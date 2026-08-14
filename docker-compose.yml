@@ -1,0 +1,38 @@
+# ═══════════════════════════════════════════════════════════════
+# Z8 Platform — تشغيل كامل بأمر واحد: docker compose up
+# ═══════════════════════════════════════════════════════════════
+# وضعان للتشغيل:
+#   أ) قاعدة بياناتك الحالية على الجهاز (الافتراضي):
+#      خلي DATABASE_URL في backend/.env يشاور على host.docker.internal
+#   ب) قاعدة جديدة داخل Docker: شغّل بروفايل db
+#      docker compose --profile db up
+# ═══════════════════════════════════════════════════════════════
+services:
+  api:
+    build: ./backend
+    ports: ["4001:4001"]
+    env_file: ./backend/.env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  web:
+    build: ./frontend
+    ports: ["3000:3000"]
+    environment:
+      - API_URL=http://api:4001
+    depends_on: [api]
+    restart: unless-stopped
+
+  db:
+    profiles: ["db"]
+    image: postgres:18
+    environment:
+      POSTGRES_DB: z8_car_manager
+      POSTGRES_PASSWORD: "123456"
+    ports: ["5433:5432"]
+    volumes:
+      - z8_pgdata:/var/lib/postgresql/data
+
+volumes:
+  z8_pgdata:

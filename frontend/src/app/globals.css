@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── لوحة الألوان: نهاري (الافتراضي) ── */
+:root {
+  /* لوحة Z8 الفاخرة — Linear/Stripe: أسطح فاتحة هادية + أزرق ملكي */
+  --ink:#F8FAFC; --ink2:#FFFFFF; --ink3:#F1F5F9; --ink4:#E2E8F0;
+  --petrol:#1E3A8A; --petrol-deep:#163A70; --petrol-soft:#DBEAFE;
+  --brass:#F59E0B; --brass-soft:#FEF3C7;
+  --emerald:#22C55E; --emerald-bg:rgba(34,197,94,0.10);
+  --ember:#EF4444; --ember-bg:rgba(239,68,68,0.09);
+  --line:#E5E7EB;
+  --text:#0F172A; --text-dim:#64748B;
+}
+
+/* ── الوضع الليلي ── */
+[data-theme="dark"] {
+  --ink:#0B1220; --ink2:#111C2E; --ink3:#182642; --ink4:#203050;
+  --petrol:#6D9EF5; --petrol-deep:#1E3A8A; --petrol-soft:rgba(109,158,245,0.14);
+  --brass:#F59E0B; --brass-soft:rgba(245,158,11,0.14);
+  --emerald:#34D27B; --emerald-bg:rgba(52,210,123,0.14);
+  --ember:#F0655D; --ember-bg:rgba(240,101,93,0.13);
+  --line:#263650;
+  --text:#EDF2FA; --text-dim:#93A5C4;
+}
+[data-theme="dark"] ::selection { background: rgba(46,159,171,0.3); }
+
+/* أرقام المال والجداول بعرض ثابت — سطور الأرقام تتراص تحت بعضها */
+.tnum { font-variant-numeric: tabular-nums; }
+
+::selection { background: rgba(12, 94, 102, 0.18); }
+
+/* تقليل الحركة لمن يفضّل ذلك — التزام جودة أساسي */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* شريط تصنيفات قابل للتمرير بدون شريط تمرير ظاهر */
+.scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* ── Material Symbols Rounded: مكتبة الأيقونات الموحدة ──
+   24px · Weight 400 · Optical 24 · Rounded — لون افتراضي #64748B */
+.msr {
+  font-family: "Material Symbols Rounded";
+  font-weight: 400;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  direction: ltr;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  -webkit-font-feature-settings: "liga";
+  font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: "opsz" 24, "wght" 400, "GRAD" 0, "FILL" 0;
+  transition: color .2s ease, transform .2s ease;
+  user-select: none;
+}
+.msr-fill { font-variation-settings: "opsz" 24, "wght" 400, "GRAD" 0, "FILL" 1; }
+.msr-20 { font-size: 20px; }
+.msr-18 { font-size: 18px; }
+/* Hover الموحد: أخضر + تكبير 1.05 */
+.mi-hover:hover .msr { color: #16A34A; transform: scale(1.05); }
+
+/* مؤثرات حركة بوابة اختيار الزيت */
+@keyframes kioskIn {
+  from { opacity: 0; transform: translateX(-18px) scale(.985); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+.kiosk-step { animation: kioskIn .3s cubic-bezier(.2,.7,.3,1); }
+@keyframes kioskPop {
+  0% { transform: scale(.6); opacity: 0; }
+  70% { transform: scale(1.06); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.kiosk-pop { animation: kioskPop .45s cubic-bezier(.2,.7,.3,1); }
+
+
+/* ── شريط تمرير فاخر رفيع — كل النظام ── */
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--ink4); border-radius: 99px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* ── حركة دخول المودالات والتوستات — 220ms ease-in-out ── */
+@keyframes z8-pop {
+  from { opacity: 0; transform: translateY(10px) scale(.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.z8-pop { animation: z8-pop 220ms ease-in-out; }
+
+
+/* ══════════ Material Design 3 — لغة التفاعل الموحدة (ويب = أندرويد) ══════════ */
+
+/* تموّج اللمس (Ripple) — يُزرع تلقائياً في كل عنصر .m3 */
+@keyframes m3-ripple {
+  to { transform: scale(2.6); opacity: 0; }
+}
+.m3 { position: relative; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+.m3 .m3-wave {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  background: currentColor; opacity: 0.18; transform: scale(0);
+  animation: m3-ripple 480ms ease-out forwards;
+}
+
+/* طبقة الحالة (State Layer) — hover بأسلوب Material بدل القفزات */
+.m3::after {
+  content: ""; position: absolute; inset: 0; background: currentColor;
+  opacity: 0; transition: opacity 160ms ease; pointer-events: none;
+  border-radius: inherit;
+}
+.m3:hover::after { opacity: 0.08; }
+.m3:active::after { opacity: 0.12; }
+
+/* مستويات الارتفاع M3 */
+.elev-1 { box-shadow: 0 1px 2px rgba(15,23,42,.10), 0 1px 3px rgba(15,23,42,.06); }
+.elev-2 { box-shadow: 0 2px 6px rgba(15,23,42,.12), 0 1px 2px rgba(15,23,42,.08); }
+.elev-3 { box-shadow: 0 6px 16px rgba(15,23,42,.16), 0 2px 4px rgba(15,23,42,.10); }

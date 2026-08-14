@@ -1,0 +1,59 @@
+# الأسرار - لا تُرفع أبداً
+.env
+*.env
+!.env.example
+serviceAccountKey.json
+*secret*
+*Secret*
+
+# سكريبتات فيها باسورد الداتابيز
+backup-z8.bat
+restore-z8.bat
+restore-z8 (1).bat
+setup-auto-backup.bat
+check-z8.bat
+
+# Python / FastAPI
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-error.log*
+yarn-debug.log*
+
+# نسخ الداتابيز والباك أب
+backups/
+*.backup
+*.sql.gz
+*.dump
+
+# Android
+*.apk
+*.aab
+.gradle/
+local.properties
+**/build/
+
+# IDE / نظام التشغيل
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# لوجات وتشخيص وأرشيفات
+*.log
+Z8-*-REPORT.txt
+Z8-DIAGNOSIS.txt
+z8-hr.zip
