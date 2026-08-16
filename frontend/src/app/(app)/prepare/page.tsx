@@ -37,6 +37,7 @@ export default function PreparePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
+  const [approvalPin, setApprovalPin] = useState("");
   const [err, setErr] = useState("");
   const [okMsg, setOkMsg] = useState("");
   const loadedCarRef = useRef<string | null>(null);
@@ -157,10 +158,11 @@ export default function PreparePage() {
           })),
           odometer: odometer.trim() ? Number(odometer) : null,
           notes: notes.trim() || null,
+          approvalPin: approvalPin.trim() || null,
         }),
       });
       setOkMsg(`✅ اتبعت للكاشير — ${r.plate || active.plate || ""}`);
-      setActiveId(null); loadedCarRef.current = null;
+      setActiveId(null); loadedCarRef.current = null; setApprovalPin("");
       loadQueue();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "تعذّر التأكيد");
@@ -343,6 +345,14 @@ export default function PreparePage() {
                   <Button variant="ghost" disabled={draftBusy || cart.length === 0} onClick={saveDraft}>
                     {draftBusy ? "جارٍ الحفظ…" : "💾 حفظ مسودة"}
                   </Button>
+                  <Input
+                    className="h-9 w-28 text-center tnum"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="رمز الاعتماد"
+                    value={approvalPin}
+                    onChange={(e) => setApprovalPin(e.target.value.replace(/\D/g, ""))}
+                  />
                   <Button className="!px-7 !py-3 !text-[15px]" disabled={saving || cart.length === 0} onClick={confirmAndSend}>
                     {saving ? "جارٍ الإرسال…" : "✓ إرسال إلى الكاشير"}
                   </Button>
