@@ -6,9 +6,10 @@ export type NavModule = {
   icon: string;            // رمز القائمة
   section: string;         // القسم المعماري في القائمة الجانبية
   permissions: string[];   // فاضية = للجميع؛ الأدمن يشوف الكل دايماً
+  adminOnly?: boolean;     // true = لمدير النظام (admin) وحده — لا تظهر لأي موظف
 };
 
-export const NAV_SECTIONS = ["الرئيسية", "العمليات", "المخزون والمشتريات", "المالية", "الإدارة"] as const;
+export const NAV_SECTIONS = ["الرئيسية", "العمليات", "المخزون والمشتريات", "المالية", "الإدارة", "الإعدادات"] as const;
 
 // أيقونة كل قسم رئيسي
 export const SECTION_ICONS: Record<string, string> = {
@@ -16,11 +17,12 @@ export const SECTION_ICONS: Record<string, string> = {
   "المخزون والمشتريات": "sec_stock",
   "المالية": "sec_finance",
   "الإدارة": "sec_admin",
+  "الإعدادات": "sec_admin",
 };
 
 export const NAV_MODULES: NavModule[] = [
   // ── الرئيسية (خارج القوائم المنسدلة — دايماً ظاهرة) ──
-  { path: "/dashboard",     title: "لوحة القيادة",   icon: "dashboard", section: "الرئيسية", permissions: [] },
+  { path: "/dashboard",     title: "لوحة القيادة",   icon: "dashboard", section: "الرئيسية", permissions: [], adminOnly: true },
   { path: "/sales",         title: "نقطة بيع الخدمة", icon: "sales", section: "الرئيسية", permissions: ["invoices.create", "invoices.create_service"] },
   { path: "/sales/direct",  title: "البيع المباشر",   icon: "sales", section: "الرئيسية", permissions: ["invoices.create", "invoices.create_direct"] },
 
@@ -45,5 +47,11 @@ export const NAV_MODULES: NavModule[] = [
   // ── الإدارة ──
   { path: "/branches",   title: "الفروع",         icon: "branches", section: "الإدارة", permissions: ["branches.manage"] },
   { path: "/hr",         title: "الموارد البشرية", icon: "hr", section: "الإدارة", permissions: ["hr.view", "hr.manage", "hr.attendance", "hr.leave_approve", "hr.violations", "hr.payroll"] },
-  { path: "/settings",   title: "الإعدادات",      icon: "settings", section: "الإدارة", permissions: ["settings.company", "settings.users"] },
+
+  // ── الإعدادات — كل قسم صفحة كاملة مستقلة ──
+  { path: "/settings/company",  title: "المنشأة",                icon: "settings", section: "الإعدادات", permissions: ["settings.company"] },
+  { path: "/settings/users",    title: "المستخدمون والصلاحيات",  icon: "settings", section: "الإعدادات", permissions: ["settings.users"] },
+  { path: "/settings/cameras",  title: "كاميرات المحطات",        icon: "settings", section: "الإعدادات", permissions: ["settings.company"] },
+  { path: "/settings/printing", title: "الطباعة",                icon: "settings", section: "الإعدادات", permissions: [], adminOnly: true },
+  { path: "/settings/system",   title: "النظام",                 icon: "settings", section: "الإعدادات", permissions: [], adminOnly: true },
 ];

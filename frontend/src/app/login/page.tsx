@@ -5,8 +5,20 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Button, Field, Input, ErrorNote } from "@/components/ui";
+import { NAV_MODULES } from "@/modules/registry";
 
 type ConnState = "checking" | "ok" | "down";
+
+/** وجهة ما بعد الدخول: المدير → لوحة القيادة، والموظف → أول شاشة مسموحة له.
+ *  لو بيانات المستخدم مش راجعة من login (احتياط) → السلوك القديم بلا كسر. */
+function landingPath(u: any): string {
+  if (!u || u.role === "admin") return "/dashboard";
+  const perms: string[] = Array.isArray(u.permissions) ? u.permissions : [];
+  const first = NAV_MODULES.find(
+    (m) => !m.adminOnly && (m.permissions.length === 0 || m.permissions.some((p) => perms.includes(p)))
+  );
+  return first?.path || "/dashboard";
+}
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -38,8 +50,8 @@ export default function LoginPage() {
     e.preventDefault();
     setErr(""); setBusy(true);
     try {
-      await login(email, password);
-      router.replace("/dashboard");
+      const u = await login(email, password);
+      router.replace(landingPath(u));
     } catch (e: any) {
       // فشل fetch نفسه (مش رد من السيرفر) = مشكلة اتصال مش بيانات
       const msg = String(e?.message || "");

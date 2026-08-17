@@ -72,6 +72,11 @@ PERMISSIONS = [
         {"key": "hr.violations",    "label": "المخالفات والإنذارات"},
         {"key": "hr.payroll",       "label": "الرواتب"},
     ]},
+    {"group": "مركز ملاحظات الخدمة", "items": [
+        {"key": "service_notes.view",   "label": "عرض الملاحظات والمحادثات"},
+        {"key": "service_notes.create", "label": "تسجيل ملاحظات ومراسلة العميل"},
+        {"key": "service_notes.manage", "label": "إدارة الملاحظات — الإغلاق والقوالب وكل الفروع"},
+    ]},
     {"group": "الإدارة والإعدادات", "items": [
         {"key": "branches.manage",  "label": "إدارة الفروع"},
         {"key": "settings.company", "label": "بيانات الشركة والمظهر"},

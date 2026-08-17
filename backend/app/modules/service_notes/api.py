@@ -36,10 +36,28 @@ _LIST_SQL = """
 """
 
 
+# ═══════════ حارس الفرع (بند 22) ═══════════
+# قاعدة واحدة تحكم كل النقاط: الموظف مقيّد بفرعه مهما أرسل من باراميترات،
+# وصاحب صلاحية الإدارة (service_notes.manage) وحده يرى كل الفروع.
+def _forced_branch(user: CurrentUser) -> str | None:
+    """الفرع الملزم للمستخدم — None = مصرح له بكل الفروع"""
+    if "service_notes.manage" in user.permissions:
+        return None
+    return user.branch_id
+
+
+async def _assert_branch(user: CurrentUser, branch_id) -> None:
+    """يمنع الوصول لسجل خارج فرع المستخدم (الوصول المباشر بالـ ID)"""
+    forced = _forced_branch(user)
+    if forced and branch_id and str(branch_id) != str(forced):
+        raise HTTPException(403, "هذا السجل يخص فرعاً آخر")
+
+
 # ═══════════ الإحصائيات ═══════════
 @router.get("/dashboard")
 async def dashboard(user: CurrentUser = Depends(require_permission("service_notes.view"))):
-    counts = await service.dashboard_counts(user.company_id, user.branch_id)
+    # الإحصائيات بنفس قاعدة الفرع: الموظف يرى أرقام فرعه، والإدارة أرقام الشركة كلها
+    counts = await service.dashboard_counts(user.company_id, _forced_branch(user))
     return {"counts": counts, "typeLabels": TYPE_LABELS, "statusLabels": STATUS_LABELS}
 
 
@@ -56,8 +74,9 @@ async def list_notes(
     sql = _LIST_SQL + " WHERE n.company_id = $1::uuid"
     args: list = [user.company_id]
 
-    # الموظف العادي يشوف فرعه فقط — الإدارة تشوف الكل (بند 22)
-    scope_branch = branchId or (user.branch_id if "service_notes.manage" not in user.permissions else None)
+    # الموظف مقيّد بفرعه مهما أرسل في branchId — الإدارة وحدها تختار الفرع أو ترى الكل
+    forced = _forced_branch(user)
+    scope_branch = forced or branchId
     if scope_branch:
         args.append(scope_branch)
         sql += f" AND n.branch_id = ${len(args)}::uuid"
@@ -89,8 +108,9 @@ async def work_order_notes(
 ):
     rows = await fetch(
         _LIST_SQL + " WHERE n.company_id=$1::uuid AND n.work_order_id=$2::uuid"
+                    " AND ($3::uuid IS NULL OR n.branch_id = $3::uuid)"
                     " ORDER BY n.created_at DESC",
-        user.company_id, work_order_id)
+        user.company_id, work_order_id, _forced_branch(user))
     return [dict(r) for r in rows]
 
 
@@ -114,6 +134,7 @@ async def note_details(
         user.company_id, note_id)
     if not row:
         raise HTTPException(404, "الملاحظة غير موجودة")
+    await _assert_branch(user, row["branch_id"])
     atts = await fetch(
         "SELECT id, file_url, file_type, created_at FROM service_note_attachments"
         " WHERE note_id=$1::uuid ORDER BY created_at",
@@ -144,10 +165,11 @@ async def update_note(
             args.append(val)
             cast = "::uuid" if col == "product_id" else ""
             sets.append(f"{col} = ${len(args)}{cast}")
-    args += [note_id, user.company_id]
+    args += [note_id, user.company_id, _forced_branch(user)]
     r = await execute(
         f"UPDATE service_notes SET {', '.join(sets)}"
-        f" WHERE id = ${len(args)-1}::uuid AND company_id = ${len(args)}::uuid",
+        f" WHERE id = ${len(args)-2}::uuid AND company_id = ${len(args)-1}::uuid"
+        f"   AND (${len(args)}::uuid IS NULL OR branch_id = ${len(args)}::uuid)",
         *args)
     if r.endswith("0"):
         raise HTTPException(404, "الملاحظة غير موجودة")
@@ -169,8 +191,10 @@ async def update_status(
            SET status=$1, updated_at=now(),
                closed_at = CASE WHEN $2 THEN now() ELSE closed_at END,
                closed_by = CASE WHEN $2 THEN $3::uuid ELSE closed_by END
-           WHERE id=$4::uuid AND company_id=$5::uuid""",
-        body.status, closing, user.user_id, note_id, user.company_id)
+           WHERE id=$4::uuid AND company_id=$5::uuid
+             AND ($6::uuid IS NULL OR branch_id = $6::uuid)""",
+        body.status, closing, user.user_id, note_id, user.company_id,
+        _forced_branch(user))
     if r.endswith("0"):
         raise HTTPException(404, "الملاحظة غير موجودة")
     return {"ok": True}
@@ -214,6 +238,8 @@ async def messages(
     user: CurrentUser = Depends(require_permission("service_notes.view",
                                                    "service_notes.create")),
 ):
+    wo = await service.resolve_work_order(user.company_id, work_order_id)
+    await _assert_branch(user, wo["branch_id"])
     rows = await fetch(
         """SELECT id, sender_type, message, attachment_url, message_type,
                   is_read, created_at, read_at, note_id
@@ -237,6 +263,7 @@ async def send_message(
                                                    "service_notes.manage")),
 ):
     wo = await service.resolve_work_order(user.company_id, work_order_id)
+    await _assert_branch(user, wo["branch_id"])
     await execute(
         """INSERT INTO service_messages
              (company_id, branch_id, work_order_id, customer_id, employee_id,

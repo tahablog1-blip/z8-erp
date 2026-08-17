@@ -76,9 +76,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
     });
   }
 
-  const visible = NAV_MODULES.filter(
-    (m) => m.permissions.length === 0 || hasPerm(...m.permissions)
-  );
+  // الفلترة: adminOnly = لمدير النظام وحده؛ غير كده الصلاحيات هي الحكم
+  const isAdmin = user?.role === "admin";
+  const visible = NAV_MODULES.filter((m) => {
+    if (m.adminOnly) return isAdmin;
+    return m.permissions.length === 0 || hasPerm(...m.permissions);
+  });
 
   // العنصر النشط = أطول مسار مطابق (لكي "/sales" و"/sales/history" ما يضيّوش مع بعض)
   const activePath = visible
