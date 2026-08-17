@@ -319,7 +319,7 @@ async def public_messages(token: str):
     rows = await fetch(
         """SELECT id, sender_type, message, attachment_url, message_type, created_at
            FROM service_messages
-           WHERE work_order_id=$1::uuid ORDER BY created_at""",
+           WHERE work_order_id=$1::uuid AND COALESCE(message_type,'') <> 'note_internal' ORDER BY created_at""",
         car["id"])
     notes = await fetch(
         """SELECT note_number, type, title, description, created_at
@@ -460,3 +460,4 @@ async def public_media(fname: str):
     if not os.path.isfile(path):
         raise HTTPException(404, "غير موجود")
     return FileResponse(path, media_type="audio/wav")
+
