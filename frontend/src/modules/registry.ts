@@ -26,6 +26,7 @@ export const NAV_MODULES: NavModule[] = [
 
   // ── العمليات اليومية ──
   { path: "/prepare",       title: "إعداد أوامر العمل", icon: "invoices", section: "العمليات", permissions: ["invoices.prepare"] },
+  { path: "/service-notes", title: "مركز ملاحظات الخدمة", icon: "invoices", section: "العمليات", permissions: ["service_notes.view", "service_notes.create", "service_notes.manage"] },
   { path: "/sales/history", title: "سجل الفواتير",   icon: "invoices", section: "العمليات", permissions: ["invoices.view_today", "invoices.view_all"] },
   { path: "/cars",          title: "خط الخدمة",      icon: "car", section: "العمليات", permissions: ["cars.create", "cars.confirm_entry", "cars.confirm_exit"] },
   { path: "/customers",     title: "العملاء",        icon: "customers", section: "العمليات", permissions: ["customers.create", "customers.edit", "customers.view_statement"] },

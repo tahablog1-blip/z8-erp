@@ -19,6 +19,12 @@ type Booking = {
   queueNo: number; ahead: number; estWaitMinutes: number;
   plate: string; customerName: string; station: string | null; branchName: string;
 };
+type ChatMsg = {
+  id: string; sender_type: "employee" | "customer";
+  message: string; attachment_url?: string | null; message_type?: string | null; created_at: string;
+};
+type ChatNote = { note_number: string; type: string; title?: string | null; description?: string | null; created_at: string };
+type ChatData = { car: { plate?: string | null }; messages: ChatMsg[]; notes: ChatNote[]; typeLabels: Record<string, string> };
 type SType = "basic" | "warranty" | "company";
 type FormValues = {
   name: string; phone: string;
@@ -256,6 +262,287 @@ function RegisterForm({ sType, initial, busy, err, onBack, onSubmit }: {
   );
 }
 
+/* ═══════════ محادثة مركز الخدمة (مرحلة 3) — module scope ═══════════ */
+
+const QUICK_REPLIES = [
+  "موافق — نفّذوا الخدمة ✅",
+  "غير موافق حالياً ❌",
+  "كم التكلفة الإضافية؟",
+  "اتصلوا بي من فضلكم 📞",
+];
+
+function fmtChatTime(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString("ar-SA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  } catch { return ""; }
+}
+
+// تحويل التسجيل الخام إلى WAV (mono 16kHz) — الصيغة الوحيدة المضمونة التشغيل على كل الأجهزة
+function encodeWav(chunks: Float32Array[], inRate: number): Blob {
+  const OUT = 16000;
+  let len = 0; for (const c of chunks) len += c.length;
+  const all = new Float32Array(len);
+  let off = 0; for (const c of chunks) { all.set(c, off); off += c.length; }
+  const ratio = inRate / OUT;
+  const outLen = Math.floor(all.length / ratio);
+  const pcm = new Int16Array(outLen);
+  for (let i = 0; i < outLen; i++) {
+    const s = Math.max(-1, Math.min(1, all[Math.floor(i * ratio)] || 0));
+    pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
+  const buf = new ArrayBuffer(44 + pcm.length * 2);
+  const dv = new DataView(buf);
+  const ws = (o: number, t: string) => { for (let i = 0; i < t.length; i++) dv.setUint8(o + i, t.charCodeAt(i)); };
+  ws(0, "RIFF"); dv.setUint32(4, 36 + pcm.length * 2, true); ws(8, "WAVE");
+  ws(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, OUT, true); dv.setUint32(28, OUT * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
+  ws(36, "data"); dv.setUint32(40, pcm.length * 2, true);
+  new Int16Array(buf, 44).set(pcm);
+  return new Blob([buf], { type: "audio/wav" });
+}
+
+function ChatBubble({ m }: { m: ChatMsg }) {
+  const mine = m.sender_type === "customer";
+  return (
+    <div className={`flex ${mine ? "justify-start" : "justify-end"}`}>
+      <div className={`max-w-[82%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${mine ? "rounded-bl-sm text-white" : "rounded-br-sm border bg-white"}`}
+           style={mine ? { background: GREEN } : { borderColor: LINE, color: "#1E293B" }}>
+        {m.attachment_url && (m.message_type === "voice" || m.attachment_url.endsWith(".wav")) ? (
+          <audio controls preload="metadata" src={m.attachment_url} className="my-0.5 w-[215px] max-w-full" />
+        ) : m.attachment_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={m.attachment_url} alt="" className="mb-1.5 max-h-52 rounded-lg" />
+        ) : null}
+        {(!m.attachment_url || m.message_type !== "voice") && (
+          <p className="whitespace-pre-wrap break-words font-bold">{m.message}</p>
+        )}
+        <p className="mt-0.5 text-[9.5px]" style={{ color: mine ? "rgba(255,255,255,.75)" : DIM }}>
+          {mine ? "أنت" : "مركز الخدمة"} · {fmtChatTime(m.created_at)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ChatNoteCard({ n, labels }: { n: ChatNote; labels: Record<string, string> }) {
+  return (
+    <div className="rounded-xl border px-3.5 py-2.5" style={{ borderColor: "#FDE68A", background: "#FFFBEB" }}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-black" style={{ background: "#FDE68A", color: "#92400E" }}>
+          {labels[n.type] ?? n.type}
+        </span>
+        <span className="tnum text-[10px] font-bold" style={{ color: "#B45309" }}>{n.note_number}</span>
+      </div>
+      {n.title && <p className="mt-1 text-[12.5px] font-black" style={{ color: NAVY }}>{n.title}</p>}
+      {n.description && <p className="mt-0.5 text-[12.5px] font-bold" style={{ color: "#334155" }}>{n.description}</p>}
+    </div>
+  );
+}
+
+// carId = رقم الحجز (نفس رقم السيارة) — بيتحول لتوكن آمن تلقائياً
+// urlToken = توكن جاهز جاي من رابط الواتساب ?t=
+function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: string | null }) {
+  const [token, setToken] = useState<string | null>(urlToken || null);
+  const [data, setData] = useState<ChatData | null>(null);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [cErr, setCErr] = useState("");
+  const endRef = useRef<HTMLDivElement | null>(null);
+  const countRef = useRef(0);
+  const [recOn, setRecOn] = useState(false);
+  const [recSec, setRecSec] = useState(0);
+  const recRef = useRef<any>(null);
+  const recTimer = useRef<any>(null);
+  const recStart = useRef(0);
+
+  // تحويل رقم الحجز لتوكن آمن (لو مفيش توكن من الرابط)
+  useEffect(() => {
+    if (token || !carId) return;
+    fetch(`/api/service-notes/public/car-token/${carId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.token && setToken(d.token))
+      .catch(() => {});
+  }, [token, carId]);
+
+  // تحميل المحادثة + تحديث كل 10 ثوانٍ
+  useEffect(() => {
+    if (!token) return;
+    let alive = true;
+    const load = async () => {
+      try {
+        const r = await fetch(`/api/service-notes/public/${token}/messages`, { cache: "no-store" });
+        if (!r.ok || !alive) return;
+        const d: ChatData = await r.json();
+        setData(d);
+        if (d.messages.length !== countRef.current) {
+          countRef.current = d.messages.length;
+          setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 120);
+        }
+      } catch {}
+    };
+    load();
+    const t = setInterval(load, 10000);
+    return () => { alive = false; clearInterval(t); };
+  }, [token]);
+
+  async function sendMsg(preset?: string) {
+    const body = (preset ?? text).trim();
+    if (!body || sending || !token) return;
+    setSending(true); setCErr("");
+    try {
+      const r = await fetch(`/api/service-notes/public/${token}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: body, messageType: "text" }),
+      });
+      if (r.ok) {
+        setText("");
+        countRef.current = -1; // إجبار إعادة التحميل والنزول لآخر رسالة
+        const rr = await fetch(`/api/service-notes/public/${token}/messages`, { cache: "no-store" });
+        if (rr.ok) { const d: ChatData = await rr.json(); setData(d); countRef.current = d.messages.length; }
+        setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 120);
+      } else setCErr("تعذّر الإرسال — حاول مرة أخرى");
+    } catch { setCErr("تعذّر الاتصال — حاول مرة أخرى"); }
+    finally { setSending(false); }
+  }
+
+  function teardownRec() {
+    clearInterval(recTimer.current);
+    const r = recRef.current;
+    if (r) {
+      try { r.proc.disconnect(); r.src.disconnect(); } catch {}
+      try { r.stream.getTracks().forEach((t: any) => t.stop()); } catch {}
+      try { r.ctx.close(); } catch {}
+    }
+    setRecOn(false);
+  }
+
+  // إيقاف التسجيل وتنضيف الموارد عند الخروج من الصفحة
+  useEffect(() => () => { try { teardownRec(); } catch {} }, []); // eslint-disable-line
+
+  async function startRec() {
+    if (recOn || sending || !token) return;
+    setCErr("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const Ctx: any = (window as any).AudioContext || (window as any).webkitAudioContext;
+      const ctx = new Ctx();
+      const srcNode = ctx.createMediaStreamSource(stream);
+      const proc = ctx.createScriptProcessor(4096, 1, 1);
+      const chunks: Float32Array[] = [];
+      proc.onaudioprocess = (e: any) => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+      srcNode.connect(proc); proc.connect(ctx.destination);
+      recRef.current = { ctx, stream, proc, src: srcNode, chunks, sr: ctx.sampleRate };
+      recStart.current = Date.now();
+      setRecSec(0); setRecOn(true);
+      recTimer.current = setInterval(() => {
+        const s = Math.floor((Date.now() - recStart.current) / 1000);
+        setRecSec(s);
+        if (s >= 60) stopRec(true); // حد أقصى دقيقة
+      }, 500);
+    } catch {
+      setCErr("اسمح بالوصول للمايكروفون من المتصفح أولاً 🎤");
+    }
+  }
+
+  async function stopRec(send: boolean) {
+    const r = recRef.current;
+    teardownRec();
+    recRef.current = null;
+    if (!send || !r || !token) return;
+    const blob = encodeWav(r.chunks, r.sr);
+    if (blob.size < 6000) { setCErr("التسجيل قصير جداً — حاول مرة أخرى"); return; }
+    setSending(true); setCErr("");
+    try {
+      const fd = new FormData();
+      fd.append("file", blob, "voice.wav");
+      const resp = await fetch(`/api/service-notes/public/${token}/voice`, { method: "POST", body: fd });
+      if (resp.ok) {
+        const rr = await fetch(`/api/service-notes/public/${token}/messages`, { cache: "no-store" });
+        if (rr.ok) { const d: ChatData = await rr.json(); setData(d); countRef.current = d.messages.length; }
+        setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 120);
+      } else setCErr("تعذّر إرسال التسجيل — حاول مرة أخرى");
+    } catch { setCErr("تعذّر الاتصال — حاول مرة أخرى"); }
+    finally { setSending(false); }
+  }
+
+  if (!token) return null;
+
+  return (
+    <div className="kiosk-pop space-y-2.5 rounded-2xl bg-white p-4 shadow-lg">
+      <div className="flex items-center justify-between">
+        <h3 className="flex items-center gap-1.5 text-[13.5px] font-black" style={{ color: NAVY }}>
+          <MIcon name="forum" className="!text-[19px]" /> تواصل مع مركز الخدمة
+        </h3>
+        {data?.car?.plate && (
+          <span className="tnum rounded-lg px-2 py-0.5 text-[11px] font-black text-white" style={{ background: NAVY }}>{data.car.plate}</span>
+        )}
+      </div>
+
+      {data && data.notes.length > 0 && (
+        <div className="space-y-1.5">
+          {data.notes.map((n) => <ChatNoteCard key={n.note_number} n={n} labels={data.typeLabels} />)}
+        </div>
+      )}
+
+      <div className="max-h-[42vh] space-y-2 overflow-y-auto rounded-xl p-2.5" style={{ background: "#F6F8FA" }}>
+        {(!data || data.messages.length === 0) && (
+          <p className="py-5 text-center text-[11.5px] font-bold" style={{ color: DIM }}>
+            اكتب رسالتك وسيصلك الرد هنا — أي تحديث عن سيارتك هيظهر في نفس المكان 💬
+          </p>
+        )}
+        {data?.messages.map((m) => <ChatBubble key={m.id} m={m} />)}
+        <div ref={endRef} />
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {QUICK_REPLIES.map((q) => (
+          <button key={q} disabled={sending} onClick={() => sendMsg(q)}
+                  className="rounded-full border px-3 py-1.5 text-[11px] font-black transition active:scale-[.97] disabled:opacity-40"
+                  style={{ borderColor: LINE, color: NAVY, background: "#fff" }}>
+            {q}
+          </button>
+        ))}
+      </div>
+
+      {!recOn ? (
+        <div className="flex gap-2">
+          <button onClick={startRec} disabled={sending} title="تسجيل رسالة صوتية"
+                  className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-xl border transition active:scale-[.95] disabled:opacity-40"
+                  style={{ borderColor: LINE, color: NAVY }}>
+            <MIcon name="mic" className="!text-[21px]" />
+          </button>
+          <input value={text} onChange={(e) => setText(e.target.value)}
+                 onKeyDown={(e) => { if (e.key === "Enter") sendMsg(); }}
+                 placeholder="اكتب رسالتك هنا…" maxLength={2000}
+                 className="min-w-0 flex-1 rounded-xl border px-3.5 py-2.5 text-[13px] font-bold outline-none focus:border-[#0F2D52]"
+                 style={{ borderColor: LINE }} />
+          <button onClick={() => sendMsg()} disabled={sending || !text.trim()}
+                  className="flex items-center gap-1 rounded-xl px-4 py-2.5 text-[13px] font-black text-white transition active:scale-[.97] disabled:opacity-40"
+                  style={{ background: GREEN }}>
+            <MIcon name="send" className="!text-[17px] text-white" />
+            {sending ? "…" : "إرسال"}
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: "rgba(220,38,38,.07)" }}>
+          <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full" style={{ background: "#DC2626" }} />
+          <span className="tnum min-w-0 flex-1 text-[12px] font-black" style={{ color: "#DC2626" }}>
+            جارِ التسجيل… {recSec} ث / 60
+          </span>
+          <button onClick={() => stopRec(true)}
+                  className="rounded-lg px-3.5 py-2 text-[12px] font-black text-white active:scale-[.97]"
+                  style={{ background: GREEN }}>إيقاف وإرسال</button>
+          <button onClick={() => stopRec(false)}
+                  className="rounded-lg border px-3 py-2 text-[12px] font-black active:scale-[.97]"
+                  style={{ borderColor: LINE, color: DIM }}>إلغاء</button>
+        </div>
+      )}
+      {cErr && <ErrBox msg={cErr} />}
+    </div>
+  );
+}
+
 /* ═══════════ الصفحة ═══════════ */
 
 export default function PublicBookingPage() {
@@ -269,6 +556,15 @@ export default function PublicBookingPage() {
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<FormValues>(EMPTY_FORM);
   const pollRef = useRef<any>(null);
+  const [chatToken, setChatToken] = useState<string | null>(null);
+
+  // لو العميل جاي من رابط الواتساب ?t=التوكن — المحادثة تفتح فوراً
+  useEffect(() => {
+    try {
+      const t = new URLSearchParams(window.location.search).get("t");
+      if (t && t.length >= 20) setChatToken(t);
+    } catch {}
+  }, []);
 
   useEffect(() => {
     call<Info>(`booking/${branchId}`).then(setInfo).catch(() => {});
@@ -442,6 +738,7 @@ export default function PublicBookingPage() {
               </div>
               <div className="h-3" style={{ background: "linear-gradient(45deg, #EEF2F6 50%, transparent 50%) 0 100%/12px 12px repeat-x, linear-gradient(-45deg, #EEF2F6 50%, transparent 50%) 6px 100%/12px 12px repeat-x" }} />
             </div>
+            <ChatSection carId={booking.bookingId} urlToken={chatToken} />
             <p className="text-center text-[10.5px]" style={{ color: DIM }}>الصفحة بتتحدث تلقائياً — سيبها مفتوحة وتابع دورك</p>
             <button onClick={() => {
                       localStorage.removeItem(`z8_booking_${branchId}`);
@@ -455,6 +752,8 @@ export default function PublicBookingPage() {
             </button>
           </div>
         )}
+
+        {view !== "ticket" && view !== "loading" && chatToken && <ChatSection urlToken={chatToken} />}
 
         <p className="text-center text-[10px]" style={{ color: DIM }}>منصة Z8 — شركة مصدر الزيوت للتجارة · نسخة الحجز v2</p>
       </div>

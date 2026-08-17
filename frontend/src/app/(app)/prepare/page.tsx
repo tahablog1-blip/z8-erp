@@ -10,6 +10,7 @@ import { Button, Card, Badge, Input, Field, Textarea, ErrorNote } from "@/compon
 import { Product, productLabel, money } from "@/modules/products/types";
 import { BillingQueueRow } from "@/modules/cars/types";
 import { appAlert, appConfirm } from "@/components/dialog";
+import AddNoteModal from "@/components/AddNoteModal";
 
 type CartLine = {
   productId: string;
@@ -38,6 +39,7 @@ export default function PreparePage() {
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [approvalPin, setApprovalPin] = useState("");
+  const [noteOpen, setNoteOpen] = useState(false);
   const [err, setErr] = useState("");
   const [okMsg, setOkMsg] = useState("");
   const loadedCarRef = useRef<string | null>(null);
@@ -342,6 +344,7 @@ export default function PreparePage() {
                 </div>
                 <div className="mr-auto flex flex-wrap items-center gap-2">
                   <Button variant="danger" onClick={cancelOrder}>🗑 إلغاء أمر العمل</Button>
+                  <Button variant="ghost" onClick={() => setNoteOpen(true)}>+ إضافة ملاحظة</Button>
                   <Button variant="ghost" disabled={draftBusy || cart.length === 0} onClick={saveDraft}>
                     {draftBusy ? "جارٍ الحفظ…" : "💾 حفظ مسودة"}
                   </Button>
@@ -363,6 +366,9 @@ export default function PreparePage() {
           </Card>
         )}
       </div>
+      {noteOpen && active && (
+        <AddNoteModal workOrderId={active.id} onClose={() => setNoteOpen(false)} />
+      )}
     </div>
   );
 }
