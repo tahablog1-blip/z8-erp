@@ -108,6 +108,9 @@ export default function GatePage() {
   const [active, setActive] = useState<GateEvent | null>(null);
   const [manualPlate, setManualPlate] = useState("");
   const [busy, setBusy] = useState(false);
+  const [reader, setReader] = useState<{ model: string; available: Record<string, string> } | null>(null);
+  const [fixMode, setFixMode] = useState(false);
+  const [fixPlate, setFixPlate] = useState("");
 
   const wsRef = useRef<WebSocket | null>(null);
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -160,9 +163,36 @@ export default function GatePage() {
     };
   }, [connect]);
 
-  /* ---- إدخال يدوي ---- */
-  const submitManual = async () => {
-    if (!manualPlate.trim() || !branchId) return;
+  /* ---- قارئ اللوحة الحالي (API القراءة) + التبديل الفوري ---- */
+  useEffect(() => {
+    fetch(`${API_BASE}/api/auto-checkin/vision-model`, {
+      headers: { Authorization: `Bearer ${window.localStorage?.getItem("z8_token") ?? ""}` },
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then(setReader)
+      .catch(() => {});
+  }, []);
+
+  const switchReader = async (m: string) => {
+    const prev = reader;
+    setReader(prev ? { ...prev, model: m } : prev);
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/auto-checkin/vision-model?model=${encodeURIComponent(m)}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${window.localStorage?.getItem("z8_token") ?? ""}` },
+        },
+      );
+      if (!res.ok) throw new Error();
+    } catch {
+      setReader(prev ?? null); // فشل التبديل — نرجع للاختيار السابق
+    }
+  };
+
+  /* ---- إرسال رقم لوحة (الإدخال اليدوي وتصحيح القراءة) ---- */
+  const sendPlate = async (plate: string) => {
+    if (!plate.trim() || !branchId) return;
     setBusy(true);
     try {
       const res = await fetch(`${API_BASE}/api/auto-checkin/manual`, {
@@ -171,16 +201,26 @@ export default function GatePage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${window.localStorage?.getItem("z8_token") ?? ""}`,
         },
-        body: JSON.stringify({ plate: manualPlate, branch_id: branchId, auto_checkin: true }),
+        body: JSON.stringify({ plate, branch_id: branchId, auto_checkin: true }),
       });
       const ev: GateEvent = await res.json();
       setActive(ev);
       setEvents((p) => [ev, ...p].slice(0, 40));
-      setManualPlate("");
+      setFixMode(false);
     } finally {
       setBusy(false);
     }
   };
+
+  const submitManual = async () => {
+    await sendPlate(manualPlate);
+    setManualPlate("");
+  };
+
+  /* أي التقاط جديد يقفل وضع التصحيح */
+  useEffect(() => {
+    setFixMode(false);
+  }, [active?.scan_id]);
 
   /* ---- تأكيد سيارة ---- */
   const confirmCar = async (carId: string) => {
@@ -244,6 +284,23 @@ export default function GatePage() {
           <span className="dot" data-on={connected} />
           البوابة الذكية
         </div>
+        <div className="bar__reader">
+          <span>قارئ اللوحة</span>
+          <select
+            className="field field--sm"
+            value={reader?.model ?? ""}
+            disabled={!reader || busy}
+            onChange={(e) => switchReader(e.target.value)}
+          >
+            {reader ? (
+              Object.entries(reader.available).map(([id, label]) => (
+                <option key={id} value={id}>{label}</option>
+              ))
+            ) : (
+              <option value="">...</option>
+            )}
+          </select>
+        </div>
         <div className="bar__manual">
           <input
             className="field field--sm"
@@ -283,6 +340,35 @@ export default function GatePage() {
                   digits={active.plate.digits || "----"}
                 />
               </div>
+
+              {fixMode ? (
+                <div className="card__fix">
+                  <input
+                    className="field field--sm"
+                    value={fixPlate}
+                    onChange={(e) => setFixPlate(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && sendPlate(fixPlate)}
+                    placeholder="أ ب ح 1234"
+                    autoFocus
+                  />
+                  <button className="btn btn--ghost" onClick={() => sendPlate(fixPlate)} disabled={busy}>
+                    اعتماد الرقم
+                  </button>
+                  <button className="btn btn--ghost" onClick={() => setFixMode(false)} disabled={busy}>
+                    إلغاء
+                  </button>
+                </div>
+              ) : (
+                <button
+                  className="btn btn--ghost card__fixbtn"
+                  onClick={() => {
+                    setFixPlate(`${active.plate.letters_ar || ""} ${active.plate.digits || ""}`.trim());
+                    setFixMode(true);
+                  }}
+                >
+                  ✏ تبديل الرقم
+                </button>
+              )}
 
               <p className="card__msg">{active.message}</p>
 
@@ -529,6 +615,10 @@ function GateStyles() {
       .conf { font-size: 13px; opacity: .85; }
       .card__plate { display: flex; justify-content: center; padding: 24px 20px 8px; }
       .card__msg { text-align: center; font-size: 17px; margin: 0 0 18px; padding: 0 20px; }
+      .card__fix { display: flex; gap: 8px; justify-content: center; align-items: center; margin: 0 0 14px; padding: 0 20px; flex-wrap: wrap; }
+      .card__fixbtn { display: block; margin: 0 auto 14px; }
+      .bar__reader { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+      .bar__reader select { max-width: 280px; }
 
       .grid {
         display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

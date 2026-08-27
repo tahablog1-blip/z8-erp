@@ -83,6 +83,12 @@ async def _auto_supervisor():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # ═══ البوابة الذكية: تشغيل المراقب الخلفي الدائم مع إقلاع الخادم ═══
+    try:
+        from app.modules.auto_checkin.watcher import start_watcher
+        start_watcher()
+    except Exception as _e:
+        print(f"⚠ تعذر تشغيل مراقب البوابة: {_e}")
     await init_pool()
     print("🐘 PostgreSQL متصلة")
     # ── تحصين المخطط: أعمدة جديدة تُضاف آلياً بدون Migration يدوي ──
@@ -574,3 +580,4 @@ async def list_modules():
     return [{"name": m.name, "title": m.title, "prefix": m.prefix,
              "icon": m.icon, "navPermissions": m.nav_permissions}
             for m in LOADED_MODULES]
+

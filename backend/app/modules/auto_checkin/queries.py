@@ -1,15 +1,11 @@
 """
 Z8 - البوابة الذكية | خريطة الجداول والاستعلامات
 ================================================
->>> كل أسماء الجداول والأعمدة في هذا الملف فقط <<<
-لو أسماء عندك مختلفة، عدّل هنا وبس. باقي الموديول مش هيتأثر.
-
-بعد التعديل شغّل:  GET /api/auto-checkin/schema-check
-هيقولك بالظبط أي اسم غلط.
+مُعدّل ليطابق جداول Z8 الفعلية بالحرف (cars / customers / invoices / invoice_items / products)
 """
 
 # ---------------------------------------------------------------------------
-# 1) خريطة الأسماء  — عدّل هنا لو محتاج
+# 1) خريطة الأسماء
 # ---------------------------------------------------------------------------
 TABLES = {
     "cars":          "cars",
@@ -17,80 +13,74 @@ TABLES = {
     "invoices":      "invoices",
     "invoice_items": "invoice_items",
     "products":      "products",
-    "queue":         "car_service_queue",   # طابور الخدمة
-    "branches":      "branches",
 }
 
 COLUMNS = {
-    # جدول السيارات
+    # جدول السيارات — ملف السيارة الدائم + الزيارة الحالية في نفس الصف
     "car_id":            "id",
-    "car_plate":         "plate_number",
-    "car_plate_norm":    "plate_normalized",   # عمود جديد (من ملف الـ SQL)
-    "car_plate_loose":   "plate_loose",        # عمود جديد
+    "car_plate":         "plate",
+    "car_plate_norm":    "plate_normalized",
+    "car_plate_loose":   "plate_loose",
     "car_customer_id":   "customer_id",
     "car_brand":         "brand",
-    "car_model":         "model",
-    "car_year":          "year",
+    "car_model":         "name",
+    "car_year":          "model_year",
     "car_color":         "color",
-    "car_vin":           "vin",
-    "car_odometer":      "last_odometer",
+    "car_vin":           "chassis_number",
+    "car_odometer":      "odometer_current",
     "car_branch_id":     "branch_id",
-    "car_is_active":     "is_active",
+    "car_company_id":    "company_id",
+    "car_station":       "station",
+    "car_entered_at":    "entered_at",
+    "car_exited_at":     "exited_at",
+    "car_work_status":   "work_status",
+    "car_customer_name": "customer_name",
+    "car_customer_phone":"customer_phone",
+    "car_plate_type":    "plate_type",
+    "car_category":      "car_category",
+    "car_cylinders":     "cylinders",
+    "car_created_by":    "created_by",
 
     # جدول العملاء
     "cust_id":           "id",
     "cust_name":         "name",
     "cust_phone":        "phone",
     "cust_vat":          "vat_number",
-    "cust_notes":        "notes",
-    "cust_balance":      "balance",
+    "cust_notes":        "address",
+    "cust_balance":      "id",   # لا يوجد عمود رصيد مباشر — غير مستخدم فعلياً
 
     # جدول الفواتير
     "inv_id":            "id",
-    "inv_number":        "invoice_number",
+    "inv_number":        "invoice_no",
     "inv_customer_id":   "customer_id",
     "inv_car_id":        "car_id",
     "inv_branch_id":     "branch_id",
-    "inv_date":          "created_at",
-    "inv_total":         "total",
-    "inv_status":        "status",
-    "inv_odometer":      "odometer",
+    "inv_date":          "issued_at",
+    "inv_total":         "total_inc",
+    "inv_status":        "payment_status",
+    "inv_odometer":      "next_service_km",
 
     # بنود الفاتورة
     "item_id":           "id",
     "item_invoice_id":   "invoice_id",
     "item_product_id":   "product_id",
-    "item_name":         "product_name",
-    "item_qty":          "quantity",
-    "item_price":        "unit_price",
-    "item_discount":     "discount",
-    "item_total":        "total",
+    "item_name":         "label",
+    "item_qty":          "qty",
+    "item_price":        "unit_price_vat",
+    "item_discount":     "discount_amount",
+    "item_total":        "line_inc",
 
     # المنتجات
     "prod_id":           "id",
     "prod_name":         "name",
-    "prod_sku":          "sku",
-    "prod_price":        "sale_price",
+    "prod_sku":          "barcode",
+    "prod_price":        "price_vat",
     "prod_is_service":   "is_service",
     "prod_is_active":    "is_active",
-
-    # طابور الخدمة
-    "q_id":              "id",
-    "q_car_id":          "car_id",
-    "q_customer_id":     "customer_id",
-    "q_branch_id":       "branch_id",
-    "q_status":          "status",
-    "q_station":         "station",
-    "q_entry_time":      "entry_time",
-    "q_odometer":        "odometer",
-    "q_notes":           "notes",
 }
 
-# الحالات التي تعتبر "السيارة لسه جوه المركز"
-QUEUE_OPEN_STATUSES = ("waiting", "in_service", "pending", "active")
-
-# حالات الفاتورة المكتملة (لسحب آخر خدمة)
-INVOICE_DONE_STATUSES = ("completed", "paid", "posted", "issued")
+# حالات الفاتورة المكتملة (لسحب آخر خدمة) — عمود payment_status الفعلي
+INVOICE_DONE_STATUSES = ("paid", "partial")
 
 T = TABLES
 C = COLUMNS
@@ -100,7 +90,7 @@ C = COLUMNS
 # 2) الاستعلامات
 # ---------------------------------------------------------------------------
 
-# البحث بالمفتاح الموحّد الأساسي (مطابقة 100%)
+# البحث بالمفتاح الموحّد الأساسي (مطابقة 100%) — آخر زيارة لهذه اللوحة
 Q_FIND_CAR_EXACT = f"""
 SELECT  c.{C['car_id']}            AS car_id,
         c.{C['car_plate']}         AS plate_number,
@@ -115,35 +105,51 @@ SELECT  c.{C['car_id']}            AS car_id,
         cu.{C['cust_name']}        AS customer_name,
         cu.{C['cust_phone']}       AS customer_phone,
         cu.{C['cust_vat']}         AS customer_vat,
-        cu.{C['cust_balance']}     AS customer_balance
+        NULL::numeric              AS customer_balance
 FROM {T['cars']} c
 LEFT JOIN {T['customers']} cu ON cu.{C['cust_id']} = c.{C['car_customer_id']}
 WHERE c.{C['car_plate_norm']} = $1
+ORDER BY c.{C['car_entered_at']} DESC NULLS LAST
 LIMIT 1
 """
 
-# البحث المتساهل (نفس الأرقام + نفس الحروف بترتيب مختلف)
+# البحث المتساهل (نفس الحروف بترتيب مختلف)
 Q_FIND_CAR_LOOSE = Q_FIND_CAR_EXACT.replace(
     f"WHERE c.{C['car_plate_norm']} = $1",
     f"WHERE c.{C['car_plate_loose']} = $1",
 )
 
 # مرشحون بنفس الأرقام فقط (للحالات الضعيفة — يعرضهم للموظف ليختار)
+# البحث بالأرقام من العمودين: التطبيع (لو موجود) أو الأرقام من اللوحة الأصلية
+# — السيارات المسجلة يدوياً (بلا تطبيع) تصبح مرئية للمطابقة
 Q_FIND_CANDIDATES = Q_FIND_CAR_EXACT.replace(
-    f"WHERE c.{C['car_plate_norm']} = $1\nLIMIT 1",
-    f"WHERE c.{C['car_plate_norm']} LIKE $1 || '-%'\nLIMIT 5",
+    f"WHERE c.{C['car_plate_norm']} = $1\nORDER BY c.{C['car_entered_at']} DESC NULLS LAST\nLIMIT 1",
+    "WHERE (split_part(COALESCE(c." + C['car_plate_norm'] + ",''), '-', 1) = $1\n"
+    "       OR regexp_replace(COALESCE(c." + C['car_plate'] + ",''), '[^0-9]', '', 'g') = $1)\n"
+    f"ORDER BY c.{C['car_entered_at']} DESC NULLS LAST\nLIMIT 8",
 )
 
-# هل السيارة داخلة بالفعل ولسه ما خرجتش؟
-_open = ", ".join(f"'{s}'" for s in QUEUE_OPEN_STATUSES)
+# مرشحون من طابور الفرع المفتوح فقط (لم تخرج بعد) — نطاق آمن وصغير
+# للمطابقة التقريبية عند فشل المطابقة الدقيقة (مثال: القارئ أسقط رقماً)
+Q_OPEN_QUEUE_PLATES = Q_FIND_CAR_EXACT.replace(
+    f"WHERE c.{C['car_plate_norm']} = $1\nORDER BY c.{C['car_entered_at']} DESC NULLS LAST\nLIMIT 1",
+    f"WHERE c.{C['car_branch_id']} = $1 AND c.{C['car_exited_at']} IS NULL\n"
+    f"ORDER BY c.{C['car_entered_at']} DESC NULLS LAST\nLIMIT 60",
+)
+
+# هل السيارة داخلة بالفعل ولسه ما خرجتش؟ (صف مفتوح = exited_at فاضي)
 Q_OPEN_QUEUE_FOR_CAR = f"""
-SELECT {C['q_id']} AS id, {C['q_status']} AS status, {C['q_entry_time']} AS entry_time
-FROM {T['queue']}
-WHERE {C['q_car_id']} = $1
-  AND {C['q_status']} IN ({_open})
-ORDER BY {C['q_entry_time']} DESC
+SELECT {C['car_id']} AS id, {C['car_work_status']} AS status, {C['car_entered_at']} AS entry_time
+FROM {T['cars']}
+WHERE {C['car_plate_norm']} = $1
+  AND {C['car_branch_id']} = $2
+  AND {C['car_exited_at']} IS NULL
+ORDER BY {C['car_entered_at']} DESC NULLS LAST
 LIMIT 1
 """
+
+# جلب company_id للفرع (مطلوب لإدراج صف السيارة الجديد)
+Q_BRANCH_COMPANY = "SELECT company_id FROM branches WHERE id = $1"
 
 # آخر فاتورة مكتملة لنفس السيارة
 _done = ", ".join(f"'{s}'" for s in INVOICE_DONE_STATUSES)
@@ -152,7 +158,7 @@ SELECT {C['inv_id']}       AS id,
        {C['inv_number']}   AS invoice_number,
        {C['inv_date']}     AS invoice_date,
        {C['inv_total']}    AS total,
-       {C['inv_odometer']} AS odometer
+       NULL::int           AS odometer
 FROM {T['invoices']}
 WHERE {C['inv_car_id']} = $1
   AND {C['inv_status']} IN ({_done})
@@ -186,7 +192,7 @@ ORDER BY i.{C['item_id']}
 # تاريخ الزيارات (لحساب معدل الاستهلاك وموعد التغيير القادم)
 Q_VISIT_HISTORY = f"""
 SELECT {C['inv_date']}     AS invoice_date,
-       {C['inv_odometer']} AS odometer,
+       NULL::int           AS odometer,
        {C['inv_total']}    AS total
 FROM {T['invoices']}
 WHERE {C['inv_car_id']} = $1
@@ -195,17 +201,29 @@ ORDER BY {C['inv_date']} DESC
 LIMIT 6
 """
 
-# تسجيل الدخول التلقائي في الطابور
+# ═══════════════════════════════════════════════════════════════════════
+# تسجيل الدخول التلقائي — صف سيارة جديد في cars (نفس منطق خط الخدمة بالحرف)
+# البيانات (ماركة/موديل/لون/هيكل) تُنسخ من آخر زيارة لنفس اللوحة إن وُجدت
+# ═══════════════════════════════════════════════════════════════════════
 Q_INSERT_QUEUE = f"""
-INSERT INTO {T['queue']} (
-    {C['q_car_id']}, {C['q_customer_id']}, {C['q_branch_id']},
-    {C['q_status']}, {C['q_station']}, {C['q_entry_time']},
-    {C['q_odometer']}, {C['q_notes']}
-) VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7)
-RETURNING {C['q_id']} AS id, {C['q_entry_time']} AS entry_time
+INSERT INTO {T['cars']} (
+    {C['car_company_id']}, {C['car_branch_id']}, {C['car_plate']},
+    {C['car_plate_type']}, {C['car_plate_norm']}, {C['car_plate_loose']},
+    {C['car_customer_id']}, {C['car_customer_name']}, {C['car_customer_phone']},
+    {C['car_brand']}, {C['car_model']}, {C['car_year']}, {C['car_color']},
+    {C['car_vin']}, {C['car_odometer']},
+    {C['car_station']}, {C['car_entered_at']}, {C['car_work_status']}
+) VALUES (
+    $1, $2, $3, 'saudi', $4, $5,
+    $6, $7, $8,
+    $9, $10, $11, $12,
+    $13, $14,
+    $15, NOW(), 'queued'
+)
+RETURNING {C['car_id']} AS id, {C['car_entered_at']} AS entry_time
 """
 
-# تحديث عداد السيارة
+# تحديث عداد السيارة (لو الموديول احتاجها لاحقاً على صف موجود)
 Q_UPDATE_CAR_ODOMETER = f"""
 UPDATE {T['cars']} SET {C['car_odometer']} = $2 WHERE {C['car_id']} = $1
 """
@@ -254,8 +272,9 @@ RETURNING id
 Q_GET_SCAN = "SELECT * FROM plate_scans WHERE id = $1"
 
 Q_GET_CAMERAS = """
-SELECT id, branch_id, name, rtsp_url, direction, is_active, capture_interval_sec
-FROM gate_cameras WHERE is_active = true
+SELECT id, branch_id, name, rtsp_url, station AS direction, is_active,
+       5 AS capture_interval_sec
+FROM station_cameras WHERE is_active = true
 """
 
 
@@ -271,13 +290,13 @@ WHERE table_schema = 'public' AND table_name = ANY($1::text[])
 # الأعمدة المطلوبة لكل جدول (للفحص)
 REQUIRED = {
     T["cars"]: [C["car_id"], C["car_plate"], C["car_plate_norm"], C["car_plate_loose"],
-                C["car_customer_id"], C["car_odometer"]],
+                C["car_customer_id"], C["car_odometer"], C["car_station"],
+                C["car_entered_at"], C["car_work_status"]],
     T["customers"]: [C["cust_id"], C["cust_name"], C["cust_phone"]],
     T["invoices"]: [C["inv_id"], C["inv_car_id"], C["inv_customer_id"],
                     C["inv_date"], C["inv_status"], C["inv_total"]],
     T["invoice_items"]: [C["item_invoice_id"], C["item_product_id"],
                          C["item_qty"], C["item_price"]],
     T["products"]: [C["prod_id"], C["prod_name"], C["prod_price"]],
-    T["queue"]: [C["q_id"], C["q_car_id"], C["q_status"], C["q_entry_time"]],
     "plate_scans": ["id", "plate_normalized", "status"],
 }

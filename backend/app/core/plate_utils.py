@@ -139,6 +139,25 @@ def letters_overlap(a: str, b: str) -> int:
     return count
 
 
+def _edit_distance(a: str, b: str) -> int:
+    """مسافة تحرير كلاسيكية (Levenshtein) — لحساب قرب رقمين مختلفين بالطول"""
+    n, m = len(a), len(b)
+    if n == 0:
+        return m
+    if m == 0:
+        return n
+    dp = list(range(m + 1))
+    for i in range(1, n + 1):
+        prev = dp[0]
+        dp[0] = i
+        for j in range(1, m + 1):
+            cur = dp[j]
+            cost = 0 if a[i - 1] == b[j - 1] else 1
+            dp[j] = min(dp[j] + 1, dp[j - 1] + 1, prev + cost)
+            prev = cur
+    return dp[m]
+
+
 def plate_similarity(p1: PlateKey, p2: PlateKey) -> float:
     """
     نسبة تشابه بين لوحتين من 0 إلى 1.
@@ -147,13 +166,16 @@ def plate_similarity(p1: PlateKey, p2: PlateKey) -> float:
     if not p1.canonical or not p2.canonical:
         return 0.0
 
-    # تشابه الأرقام
+    # تشابه الأرقام — يعتمد على مسافة التحرير وليس المطابقة الحرفية فقط،
+    # لأن القارئ أحياناً يُسقط رقماً واحداً (مثال حقيقي: "1288" تُقرأ "128")
+    # فطول الرقمين يختلف، والمقارنة القديمة كانت تُرجع صفراً في هذه الحالة تماماً.
     d1, d2 = p1.digits, p2.digits
-    if d1 == d2:
-        digit_score = 1.0
-    elif len(d1) == len(d2) and d1 and d2:
-        same = sum(1 for x, y in zip(d1, d2) if x == y)
-        digit_score = same / len(d1)
+    if d1 and d2:
+        if d1 == d2:
+            digit_score = 1.0
+        else:
+            dist = _edit_distance(d1, d2)
+            digit_score = max(0.0, 1 - dist / max(len(d1), len(d2)))
     else:
         digit_score = 0.0
 

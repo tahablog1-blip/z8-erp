@@ -112,6 +112,13 @@ export default function NoteDetailsPage() {
   useEffect(() => { const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [note?.messages.length]);
 
+  // ── إصلاح: رسائل العميل الجديدة تظهر تلقائياً (استطلاع كل 10 ثوانٍ) ──
+  useEffect(() => {
+    const t = setInterval(() => { load(); }, 10000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteId]);
+
   async function changeStatus(status: string) {
     if (busy) return; setBusy(true);
     try { await api(`/service-notes/${noteId}/status`, { method: "PUT", body: JSON.stringify({ status }) }); await load(); }

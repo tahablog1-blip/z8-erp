@@ -472,3 +472,72 @@ async def fetch_snapshot_url(body: SnapshotUrlIn,
     except Exception as e:
         raise HTTPException(502, f"تعذّر سحب اللقطة من الكاميرا: {e}")
     return {"image_base64": _b64.b64encode(data).decode()}
+
+
+# ═══ لقطة حية HTTP من أي كاميرا مسجلة — جسر للشاشات التي تطلب رابط صورة مباشر ═══
+from fastapi.responses import Response as _ImgResponse
+import time as _time
+_LIVE_CACHE: dict = {}
+
+
+@router.get("/public-live/{camera_id}.jpg")
+async def public_live_frame(camera_id: str):
+    row = await fetchrow(
+        "SELECT rtsp_url FROM station_cameras WHERE id=$1::uuid",
+        camera_id)
+    if not row:
+        raise HTTPException(404, "الكاميرا غير موجودة")
+    now = _time.time()
+    cached = _LIVE_CACHE.get(camera_id)
+    if cached and now - cached[0] < 2.0:
+        return _ImgResponse(content=cached[1], media_type="image/jpeg")
+    import cv2
+    cap = cv2.VideoCapture(row["rtsp_url"], cv2.CAP_FFMPEG)
+    try:
+        ok, frame = False, None
+        for _ in range(3):
+            ok, frame = cap.read()
+            if ok:
+                break
+    finally:
+        cap.release()
+    if not ok or frame is None:
+        raise HTTPException(502, "تعذر الالتقاط من الكاميرا")
+    ok, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+    data = buf.tobytes()
+    _LIVE_CACHE[camera_id] = (now, data)
+    return _ImgResponse(content=data, media_type="image/jpeg")
+
+
+
+# ═══ 🩺 فحص كل الكاميرات دفعة واحدة — بدون فتح كل كاميرا ═══
+from fastapi import Depends as _Dep
+from ...core.deps import CurrentUser as _CU, get_current_user as _gcu
+
+
+@router.post("/health-check")
+async def cameras_health_check(user: _CU = _Dep(_gcu)):
+    import asyncio
+    import cv2
+    rows = await fetch(
+        """SELECT id, name, rtsp_url FROM station_cameras
+           WHERE company_id=$1 AND is_active=TRUE ORDER BY station""",
+        user.company_id)
+
+    def _grab_ok(url: str) -> bool:
+        cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+        try:
+            ok, _ = cap.read()
+            return bool(ok)
+        finally:
+            cap.release()
+
+    out = []
+    for r in rows:
+        try:
+            ok = await asyncio.wait_for(asyncio.to_thread(_grab_ok, r["rtsp_url"]), timeout=8)
+        except Exception:
+            ok = False
+        out.append({"id": str(r["id"]), "name": r["name"], "ok": ok})
+    return {"cameras": out, "all_ok": bool(out) and all(c["ok"] for c in out)}
+

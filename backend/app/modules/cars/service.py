@@ -285,6 +285,27 @@ async def create_car(company_id: str, user_id: str, user_email: str, d: dict) ->
                             if retry:
                                 customer_id = str(retry["id"])
 
+            # ── قفل هوية السيارة: البيانات تُحفظ مرة واحدة والممشى وحده يتغير ──
+            # لو اللوحة مسجلة قبل كده لنفس العميل، الهوية المحفوظة (ماركة/موديل/
+            # سنة/لون/هيكل/فئة/سلندرات) هي المرجع مهما أُرسل في هذه الزيارة —
+            # يمنع أخطاء الكتابة من إفساد ملف السيارة الدائم.
+            if customer_id and plate:
+                saved_car = await conn.fetchrow(
+                    """SELECT brand, name, model_year, car_category, cylinders,
+                              color, chassis_number
+                       FROM customer_cars
+                       WHERE company_id=$1 AND customer_id=$2 AND plate=$3""",
+                    company_id, customer_id, plate)
+                if saved_car:
+                    _identity = (("brand", "brand"), ("name", "name"),
+                                 ("model_year", "modelYear"),
+                                 ("car_category", "carCategory"),
+                                 ("cylinders", "cylinders"), ("color", "color"),
+                                 ("chassis_number", "chassisNumber"))
+                    for _db_k, _in_k in _identity:
+                        if saved_car[_db_k]:
+                            d[_in_k] = saved_car[_db_k]
+
             row = await conn.fetchrow(
                 """INSERT INTO cars
                      (company_id, branch_id, plate, plate_type, name, model_year, brand, car_category,
@@ -311,13 +332,13 @@ async def create_car(company_id: str, user_id: str, user_email: str, d: dict) ->
                       car_category, cylinders, color, chassis_number, last_odometer)
                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
                    ON CONFLICT (customer_id, plate) DO UPDATE SET
-                     brand=COALESCE(EXCLUDED.brand, customer_cars.brand),
-                     name=COALESCE(EXCLUDED.name, customer_cars.name),
-                     model_year=COALESCE(EXCLUDED.model_year, customer_cars.model_year),
-                     car_category=COALESCE(EXCLUDED.car_category, customer_cars.car_category),
-                     cylinders=COALESCE(EXCLUDED.cylinders, customer_cars.cylinders),
-                     color=COALESCE(EXCLUDED.color, customer_cars.color),
-                     chassis_number=COALESCE(EXCLUDED.chassis_number, customer_cars.chassis_number),
+                     brand=COALESCE(customer_cars.brand, EXCLUDED.brand),
+                     name=COALESCE(customer_cars.name, EXCLUDED.name),
+                     model_year=COALESCE(customer_cars.model_year, EXCLUDED.model_year),
+                     car_category=COALESCE(customer_cars.car_category, EXCLUDED.car_category),
+                     cylinders=COALESCE(customer_cars.cylinders, EXCLUDED.cylinders),
+                     color=COALESCE(customer_cars.color, EXCLUDED.color),
+                     chassis_number=COALESCE(customer_cars.chassis_number, EXCLUDED.chassis_number),
                      last_odometer=COALESCE(EXCLUDED.last_odometer, customer_cars.last_odometer)""",
                 company_id, customer_id, plate, d.get("brand"), d.get("name"), d.get("modelYear"),
                 d.get("carCategory"), d.get("cylinders"), d.get("color"), d.get("chassisNumber"),
@@ -1094,13 +1115,13 @@ async def _upsert_garage(company_id: str, customer_id: str, plate: str, car: dic
               car_category, cylinders, color, chassis_number, service_type)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
            ON CONFLICT (customer_id, plate) DO UPDATE SET
-             brand=COALESCE(EXCLUDED.brand, customer_cars.brand),
-             name=COALESCE(EXCLUDED.name, customer_cars.name),
-             model_year=COALESCE(EXCLUDED.model_year, customer_cars.model_year),
-             car_category=COALESCE(EXCLUDED.car_category, customer_cars.car_category),
-             cylinders=COALESCE(EXCLUDED.cylinders, customer_cars.cylinders),
-             color=COALESCE(EXCLUDED.color, customer_cars.color),
-             chassis_number=COALESCE(EXCLUDED.chassis_number, customer_cars.chassis_number),
+             brand=COALESCE(customer_cars.brand, EXCLUDED.brand),
+             name=COALESCE(customer_cars.name, EXCLUDED.name),
+             model_year=COALESCE(customer_cars.model_year, EXCLUDED.model_year),
+             car_category=COALESCE(customer_cars.car_category, EXCLUDED.car_category),
+             cylinders=COALESCE(customer_cars.cylinders, EXCLUDED.cylinders),
+             color=COALESCE(customer_cars.color, EXCLUDED.color),
+             chassis_number=COALESCE(customer_cars.chassis_number, EXCLUDED.chassis_number),
              service_type=EXCLUDED.service_type""",
         company_id, customer_id, plate, car.get("brand"), car.get("carName"),
         car.get("modelYear"), car.get("carCategory"), car.get("cylinders"),

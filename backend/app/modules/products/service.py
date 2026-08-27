@@ -371,12 +371,22 @@ async def upsert_oil_brand(company_id: str, name: str, logo_b64: str | None,
     if not name:
         raise HTTPException(400, "اسم الشركة مطلوب")
     if brand_id:
+        # نمسك الاسم القديم قبل التعديل — لو الاسم اتغير لازم المنتجات المرتبطة
+        # (المخزنة بالاسم في عمود oil_brand) تتحدث معاه وإلا الربط بينفك.
+        old = await fetchrow(
+            "SELECT name FROM oil_brands WHERE id=$1 AND company_id=$2", brand_id, company_id)
+        if not old:
+            raise HTTPException(404, "الشركة غير موجودة")
         row = await fetchrow(
             """UPDATE oil_brands SET name=$1, logo_base64=COALESCE($2, logo_base64)
                WHERE id=$3 AND company_id=$4 RETURNING id, name, logo_base64, sort""",
             name, logo_b64, brand_id, company_id)
         if not row:
             raise HTTPException(404, "الشركة غير موجودة")
+        if old["name"] != name:
+            await execute(
+                "UPDATE products SET oil_brand=$1 WHERE company_id=$2 AND oil_brand=$3",
+                name, company_id, old["name"])
     else:
         row = await fetchrow(
             """INSERT INTO oil_brands (company_id, name, logo_base64)
@@ -703,3 +713,162 @@ async def auto_assign_brands(company_id: str, apply: bool) -> dict:
         "applied": apply,
         "byBrand": [{"brand": bn, "count": len(ids)} for bn, ids in sorted(plan.items(), key=lambda x: -len(x[1]))],
     }
+
+
+# ══════════════════ بوابة الحجز العامة — خريطة الأصناف الكاملة ══════════════════
+# نقاط عامة (بلا توكن) لصفحة حجز العميل: الأقسام كما هي في القاعدة + الخدمات،
+# ثم أصناف كل قسم عند فتحه. الصور بتتجاب في طلب منفصل عشان الاستجابة تفضل خفيفة
+# مهما كان عدد الأصناف.
+import base64 as _b64
+
+
+async def _public_branch_company(branch_id: str) -> str:
+    try:
+        row = await fetchrow("SELECT company_id FROM branches WHERE id = $1::uuid", branch_id)
+    except Exception:
+        row = None
+    if not row:
+        raise HTTPException(404, "الفرع غير موجود")
+    return str(row["company_id"])
+
+
+def _public_row(r) -> dict:
+    price = r["price_vat"]
+    if isinstance(price, Decimal):
+        price = float(price)
+    return {"id": str(r["id"]), "name": r["name"], "spec": r["spec"] or "",
+            "unit": r["unit"] or "", "price": price or 0, "hasImage": bool(r["has_image"])}
+
+
+async def public_catalog_overview(branch_id: str) -> dict:
+    company_id = await _public_branch_company(branch_id)
+    cats = await fetch(
+        """SELECT COALESCE(NULLIF(TRIM(category), ''), 'أخرى') AS cat, COUNT(*) AS cnt
+           FROM products
+           WHERE company_id = $1 AND is_active = TRUE AND is_service = FALSE
+           GROUP BY 1
+           ORDER BY cnt DESC, cat""",
+        company_id)
+    services = await fetch(
+        """SELECT id, name, spec, unit, price_vat,
+                  (image_base64 IS NOT NULL AND image_base64 <> '') AS has_image
+           FROM products
+           WHERE company_id = $1 AND is_active = TRUE AND is_service = TRUE
+           ORDER BY name, spec""",
+        company_id)
+    return {"categories": [{"name": r["cat"], "count": r["cnt"]} for r in cats],
+            "services": [_public_row(r) for r in services]}
+
+
+async def public_catalog_products(branch_id: str, category: str) -> dict:
+    company_id = await _public_branch_company(branch_id)
+    if category == "أخرى":
+        cond, params = "AND (category IS NULL OR TRIM(category) = '' OR category = 'أخرى')", [company_id]
+    else:
+        cond, params = "AND category = $2", [company_id, category]
+    rows = await fetch(
+        f"""SELECT id, name, spec, unit, price_vat,
+                   (image_base64 IS NOT NULL AND image_base64 <> '') AS has_image
+            FROM products
+            WHERE company_id = $1 AND is_active = TRUE AND is_service = FALSE {cond}
+            ORDER BY name, spec""",
+        *params)
+    return {"products": [_public_row(r) for r in rows]}
+
+
+async def public_product_image(product_id: str) -> dict | None:
+    try:
+        row = await fetchrow(
+            "SELECT image_base64 FROM products WHERE id = $1::uuid AND is_active = TRUE",
+            product_id)
+    except Exception:
+        return None
+    if not row:
+        return None
+    raw = row["image_base64"] or ""
+    if not raw:
+        return None
+    mime, b64 = "image/jpeg", raw
+    if raw.startswith("data:"):
+        head, _, b64 = raw.partition(",")
+        mime = head[5:].split(";")[0] or "image/jpeg"
+    try:
+        return {"bytes": _b64.b64decode(b64), "mime": mime}
+    except Exception:
+        return None
+
+
+async def public_booking_service(branch_id: str, brand: str, model: str, year: str) -> dict:
+    """حلّ خدمة تغيير الزيت المناسبة للسيارة: أدق قاعدة تسعير مطابقة
+    (ماركة+موديل+سنة > ماركة+موديل > ماركة > قاعدة عامة)، وإن لم توجد قواعد
+    نرجع لأقرب صنف خدمة اسمه يدل على تغيير الزيت — وإلا لا شيء."""
+    company_id = await _public_branch_company(branch_id)
+    yr = None
+    digits = "".join(ch for ch in (year or "") if ch.isdigit())
+    if len(digits) == 4:
+        yr = int(digits)
+
+    def _norm(s):
+        return (s or "").strip().lower()
+
+    b, m = _norm(brand), _norm(model)
+    rules = await fetch(
+        """SELECT r.service_product_id AS pid, r.price, r.brand, r.model,
+                  r.year_from, r.year_to, p.name
+           FROM service_price_rules r
+           JOIN products p ON p.id = r.service_product_id
+           WHERE r.company_id = $1 AND p.is_active = TRUE AND p.is_service = TRUE""",
+        company_id)
+
+    best, best_score = None, -1
+    for r in rules:
+        rb, rm = _norm(r["brand"]), _norm(r["model"])
+        if rb and not (b and (rb in b or b in rb)):
+            continue
+        if rm and not (m and (rm in m or m in rm)):
+            continue
+        if r["year_from"] is not None and (yr is None or yr < r["year_from"]):
+            continue
+        if r["year_to"] is not None and (yr is None or yr > r["year_to"]):
+            continue
+        score = (2 if rb else 0) + (2 if rm else 0) + (1 if (r["year_from"] is not None or r["year_to"] is not None) else 0)
+        if score > best_score:
+            best, best_score = r, score
+    if best:
+        price = best["price"]
+        return {"service": {"id": str(best["pid"]), "name": best["name"],
+                            "price": float(price) if isinstance(price, Decimal) else (price or 0)}}
+
+    row = await fetchrow(
+        """SELECT id, name, price_vat FROM products
+           WHERE company_id = $1 AND is_active = TRUE AND is_service = TRUE
+             AND (name ILIKE '%تغيير%زيت%' OR name ILIKE '%غيار%زيت%' OR name ILIKE '%زيت%')
+           ORDER BY (name ILIKE '%تغيير%زيت%') DESC,
+                    (name ILIKE '%غيار%زيت%') DESC, name
+           LIMIT 1""",
+        company_id)
+    if row:
+        pv = row["price_vat"]
+        return {"service": {"id": str(row["id"]), "name": row["name"],
+                            "price": float(pv) if isinstance(pv, Decimal) else (pv or 0)}}
+    return {"service": None}
+
+
+async def public_brand_logo(brand_id: str) -> dict | None:
+    try:
+        row = await fetchrow("SELECT logo_base64 FROM oil_brands WHERE id = $1::uuid", brand_id)
+    except Exception:
+        return None
+    if not row:
+        return None
+    raw = row["logo_base64"] or ""
+    if not raw:
+        return None
+    mime, b64 = "image/png", raw
+    if raw.startswith("data:"):
+        head, _, b64 = raw.partition(",")
+        mime = head[5:].split(";")[0] or "image/png"
+    try:
+        return {"bytes": _b64.b64decode(b64), "mime": mime}
+    except Exception:
+        return None

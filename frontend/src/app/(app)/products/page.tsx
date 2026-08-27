@@ -225,6 +225,7 @@ export default function ProductsPage() {
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
   const [brandBusy, setBrandBusy] = useState(false);
   const [brandErr, setBrandErr] = useState("");
+  const [brandEdit, setBrandEdit] = useState<OilBrand | null>(null); // الشركة الجاري تعديلها
   // تعيين المنتجات لشركة
   const [assignFor, setAssignFor] = useState<OilBrand | null>(null);
   const [assignSel, setAssignSel] = useState<Set<string>>(new Set());
@@ -276,14 +277,33 @@ export default function ProductsPage() {
   async function saveBrand() {
     setBrandErr(""); setBrandBusy(true);
     try {
-      await api("/products/oil-brands", {
-        method: "POST",
-        body: JSON.stringify({ name: brandName, logoBase64: brandLogo }),
-      });
+      if (brandEdit) {
+        // تعديل: لو مرفعتش شعار جديد (null) الباك اند بيحافظ على القديم،
+        // ولو الاسم اتغير المنتجات المرتبطة بتتحدث معاه تلقائياً.
+        await api(`/products/oil-brands/${brandEdit.id}`, {
+          method: "PUT",
+          body: JSON.stringify({ name: brandName, logoBase64: brandLogo }),
+        });
+        setBrandEdit(null);
+        await load(); // أسماء الشركات على المنتجات ممكن تكون اتغيرت
+      } else {
+        await api("/products/oil-brands", {
+          method: "POST",
+          body: JSON.stringify({ name: brandName, logoBase64: brandLogo }),
+        });
+      }
       setBrandName(""); setBrandLogo(null);
       await loadBrands();
     } catch (e: any) { setBrandErr(e.message); }
     finally { setBrandBusy(false); }
+  }
+
+  function startBrandEdit(b: OilBrand) {
+    setBrandEdit(b); setBrandName(b.name); setBrandLogo(null); setBrandErr("");
+  }
+
+  function cancelBrandEdit() {
+    setBrandEdit(null); setBrandName(""); setBrandLogo(null); setBrandErr("");
   }
 
   async function removeBrand(b: OilBrand) {
@@ -718,11 +738,21 @@ export default function ProductsPage() {
                             className="rounded-md bg-petrol px-2 py-1 text-[10.5px] font-bold text-white hover:brightness-110">
                       تعيين المنتجات
                     </button>
+                    <button onClick={() => startBrandEdit(b)}
+                            className="rounded-md border border-line px-2 py-1 text-[10.5px] font-bold hover:border-petrol">
+                      تعديل
+                    </button>
                     <button onClick={() => removeBrand(b)}
                             className="rounded-md px-2 py-1 text-[10.5px] font-bold text-ember hover:bg-ember-bg">حذف</button>
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+          {brandEdit && (
+            <div className="flex items-center justify-between rounded-lg bg-petrol/10 px-3 py-2 text-[11.5px] font-bold">
+              <span>✏ تعديل «{brandEdit.name}» — غيّر الاسم أو ارفع شعاراً جديداً (سيبه فاضي للاحتفاظ بالحالي)</span>
+              <button onClick={cancelBrandEdit} className="font-black text-ember">إلغاء</button>
             </div>
           )}
           <div className="grid gap-2 rounded-xl border border-dashed border-line p-3 sm:grid-cols-[1fr_auto_auto]">
@@ -738,7 +768,7 @@ export default function ProductsPage() {
                      }} />
             </label>
             <Button onClick={saveBrand} disabled={brandBusy || !brandName.trim()}>
-              {brandBusy ? "..." : "+ إضافة"}
+              {brandBusy ? "..." : brandEdit ? "حفظ التعديل" : "+ إضافة"}
             </Button>
           </div>
           <ErrorNote msg={brandErr} />

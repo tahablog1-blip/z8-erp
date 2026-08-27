@@ -752,6 +752,57 @@ export default function CarsPage() {
     router.push("/sales");
   }
 
+  // ══════════ 🎛 مفتاح البوابة الذكية (المراقب الخلفي) — تشغيل/إيقاف بضغطة ══════════
+  const [gateSwOn, setGateSwOn] = useState<boolean | null>(null);
+  const [gateSwRunning, setGateSwRunning] = useState(false);
+  const [gateSwBusy, setGateSwBusy] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      api<{ enabled: boolean; running: boolean }>("/auto-checkin/watcher-status")
+        .then((r) => { if (alive) { setGateSwOn(r.enabled); setGateSwRunning(r.running); } })
+        .catch(() => { if (alive) setGateSwOn(null); });
+    load();
+    const t = setInterval(load, 15000);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
+
+  async function toggleGateSw() {
+    if (gateSwOn === null || gateSwBusy) return;
+    setGateSwBusy(true);
+    try {
+      const r = await api<{ enabled: boolean; running: boolean }>(
+        `/auto-checkin/watcher-toggle?enabled=${!gateSwOn}`, { method: "POST" });
+      setGateSwOn(r.enabled); setGateSwRunning(r.running);
+    } catch { /* تجاهل */ }
+    finally { setGateSwBusy(false); }
+  }
+
+  // ── لوحة الكاميرات: مفتاح مستقل لكل كاميرا + مؤشر حالة حي ──
+  const [gateSwPanel, setGateSwPanel] = useState(false);
+  const [gateCamsStatus, setGateCamsStatus] = useState<
+    { id: string; name: string; is_active: boolean; ok: boolean | null; last: string }[]>([]);
+
+  const loadCamsStatus = () =>
+    api<{ cameras: any[] }>("/auto-checkin/cameras-status")
+      .then((r) => setGateCamsStatus(r.cameras))
+      .catch(() => {});
+
+  useEffect(() => {
+    if (!gateSwPanel) return;
+    loadCamsStatus();
+    const t = setInterval(loadCamsStatus, 8000);
+    return () => clearInterval(t);
+  }, [gateSwPanel]);
+
+  async function toggleCam(camId: string, enabled: boolean) {
+    try {
+      await api(`/auto-checkin/camera-toggle?camera_id=${camId}&enabled=${enabled}`, { method: "POST" });
+      setGateCamsStatus((l) => l.map((c) => (c.id === camId ? { ...c, is_active: enabled } : c)));
+    } catch { /* تجاهل */ }
+  }
+
   // ══════════ البوابة الحية (ANPR تلقائي بالكامل) ══════════
   // خط المعالجة: كشف حركة محلي → انتظار الثبات → قراءة ذكية للقطة واحدة → مطابقة وتأكيد → تهدئة
   const [liveOpen, setLiveOpen] = useState(false);
@@ -1144,6 +1195,29 @@ export default function CarsPage() {
     const R = liveRefs.current;
     R.mode = mode;
     R.camUrl = (urlOverride ?? ipCamUrl).trim();
+    // ═══ حماية جذرية v2: أي رابط RTSP (محفوظ قديم / زر / يدوي) يُترجم فوراً
+    //     لجسر الباك اند — مع جلب قائمة الكاميرات لحظياً لو لم تكن محمّلة ═══
+    liveAddLog("نسخة الواجهة: bridge-v2", "info");
+    if (R.camUrl.toLowerCase().startsWith("rtsp://")) {
+      let cam = gateCams.find((c) => (c.rtsp_url || "").trim() === R.camUrl);
+      if (!cam) {
+        try {
+          const list = await api<{ id: string; rtsp_url: string }[]>("/cameras");
+          cam = (list || []).find((c) => (c.rtsp_url || "").trim() === R.camUrl) as any;
+        } catch { /* هنتعامل تحت */ }
+      }
+      if (cam) {
+        R.camUrl = `${window.location.origin}/api/cameras/public-live/${cam.id}.jpg`;
+        localStorage.setItem("z8_gate_cam_url", R.camUrl);
+        setIpCamUrl(R.camUrl);
+        liveAddLog("↻ رابط RTSP اتحوّل تلقائياً لجسر الخادم", "info");
+      } else {
+        localStorage.removeItem("z8_gate_cam_url");
+        setLiveStatus("error");
+        setLiveErr("روابط RTSP لا تعمل من المتصفح — افتح «تغيير مصدر الكاميرا» واختر الكاميرا من القائمة الخضراء");
+        return;
+      }
+    }
     try {
       if (mode === "device") {
         if (!navigator.mediaDevices?.getUserMedia) {
@@ -1683,11 +1757,62 @@ export default function CarsPage() {
                     style={{ borderColor: UI.border }}>
               <MIcon name="qr_code_2" className="!text-[17px]" /> باركود الحجز
             </button>
-            <button onClick={openLive}
-                    className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[12.5px] font-bold text-white shadow-sm transition-all duration-200 hover:-translate-y-px hover:brightness-110"
-                    style={{ background: UI.success }}>
-              <MIcon name="videocam" className="!text-[17px] text-white" /> البوابة الحية
-            </button>
+            {/* 🎛 البوابة الذكية — لوحة بمفتاح مستقل لكل كاميرا */}
+            <div className="relative">
+              <button onClick={() => setGateSwPanel((v) => !v)}
+                      className="flex items-center gap-2 rounded-xl border bg-white px-3.5 py-2 shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md"
+                      style={{ borderColor: UI.border }}>
+                <span className={`inline-block h-2.5 w-2.5 rounded-full ${gateSwOn && gateSwRunning ? "animate-pulse" : ""}`}
+                      style={{ background: gateSwOn === null ? "#CBD5E1" : gateSwOn ? UI.success : "#DC2626" }} />
+                <span className="text-[12.5px] font-bold text-slate-700">البوابة الذكية</span>
+                <MIcon name={gateSwPanel ? "expand_less" : "expand_more"} className="!text-[17px]" />
+              </button>
+
+              {gateSwPanel && (
+                <div className="absolute left-0 top-full z-30 mt-2 w-80 rounded-2xl border bg-white p-3 shadow-xl"
+                     style={{ borderColor: UI.border }}>
+                  {/* المفتاح الرئيسي */}
+                  <div className="flex items-center justify-between rounded-xl px-3 py-2.5"
+                       style={{ background: "#F6F8FA" }}>
+                    <span className="text-[12.5px] font-black text-slate-800">المراقب التلقائي (الكل)</span>
+                    <button onClick={toggleGateSw} disabled={gateSwOn === null || gateSwBusy}
+                            className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50"
+                            style={{ background: gateSwOn ? UI.success : "#CBD5E1" }}>
+                      <span className="absolute h-5 w-5 rounded-full bg-white shadow transition-all"
+                            style={{ right: gateSwOn ? "2px" : "22px" }} />
+                    </button>
+                  </div>
+
+                  {/* مفتاح مستقل لكل كاميرا + مؤشر حي */}
+                  <div className="mt-2 space-y-1.5">
+                    {gateCamsStatus.length === 0 && (
+                      <p className="py-2 text-center text-[11.5px] font-bold text-slate-400">جارِ تحميل الكاميرات...</p>
+                    )}
+                    {gateCamsStatus.map((c) => (
+                      <div key={c.id} className="flex items-center justify-between rounded-xl border px-3 py-2"
+                           style={{ borderColor: UI.border }}>
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="inline-block h-2 w-2 shrink-0 rounded-full"
+                                style={{ background: !c.is_active ? "#CBD5E1" : c.ok === null ? "#F59E0B" : c.ok ? UI.success : "#DC2626" }}
+                                title={!c.is_active ? "موقوفة" : c.ok === null ? "بانتظار أول التقاط" : c.ok ? "تلتقط بنجاح" : "لا تستجيب"} />
+                          <span className="truncate text-[12px] font-bold text-slate-700">{c.name}</span>
+                          {c.last && <span className="tnum shrink-0 text-[10px] text-slate-400">{c.last}</span>}
+                        </span>
+                        <button onClick={() => toggleCam(c.id, !c.is_active)}
+                                className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
+                                style={{ background: c.is_active ? UI.success : "#CBD5E1" }}>
+                          <span className="absolute h-5 w-5 rounded-full bg-white shadow transition-all"
+                                style={{ right: c.is_active ? "2px" : "22px" }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-center text-[10px] font-bold text-slate-400">
+                    🟢 تلتقط · 🔴 لا تستجيب · 🟠 بانتظار أول التقاط · ⚪ موقوفة
+                  </p>
+                </div>
+              )}
+            </div>
             <button onClick={() => { setGateOpen(true); setGateResult(null); setGateMsg(""); }}
                     className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[12.5px] font-bold text-white shadow-sm transition-all duration-200 hover:-translate-y-px hover:brightness-110"
                     style={{ background: UI.primary }}>
@@ -2389,8 +2514,12 @@ export default function CarsPage() {
                         <button key={c.id}
                                 onClick={() => {
                                   const u = c.rtsp_url.trim();
-                                  const shot = u.startsWith("http") && !u.includes("shot.jpg")
-                                    ? u.replace(/\/+$/, "") + "/shot.jpg" : u;
+                                  // كاميرا RTSP (Hikvision): المتصفح لا يفهم RTSP —
+                                  // نمر عبر جسر الباك اند الذي يجلب لقطة حية متجددة
+                                  const shot = u.toLowerCase().startsWith("rtsp://")
+                                    ? `${window.location.origin}/api/cameras/public-live/${c.id}.jpg`
+                                    : (u.startsWith("http") && !u.includes("shot.jpg")
+                                        ? u.replace(/\/+$/, "") + "/shot.jpg" : u);
                                   setIpCamUrl(shot);
                                   startLive("ip", shot);
                                 }}

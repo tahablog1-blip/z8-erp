@@ -76,6 +76,43 @@ export function Shell({ children }: { children: React.ReactNode }) {
     });
   }
 
+  // ── 💬 عداد الرسائل غير المقروءة (رسائل العملاء) — استطلاع كل 15 ثانية ──
+  //    شارة خضراء على "المحادثات" + إشعار متصفح + عداد في عنوان التبويب
+  const [unread, setUnread] = useState(0);
+  const canChats = hasPerm("service_notes.view", "service_notes.create", "service_notes.manage");
+  useEffect(() => {
+    if (!canChats) return;
+    let last = -1;
+    let alive = true;
+    async function poll() {
+      try {
+        const r = await api<{ unread: number }>("/service-notes/unread-count");
+        if (!alive) return;
+        setUnread(r.unread);
+        // إشعار متصفح عند وصول رسائل جديدة (زيادة العدد)
+        if (last >= 0 && r.unread > last && typeof Notification !== "undefined") {
+          if (Notification.permission === "default") await Notification.requestPermission();
+          if (Notification.permission === "granted") {
+            new Notification("💬 رسالة جديدة من عميل", {
+              body: `لديك ${r.unread} رسالة غير مقروءة — افتح المحادثات`,
+              tag: "z8-chat",
+            });
+          }
+        }
+        last = r.unread;
+      } catch { /* الخادم غير متاح مؤقتاً */ }
+    }
+    poll();
+    const t = setInterval(poll, 15000);
+    return () => { alive = false; clearInterval(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canChats]);
+  // عداد في عنوان التبويب — يبان حتى والموظف في شاشة تانية
+  useEffect(() => {
+    const base = document.title.replace(/^\(\d+\) /, "");
+    document.title = unread > 0 ? `(${unread}) ${base}` : base;
+  }, [unread]);
+
   // الفلترة: adminOnly = لمدير النظام وحده؛ غير كده الصلاحيات هي الحكم
   const isAdmin = user?.role === "admin";
   const visible = NAV_MODULES.filter((m) => {
@@ -144,7 +181,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
                               ${sec !== "الرئيسية" ? "pr-6" : ""}
                               ${active ? "m3 rounded-full bg-white/[0.22] font-black text-white" : "m3 rounded-full text-white/70 hover:text-white"}`}>
                         <NavIcon name={m.icon} />
-                        {t(NAV_TITLE_KEYS[m.title] || "", m.title)}
+                        <span className="flex-1">{t(NAV_TITLE_KEYS[m.title] || "", m.title)}</span>
+                        {m.path === "/service-notes" && unread > 0 && (
+                          <span className="grid h-5 min-w-5 place-items-center rounded-full bg-emerald px-1.5 text-[10.5px] font-black text-white">
+                            {unread > 99 ? "99+" : unread}
+                          </span>
+                        )}
                       </Link>
                     );
                   })}

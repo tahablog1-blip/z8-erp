@@ -284,3 +284,47 @@ async def oil_brands_auto_assign(body: AutoAssignIn,
                                  user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
     """توزيع الزيوت على شركاتها تلقائياً — معاينة (apply=false) ثم تطبيق"""
     return await service.auto_assign_brands(user.company_id, body.apply)
+
+
+# ══════════════════ بوابة الحجز العامة — خريطة الأصناف الكاملة (بلا تسجيل دخول) ══════════════════
+# نفس فلسفة /api/cars/public: نقاط قراءة فقط، مقيدة بفرع حقيقي في القاعدة،
+# ولا تكشف غير ما يظهر أصلاً لعميل واقف في الفرع (الاسم والمواصفة والسعر شامل الضريبة).
+from fastapi import Response as _Response
+
+
+@router.get("/public/booking-catalog/{branch_id}")
+async def public_booking_catalog(branch_id: str, category: str | None = Query(default=None)):
+    """بدون category: قائمة الأقسام + الخدمات. مع category: أصناف القسم نفسه."""
+    if category is None:
+        return await service.public_catalog_overview(branch_id)
+    return await service.public_catalog_products(branch_id, category)
+
+
+@router.get("/public/product-image/{product_id}")
+async def public_product_image(product_id: str):
+    """صورة الصنف المخزنة في القاعدة — للعرض في صفحة الحجز"""
+    img = await service.public_product_image(product_id)
+    if not img:
+        raise HTTPException(404, "لا توجد صورة")
+    return _Response(content=img["bytes"], media_type=img["mime"],
+                     headers={"Cache-Control": "public, max-age=86400"})
+
+
+@router.get("/public/booking-service/{branch_id}")
+async def public_booking_service(branch_id: str,
+                                 brand: str = Query(default=""),
+                                 model: str = Query(default=""),
+                                 year: str = Query(default="")):
+    """خدمة تغيير الزيت للسيارة دي تحديداً — تُضاف تلقائياً في الحجز مع اختيار الزيت.
+    التسعير من قواعد service_price_rules (ماركة/موديل/سنة)، وإلا أقرب صنف خدمة زيت."""
+    return await service.public_booking_service(branch_id, brand, model, year)
+
+
+@router.get("/public/brand-logo/{brand_id}")
+async def public_brand_logo(brand_id: str):
+    """شعار شركة الزيت — لكروت الشركات في صفحة الحجز"""
+    img = await service.public_brand_logo(brand_id)
+    if not img:
+        raise HTTPException(404, "لا يوجد شعار")
+    return _Response(content=img["bytes"], media_type=img["mime"],
+                     headers={"Cache-Control": "public, max-age=86400"})

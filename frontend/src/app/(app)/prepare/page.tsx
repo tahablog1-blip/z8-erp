@@ -40,6 +40,12 @@ export default function PreparePage() {
   const [saving, setSaving] = useState(false);
   const [approvalPin, setApprovalPin] = useState("");
   const [noteOpen, setNoteOpen] = useState(false);
+  // 🛢 كمية الزيت المعتمدة لموديل السيارة — تُدخل مرة وتثبت للموديل كله
+  const [oil, setOil] = useState<{ oilQty: number | null; oilType: string; brand?: string; model?: string; modelYear?: string } | null>(null);
+  const [oilOpen, setOilOpen] = useState(false);
+  const [oilQtyIn, setOilQtyIn] = useState("");
+  const [oilTypeIn, setOilTypeIn] = useState("");
+  const [oilBusy, setOilBusy] = useState(false);
   const [err, setErr] = useState("");
   const [okMsg, setOkMsg] = useState("");
   const loadedCarRef = useRef<string | null>(null);
@@ -75,7 +81,33 @@ export default function PreparePage() {
     setOdometer(active.odometer_current != null ? String(active.odometer_current) : "");
     setNotes(active.notes || "");
     setErr(""); setOkMsg(""); setSearch("");
+    // 🛢 كمية الزيت المعتمدة لموديل السيارة دي
+    setOil(null); setOilOpen(false);
+    api<{ oilQty: number | null; oilType: string; brand?: string; model?: string; modelYear?: string }>(
+      `/cars/oil/by-car/${active.id}`).then((r) => {
+        setOil(r);
+        setOilQtyIn(r.oilQty != null ? String(r.oilQty) : "");
+        setOilTypeIn(r.oilType || "");
+      }).catch(() => {});
   }, [active]);
+
+  // 🛢 حفظ كمية الزيت — تثبت تلقائياً لكل سيارة بنفس الماركة/الموديل/السنة
+  async function saveOil() {
+    if (!active) return;
+    const q = Number(oilQtyIn);
+    if (!q || q <= 0 || q > 30) { setErr("أدخل كمية زيت صحيحة بين 0.5 و30 لتر"); return; }
+    setOilBusy(true); setErr("");
+    try {
+      await api(`/cars/oil/by-car/${active.id}`, {
+        method: "PUT",
+        body: JSON.stringify({ oilQty: q, oilType: oilTypeIn.trim() }),
+      });
+      setOil((o) => ({ ...(o || {}), oilQty: q, oilType: oilTypeIn.trim() }));
+      setOilOpen(false);
+      setOkMsg(`🛢 ثُبّتت الكمية (${q} لتر) لكل ${[oil?.brand, oil?.model, oil?.modelYear].filter(Boolean).join(" ")}`);
+    } catch (e) { setErr(e instanceof Error ? e.message : "تعذر الحفظ"); }
+    finally { setOilBusy(false); }
+  }
 
   const results = useMemo(() => {
     const q = search.trim();
@@ -228,10 +260,42 @@ export default function PreparePage() {
                     {[active.brand, active.name, active.model_year].filter(Boolean).join(" ") || "سيارة بدون بيانات"}
                   </div>
                 </div>
-                <Badge tone={(STATUS_META[active.work_status || "queued"] || STATUS_META.queued).tone}>
-                  {(STATUS_META[active.work_status || "queued"] || STATUS_META.queued).label}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  {/* 🛢 كمية الزيت المعتمدة للموديل — ضغطة للتحديد/التعديل */}
+                  <button onClick={() => setOilOpen((v) => !v)}
+                          className={`rounded-full px-3.5 py-1.5 text-[12px] font-black transition
+                            ${oil?.oilQty != null ? "bg-emerald text-white" : "border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol"}`}>
+                    {oil?.oilQty != null ? `🛢 ${oil.oilQty} لتر${oil.oilType ? ` · ${oil.oilType}` : ""}` : "🛢 حدد كمية الزيت"}
+                  </button>
+                  <Badge tone={(STATUS_META[active.work_status || "queued"] || STATUS_META.queued).tone}>
+                    {(STATUS_META[active.work_status || "queued"] || STATUS_META.queued).label}
+                  </Badge>
+                </div>
               </div>
+
+              {/* 🛢 نموذج كمية الزيت — تُدخل مرة واحدة وتثبت للموديل كله وتظهر للعميل */}
+              {oilOpen && (
+                <div className="rounded-xl border border-line bg-ink-3 p-3">
+                  <p className="mb-2 text-[11.5px] font-bold text-text-dim">
+                    الكمية تُحفظ لكل سيارة بنفس ({[oil?.brand, oil?.model, oil?.modelYear].filter(Boolean).join(" ") || "الماركة/الموديل/السنة"}) وتظهر للعميل في صفحة الحجز تلقائياً
+                  </p>
+                  <div className="flex flex-wrap items-end gap-2">
+                    <Field label="الكمية باللتر *">
+                      <Input className="w-28 text-center tnum" inputMode="decimal" placeholder="5.5"
+                             value={oilQtyIn}
+                             onChange={(e) => setOilQtyIn(e.target.value.replace(/[^0-9.]/g, ""))} />
+                    </Field>
+                    <Field label="نوع الزيت (اختياري)">
+                      <Input className="w-52" placeholder="مثال: 5W-30 تخليقي"
+                             value={oilTypeIn} onChange={(e) => setOilTypeIn(e.target.value)} />
+                    </Field>
+                    <Button disabled={oilBusy || !oilQtyIn.trim()} onClick={saveOil}>
+                      {oilBusy ? "جارٍ الحفظ…" : "✓ حفظ وتثبيت للموديل"}
+                    </Button>
+                    <Button variant="ghost" onClick={() => setOilOpen(false)}>إغلاق</Button>
+                  </div>
+                </div>
+              )}
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="الممشى الحالي (كم)">
@@ -335,6 +399,7 @@ export default function PreparePage() {
               )}
 
               {err && <ErrorNote msg={err} />}
+              {okMsg && <p className="rounded-lg bg-emerald-bg px-3 py-2 text-[12.5px] font-bold text-emerald">{okMsg}</p>}
 
               {/* ══ شريط الإجراءات السفلي — التحكم الكامل ══ */}
               <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-ink-3 p-3">
