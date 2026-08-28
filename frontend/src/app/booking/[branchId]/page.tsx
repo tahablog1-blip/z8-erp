@@ -808,22 +808,28 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
               const active = sel.oil?.id === o.id;
               return (
                 <button key={o.id} onClick={() => setSel({ ...sel, oil: o, fromInvoice: null })}
-                        className="flex items-center gap-3 rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
+                        className="flex flex-col gap-2 rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
                         style={{ borderColor: active ? GREEN : LINE, background: active ? "rgba(22,163,74,.06)" : "#fff" }}>
-                  {o.image
-                    ? <img src={o.image} alt="" className="h-12 w-12 shrink-0 rounded-lg object-contain" style={{ background: "#F6F8FA" }} />
-                    : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg text-[22px]" style={{ background: "#F6F8FA" }}>🛢</span>}
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-black" style={{ color: NAVY }}>{o.name}</span>
-                    <span className="text-[10.5px] font-bold" style={{ color: DIM }}>
-                      {[o.brand, o.spec, o.unit].filter(Boolean).join(" · ")}
+                  {/* الصف العلوي: الصورة + الاسم كاملاً بلا قطع (يلف على أكثر من سطر) */}
+                  <span className="flex w-full items-start gap-3">
+                    {o.image
+                      ? <img src={o.image} alt="" className="h-12 w-12 shrink-0 rounded-lg object-contain" style={{ background: "#F6F8FA" }} />
+                      : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg text-[22px]" style={{ background: "#F6F8FA" }}>🛢</span>}
+                    <span className="min-w-0 flex-1">
+                      {/* بلا truncate: الاسم يظهر كاملاً حتى لو طال، يلف على سطرين+ */}
+                      <span className="block text-[13px] font-black leading-snug" style={{ color: NAVY }}>{o.name}</span>
+                      <span className="text-[10.5px] font-bold" style={{ color: DIM }}>
+                        {[o.brand, o.spec, o.unit].filter(Boolean).join(" · ")}
+                      </span>
                     </span>
+                    {active && <MIcon name="check_circle" filled className="!text-[20px] shrink-0" />}
                   </span>
-                  <span className="shrink-0 text-left">
-                    <span className="tnum block text-[14px] font-black" style={{ color: GREEN }}>{money(o.price)}</span>
-                    <span className="text-[9.5px] font-bold" style={{ color: DIM }}>ر.س شامل الضريبة</span>
+                  {/* الصف السفلي: السعر بشارة بارزة بعرض كامل — لا يفوته أحد أثناء المرور السريع */}
+                  <span className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5"
+                        style={{ background: "rgba(22,163,74,.08)" }}>
+                    <span className="text-[9.5px] font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
+                    <span className="tnum text-[15px] font-black" style={{ color: GREEN }}>{money(o.price)} ر.س</span>
                   </span>
-                  {active && <MIcon name="check_circle" filled className="!text-[20px]" />}
                 </button>
               );
             })}
@@ -906,15 +912,21 @@ function FilterPicker({ branchId, sel, setSel, onNext, onBack }: {
               const active = sel.filter?.id === f.id;
               return (
                 <button key={f.id} onClick={() => setSel({ ...sel, filter: f })}
-                        className="flex items-center gap-3 rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
+                        className="flex flex-col gap-2 rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
                         style={{ borderColor: active ? GREEN : LINE, background: active ? "rgba(22,163,74,.06)" : "#fff" }}>
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-[18px]" style={{ background: "#F6F8FA" }}>⭕</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-black" style={{ color: NAVY }}>{f.name}</span>
-                    {f.spec && <span className="tnum text-[10.5px] font-bold" style={{ color: DIM }}>{f.spec}</span>}
+                  <span className="flex w-full items-start gap-3">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-[18px]" style={{ background: "#F6F8FA" }}>⭕</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-black leading-snug" style={{ color: NAVY }}>{f.name}</span>
+                      {f.spec && <span className="tnum text-[10.5px] font-bold" style={{ color: DIM }}>{f.spec}</span>}
+                    </span>
+                    {active && <MIcon name="check_circle" filled className="!text-[18px] shrink-0" />}
                   </span>
-                  <span className="tnum shrink-0 text-[13.5px] font-black" style={{ color: GREEN }}>{money(f.price)}</span>
-                  {active && <MIcon name="check_circle" filled className="!text-[18px]" />}
+                  <span className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5"
+                        style={{ background: "rgba(22,163,74,.08)" }}>
+                    <span className="text-[9.5px] font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
+                    <span className="tnum text-[14px] font-black" style={{ color: GREEN }}>{money(f.price)} ر.س</span>
+                  </span>
                 </button>
               );
             })}
@@ -1059,7 +1071,7 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
                            className="h-12 w-12 shrink-0 rounded-lg object-contain" style={{ background: "#F6F8FA" }} />
                     : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg text-[20px]" style={{ background: "#F6F8FA" }}>{catIcon(pick)}</span>}
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-black" style={{ color: NAVY }}>{p.name}</span>
+                    <span className="block text-[13px] font-black leading-snug" style={{ color: NAVY }}>{p.name}</span>
                     <span className="text-[10.5px] font-bold" style={{ color: DIM }}>
                       {[p.spec, p.unit].filter(Boolean).join(" · ")}
                     </span>
