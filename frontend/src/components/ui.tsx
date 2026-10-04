@@ -5,16 +5,24 @@ import {
   SelectHTMLAttributes, TextareaHTMLAttributes,
 } from "react";
 
-export function Button({ variant = "primary", className = "", ...props }:
-  ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "ghost" | "danger" }) {
+export function Button({ variant = "primary", size = "md", className = "", ...props }:
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    variant?: "primary" | "ghost" | "danger" | "tool";
+    size?: "md" | "sm";
+  }) {
   // Material 3: شكل stadium + طبقة حالة بدل القفزات + تموّج لمس
-  const base = "m3 inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-[13px] font-bold transition-shadow duration-200 disabled:opacity-45 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-petrol";
+  const base = "m3 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-bold transition-all duration-200 disabled:opacity-45 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-petrol";
+  const sizes = {
+    md: "px-5 py-2.5 text-[13px]",
+    sm: "px-3.5 py-2 text-[12px]",
+  }[size];
   const styles = {
     primary: "bg-petrol text-white elev-1 hover:elev-2",
     ghost:   "border border-line bg-ink-2 text-petrol hover:border-petrol",
     danger:  "border border-ember/40 bg-ember-bg text-ember hover:bg-ember hover:text-white",
+    tool:    "border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol",
   }[variant];
-  return <button className={`${base} ${styles} ${className}`} {...props} />;
+  return <button className={`${base} ${sizes} ${styles} ${className}`} {...props} />;
 }
 
 export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
