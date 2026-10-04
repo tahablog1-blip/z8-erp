@@ -13,13 +13,21 @@ export type Product = {
   price_vat: number;
   cost_price: number;
   min_qty: number;
+  stock_qty?: number | null;
   service_interval_km: number | null;
   is_service: boolean;
   is_oil: boolean;
   is_oil_filter: boolean;
+  is_active: boolean;
   oil_brand: string | null;
+  oil_type: string | null;
+  filter_kind: string | null;
+  brand: string | null;
+  model: string | null;
+  year_from: number | null;
+  year_to: number | null;
+  counts?: Record<string, number> | null;
 };
-
 /** وصف الصنف الكامل بسطر واحد — نفس الصيغة المخزّنة في السندات والفواتير */
 export function productLabel(p: Pick<Product, "category" | "name" | "spec">) {
   return [p.category, p.name, p.spec].filter(Boolean).join(" — ");
