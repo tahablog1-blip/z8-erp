@@ -1,5 +1,5 @@
 "use client";
-// components/ui.tsx — لبنات الواجهة الأساسية بهوية Z8 (بترولي/عنبري، نهاري أولاً)
+// components/ui.tsx — لبنات الواجهة الأساسية بهوية Z8
 import {
   ReactNode, InputHTMLAttributes, ButtonHTMLAttributes,
   SelectHTMLAttributes, TextareaHTMLAttributes,
@@ -8,18 +8,18 @@ import {
 export function Button({ variant = "primary", size = "md", className = "", ...props }:
   ButtonHTMLAttributes<HTMLButtonElement> & {
     variant?: "primary" | "ghost" | "danger" | "tool";
-    size?: "md" | "sm";
+    size?: "md" | "sm" | "xs";
   }) {
-  // Material 3: شكل stadium + طبقة حالة بدل القفزات + تموّج لمس
-  const base = "m3 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-bold transition-all duration-200 disabled:opacity-45 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-petrol";
+  const base = "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg font-semibold transition-colors duration-150 disabled:opacity-45 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-petrol";
   const sizes = {
-    md: "px-5 py-2.5 text-[13px]",
-    sm: "px-3.5 py-2 text-[12px]",
+    md: "px-4 py-2 text-[13px]",
+    sm: "px-3 py-1.5 text-[12px]",
+    xs: "px-2 py-1 text-[11px]",
   }[size];
   const styles = {
-    primary: "bg-petrol text-white elev-1 hover:elev-2",
+    primary: "bg-petrol text-white hover:brightness-110",
     ghost:   "border border-line bg-ink-2 text-petrol hover:border-petrol",
-    danger:  "border border-ember/40 bg-ember-bg text-ember hover:bg-ember hover:text-white",
+    danger:  "border border-ember/30 bg-ember-bg text-ember hover:bg-ember hover:text-white",
     tool:    "border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol",
   }[variant];
   return <button className={`${base} ${sizes} ${styles} ${className}`} {...props} />;
@@ -69,7 +69,6 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
   return <div className={`rounded-card border border-line bg-ink-2 p-5 shadow-card transition-shadow duration-200 ${className}`}>{children}</div>;
 }
 
-/** شارة حالة صغيرة — نفس ألوان الحالات في كل الجداول */
 export function Badge({ tone = "neutral", children }:
   { tone?: "neutral" | "good" | "warn" | "info"; children: ReactNode }) {
   const styles = {
@@ -81,7 +80,6 @@ export function Badge({ tone = "neutral", children }:
   return <span className={`inline-block rounded-full px-2.5 py-1 text-[11px] font-bold ${styles}`}>{children}</span>;
 }
 
-/** تبويبات داخل الشاشة — شاشة المخزون بتفصل أقسامها بيها بدل صفحات منفصلة */
 export function Tabs<T extends string>({ value, onChange, items }:
   { value: T; onChange: (v: T) => void; items: { key: T; label: string }[] }) {
   return (
