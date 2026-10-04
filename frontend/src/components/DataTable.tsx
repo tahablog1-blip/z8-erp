@@ -5,7 +5,7 @@ import { ReactNode, useMemo, useState } from "react";
 
 export type Column<T> = {
   key: string;
-  title: string;
+  title: ReactNode;   // نص عادي أو عنصر (مثال: چكبوكس "تحديد الكل" في هيدر عمود التحديد)
   render?: (row: T) => ReactNode;   // بدون render → عرض القيمة النصية للحقل
   width?: string;
 };

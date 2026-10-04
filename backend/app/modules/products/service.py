@@ -11,7 +11,7 @@ from ...core.db import execute, fetch, fetchrow, transaction
 # الأعمدة اللي بترجع للواجهة — مكتوبة صراحةً بدل SELECT *
 # عشان أي عمود جديد يتضاف للجدول ما يسربش للواجهة من غير قصد.
 _COLS = """id, category, name, spec, unit, barcode, price, price_vat, is_service, is_oil, is_oil_filter, oil_brand,
-           cost_price, min_qty, service_interval_km, is_active, created_at"""
+           oil_type, filter_kind, cost_price, min_qty, service_interval_km, is_active, created_at"""
 
 
 def _row_out(r: dict) -> dict:
@@ -136,14 +136,15 @@ async def create_product(company_id: str, d: dict) -> dict:
         row = await fetchrow(
             f"""INSERT INTO products
                   (company_id, category, name, spec, unit, barcode,
-                   price, cost_price, min_qty, service_interval_km, is_service, is_oil, is_oil_filter, oil_brand)
-                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+                   price, cost_price, min_qty, service_interval_km, is_service, is_oil, is_oil_filter, oil_brand, oil_type, filter_kind)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
                 RETURNING {_COLS}""",
             company_id, category, d["name"], d.get("spec", ""), d.get("unit", "قطعة"),
             d.get("barcode") or None,
             Decimal(str(d.get("price", 0))), Decimal(str(d.get("costPrice", 0))),
             d.get("minQty", 0), d.get("serviceIntervalKm"), bool(d.get("isService", False)),
             bool(d.get("isOil", False)), bool(d.get("isOilFilter", False)), d.get("oilBrand"),
+            d.get("oilType"), d.get("filterKind"),
         )
     except asyncpg.UniqueViolationError as e:
         raise HTTPException(409, _unique_violation_message(e))
@@ -155,7 +156,7 @@ _COL_MAP = {
     "barcode": "barcode", "price": "price", "costPrice": "cost_price",
     "minQty": "min_qty", "serviceIntervalKm": "service_interval_km",
     "isService": "is_service", "isOil": "is_oil", "isOilFilter": "is_oil_filter",
-    "oilBrand": "oil_brand",
+    "oilBrand": "oil_brand", "oilType": "oil_type", "filterKind": "filter_kind",
 }
 _DECIMAL_KEYS = {"price", "costPrice"}
 
@@ -425,6 +426,89 @@ async def assign_brand_products(company_id: str, brand_id: str, product_ids: lis
     return {"ok": True, "count": len(product_ids)}
 
 
+# الأنواع الخمسة الثابتة لتصنيف الزيوت والخدمات المرتبطة بها — نفس القيم
+# تُستخدم في عمود oil_type لكل من صنف الزيت (أي نوعه) وصنف الخدمة (أي نوع
+# يلزمها)، فربط "تغيير زيت الفرامل" بـ oil_type='brake' يحصر الزيوت
+# المقترحة لها في زيوت الفرامل فقط، بدل عرض أي زيت عشوائي.
+OIL_TYPES = {
+    "engine": "زيت ماكينة", "differential": "زيت دفرنس", "steering": "زيت دركسيون",
+    "brake": "زيت فرامل", "gearbox": "زيت قير",
+}
+
+# الأنواع الثلاثة لتصنيف الفلاتر — كانت كلها مخلوطة تحت "فلاتر زيت" واحدة
+FILTER_KINDS = {"oil": "فلتر زيت", "air": "فلتر هواء", "ac": "فلتر مكيف"}
+
+
+async def assign_filter_kind(company_id: str, filter_kind: str, product_ids: list[str]) -> dict:
+    if filter_kind not in FILTER_KINDS:
+        raise HTTPException(400, "نوع فلتر غير معروف")
+    if not product_ids:
+        return {"ok": True, "count": 0}
+    await execute(
+        "UPDATE products SET filter_kind=$1 WHERE company_id=$2 AND id = ANY($3::uuid[])",
+        filter_kind, company_id, product_ids)
+    return {"ok": True, "count": len(product_ids)}
+
+
+async def clear_filter_kind(company_id: str, product_ids: list[str]) -> dict:
+    if not product_ids:
+        return {"ok": True, "count": 0}
+    await execute(
+        "UPDATE products SET filter_kind=NULL WHERE company_id=$1 AND id = ANY($2::uuid[])",
+        company_id, product_ids)
+    return {"ok": True, "count": len(product_ids)}
+
+
+async def auto_classify_filter_kind(company_id: str) -> dict:
+    """تصنيف تلقائي من نص الفئة الموجود أصلاً (مثال: فئة "فلاتر زيت" على أصناف
+    كتير بالفعل) — يوفر التحديد اليدوي صنفاً بصنف حين تكون البيانات موجودة
+    أصلاً بنص واضح. لا يلمس أي صنف مصنّف بالفعل (يمس فقط filter_kind IS NULL)."""
+    patterns = {
+        "oil": ["%فلتر%زيت%", "%فلاتر%زيت%", "%oil%filter%"],
+        "air": ["%فلتر%هواء%", "%فلاتر%هواء%", "%air%filter%"],
+        "ac": ["%فلتر%مكيف%", "%فلاتر%مكيف%", "%فلتر%تكييف%", "%cabin%filter%", "%ac%filter%"],
+    }
+    counts: dict[str, int] = {}
+    for kind, pats in patterns.items():
+        total = 0
+        for pat in pats:
+            # نعدّ المطابق أولاً (مضمون بغض النظر عن شكل رد execute)، ثم نحدّث
+            matched = await fetch(
+                """SELECT id FROM products
+                   WHERE company_id=$1 AND filter_kind IS NULL
+                     AND (category ILIKE $2 OR name ILIKE $2)""",
+                company_id, pat)
+            if matched:
+                ids = [r["id"] for r in matched]
+                await execute(
+                    "UPDATE products SET filter_kind=$1 WHERE id = ANY($2::uuid[])",
+                    kind, ids)
+                total += len(ids)
+        counts[kind] = total
+    return {"ok": True, "counts": counts}
+
+
+async def assign_oil_type(company_id: str, oil_type: str, product_ids: list[str]) -> dict:
+    if oil_type not in OIL_TYPES:
+        raise HTTPException(400, "نوع زيت غير معروف")
+    if not product_ids:
+        return {"ok": True, "count": 0}
+    await execute(
+        "UPDATE products SET oil_type=$1 WHERE company_id=$2 AND id = ANY($3::uuid[])",
+        oil_type, company_id, product_ids)
+    return {"ok": True, "count": len(product_ids)}
+
+
+async def clear_oil_type(company_id: str, product_ids: list[str]) -> dict:
+    """إزالة تصنيف النوع عن أصناف محددة (بدون لمس is_oil/oil_brand)"""
+    if not product_ids:
+        return {"ok": True, "count": 0}
+    await execute(
+        "UPDATE products SET oil_type=NULL WHERE company_id=$1 AND id = ANY($2::uuid[])",
+        company_id, product_ids)
+    return {"ok": True, "count": len(product_ids)}
+
+
 async def kiosk_oils(company_id: str) -> dict:
     """بيانات بوابة العميل: الشركات بشعاراتها + الزيوت بصورها + الفلاتر"""
     brands = await list_oil_brands(company_id)
@@ -438,14 +522,21 @@ async def kiosk_oils(company_id: str) -> dict:
            FROM products
            WHERE company_id=$1 AND is_active=TRUE AND is_oil_filter=TRUE
            ORDER BY name""", company_id)
-    gear_oils = await fetch(
-        """SELECT id, name, spec, price_vat, oil_brand, image_base64
+    # كانت تُخمَّن نصياً من اسم الفئة (category ILIKE '%قير%') — استُبدلت
+    # بعمود oil_type الحقيقي؛ ونفس الاستعلام يغطي بقية الأنواع الآن.
+    by_type_rows = await fetch(
+        """SELECT id, name, spec, price_vat, oil_brand, oil_type, image_base64
            FROM products
-           WHERE company_id=$1 AND is_active=TRUE AND is_service=FALSE
-             AND (category ILIKE '%قير%' OR category ILIKE '%دفرنس%')
-           ORDER BY oil_brand NULLS LAST, name""", company_id)
+           WHERE company_id=$1 AND is_active=TRUE AND is_oil=TRUE AND oil_type IS NOT NULL
+           ORDER BY oil_type, oil_brand NULLS LAST, name""", company_id)
     fix = lambda rows: [{**r, "id": str(r["id"]), "price_vat": float(r["price_vat"])} for r in rows]
-    return {"brands": brands, "oils": fix(oils), "filters": fix(filters), "gearOils": fix(gear_oils)}
+    by_type_fixed = fix(by_type_rows)
+    gear_oils = [r for r in by_type_fixed if r["oil_type"] == "gearbox"]
+    return {
+        "brands": brands, "oils": fix(oils), "filters": fix(filters),
+        "gearOils": gear_oils,          # إبقاء الاسم القديم لعدم كسر الواجهة الحالية
+        "oilsByType": by_type_fixed,    # كل الأنواع الخمسة — لاستخدام الواجهة مستقبلاً
+    }
 
 
 # ══════════════════ قواعد تسعير الخدمة ══════════════════

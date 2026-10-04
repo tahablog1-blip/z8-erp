@@ -594,6 +594,12 @@ class PublicBookingIn(_BM):
     company: PublicCompanyIn | None = None
     savedCarId: str | None = None       # حجز فوري من الكراج
     odometer: str | int | None = None   # الممشى مع السيارة المحفوظة
+    # الأصناف المختارة (زيت/فلتر/خدمة) — تُحفظ الآن ذرّياً مع إنشاء الحجز نفسه
+    # بدل نداء PUT منفصل بعده كان يفشل بصمت أحياناً ويسيب أمر العمل بلا
+    # الأصناف اللي العميل اختارها واعتمد عليها في ملخص حجزه.
+    items: list = []
+    withFilter: bool | None = None
+    fromInvoice: str | None = None
 
 
 class PublicLookupIn(_BM):
@@ -634,6 +640,113 @@ async def _oil_lookup(company_id: str, brand: str, model: str, year: str):
         """SELECT oil_qty, oil_type FROM oil_specs
            WHERE company_id=$1::uuid AND brand=$2 AND model=$3 AND model_year=$4""",
         company_id, brand or "", model or "", year or "")
+
+
+class CarOilFilterIn(_BM):
+    brand: str
+    model: str
+    yearFrom: int
+    yearTo: int
+    filterProductId: str
+    filterKind: str = "oil"  # oil | air | ac
+    cylinders: int | None = None  # فارغ = ينطبق على أي محرك لهذا الموديل
+
+
+@router.get("/oil-filters")
+async def list_car_oil_filters(user: CurrentUser = Depends(get_current_user)):
+    return await service.list_car_oil_filters(user.company_id)
+
+
+@router.post("/oil-filters")
+async def create_car_oil_filter(body: CarOilFilterIn,
+                                user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
+    return await service.create_car_oil_filter(
+        user.company_id, body.brand, body.model, body.yearFrom, body.yearTo,
+        body.filterProductId, user.user_id, body.filterKind, body.cylinders)
+
+
+# ── تطبيع بسيط للنص العربي: يوحّد الألف المقصورة/الياء والمسافات الزائدة —
+#    "كامري" و"كامرى" يُحسبان نفس القيمة، وأي مسافات مكررة تُختصر لمسافة واحدة.
+#    هذا للتجميع والمقارنة فقط، والعرض يبقى بأكثر صيغة كتابة شائعة فعلياً. ──
+_NORMALIZE_SQL = "regexp_replace(replace(replace(trim({col}), 'ى', 'ي'), 'أ', 'ا'), '\\s+', ' ', 'g')"
+
+
+def _merge_with_catalog(real: list[str], catalog_items: list[str]) -> list[str]:
+    """يدمج نتائج القاعدة الحقيقية (تبقى أولاً بترتيبها) مع عناصر الكتالوج غير
+    الموجودة أصلاً (حسب المقارنة المُطبَّعة) — يضمن قائمة شاملة دائماً."""
+    seen = {service._ar_normalize(x) for x in real}
+    out = list(real)
+    for item in catalog_items:
+        if service._ar_normalize(item) not in seen:
+            out.append(item)
+            seen.add(service._ar_normalize(item))
+    return out
+
+
+@router.get("/brands")
+async def admin_car_brands(user: CurrentUser = Depends(get_current_user)):
+    """ماركات السيارات الفعلية المسجّلة على مستوى الشركة كلها — مجمّعة (تتجاهل
+    فروق الإملاء البسيطة) ومرتبة بالأكثر تكراراً أولاً — يسهّل ملاحظة أي بيانات
+    قديمة غير نظيفة (تظهر نادرة في آخر القائمة) بدل اختفائها وسط قائمة عشوائية."""
+    from ...core.db import fetch as _f
+    norm = _NORMALIZE_SQL.format(col="brand")
+    rows = await _f(
+        f"""SELECT (array_agg(brand ORDER BY brand))[1] AS display, count(*) AS cnt
+            FROM cars
+            WHERE company_id=$1 AND brand IS NOT NULL AND trim(brand) <> ''
+            GROUP BY {norm}
+            ORDER BY cnt DESC, display
+            LIMIT 300""", user.company_id)
+    return _merge_with_catalog([r["display"] for r in rows], list(service.CAR_CATALOG.keys()))
+
+
+@router.get("/models")
+async def admin_car_models(brand: str = Query(...), user: CurrentUser = Depends(get_current_user)):
+    """موديلات ماركة معينة — المطابقة على الشكل المُطبَّع من الماركة (يتجاهل فروق
+    الإملاء)، والنتائج مجمّعة ومرتبة بالأكثر تكراراً لنفس السبب."""
+    from ...core.db import fetch as _f
+    norm_brand = _NORMALIZE_SQL.format(col="brand")
+    norm_name = _NORMALIZE_SQL.format(col="name")
+    norm_input = _NORMALIZE_SQL.format(col="$2::text")
+    rows = await _f(
+        f"""SELECT (array_agg(name ORDER BY name))[1] AS display, count(*) AS cnt
+            FROM cars
+            WHERE company_id=$1 AND name IS NOT NULL AND trim(name) <> ''
+              AND {norm_brand} = {norm_input}
+            GROUP BY {norm_name}
+            ORDER BY cnt DESC, display
+            LIMIT 300""", user.company_id, brand)
+    catalog_models = next(
+        (v for k, v in service.CAR_CATALOG.items() if service._ar_normalize(k) == service._ar_normalize(brand)), [])
+    return _merge_with_catalog([r["display"] for r in rows], catalog_models)
+
+
+@router.delete("/oil-filters/{row_id}")
+async def delete_car_oil_filter(row_id: str,
+                                user: CurrentUser = Depends(require_permission("products.edit", "products.delete"))):
+    return await service.delete_car_oil_filter(user.company_id, row_id)
+
+
+@router.get("/public/car-oil-filter-match/{branch_id}")
+async def public_oil_filter_match(branch_id: str, brand: str = Query(...), model: str = Query(...),
+                                  year: str | None = Query(default=None),
+                                  kind: str = Query(default="oil"),
+                                  cylinders: str | None = Query(default=None)):
+    """يُستخدم من صفحة الحجز: يرجع الفلتر الصحيح لنفس السيارة إن وُجد ربط له
+    (يفضّل تطابق السلندرات بالضبط لو الموديل له أكثر من محرك)"""
+    _pub_guard(branch_id)
+    from ...core.db import fetchrow as _fr
+    br = await _fr("SELECT company_id FROM branches WHERE id=$1::uuid", branch_id)
+    if not br:
+        raise HTTPException(404, "الفرع غير موجود")
+    match = await service.match_oil_filter(br["company_id"], brand, model, year, kind, cylinders)
+    if not match:
+        return None
+    return {
+        "id": str(match["id"]), "name": match["name"], "spec": match["spec"] or "",
+        "price": float(match["price_vat"] or 0),
+        "image": f"/api/products/public/product-image/{match['id']}" if match["has_image"] else None,
+    }
 
 
 @router.get("/oil/by-car/{car_id}")
@@ -761,6 +874,50 @@ def _oil_brand_of(name: str, oil_brand: str | None, category: str | None) -> str
     return "أخرى"
 
 
+@router.get("/public/car-brands/{branch_id}", response_model=list[str])
+async def public_car_brands(branch_id: str):
+    """الماركات الفعلية المسجّلة في هذا الفرع — نفس منطق شاشة الإدارة بالحرف
+    (تطبيع + ترتيب بالأكثر تكراراً) عشان يكون نفس القوائم في المكانين تماماً."""
+    _pub_guard(branch_id)
+    from ...core.db import fetchrow as _fr, fetch as _f
+    br = await _fr("SELECT company_id FROM branches WHERE id=$1::uuid", branch_id)
+    if not br:
+        raise HTTPException(404, "الفرع غير موجود")
+    norm = _NORMALIZE_SQL.format(col="brand")
+    rows = await _f(
+        f"""SELECT (array_agg(brand ORDER BY brand))[1] AS display, count(*) AS cnt
+            FROM cars
+            WHERE company_id=$1 AND brand IS NOT NULL AND trim(brand) <> ''
+            GROUP BY {norm}
+            ORDER BY cnt DESC, display
+            LIMIT 200""", br["company_id"])
+    return _merge_with_catalog([r["display"] for r in rows], list(service.CAR_CATALOG.keys()))
+
+
+@router.get("/public/car-models/{branch_id}", response_model=list[str])
+async def public_car_models(branch_id: str, brand: str = Query(...)):
+    """موديلات ماركة معينة بس — نفس منطق شاشة الإدارة بالحرف (تطبيع + ترتيب)"""
+    _pub_guard(branch_id)
+    from ...core.db import fetchrow as _fr, fetch as _f
+    br = await _fr("SELECT company_id FROM branches WHERE id=$1::uuid", branch_id)
+    if not br:
+        raise HTTPException(404, "الفرع غير موجود")
+    norm_brand = _NORMALIZE_SQL.format(col="brand")
+    norm_name = _NORMALIZE_SQL.format(col="name")
+    norm_input = _NORMALIZE_SQL.format(col="$2::text")
+    rows = await _f(
+        f"""SELECT (array_agg(name ORDER BY name))[1] AS display, count(*) AS cnt
+            FROM cars
+            WHERE company_id=$1 AND name IS NOT NULL AND trim(name) <> ''
+              AND {norm_brand} = {norm_input}
+            GROUP BY {norm_name}
+            ORDER BY cnt DESC, display
+            LIMIT 200""", br["company_id"], brand)
+    catalog_models = next(
+        (v for k, v in service.CAR_CATALOG.items() if service._ar_normalize(k) == service._ar_normalize(brand)), [])
+    return _merge_with_catalog([r["display"] for r in rows], catalog_models)
+
+
 @router.get("/public/booking-products/{branch_id}")
 async def public_booking_products(branch_id: str):
     _pub_guard(branch_id)
@@ -774,6 +931,9 @@ async def public_booking_products(branch_id: str):
                 "unit": r["unit"] or "",
                 "brand": _oil_brand_of(r["name"], r["oil_brand"], r["category"]),
                 "price": float(r["price_vat"] or 0),
+                # نوع الزيت (ماكينة/دفرنس/دركسيون/فرامل/قير) لو مصنّف — يتيح لاحقاً
+                # حصر الزيوت المعروضة لخدمة معينة بنوعها الصحيح بدل عرض الكل.
+                "oilType": r["oil_type"] if "oil_type" in r.keys() else None,
                 # الصورة بقت رابط لنقطة الصور العامة بدل base64 مضمّن —
                 # كده الاستجابة خفيفة مهما كبرت القائمة، والمتصفح بيكيّش الصور.
                 "image": f"/api/products/public/product-image/{r['id']}" if r["has_image"] else None}
@@ -782,7 +942,7 @@ async def public_booking_products(branch_id: str):
     # فئته أو اسمه فيهم "زيت" (مع استبعاد الفلاتر والخدمات) — كده كل الزيوت
     # المستوردة بتظهر وتتبحث من غير تعليم يدوي لآلاف الأصناف.
     oils = await _f(
-        """SELECT id, name, spec, unit, oil_brand, category, price_vat,
+        """SELECT id, name, spec, unit, oil_brand, category, oil_type, price_vat,
                   (image_base64 IS NOT NULL AND image_base64 <> '') AS has_image
            FROM products
            WHERE company_id=$1 AND is_active=TRUE AND is_service=FALSE AND is_oil_filter=FALSE

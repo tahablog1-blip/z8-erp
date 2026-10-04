@@ -147,11 +147,30 @@ async def billing_queue(company_id: str, branch_scope: str | None,
                           if r.get("invoice_id") is None and r.get("customer_id")})
 
     # 1) مسودات بوابة اختيار الزيت (draft_items jsonb على السيارة نفسها)
+    # ── إصلاح جوهري: draft_items بيتخزن كـ dict ملفوف {"source":..,"items":[...]}
+    #    من نقطة /public/booking-selection ومن الحفظ الذري الجديد وقت إنشاء
+    #    الحجز — لكن هذا الكود كان يتوقعه list خام ويتجاهله بصمت (isinstance
+    #    يرجع False)، فيسقط اختيار العميل بالكامل من غير أي خطأ ظاهر. نتعامل
+    #    الآن مع الشكلين: dict به items، أو list خام قديم (توافق خلفي). ──
     draft_by_car: dict[str, list[dict]] = {}
     draft_product_ids: set[str] = set()
     for r in rows:
         if r.get("invoice_id") is None and r.get("draft_items"):
-            items = r["draft_items"] if isinstance(r["draft_items"], list) else []
+            raw = r["draft_items"]
+            # اكتُشف بالفحص المباشر على القاعدة: عمود jsonb بيرجع من asyncpg
+            # كنص خام (str) هنا، مش dict/list جاهزين كما افترضنا سابقاً — لازم
+            # json.loads أولاً، وإلا يسقط الفحص التالي بصمت في كل مرة كالمعتاد.
+            if isinstance(raw, str):
+                try:
+                    raw = json.loads(raw)
+                except (TypeError, ValueError):
+                    raw = None
+            if isinstance(raw, dict):
+                items = raw.get("items") or []
+            elif isinstance(raw, list):
+                items = raw
+            else:
+                items = []
             if items:
                 draft_by_car[str(r["id"])] = items
                 draft_product_ids.update(str(it["productId"]) for it in items if it.get("productId"))
@@ -215,7 +234,14 @@ async def billing_queue(company_id: str, branch_scope: str | None,
                 p = products_map.get(str(it.get("productId")))
                 if not p:
                     continue
-                override = it.get("priceVat")
+                # المفتاح الفعلي المُرسل من الحجز هو priceInc (راجع buildSelectionPayload
+                # في صفحة الحجز) — كان الكود يبحث خطأً عن "priceVat" (غير موجود
+                # في الحمولة أبداً) فيرجع صفراً دائماً ويسقط تلقائياً على السعر
+                # الافتراضي العام للمنتج، متجاهلاً السعر الذي وافق عليه العميل
+                # فعلياً وقت الحجز (كان هذا سبب فرق 75 مقابل 29.90).
+                override = it.get("priceInc")
+                if override is None:
+                    override = it.get("priceVat")  # توافق خلفي لأي مصدر قديم كان يكتب هذا الاسم
                 price_vat = float(override) if override is not None else float(p["price_vat"])
                 price_ex = round(price_vat / 1.15, 2) if override is not None else float(p["price"])
                 prepared.append({
@@ -392,7 +418,11 @@ async def confirm_entry(company_id: str, car_id: str) -> dict:
     )
     if not row:
         raise HTTPException(409, "تم تأكيد دخول السيارة بالفعل من جهاز آخر")
-    await _auto_prepare_from_last_invoice(company_id, str(row["id"]), row["customer_id"])
+    # لا نستبدل اختيار العميل الحقيقي (حجز أونلاين مثلاً) بتخمين من فاتورته
+    # القديمة — كان يمسح الزيت/الخدمة اللي اختارها فعلاً ويعيد حساب سعر مختلف.
+    # التجهيز التلقائي من آخر فاتورة يبقى فقط لعميل بلا أي اختيار مسبق أصلاً.
+    if not row.get("draft_items"):
+        await _auto_prepare_from_last_invoice(company_id, str(row["id"]), row["customer_id"])
     row = await fetchrow("SELECT * FROM cars WHERE id=$1", row["id"])
     return _row_out(row)
 
@@ -1208,6 +1238,195 @@ def _validate_by_type(service_type: str, d: dict, car: dict):
             "العنوان الوطني كامل مطلوب (مبنى، شارع، حي، مدينة)")
 
 
+async def _save_booking_items(car_id: str, d: dict) -> None:
+    """نفس منطق /public/booking-selection بالحرف — يُستدعى الآن أيضاً من داخل
+    إنشاء الحجز نفسه (ذرّياً) بدل الاعتماد فقط على نداء PUT منفصل لاحق."""
+    import json as _json
+    payload = {
+        "source": "booking",
+        "withFilter": d.get("withFilter"),
+        "fromInvoice": d.get("fromInvoice"),
+        "items": (d.get("items") or [])[:10],
+    }
+    await execute("UPDATE cars SET draft_items=$2 WHERE id=$1::uuid",
+                  car_id, _json.dumps(payload, ensure_ascii=False))
+
+
+# ══════════ كتالوج مرجعي شامل: أشهر الماركات والموديلات في السوق الخليجي ══════════
+# يُدمج مع السيارات الحقيقية المسجّلة (بلا استبدال) — يضمن قوائم كاملة حتى لو
+# كانت بيانات السيارات المسجّلة قليلة لسه، بينما السيارات النادرة الحقيقية
+# المسجّلة فعلاً (غير موجودة في الكتالوج) تبقى تظهر أيضاً لا تُفقد أبداً.
+CAR_CATALOG: dict[str, list[str]] = {
+    "تويوتا": ["كامري", "كورولا", "يارس", "لاندكروزر", "برادو", "هايلكس", "فورتشنر",
+               "أفالون", "راف 4", "هايس", "إنوفا", "راش", "كراون", "أفانزا"],
+    "هيونداي": ["النترا", "أكسنت", "سوناتا", "توسان", "سنتافي", "كريتا", "بالاسيد",
+                "أزيرا", "فيلوستر", "ستاريا", "تكسون"],
+    "كيا": ["سيراتو", "أوبتيما", "K5", "سبورتاج", "سورنتو", "بيكانتو", "ريو",
+            "كارنيفال", "تيلورايد", "سول"],
+    "نيسان": ["صني", "التيما", "باترول", "إكس تريل", "كيكس", "أرمادا", "مورانو", "سنترا"],
+    "هوندا": ["سيفيك", "أكورد", "سي آر في", "بايلوت", "HR-V"],
+    "فورد": ["F-150", "إكسبلورر", "إيدج", "تورس", "رينجر", "موستنج", "إكسبيديشن"],
+    "شفروليه": ["تاهو", "سوبربان", "ماليبو", "كامارو", "سيلفرادو", "كروز", "أفيو"],
+    "جي إم سي": ["يوكن", "سييرا", "أكاديا"],
+    "ميتسوبيشي": ["لانسر", "باجيرو", "أوتلاندر", "إكليبس كروس"],
+    "مازدا": ["مازدا 3", "مازدا 6", "CX-5", "CX-9"],
+    "لكزس": ["ES", "LX", "RX", "GX", "LS", "NX"],
+    "إنفينيتي": ["Q50", "QX60", "QX80"],
+    "مرسيدس": ["C-Class", "E-Class", "S-Class", "GLE", "GLC", "G-Class"],
+    "بي إم دبليو": ["الفئة الثالثة", "الفئة الخامسة", "X5", "X3", "X6"],
+    "أودي": ["A4", "A6", "Q5", "Q7"],
+    "فولكس فاجن": ["جولف", "باسات", "تيرامونت", "طوارق"],
+    "لاند روفر": ["ديفندر", "ديسكفري", "رينج روفر", "إيفوك"],
+    "جيب": ["رانجلر", "جراند شيروكي", "كومباس"],
+    "دودج": ["تشارجر", "تشالنجر", "دورانجو"],
+    "كرايسلر": ["300"],
+    "سوزوكي": ["سويفت", "فيتارا", "جيمني"],
+    "إيسوزو": ["D-Max"],
+    "إم جي": ["MG5", "MG6", "HS", "ZS"],
+    "شانجان": ["CS35", "CS55", "إيدو"],
+    "جيلي": ["إمجراند", "كولراي"],
+    "هافال": ["H6", "جوليون"],
+    "شيري": ["تيجو"],
+    "بي واي دي": ["هان", "تانج", "يوان"],
+    "فولفو": ["XC60", "XC90", "S60"],
+    "بيجو": ["208", "3008", "5008"],
+    "رينو": ["داستر", "لوجان", "كوليوس"],
+    "سكودا": ["أوكتافيا", "كودياك"],
+    "سوبارو": ["فورستر", "إمبريزا", "XV"],
+    "ميني": ["كوبر"],
+    "بورش": ["كايين", "باناميرا", "ماكان"],
+}
+
+
+def _ar_normalize(s: str) -> str:
+    """نفس تطبيع SQL بالضبط (ألف مقصورة/همزة/مسافات) لضمان دمج صحيح مع بيانات القاعدة"""
+    import re as _re3
+    return _re3.sub(r"\s+", " ", (s or "").strip().replace("ى", "ي").replace("أ", "ا"))
+
+
+# نسخة SQL من نفس التطبيع أعلاه — تُستخدم في استعلامات المطابقة (مثل ربط
+# الفلاتر) عشان فروق إملائية بسيطة (مسافة زيادة، "ى" مقابل "ي") ما تمنعش
+# مطابقة صحيحة كانت ستنجح لولا هذا الفرق التافه.
+_SQL_NORM = "regexp_replace(replace(replace(trim({col}), 'ى', 'ي'), 'أ', 'ا'), '\\s+', ' ', 'g')"
+
+
+# ══════════ ربط السيارة بفلتر الزيت الصحيح (ماركة/موديل/نطاق سنة → صنف حقيقي) ══════════
+# إدارة يدوية بالكامل: الموظف يحدد الماركة والموديل ونطاق السنين ويختار الفلتر
+# نفسه من الأصناف الموجودة فعلاً — لا تخمين ولا مطابقة باركود هشة.
+
+async def list_car_oil_filters(company_id: str) -> list[dict]:
+    rows = await fetch(
+        """SELECT f.id, f.brand, f.model, f.year_from, f.year_to, f.filter_product_id, f.filter_kind, f.cylinders,
+                  p.name AS filter_name, p.spec AS filter_spec, p.barcode AS filter_barcode
+           FROM car_oil_filters f
+           JOIN products p ON p.id = f.filter_product_id
+           WHERE f.company_id=$1
+           ORDER BY f.filter_kind, f.brand, f.model, f.year_from DESC""", company_id)
+    out = []
+    for r in rows:
+        r = dict(r)
+        r["id"] = str(r["id"]); r["filter_product_id"] = str(r["filter_product_id"])
+        out.append(r)
+    return out
+
+
+async def create_car_oil_filter(company_id: str, brand: str, model: str,
+                                year_from: int, year_to: int, filter_product_id: str,
+                                user_id: str | None, filter_kind: str = "oil",
+                                cylinders: int | None = None) -> dict:
+    brand = (brand or "").strip(); model = (model or "").strip()
+    if not brand or not model:
+        raise HTTPException(400, "الماركة والموديل مطلوبان")
+    if filter_kind not in ("oil", "air", "ac"):
+        raise HTTPException(400, "نوع فلتر غير معروف")
+    if year_from > year_to:
+        year_from, year_to = year_to, year_from
+    prod = await fetchrow(
+        "SELECT id FROM products WHERE id=$1::uuid AND company_id=$2", filter_product_id, company_id)
+    if not prod:
+        raise HTTPException(404, "الصنف المختار غير موجود")
+    row = await fetchrow(
+        """INSERT INTO car_oil_filters
+             (company_id, brand, model, year_from, year_to, filter_product_id, created_by, filter_kind, cylinders)
+           VALUES ($1,$2,$3,$4,$5,$6::uuid,$7::uuid,$8,$9) RETURNING id""",
+        company_id, brand, model, year_from, year_to, filter_product_id, user_id, filter_kind, cylinders)
+    return {"id": str(row["id"])}
+
+
+async def delete_car_oil_filter(company_id: str, row_id: str) -> dict:
+    await execute("DELETE FROM car_oil_filters WHERE id=$1::uuid AND company_id=$2",
+                  row_id, company_id)
+    return {"ok": True}
+
+
+async def match_oil_filter(company_id: str, brand: str, model: str, year: str | int | None,
+                           filter_kind: str = "oil", cylinders: str | int | None = None) -> dict | None:
+    """أقرب ربط مطابق للسيارة (لنوع فلتر ونطاق سنة محددين) — بترتيب أولوية:
+    ١) تطابق السلندرات بالضبط (لو الموديل له أكثر من محرك، مثال حقيقي: فورتشنر
+       4 سلندر وفورتشنر 6 سلندر لهما فلتر مختلف بنفس نطاق السنة).
+    ٢) الربط بلا سلندرات محددة (NULL = ينطبق على أي محرك لهذا الموديل).
+    بلا سنة معروفة تُطابَق أوسع نطاق مسجّل لنفس الماركة/الموديل كملاذ أخير.
+
+    ملاحظة مهمة: لو سلندرات العميل غير معروفة (مثال: حجز من سيارة محفوظة بلا
+    بيانات محرك)، لا نفرض شرط السلندرات إطلاقاً — إذ إن `f.cylinders = NULL`
+    في SQL يُستبعد تلقائياً حتى لو كان الربط الوحيد المسجّل، فيفشل العثور على
+    فلتر مسجّل فعلاً لمجرد نقص بيانات جانبية. الأفضل عرض أقرب تخمين متاح على
+    ألا نعرض شيئاً؛ والفلتر يبقى قابلاً للتغيير يدوياً من القائمة في كل الأحوال."""
+    brand = (brand or "").strip(); model = (model or "").strip()
+    if not brand or not model:
+        return None
+    try:
+        y = int(str(year)[:4]) if year else None
+    except ValueError:
+        y = None
+    try:
+        cyl = int(str(cylinders)) if cylinders not in (None, "") else None
+    except ValueError:
+        cyl = None
+
+    # شرط السلندرات وترتيبها يُبنيان ديناميكياً: يُفرضان فقط لو السلندرات معروفة،
+    # وإلا يُتجاهلان بالكامل (بدل مقارنة خاطئة بـ NULL تُسقط كل النتائج خطأً).
+    cyl_filter_sql = "AND (f.cylinders IS NULL OR f.cylinders = ${n})" if cyl is not None else ""
+    cyl_order_sql = "(f.cylinders = ${n}) DESC NULLS LAST, " if cyl is not None else ""
+
+    norm_brand_col = _SQL_NORM.format(col="f.brand")
+    norm_model_col = _SQL_NORM.format(col="f.model")
+    norm_brand_in = _SQL_NORM.format(col="$2::text")
+    norm_model_in = _SQL_NORM.format(col="$3::text")
+
+    if y is not None:
+        params = [company_id, brand, model, y, filter_kind] + ([cyl] if cyl is not None else [])
+        cyl_idx = 6
+        row = await fetchrow(
+            f"""SELECT p.id, p.name, p.spec, p.price_vat,
+                      (p.image_base64 IS NOT NULL AND p.image_base64 <> '') AS has_image
+               FROM car_oil_filters f JOIN products p ON p.id = f.filter_product_id
+               WHERE f.company_id=$1 AND {norm_brand_col} = {norm_brand_in}
+                     AND {norm_model_col} = {norm_model_in} AND f.filter_kind=$5
+                     AND $4 BETWEEN f.year_from AND f.year_to
+                     {cyl_filter_sql.format(n=cyl_idx)}
+               ORDER BY {cyl_order_sql.format(n=cyl_idx)}(f.year_to - f.year_from) ASC
+               LIMIT 1""",
+            *params)
+        if row:
+            return dict(row)
+    # بلا سنة معروفة أو ما طابقت نطاقاً محدداً — آخر ربط مسجّل لنفس الماركة/الموديل
+    # (بنفس أولوية تفضيل تطابق السلندرات لو معروفة)
+    params2 = [company_id, brand, model, filter_kind] + ([cyl] if cyl is not None else [])
+    cyl_idx2 = 5
+    row = await fetchrow(
+        f"""SELECT p.id, p.name, p.spec, p.price_vat,
+                  (p.image_base64 IS NOT NULL AND p.image_base64 <> '') AS has_image
+           FROM car_oil_filters f JOIN products p ON p.id = f.filter_product_id
+           WHERE f.company_id=$1 AND {norm_brand_col} = {norm_brand_in}
+                 AND {norm_model_col} = {norm_model_in} AND f.filter_kind=$4
+                 {cyl_filter_sql.format(n=cyl_idx2)}
+           ORDER BY {cyl_order_sql.format(n=cyl_idx2)}f.year_to DESC
+           LIMIT 1""",
+        *params2)
+    return dict(row) if row else None
+
+
 async def public_create_booking(branch_id: str, d: dict) -> dict:
     br = await fetchrow(
         "SELECT id, company_id, name, is_frozen FROM branches WHERE id=$1", branch_id)
@@ -1258,6 +1477,11 @@ async def public_create_booking(branch_id: str, d: dict) -> dict:
              AND UPPER(REPLACE(COALESCE(plate,''),' ','')) = $2""",
         branch_id, f"{numbers}{letters}")
     if existing:
+        # كانت تتجاهل أي اختيار جديد للأصناف تماماً وترجع الحجز القديم كما هو —
+        # لو العميل جرّب يحجز تاني (مثلاً بعد تعديل اختياره)، اختياره الجديد
+        # كان يضيع بصمت. نحدّث الاختيار على نفس السيارة المفتوحة بدل تجاهله.
+        if d.get("items"):
+            await _save_booking_items(str(existing["id"]), d)
         return await public_booking_status(str(existing["id"]))
 
     # ── العميل: موجود بالجوال أو جديد — وتحديث بيانات الشركة لو فئة 3 ──
@@ -1302,6 +1526,8 @@ async def public_create_booking(branch_id: str, d: dict) -> dict:
         company_id, branch_id, plate, car.get("brand"), car.get("carName"), car.get("modelYear"),
         car.get("carCategory"), car.get("cylinders"), car.get("color"), car.get("chassisNumber"),
         name, phone, cust["id"], odo, service_type)
+    if d.get("items"):
+        await _save_booking_items(str(row["id"]), d)
     return await public_booking_status(str(row["id"]))
 
 

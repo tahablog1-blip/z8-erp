@@ -138,6 +138,50 @@ async def assign_brand(brand_id: str, body: AssignIn,
     return await service.assign_brand_products(user.company_id, brand_id, body.productIds)
 
 
+@router.get("/oil-types")
+async def oil_types(user: CurrentUser = Depends(get_current_user)):
+    """الأنواع الخمسة الثابتة (ماكينة/دفرنس/دركسيون/فرامل/قير) — لا تُنشأ أو تُحذف"""
+    return service.OIL_TYPES
+
+
+@router.post("/oil-types/{oil_type}/assign")
+async def assign_oil_type(oil_type: str, body: AssignIn,
+                          user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
+    """تصنيف جماعي: يُعيّن النوع لكل الأصناف المحددة دفعة واحدة (بديل التعليم الفردي)"""
+    return await service.assign_oil_type(user.company_id, oil_type, body.productIds)
+
+
+@router.post("/oil-types/clear")
+async def clear_oil_type(body: AssignIn,
+                         user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
+    return await service.clear_oil_type(user.company_id, body.productIds)
+
+
+@router.get("/filter-kinds")
+async def filter_kinds(user: CurrentUser = Depends(get_current_user)):
+    """الأنواع الثلاثة الثابتة (زيت/هواء/مكيف) — لا تُنشأ أو تُحذف"""
+    return service.FILTER_KINDS
+
+
+@router.post("/filter-kinds/{kind}/assign")
+async def assign_filter_kind(kind: str, body: AssignIn,
+                             user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
+    return await service.assign_filter_kind(user.company_id, kind, body.productIds)
+
+
+@router.post("/filter-kinds/clear")
+async def clear_filter_kind(body: AssignIn,
+                            user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
+    return await service.clear_filter_kind(user.company_id, body.productIds)
+
+
+@router.post("/filter-kinds/auto-classify")
+async def auto_classify_filter_kind(user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
+    """تصنيف تلقائي بضغطة واحدة من نص الفئة/الاسم الموجود أصلاً على الأصناف
+    (مثال: فئة "فلاتر زيت" الشائعة) — بديل التحديد اليدوي صنفاً بصنف."""
+    return await service.auto_classify_filter_kind(user.company_id)
+
+
 @router.get("/kiosk-oils")
 async def kiosk(user: CurrentUser = Depends(get_current_user)):
     """بيانات بوابة اختيار الزيت — متاحة لأي مستخدم مسجل (التابلت بيشتغل بحساب موظف البوابة)"""

@@ -13,7 +13,133 @@ import { Product, productLabel, money } from "@/modules/products/types";
 const EMPTY = {
   category: "", name: "", spec: "", unit: "قطعة", barcode: "",
   price: 0, costPrice: 0, minQty: 0, serviceIntervalKm: "", isService: false, isOil: false, isOilFilter: false, oilBrand: null as string | null,
+  oilType: null as string | null, // للزيت: نوعه — للخدمة: نوع الزيت اللي تتطلبه (يحصر الاقتراح في بوابة الحجز)
 };
+
+/** قائمة منسدلة قابلة للبحث بموضع ثابت تحت الحقل دائماً — بديل <select>
+ *  الافتراضي الذي يفتح لأعلى أو لأسفل حسب مساحة الشاشة (سلوك غير منضبط
+ *  ظهر واضحاً في شاشة "فلاتر السيارات"). تسمح أيضاً بالكتابة الحرة كخيار
+ *  احتياطي لو القائمة المقترحة ناقصة بيانات (مشكلة بيانات قديمة غير موحّدة). */
+function SearchSelect({ value, onChange, options, placeholder, disabled }: {
+  value: string; onChange: (v: string) => void; options: string[];
+  placeholder?: string; disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  const filtered = q.trim()
+    ? options.filter((o) => o.toLowerCase().includes(q.trim().toLowerCase()))
+    : options;
+
+  return (
+    <div className="relative" ref={boxRef}>
+      <button type="button" disabled={disabled}
+              onClick={() => { setOpen(!open); setQ(""); }}
+              className="flex w-full items-center justify-between rounded-xl border border-line bg-white px-3 py-2 text-[12.5px] font-bold disabled:opacity-50"
+              style={{ minHeight: 38 }}>
+        <span className={value ? "" : "text-text-dim"}>{value || placeholder || "— اختر —"}</span>
+        <MIcon name={open ? "expand_less" : "expand_more"} className="!text-[16px] text-text-dim" />
+      </button>
+      {open && !disabled && (
+        <div className="absolute z-30 mt-1 w-full rounded-xl border border-line bg-white shadow-lg">
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
+                 placeholder="بحث..." className="w-full border-b border-line px-3 py-2 text-[12px] outline-none" />
+          <div className="max-h-56 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-2.5 text-[12px] text-text-dim">
+                لا يوجد مطابق — اكتب اسماً جديداً واضغط Enter
+              </div>
+            ) : filtered.map((o) => (
+              <button key={o} type="button"
+                      onClick={() => { onChange(o); setOpen(false); setQ(""); }}
+                      className="block w-full px-3 py-2 text-right text-[12.5px] font-bold hover:bg-ink-3">
+                {o}
+              </button>
+            ))}
+          </div>
+          {q.trim() && (
+            <button type="button"
+                    onClick={() => { onChange(q.trim()); setOpen(false); setQ(""); }}
+                    className="block w-full border-t border-line px-3 py-2 text-right text-[11.5px] font-bold text-petrol hover:bg-ink-3">
+              + استخدام "{q.trim()}" كما هو
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** بحث حي في كل الأصناف (بالاسم أو الباركود) — بلا اشتراط أي تصنيف مسبق.
+ *  بديل الاعتماد على filter_kind وحده، الذي قد يكون غير مكتمل أو غير محدّث
+ *  في لحظة الاستخدام؛ البحث المباشر بالاسم/الباركود أضمن وأسرع دائماً. */
+function ProductSearchSelect({ value, onChange, products, placeholder, disabled }: {
+  value: string; onChange: (id: string) => void; products: Product[];
+  placeholder?: string; disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  const selected = products.find((p) => p.id === value);
+  const query = q.trim().toLowerCase();
+  const filtered = query
+    ? products.filter((p) =>
+        productLabel(p).toLowerCase().includes(query) ||
+        (p.barcode || "").toLowerCase().includes(query)
+      ).slice(0, 50)
+    : products.slice(0, 50);
+
+  return (
+    <div className="relative" ref={boxRef}>
+      <button type="button" disabled={disabled}
+              onClick={() => { setOpen(!open); setQ(""); }}
+              className="flex w-full items-center justify-between rounded-xl border border-line bg-white px-3 py-2 text-[12.5px] font-bold disabled:opacity-50"
+              style={{ minHeight: 38 }}>
+        <span className={selected ? "" : "text-text-dim"}>
+          {selected ? productLabel(selected) : (placeholder || "— اختر —")}
+        </span>
+        <MIcon name={open ? "expand_less" : "expand_more"} className="!text-[16px] text-text-dim" />
+      </button>
+      {open && !disabled && (
+        <div className="absolute z-30 mt-1 w-full rounded-xl border border-line bg-white shadow-lg">
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
+                 placeholder="بحث بالاسم أو الباركود..."
+                 className="w-full border-b border-line px-3 py-2 text-[12px] outline-none" />
+          <div className="max-h-64 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-2.5 text-[12px] text-text-dim">لا يوجد مطابق</div>
+            ) : filtered.map((p) => (
+              <button key={p.id} type="button"
+                      onClick={() => { onChange(p.id); setOpen(false); setQ(""); }}
+                      className="flex w-full items-center justify-between px-3 py-2 text-right hover:bg-ink-3">
+                <span className="text-[12.5px] font-bold">{productLabel(p)}</span>
+                {p.barcode && <span className="tnum text-[10.5px] text-text-dim">{p.barcode}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ProductsPage() {
   const { hasPerm } = useAuth();
@@ -117,6 +243,7 @@ export default function ProductsPage() {
       price: Number(p.price), costPrice: Number(p.cost_price), minQty: p.min_qty,
       serviceIntervalKm: p.service_interval_km == null ? "" : String(p.service_interval_km),
       isService: !!p.is_service, isOil: !!p.is_oil, isOilFilter: !!p.is_oil_filter, oilBrand: p.oil_brand,
+      oilType: p.oil_type ?? null,
     });
     setErr(""); setProdImage(undefined); setModal({ mode: "edit", id: p.id });
   }
@@ -131,6 +258,7 @@ export default function ProductsPage() {
       spec: form.spec.trim(),
       serviceIntervalKm: form.serviceIntervalKm === "" ? null : Number(form.serviceIntervalKm),
       isService: form.isService, isOil: form.isOil, isOilFilter: form.isOilFilter, oilBrand: form.oilBrand,
+      oilType: form.oilType,
     };
     try {
       let savedId: string | null = null;
@@ -159,7 +287,96 @@ export default function ProductsPage() {
     catch (e: any) { await appAlert(e.message); }
   }
 
+  // ══════════ فلترة احترافية لكل الأصناف ══════════
+  const [fltOpen, setFltOpen] = useState(false);
+  const [fltCategory, setFltCategory] = useState("");
+  const [fltKind, setFltKind] = useState<"" | "oil" | "oilFilter" | "service" | "regular">("");
+  const [fltOilType, setFltOilType] = useState("");
+  const [fltFilterKind, setFltFilterKind] = useState("");
+  const [fltOilBrand, setFltOilBrand] = useState("");
+  const [fltActive, setFltActive] = useState<"" | "active" | "inactive">("");
+  const [fltStock, setFltStock] = useState<"" | "low">("");
+
+  // قائمة الفئات المتاحة فعلياً من بيانات الأصناف نفسها — تتحدث تلقائياً
+  const availableCategories = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.category).filter(Boolean))).sort(),
+    [rows]);
+
+  const activeFilterCount = [fltCategory, fltKind, fltOilType, fltFilterKind, fltOilBrand, fltActive, fltStock]
+    .filter(Boolean).length;
+
+  function clearFilters() {
+    setFltCategory(""); setFltKind(""); setFltOilType(""); setFltFilterKind(""); setFltOilBrand("");
+    setFltActive(""); setFltStock("");
+  }
+
+  // الصفوف بعد الفلاتر — هذا ما يُعرض فعلياً في الجدول وما ينطبق عليه "تحديد الكل"
+  const filteredRows = useMemo(() => rows.filter((r) => {
+    if (fltCategory && r.category !== fltCategory) return false;
+    if (fltKind === "oil" && !r.is_oil) return false;
+    if (fltKind === "oilFilter" && !r.is_oil_filter) return false;
+    if (fltKind === "service" && !r.is_service) return false;
+    if (fltKind === "regular" && (r.is_oil || r.is_oil_filter || r.is_service)) return false;
+    if (fltOilType && r.oil_type !== fltOilType) return false;
+    if (fltFilterKind && r.filter_kind !== fltFilterKind) return false;
+    if (fltOilBrand && r.oil_brand !== fltOilBrand) return false;
+    if (fltActive === "active" && !r.is_active) return false;
+    if (fltActive === "inactive" && r.is_active) return false;
+    if (fltStock === "low" && !(r.min_qty > 0 && (r.stock_qty ?? 0) <= r.min_qty)) return false;
+    return true;
+  }), [rows, fltCategory, fltKind, fltOilType, fltFilterKind, fltOilBrand, fltActive, fltStock]);
+
+  // ── تحديد جماعي من الجدول الرئيسي — على الأصناف الظاهرة بعد الفلاتر ──
+  const [bulkSel, setBulkSel] = useState<Set<string>>(new Set());
+  const [bulkType, setBulkType] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  // قيم البادئة (ot:/fk:) تميّز نوع الزيت عن نوع الفلتر داخل نفس القائمة المنسدلة
+  async function applyBulkType() {
+    if (!bulkType || bulkSel.size === 0) return;
+    setBulkBusy(true);
+    try {
+      if (bulkType === "__clear_oiltype__") {
+        await api(`/products/oil-types/clear`, {
+          method: "POST", body: JSON.stringify({ productIds: Array.from(bulkSel) }),
+        });
+      } else if (bulkType === "__clear_filterkind__") {
+        await api(`/products/filter-kinds/clear`, {
+          method: "POST", body: JSON.stringify({ productIds: Array.from(bulkSel) }),
+        });
+      } else if (bulkType.startsWith("ot:")) {
+        await api(`/products/oil-types/${bulkType.slice(3)}/assign`, {
+          method: "POST", body: JSON.stringify({ productIds: Array.from(bulkSel) }),
+        });
+      } else if (bulkType.startsWith("fk:")) {
+        await api(`/products/filter-kinds/${bulkType.slice(3)}/assign`, {
+          method: "POST", body: JSON.stringify({ productIds: Array.from(bulkSel) }),
+        });
+      }
+      setBulkSel(new Set());
+      setBulkType("");
+      await load();
+    } catch (e: any) { await appAlert(e.message); }
+    finally { setBulkBusy(false); }
+  }
+
   const columns: Column<Product>[] = [
+    {
+      key: "__sel", title: (
+        <input type="checkbox" className="h-4 w-4 accent-petrol"
+               checked={filteredRows.length > 0 && filteredRows.every((r) => bulkSel.has(r.id))}
+               onChange={(e) => setBulkSel(e.target.checked ? new Set(filteredRows.map((r) => r.id)) : new Set())} />
+      ), width: "38px",
+      render: (p) => (
+        <input type="checkbox" className="h-4 w-4 accent-petrol"
+               checked={bulkSel.has(p.id)}
+               onChange={(e) => {
+                 const next = new Set(bulkSel);
+                 e.target.checked ? next.add(p.id) : next.delete(p.id);
+                 setBulkSel(next);
+               }} />
+      ),
+    },
     {
       key: "name", title: "الصنف",
       render: (p) => (
@@ -229,6 +446,99 @@ export default function ProductsPage() {
   // تعيين المنتجات لشركة
   const [assignFor, setAssignFor] = useState<OilBrand | null>(null);
   const [assignSel, setAssignSel] = useState<Set<string>>(new Set());
+
+  // ── تصنيف نوع الزيت (ماكينة/دفرنس/دركسيون/فرامل/قير) — جماعي بنفس نمط الشركات ──
+  const OIL_TYPES: Record<string, string> = {
+    engine: "زيت ماكينة", differential: "زيت دفرنس", steering: "زيت دركسيون",
+    brake: "زيت فرامل", gearbox: "زيت قير",
+  };
+  // الأنواع الثلاثة لتصنيف الفلاتر — كانت كلها مخلوطة تحت "فلاتر زيت" واحدة
+  const FILTER_KINDS: Record<string, string> = { oil: "فلتر زيت", air: "فلتر هواء", ac: "فلتر مكيف" };
+  const [typesOpen, setTypesOpen] = useState(false);
+
+  // ── ربط فلتر السيارة: ماركة/موديل/نطاق سنة → صنف فلتر حقيقي من المخزون ──
+  const [filtersMapOpen, setFiltersMapOpen] = useState(false);
+  const [carFilters, setCarFilters] = useState<any[]>([]);
+  const [cfKind, setCfKind] = useState<"oil" | "air" | "ac">("oil");
+  const [cfBrand, setCfBrand] = useState("");
+  const [cfModel, setCfModel] = useState("");
+  const [cfFrom, setCfFrom] = useState("");
+  const [cfTo, setCfTo] = useState("");
+  const [cfCylinders, setCfCylinders] = useState(""); // فاضي = أي محرك (الحالة الشائعة)
+  const [cfProductId, setCfProductId] = useState("");
+  const [cfBusy, setCfBusy] = useState(false);
+  const [cfErr, setCfErr] = useState("");
+  const [autoClsBusy, setAutoClsBusy] = useState(false);
+  const [autoClsMsg, setAutoClsMsg] = useState("");
+
+  async function runAutoClassify() {
+    setAutoClsBusy(true); setAutoClsMsg("");
+    try {
+      const r = await api<{ counts: Record<string, number> }>("/products/filter-kinds/auto-classify", { method: "POST" });
+      const total = Object.values(r.counts).reduce((a, b) => a + b, 0);
+      setAutoClsMsg(total > 0
+        ? `تم تصنيف ${total} صنف تلقائياً: ${Object.entries(FILTER_KINDS).map(([k, v]) => `${v} (${r.counts[k] || 0})`).join(" · ")}`
+        : "لم يُعثر على أصناف جديدة تطابق أسماء فئات معروفة — صنّفها يدوياً من الجدول.");
+      await load();
+    } catch (e: any) { setAutoClsMsg(e.message); }
+    finally { setAutoClsBusy(false); }
+  }
+
+  // كاسكيد حقيقي: الماركات من سيارات الشركة المسجّلة فعلاً، والموديل يترشّح
+  // لموديلات الماركة المختارة بس — نفس فكرة صفحة الحجز، لكن على مستوى الشركة.
+  const [cfBrandsList, setCfBrandsList] = useState<string[]>([]);
+  const [cfModelsList, setCfModelsList] = useState<string[]>([]);
+  useEffect(() => {
+    if (!filtersMapOpen) return;
+    api<string[]>("/cars/brands").then(setCfBrandsList).catch(() => setCfBrandsList([]));
+  }, [filtersMapOpen]);
+  useEffect(() => {
+    if (!cfBrand) { setCfModelsList([]); return; }
+    api<string[]>(`/cars/models?brand=${encodeURIComponent(cfBrand)}`)
+      .then(setCfModelsList).catch(() => setCfModelsList([]));
+  }, [cfBrand]);
+
+  // نطاق سنوات معقول لقائمتي "من/إلى" — بلا كتابة حرة
+  const YEAR_OPTIONS = useMemo(() => {
+    const now = new Date().getFullYear();
+    const out: string[] = [];
+    for (let y = now + 1; y >= 1990; y--) out.push(String(y));
+    return out;
+  }, []);
+
+  async function loadCarFilters() {
+    try { setCarFilters(await api<any[]>("/cars/oil-filters")); } catch { setCarFilters([]); }
+  }
+
+  async function addCarFilter() {
+    if (!cfBrand.trim() || !cfModel.trim() || !cfFrom || !cfTo || !cfProductId) {
+      setCfErr("كل الحقول مطلوبة"); return;
+    }
+    setCfBusy(true); setCfErr("");
+    try {
+      await api("/cars/oil-filters", {
+        method: "POST",
+        body: JSON.stringify({
+          brand: cfBrand.trim(), model: cfModel.trim(),
+          yearFrom: Number(cfFrom), yearTo: Number(cfTo), filterProductId: cfProductId,
+          filterKind: cfKind, cylinders: cfCylinders ? Number(cfCylinders) : null,
+        }),
+      });
+      setCfBrand(""); setCfModel(""); setCfFrom(""); setCfTo(""); setCfProductId(""); setCfCylinders("");
+      await loadCarFilters();
+    } catch (e: any) { setCfErr(e.message); }
+    finally { setCfBusy(false); }
+  }
+
+  async function removeCarFilter(id: string) {
+    if (!(await appConfirm("حذف هذا الربط؟"))) return;
+    try { await api(`/cars/oil-filters/${id}`, { method: "DELETE" }); await loadCarFilters(); }
+    catch (e: any) { await appAlert(e.message); }
+  }
+  const [typeAssignFor, setTypeAssignFor] = useState<string | null>(null); // مفتاح النوع، مثال: "brake"
+  const [typeAssignSel, setTypeAssignSel] = useState<Set<string>>(new Set());
+  const [typeBusy, setTypeBusy] = useState(false);
+  const [typeErr, setTypeErr] = useState("");
   // صورة المنتج في نموذج التعديل
   const [prodImage, setProdImage] = useState<string | null | undefined>(undefined); // undefined = بدون تغيير
 
@@ -333,6 +643,27 @@ export default function ProductsPage() {
       await load();
     } catch (e: any) { await appAlert(e.message); }
     finally { setBrandBusy(false); }
+  }
+
+  function openTypeAssign(typeKey: string) {
+    // تحديد مسبق: الأصناف المصنّفة بهذا النوع فعلاً
+    const pre = new Set<string>();
+    rows.filter((r) => r.is_oil).forEach((r) => { if (r.oil_type === typeKey) pre.add(r.id); });
+    setTypeAssignSel(pre);
+    setTypeAssignFor(typeKey);
+  }
+
+  async function saveTypeAssign() {
+    if (!typeAssignFor) return;
+    setTypeBusy(true); setTypeErr("");
+    try {
+      await api(`/products/oil-types/${typeAssignFor}/assign`, {
+        method: "POST", body: JSON.stringify({ productIds: Array.from(typeAssignSel) }),
+      });
+      setTypeAssignFor(null);
+      await load();
+    } catch (e: any) { setTypeErr(e.message); }
+    finally { setTypeBusy(false); }
   }
 
   // ══════════ منظف الأسماء الذكي ══════════
@@ -442,14 +773,116 @@ export default function ProductsPage() {
       <ErrorNote msg={pageErr} />
 
       <Card>
+        {/* ══════════ لوحة الفلاتر الاحترافية ══════════ */}
+        <div className="mb-3 rounded-xl border border-line bg-ink-3/30">
+          <button onClick={() => setFltOpen(!fltOpen)}
+                  className="flex w-full items-center justify-between px-3 py-2.5">
+            <span className="flex items-center gap-2 text-[12.5px] font-black">
+              <MIcon name="tune" className="!text-[16px]" />
+              الفلاتر
+              {activeFilterCount > 0 && (
+                <span className="rounded-full bg-petrol px-2 py-0.5 text-[10px] font-black text-white">
+                  {activeFilterCount}
+                </span>
+              )}
+            </span>
+            <span className="text-[11px] text-text-dim">
+              {filteredRows.length} من {rows.length} صنف
+              <MIcon name={fltOpen ? "expand_less" : "expand_more"} className="mr-1 !text-[16px] align-middle" />
+            </span>
+          </button>
+          {fltOpen && (
+            <div className="grid gap-2 border-t border-line p-3 sm:grid-cols-3 lg:grid-cols-6">
+              <Field label="الفئة">
+                <Select value={fltCategory} onChange={(e) => setFltCategory(e.target.value)}>
+                  <option value="">الكل</option>
+                  {availableCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                </Select>
+              </Field>
+              <Field label="النوع">
+                <Select value={fltKind} onChange={(e) => setFltKind(e.target.value as any)}>
+                  <option value="">الكل</option>
+                  <option value="oil">🛢️ زيت</option>
+                  <option value="oilFilter">🔧 فلتر زيت</option>
+                  <option value="service">🛠 خدمة</option>
+                  <option value="regular">صنف عادي</option>
+                </Select>
+              </Field>
+              <Field label="نوع الزيت">
+                <Select value={fltOilType} onChange={(e) => setFltOilType(e.target.value)}>
+                  <option value="">الكل</option>
+                  {Object.entries(OIL_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </Select>
+              </Field>
+              <Field label="نوع الفلتر">
+                <Select value={fltFilterKind} onChange={(e) => setFltFilterKind(e.target.value)}>
+                  <option value="">الكل</option>
+                  {Object.entries(FILTER_KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </Select>
+              </Field>
+              <Field label="شركة الزيت">
+                <Select value={fltOilBrand} onChange={(e) => setFltOilBrand(e.target.value)}>
+                  <option value="">الكل</option>
+                  {brands.map((b) => <option key={b.id} value={b.name}>{b.name}</option>)}
+                </Select>
+              </Field>
+              <Field label="الحالة">
+                <Select value={fltActive} onChange={(e) => setFltActive(e.target.value as any)}>
+                  <option value="">الكل</option>
+                  <option value="active">نشط</option>
+                  <option value="inactive">موقوف</option>
+                </Select>
+              </Field>
+              <Field label="المخزون">
+                <Select value={fltStock} onChange={(e) => setFltStock(e.target.value as any)}>
+                  <option value="">الكل</option>
+                  <option value="low">منخفض فقط</option>
+                </Select>
+              </Field>
+              {activeFilterCount > 0 && (
+                <div className="col-span-full flex justify-end">
+                  <Button variant="ghost" className="!py-1.5 !text-[11.5px]" onClick={clearFilters}>
+                    ✕ مسح كل الفلاتر
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         <DataTable
           columns={columns}
-          rows={rows}
+          rows={filteredRows}
           loading={loading}
           searchKeys={["name", "category", "spec", "barcode"]}
           searchPlaceholder="بحث بالاسم أو الفئة أو الباركود..."
           emptyText="لا توجد أصناف بعد — أضف أول صنف"
-          toolbar={canCreate && <div className="flex gap-2">
+          toolbar={<>
+            {bulkSel.size > 0 && (
+              <div className="flex items-center gap-2 rounded-xl border border-petrol bg-petrol/10 px-3 py-2">
+                <span className="text-[12px] font-black">
+                  محدد: <b className="tnum">{bulkSel.size}</b> صنف
+                </span>
+                <Select value={bulkType} onChange={(e) => setBulkType(e.target.value)}>
+                  <option value="">— اختر تصنيفاً —</option>
+                  <optgroup label="نوع الزيت">
+                    {Object.entries(OIL_TYPES).map(([k, v]) => <option key={"ot:" + k} value={"ot:" + k}>{v}</option>)}
+                    <option value="__clear_oiltype__">✕ إزالة تصنيف الزيت</option>
+                  </optgroup>
+                  <optgroup label="نوع الفلتر">
+                    {Object.entries(FILTER_KINDS).map(([k, v]) => <option key={"fk:" + k} value={"fk:" + k}>{v}</option>)}
+                    <option value="__clear_filterkind__">✕ إزالة تصنيف الفلتر</option>
+                  </optgroup>
+                </Select>
+                <Button className="!py-1.5 !text-[11.5px]" disabled={!bulkType || bulkBusy} onClick={applyBulkType}>
+                  {bulkBusy ? "جارِ التطبيق..." : "✓ تطبيق على المحدد"}
+                </Button>
+                <Button variant="ghost" className="!py-1.5 !text-[11.5px]" onClick={() => setBulkSel(new Set())}>
+                  إلغاء التحديد
+                </Button>
+              </div>
+            )}
+            {canCreate && <div className="flex gap-2">
             <input ref={importRef} type="file" accept=".xlsx" hidden
                    onChange={(e) => e.target.files?.[0] && importExcel(e.target.files[0])} />
             <Button variant="ghost" disabled={importBusy} onClick={() => importRef.current?.click()}>
@@ -467,11 +900,18 @@ export default function ProductsPage() {
             <Button variant="ghost" onClick={() => { setBrandsOpen(true); setBrandErr(""); }}>
               🏷️ شركات الزيوت
             </Button>
+            <Button variant="ghost" onClick={() => setTypesOpen(true)}>
+              🧪 تصنيف نوع الزيت
+            </Button>
+            <Button variant="ghost" onClick={() => { setFiltersMapOpen(true); loadCarFilters(); }}>
+              🔩 فلاتر السيارات
+            </Button>
             <Button variant="ghost" onClick={() => { setClsOpen(true); setClsPreview(null); setClsErr(""); }}>
               🪄 تصنيف ذكي
             </Button>
             <Button onClick={openCreate}>+ صنف جديد</Button>
           </div>}
+          </>}
         />
       </Card>
 
@@ -572,6 +1012,22 @@ export default function ProductsPage() {
                   <Select value={form.oilBrand || ""} onChange={(e) => setForm({ ...form, oilBrand: e.target.value || null })}>
                     <option value="">— بدون شركة —</option>
                     {brands.map((b) => <option key={b.id} value={b.name}>{b.name}</option>)}
+                  </Select>
+                </Field>
+              )}
+              {form.isOil && (
+                <Field label="نوع الزيت">
+                  <Select value={form.oilType || ""} onChange={(e) => setForm({ ...form, oilType: e.target.value || null })}>
+                    <option value="">— غير مصنّف —</option>
+                    {Object.entries(OIL_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </Select>
+                </Field>
+              )}
+              {form.isService && (
+                <Field label="نوع الزيت المطلوب لهذه الخدمة">
+                  <Select value={form.oilType || ""} onChange={(e) => setForm({ ...form, oilType: e.target.value || null })}>
+                    <option value="">— غير مرتبطة بزيت —</option>
+                    {Object.entries(OIL_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </Select>
                 </Field>
               )}
@@ -809,6 +1265,185 @@ export default function ProductsPage() {
             <Button onClick={saveAssign} disabled={brandBusy}>
               {brandBusy ? "جارِ الحفظ..." : `✓ حفظ التعيين (${assignSel.size})`}
             </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ══════════ تصنيف نوع الزيت — الأنواع الخمسة الثابتة ══════════ */}
+      <Modal open={typesOpen} size="lg" onClose={() => setTypesOpen(false)} title="🧪 تصنيف نوع الزيت">
+        <div className="space-y-3">
+          <p className="text-[12px] text-text-dim">
+            صنّف كل زيت بنوعه (ماكينة/دفرنس/دركسيون/فرامل/قير) بالجملة دفعة واحدة بدل صنف بصنف —
+            ونفس النوع يُستخدم لربط الخدمة (مثال: "تغيير زيت الفرامل") بالزيوت المناسبة لها فقط
+            في بوابة الحجز، بدل ظهور أي زيت عشوائي.
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {Object.entries(OIL_TYPES).map(([key, label]) => {
+              const count = rows.filter((r) => r.is_oil && r.oil_type === key).length;
+              return (
+                <div key={key} className="rounded-xl border border-line p-3 text-center">
+                  <div className="text-[12.5px] font-black">{label}</div>
+                  <div className="mt-1 text-[11px] text-text-dim">
+                    <b className="tnum">{count}</b> صنف مصنّف
+                  </div>
+                  <button onClick={() => openTypeAssign(key)}
+                          className="mt-2 w-full rounded-md bg-petrol px-2 py-1.5 text-[10.5px] font-bold text-white hover:brightness-110">
+                    تعيين المنتجات
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          {(() => {
+            const unclassified = rows.filter((r) => r.is_oil && !r.oil_type).length;
+            return unclassified > 0 ? (
+              <p className="rounded-lg bg-ink-3/40 px-3 py-2 text-[11.5px] font-bold text-text-dim">
+                {unclassified} صنف زيت لسه من غير نوع محدد.
+              </p>
+            ) : null;
+          })()}
+        </div>
+      </Modal>
+
+      {/* ══════════ تعيين منتجات لنوع زيت (اختيار جماعي) ══════════ */}
+      <Modal open={!!typeAssignFor} size="lg" onClose={() => setTypeAssignFor(null)}
+             title={`تعيين الزيوت لنوع «${(typeAssignFor && OIL_TYPES[typeAssignFor]) || ""}»`}>
+        <div className="space-y-3">
+          <p className="text-[12px] text-text-dim">
+            حدّد كل الأصناف اللي تتبع هذا النوع مرة واحدة ثم احفظ — بديل التعليم الفردي صنف بصنف.
+            المحدد: <b className="tnum">{typeAssignSel.size}</b>
+          </p>
+          <div className="max-h-80 divide-y divide-line overflow-y-auto rounded-lg border border-line">
+            {rows.filter((r) => r.is_oil).map((r) => (
+              <label key={r.id} className="flex cursor-pointer items-center gap-2 px-3 py-2 text-[12.5px] hover:bg-ink-3">
+                <input type="checkbox" checked={typeAssignSel.has(r.id)} className="h-4 w-4 accent-petrol"
+                       onChange={(e) => {
+                         const next = new Set(typeAssignSel);
+                         e.target.checked ? next.add(r.id) : next.delete(r.id);
+                         setTypeAssignSel(next);
+                       }} />
+                <span className="flex-1 font-bold">{productLabel(r)}</span>
+                {r.oil_type && r.oil_type !== typeAssignFor && (
+                  <span className="rounded-full bg-ink-3 px-2 py-0.5 text-[10px] text-text-dim">
+                    حالياً: {OIL_TYPES[r.oil_type] || r.oil_type}
+                  </span>
+                )}
+              </label>
+            ))}
+            {rows.filter((r) => r.is_oil).length === 0 && (
+              <p className="p-6 text-center text-[12px] text-text-dim">
+                لا توجد أصناف زيت بعد — شغّل "🪄 تصنيف ذكي" أولاً أو فعّل "صنف زيت" على المنتجات
+              </p>
+            )}
+          </div>
+          <ErrorNote msg={typeErr} />
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setTypeAssignFor(null)}>إلغاء</Button>
+            <Button onClick={saveTypeAssign} disabled={typeBusy}>
+              {typeBusy ? "جارِ الحفظ..." : `✓ حفظ التعيين (${typeAssignSel.size})`}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ══════════ ربط فلتر السيارة: ماركة/موديل/نطاق سنة ← صنف حقيقي ══════════ */}
+      <Modal open={filtersMapOpen} size="lg" onClose={() => setFiltersMapOpen(false)} title="🔩 فلاتر السيارات">
+        <div className="space-y-4">
+          <p className="text-[12px] text-text-dim">
+            حدّد نوع الفلتر (زيت/هواء/مكيف) والماركة والموديل ونطاق سنة الصنع، واختر
+            الفلتر الصحيح من أصنافك — بمجرد ما العميل يحجز بنفس البيانات، الفلتر ده
+            يظهر تلقائياً في فاتورته بدل قائمة عامة.
+          </p>
+
+          {/* نوع الفلتر — أزرار بدل نص حر، يحدد أي أصناف تظهر في قائمة الاختيار */}
+          <div className="flex gap-2">
+            {Object.entries(FILTER_KINDS).map(([k, label]) => (
+              <button key={k} onClick={() => { setCfKind(k as any); setCfProductId(""); }}
+                      className="rounded-full px-3.5 py-1.5 text-[11.5px] font-black transition"
+                      style={{
+                        background: cfKind === k ? "var(--petrol, #0f766e)" : "transparent",
+                        color: cfKind === k ? "#fff" : undefined,
+                        border: cfKind === k ? "none" : "1px solid var(--line, #E2E8F0)",
+                      }}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <SearchSelect value={cfBrand} onChange={(v) => { setCfBrand(v); setCfModel(""); }}
+                          options={cfBrandsList} placeholder="اختر أو اكتب الماركة" />
+            <SearchSelect value={cfModel} onChange={setCfModel} options={cfModelsList}
+                          placeholder={cfBrand ? "اختر أو اكتب الموديل" : "اختر الماركة أولاً"}
+                          disabled={!cfBrand} />
+            <Select value={cfFrom} onChange={(e) => setCfFrom(e.target.value)}>
+              <option value="">من سنة</option>
+              {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
+            </Select>
+            <Select value={cfTo} onChange={(e) => setCfTo(e.target.value)}>
+              <option value="">إلى سنة</option>
+              {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
+            </Select>
+          </div>
+          {/* صنف الفلتر ياخد صفاً كاملاً — الأسماء طويلة ومحتاجة مساحة أوضح من
+              زحمة شبكة الماركة/الموديل/السنة، والسلندرات جنبه لأنه اختياري بسيط.
+              البحث هنا حي في كل الأصناف (اسم أو باركود) — بلا اشتراط تصنيف
+              مسبق، عشان محدش يتعطل بانتظار خطوة تصنيف قد تكون غير مكتملة. */}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_140px]">
+            <ProductSearchSelect value={cfProductId} onChange={setCfProductId} products={rows}
+                                 placeholder={`ابحث عن ${FILTER_KINDS[cfKind]} بالاسم أو الباركود...`} />
+            <Select value={cfCylinders} onChange={(e) => setCfCylinders(e.target.value)}>
+              <option value="">أي محرك</option>
+              {["3", "4", "5", "6", "8", "10", "12"].map((c) => <option key={c} value={c}>{c} سلندر</option>)}
+            </Select>
+          </div>
+          <p className="text-[10.5px] text-text-dim">
+            اترك "أي محرك" إلا لو نفس الموديل والسنة عنده أكثر من خيار محرك بفلاتر مختلفة
+            (مثال: فورتشنر 4 أو 6 سلندر) — حينها أضف رابطاً منفصلاً لكل سلندر.
+          </p>
+          {/* تصنيف نوع الفلتر (زيت/هواء/مكيف) على الأصناف مفيد لتقارير الجدول
+              الرئيسي وفلترته، لكن البحث فوق يعمل مباشرة في كل الأصناف بلا
+              اشتراطه — فهذا مجرد اقتراح اختياري غير معطِّل لأي شيء. */}
+          <div className="flex items-center justify-between gap-3 rounded-lg bg-ink-3/40 px-3 py-2">
+            <p className="text-[10.5px] text-text-dim">
+              💡 نصيحة: صنّف أصنافك بنوع الفلتر (من الجدول الرئيسي) عشان تقدر تفلترها
+              وتحلّل تقاريرها لاحقاً — مش شرط للبحث والربط هنا.
+            </p>
+            <Button variant="ghost" className="!shrink-0 !py-1.5 !text-[11px]"
+                    disabled={autoClsBusy} onClick={runAutoClassify}>
+              {autoClsBusy ? "جارِ التصنيف..." : "⚡ تصنيف تلقائي من الفئة"}
+            </Button>
+          </div>
+          {autoClsMsg && (
+            <p className="rounded-lg bg-petrol/10 px-3 py-2 text-[11px] font-bold text-petrol">
+              {autoClsMsg}
+            </p>
+          )}
+          <ErrorNote msg={cfErr} />
+          <Button onClick={addCarFilter} disabled={cfBusy}>
+            {cfBusy ? "جارِ الإضافة..." : "+ إضافة ربط"}
+          </Button>
+
+          <div className="max-h-72 divide-y divide-line overflow-y-auto rounded-lg border border-line">
+            {carFilters.map((f) => (
+              <div key={f.id} className="flex items-center gap-2 px-3 py-2 text-[12px]">
+                <span className="rounded-full bg-ink-3 px-2 py-0.5 text-[10px] font-black text-text-dim">
+                  {FILTER_KINDS[f.filter_kind] || f.filter_kind}
+                </span>
+                <span className="flex-1">
+                  <b>{f.brand}</b> {f.model} <span className="text-text-dim">({f.year_from}–{f.year_to}{f.cylinders ? ` · ${f.cylinders} سلندر` : ""})</span>
+                  {" ← "}
+                  <span className="font-bold">{f.filter_name}{f.filter_spec ? ` ${f.filter_spec}` : ""}</span>
+                </span>
+                <button onClick={() => removeCarFilter(f.id)}
+                        className="rounded-md px-2 py-1 text-[11px] font-bold text-red-600 hover:bg-red-50">
+                  حذف
+                </button>
+              </div>
+            ))}
+            {carFilters.length === 0 && (
+              <p className="p-6 text-center text-[12px] text-text-dim">لا توجد روابط بعد</p>
+            )}
           </div>
         </div>
       </Modal>

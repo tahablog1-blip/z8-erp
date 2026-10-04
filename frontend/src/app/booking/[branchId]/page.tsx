@@ -68,6 +68,63 @@ function TInput(props: React.InputHTMLAttributes<HTMLInputElement> & { label: st
   );
 }
 
+/** قائمة منسدلة مخصصة بهوية الموقع البصرية بالكامل — بديل <select>/<datalist>
+ *  اللي شكلهما يعتمد على المتصفح ومايتحكمش فيه. تسمح بالكتابة الحرة أيضاً
+ *  (allowCustom) للحالات النادرة اللي مش في القائمة بعد. */
+function Combobox({ label, value, onChange, options, placeholder, allowCustom = true }: {
+  label: string; value: string; onChange: (v: string) => void; options: string[];
+  placeholder?: string; allowCustom?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  const filtered = value.trim()
+    ? options.filter((o) => o.toLowerCase().includes(value.trim().toLowerCase()))
+    : options;
+
+  return (
+    <div className="relative block text-right" ref={boxRef}>
+      <span className="mb-1 block text-[11.5px] font-black" style={{ color: NAVY }}>{label}</span>
+      <input
+        value={value}
+        onChange={(e) => { if (allowCustom) onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        readOnly={!allowCustom}
+        placeholder={placeholder}
+        style={{ borderColor: LINE }}
+        className={inputCls}
+      />
+      {open && (options.length > 0 || value.trim()) && (
+        <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-xl border bg-white shadow-lg"
+             style={{ borderColor: LINE }}>
+          {filtered.length === 0 ? (
+            <div className="px-4 py-2.5 text-[12.5px] font-bold" style={{ color: DIM }}>
+              {allowCustom ? "لا يوجد مطابق — تقدر تكتب اسماً جديداً" : "لا يوجد مطابق"}
+            </div>
+          ) : filtered.map((o) => (
+            <button
+              key={o} type="button"
+              onClick={() => { onChange(o); setOpen(false); }}
+              className="block w-full px-4 py-2.5 text-right text-[13px] font-bold transition hover:bg-[#F1F5F9]"
+              style={{ color: value === o ? GREEN : NAVY }}
+            >
+              {o}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2.5 rounded-xl p-3" style={{ background: "#F6F8FA" }}>
@@ -168,11 +225,23 @@ function GarageCard({ profile, busy, err, onBook, onAddNew }: {
 }
 
 /* ── 4) نموذج التسجيل — الحالة جوّه الكومبوننت ── */
-function RegisterForm({ sType, initial, busy, err, onBack, onSubmit }: {
-  sType: SType; initial: FormValues; busy: boolean; err: string;
+function RegisterForm({ sType, initial, busy, err, branchId, onBack, onSubmit }: {
+  sType: SType; initial: FormValues; busy: boolean; err: string; branchId: string;
   onBack: (v: FormValues) => void; onSubmit: (v: FormValues) => void;
 }) {
   const [f, setF] = useState<FormValues>(initial);
+
+  // ── كاسكيد الماركة/الموديل الحقيقي: من سيارات هذا الفرع المسجّلة فعلاً ──
+  const [brandsList, setBrandsList] = useState<string[]>([]);
+  const [modelsList, setModelsList] = useState<string[]>([]);
+  useEffect(() => {
+    call<string[]>(`car-brands/${branchId}`).then(setBrandsList).catch(() => setBrandsList([]));
+  }, [branchId]);
+  useEffect(() => {
+    if (!f.brand) { setModelsList([]); return; }
+    call<string[]>(`car-models/${branchId}?brand=${encodeURIComponent(f.brand)}`)
+      .then(setModelsList).catch(() => setModelsList([]));
+  }, [branchId, f.brand]);
   const set = (k: keyof FormValues) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
     setF((p) => ({ ...p, [k]: v }));
@@ -206,22 +275,46 @@ function RegisterForm({ sType, initial, busy, err, onBack, onSubmit }: {
                   value={f.plateNumbers} onChange={setClean("plateNumbers", (s) => s.replace(/\D/g, "").slice(0, 4))} />
           <TInput label="حروفها (إنجليزي)" dir="ltr" className="text-center uppercase" placeholder="HHR"
                   value={f.plateLetters} onChange={setClean("plateLetters", (s) => s.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 3))} />
-          <TInput label="الماركة" placeholder="تويوتا" value={f.brand} onChange={set("brand")} />
-          <TInput label="الموديل" placeholder="كامري" value={f.carName} onChange={set("carName")} />
+          {/* كاسكيد حقيقي وشكل مخصص بهوية الموقع: الماركات من سيارات هذا الفرع
+              المسجّلة فعلاً — تنمو تلقائياً بلا صيانة يدوية لقائمة ثابتة. */}
+          <Combobox label="الماركة" value={f.brand}
+                    onChange={(v) => setF((p) => ({ ...p, brand: v, carName: "" }))}
+                    options={brandsList} placeholder="اختر أو اكتب الماركة" />
+          {/* الموديل يترشّح فعلياً حسب الماركة المختارة فوق — يفضل فاضياً لحد
+              ما تُختار ماركة، وبمجرد الاختيار يجيب موديلاتها هي فقط. */}
+          <Combobox label="الموديل" value={f.carName}
+                    onChange={(v) => setF((p) => ({ ...p, carName: v }))}
+                    options={modelsList}
+                    placeholder={f.brand ? "اختر أو اكتب الموديل" : "اختر الماركة أولاً"} />
           <TInput label="سنة الصنع" inputMode="numeric" className="tnum" placeholder="2022"
                   value={f.modelYear} onChange={setClean("modelYear", (s) => s.replace(/\D/g, "").slice(0, 4))} />
           <TInput label="الممشى الحالي (كم)" inputMode="numeric" className="tnum" placeholder="84500"
                   value={f.odometer} onChange={setClean("odometer", (s) => s.replace(/\D/g, ""))} />
+          {/* إلزامية دائماً (بغض النظر عن نوع الخدمة) — أساسية لمطابقة الفلتر
+              الصحيح بدقة بدل عرض قائمة عامة على العميل. */}
+          <Combobox label="عدد السلندرات" value={f.cylinders}
+                    onChange={(v) => setF((p) => ({ ...p, cylinders: v }))}
+                    options={["3", "4", "5", "6", "8", "10", "12"]} placeholder="اختر (إلزامي)" allowCustom={false} />
         </div>
       </Section>
 
       {(sType === "warranty" || sType === "company") && (
         <Section title="بيانات الضمان الكاملة">
           <div className="grid grid-cols-2 gap-2">
-            <TInput label="الفئة" placeholder="GLX / فل كامل" value={f.carCategory} onChange={set("carCategory")} />
-            <TInput label="السلندرات" inputMode="numeric" className="tnum" placeholder="4"
-                    value={f.cylinders} onChange={set("cylinders")} />
-            <TInput label="اللون" placeholder="أبيض" value={f.color} onChange={set("color")} />
+            {/* الفئة (تريم) تتفاوت باختلاف الماركة والموديل بشكل كبير جداً — قائمة
+                مقترحات قابلة للكتابة (datalist) بدل قائمة مغلقة تمنع فئات نادرة */}
+            <label className="block text-right">
+              <span className="mb-1 block text-[11.5px] font-black" style={{ color: NAVY }}>الفئة</span>
+              <input list="car-category-suggestions" value={f.carCategory} onChange={set("carCategory")}
+                     placeholder="GLX / فل كامل" style={{ borderColor: LINE }} className={inputCls} />
+              <datalist id="car-category-suggestions">
+                {["فل كامل", "نص فل", "ستاندرد", "GLX", "SE", "LE", "XLE", "Limited", "Base", "GL", "EX", "LX"]
+                  .map((o) => <option key={o} value={o} />)}
+              </datalist>
+            </label>
+            <Combobox label="اللون" value={f.color}
+                      onChange={(v) => setF((p) => ({ ...p, color: v }))}
+                      options={["أبيض", "أسود", "فضي", "رمادي", "أحمر", "أزرق", "بني", "ذهبي", "بيج", "أخرى"]} />
             <TInput label="رقم الهيكل (الشاصي)" dir="ltr" className="tnum uppercase"
                     value={f.chassisNumber} onChange={setClean("chassisNumber", (s) => s.toUpperCase())} />
           </div>
@@ -249,7 +342,12 @@ function RegisterForm({ sType, initial, busy, err, onBack, onSubmit }: {
       )}
 
       <ErrBox msg={err} />
-      <button onClick={() => onSubmit(f)} disabled={busy}
+      {!f.cylinders && (
+        <p className="text-center text-[11px] font-bold" style={{ color: "#B45309" }}>
+          حدّد عدد السلندرات فوق قبل المتابعة — ضروري لمطابقة الفلتر الصحيح لسيارتك.
+        </p>
+      )}
+      <button onClick={() => onSubmit(f)} disabled={busy || !f.cylinders}
               className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-black text-white shadow-lg transition active:scale-[.98] disabled:opacity-50"
               style={{ background: GREEN }}>
         <MIcon name="confirmation_number" className="!text-[20px] text-white" />
@@ -637,7 +735,8 @@ function OilCard({ carId }: { carId: string }) {
 /* ═══════════ خطوة اختيار الزيت — بطاقات المنتجات + تكرار فاتورة سابقة ═══════════ */
 function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
   branchId: string; phone: string; sel: Selection;
-  setSel: (s: Selection) => void; onNext: () => void; onBack: () => void;
+  setSel: (s: Selection) => void;
+  onNext: () => void; onBack: () => void;
 }) {
   const [oils, setOils] = useState<OilProduct[] | null>(null);
   const [brandLogos, setBrandLogos] = useState<BrandLogo[]>([]);
@@ -646,7 +745,6 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
   const [loadingInv, setLoadingInv] = useState(false);
   const [err, setErr] = useState("");
   const [q, setQ] = useState("");
-
   useEffect(() => {
     call<{ oils: OilProduct[]; brands?: BrandLogo[] }>(`booking-products/${branchId}`)
       .then((r) => { setOils(r.oils); setBrandLogos(r.brands || []); }).catch(() => setOils([]));
@@ -868,8 +966,9 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
 }
 
 /* ═══════════ خطوة فلتر الزيت ═══════════ */
-function FilterPicker({ branchId, sel, setSel, onNext, onBack }: {
+function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carCylinders, onNext, onBack }: {
   branchId: string; sel: Selection; setSel: (s: Selection) => void;
+  carBrand: string; carModel: string; carYear: string; carCylinders: string;
   onNext: () => void; onBack: () => void;
 }) {
   const [filters, setFilters] = useState<OilProduct[] | null>(null);
@@ -880,8 +979,29 @@ function FilterPicker({ branchId, sel, setSel, onNext, onBack }: {
       .then((r) => setFilters(r.filters)).catch(() => setFilters([]));
   }, [branchId]);
 
+  // ── الفلتر الصحيح لنفس السيارة (ماركة/موديل/سنة) لو موظف عيّن ربطاً له مسبقاً ──
+  const [matchedFilter, setMatchedFilter] = useState<OilProduct | null>(null);
+  useEffect(() => {
+    if (!carBrand || !carModel) { setMatchedFilter(null); return; }
+    const cylQuery = carCylinders ? `&cylinders=${encodeURIComponent(carCylinders)}` : "";
+    call<OilProduct | null>(
+      `car-oil-filter-match/${branchId}?brand=${encodeURIComponent(carBrand)}&model=${encodeURIComponent(carModel)}&year=${encodeURIComponent(carYear || "")}${cylQuery}`
+    ).then((f) => {
+      setMatchedFilter(f);
+      // لو لسه ما في اختيار فلتر، رشّح المطابق تلقائياً كافتراضي (يبقى قابل للتغيير)
+      // ملاحظة: setSel هنا مُعرّف كدالة تستقبل قيمة مباشرة لا مُحدِّث دالي — لذا
+      // نعتمد على قيمة sel الحالية من الـprops بدل صيغة functional update.
+      if (f && !sel.filter) setSel({ ...sel, filter: f });
+    }).catch(() => setMatchedFilter(null));
+    // eslint-disable-next-line
+  }, [branchId, carBrand, carModel, carYear, carCylinders]);
+
   const ql = q.trim();
   const shown = (filters || []).filter((f) => !ql || f.name.includes(ql) || (f.brand || "").includes(ql));
+  // القائمة الكاملة (كل ماركات الفلاتر في المخزون) مش مفيدة للعميل لو عندنا
+  // تطابق دقيق جاهز أصلاً — نخفيها افتراضياً ونعرض الفلتر الصح بس، مع رابط
+  // اختياري لإظهارها لو حبّ يغيّر يدوياً.
+  const [showAllFilters, setShowAllFilters] = useState(false);
 
   return (
     <div className="kiosk-step space-y-3 rounded-2xl bg-white p-5 shadow-lg">
@@ -903,37 +1023,78 @@ function FilterPicker({ branchId, sel, setSel, onNext, onBack }: {
 
       {sel.withFilter === true && (
         <div className="space-y-2">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث عن الفلتر المناسب لسيارتك"
-                 className="w-full rounded-xl border-2 px-3.5 py-2.5 text-[13px] font-bold outline-none"
-                 style={{ borderColor: LINE }} />
-          {filters === null && <p className="py-3 text-center text-[12px]" style={{ color: DIM }}>جارِ التحميل...</p>}
-          <div className="grid max-h-[38vh] gap-2 overflow-y-auto">
-            {shown.map((f) => {
-              const active = sel.filter?.id === f.id;
-              return (
-                <button key={f.id} onClick={() => setSel({ ...sel, filter: f })}
-                        className="flex flex-col gap-2 rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
-                        style={{ borderColor: active ? GREEN : LINE, background: active ? "rgba(22,163,74,.06)" : "#fff" }}>
-                  <span className="flex w-full items-start gap-3">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-[18px]" style={{ background: "#F6F8FA" }}>⭕</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[13px] font-black leading-snug" style={{ color: NAVY }}>{f.name}</span>
-                      {f.spec && <span className="tnum text-[10.5px] font-bold" style={{ color: DIM }}>{f.spec}</span>}
-                    </span>
-                    {active && <MIcon name="check_circle" filled className="!text-[18px] shrink-0" />}
+          {matchedFilter && !showAllFilters ? (
+            // ── تطابق دقيق موجود: نعرض الفلتر الصحيح فقط بثقة، بدل قائمة
+            //    كاملة بماركات عشوائية غير متعلقة بسيارة العميل خالص. ──
+            <div className="space-y-2">
+              <p className="rounded-lg px-3 py-2 text-[11.5px] font-bold" style={{ background: "rgba(22,163,74,.08)", color: GREEN }}>
+                ✓ هذا هو الفلتر الأصلي المطابق لسيارتك — محدد تلقائياً.
+              </p>
+              <div className="flex flex-col gap-2 rounded-xl border-2 p-3 text-right"
+                   style={{ borderColor: GREEN, background: "rgba(22,163,74,.06)" }}>
+                <span className="flex w-full items-start gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-[18px]" style={{ background: "#F6F8FA" }}>⭕</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13px] font-black leading-snug" style={{ color: NAVY }}>{matchedFilter.name}</span>
+                    {matchedFilter.spec && <span className="tnum text-[10.5px] font-bold" style={{ color: DIM }}>{matchedFilter.spec}</span>}
                   </span>
-                  <span className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5"
-                        style={{ background: "rgba(22,163,74,.08)" }}>
-                    <span className="text-[9.5px] font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
-                    <span className="tnum text-[14px] font-black" style={{ color: GREEN }}>{money(f.price)} ر.س</span>
-                  </span>
+                  <MIcon name="check_circle" filled className="!text-[18px] shrink-0" />
+                </span>
+                <span className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5" style={{ background: "rgba(22,163,74,.08)" }}>
+                  <span className="text-[9.5px] font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
+                  <span className="tnum text-[14px] font-black" style={{ color: GREEN }}>{money(matchedFilter.price)} ر.س</span>
+                </span>
+              </div>
+              <button onClick={() => setShowAllFilters(true)}
+                      className="w-full text-center text-[11.5px] font-bold underline" style={{ color: DIM }}>
+                عايز فلتر تاني؟ اعرض كل الخيارات
+              </button>
+            </div>
+          ) : (
+            <>
+              {matchedFilter && (
+                <button onClick={() => setShowAllFilters(false)}
+                        className="text-[11px] font-bold underline" style={{ color: GREEN }}>
+                  ← الرجوع للفلتر الأصلي المطابق لسيارتك
                 </button>
-              );
-            })}
-            {filters !== null && shown.length === 0 && (
-              <p className="py-3 text-center text-[12px]" style={{ color: DIM }}>لا فلاتر مطابقة للبحث</p>
-            )}
-          </div>
+              )}
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث عن الفلتر المناسب لسيارتك"
+                     className="w-full rounded-xl border-2 px-3.5 py-2.5 text-[13px] font-bold outline-none"
+                     style={{ borderColor: LINE }} />
+              {filters === null && <p className="py-3 text-center text-[12px]" style={{ color: DIM }}>جارِ التحميل...</p>}
+              <div className="grid max-h-[38vh] gap-2 overflow-y-auto">
+                {shown.map((f) => {
+                  const active = sel.filter?.id === f.id;
+                  return (
+                    <button key={f.id} onClick={() => setSel({ ...sel, filter: f })}
+                            className="flex flex-col gap-2 rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
+                            style={{ borderColor: active ? GREEN : LINE, background: active ? "rgba(22,163,74,.06)" : "#fff" }}>
+                      <span className="flex w-full items-start gap-3">
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-[18px]" style={{ background: "#F6F8FA" }}>⭕</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[13px] font-black leading-snug" style={{ color: NAVY }}>{f.name}</span>
+                          {f.spec && <span className="tnum text-[10.5px] font-bold" style={{ color: DIM }}>{f.spec}</span>}
+                          {matchedFilter?.id === f.id && (
+                            <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[9.5px] font-black"
+                                  style={{ background: GREEN, color: "#fff" }}>الأصلي لسيارتك</span>
+                          )}
+                        </span>
+                        {active && <MIcon name="check_circle" filled className="!text-[18px] shrink-0" />}
+                      </span>
+                      <span className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5"
+                            style={{ background: "rgba(22,163,74,.08)" }}>
+                        <span className="text-[9.5px] font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
+                        <span className="tnum text-[14px] font-black" style={{ color: GREEN }}>{money(f.price)} ر.س</span>
+                      </span>
+                    </button>
+                  );
+                })}
+                {filters !== null && shown.length === 0 && (
+                  <p className="py-3 text-center text-[12px]" style={{ color: DIM }}>لا فلاتر مطابقة للبحث</p>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -1362,44 +1523,45 @@ export default function PublicBookingPage() {
     setView("oil");
   }
 
-  // ═══ التأكيد النهائي: إنشاء الحجز + حفظ اختيار الزيت والفلتر معه ═══
+  // ── بناء حمولة الاختيار (زيت/فلتر/إضافات/خدمة تلقائية) لإرسالها ذرّياً
+  //    داخل نفس طلب إنشاء الحجز — بدل نداء PUT منفصل بعده كان معرّضاً للفشل
+  //    الصامت ويسيب أمر العمل بلا الأصناف اللي العميل اختارها فعلاً.
+  function buildSelectionPayload() {
+    const items: { productId: string | null; label: string; qty: number; priceInc: number }[] = [];
+    if (sel.oil) items.push({ productId: sel.oil.id, label: sel.oil.name, qty: sel.oilQty, priceInc: sel.oil.price });
+    if (sel.withFilter && sel.filter) items.push({ productId: sel.filter.id, label: sel.filter.name, qty: 1, priceInc: sel.filter.price });
+    for (const ex of sel.extras) items.push({ productId: ex.p.id, label: ex.p.spec ? `${ex.p.name} ${ex.p.spec}` : ex.p.name, qty: ex.qty, priceInc: ex.p.price });
+    if (sel.oil && autoService && !sel.extras.some((e) => e.p.id === autoService.id))
+      items.push({ productId: autoService.id, label: autoService.name, qty: 1, priceInc: autoService.price });
+    return { items, withFilter: sel.withFilter, fromInvoice: sel.fromInvoice };
+  }
+
+  // ═══ التأكيد النهائي: إنشاء الحجز والأصناف المختارة في نفس الطلب ═══
   async function confirmBooking() {
     if (!pending) return;
     setErr(""); setBusy(true);
     try {
+      const selection = buildSelectionPayload();
       let b: Booking;
       if (pending.mode === "saved") {
         b = await call<Booking>(`booking/${branchId}`, {
           method: "POST",
           body: JSON.stringify({ savedCarId: pending.car.id, odometer: pending.odometer,
-                                 serviceType: pending.car.service_type }),
+                                 serviceType: pending.car.service_type, ...selection }),
         });
       } else {
         const f = pending.form;
-        b = await _createNewBooking(f);
+        b = await _createNewBooking(f, selection);
         localStorage.setItem("z8_cust_phone", f.phone.trim());
       }
       localStorage.setItem(`z8_booking_${branchId}`, b.bookingId);
-      // حفظ الاختيار مع الحجز — يظهر للفني في أمر العمل (لا يوقف الحجز لو فشل)
-      try {
-        const items: { productId: string | null; label: string; qty: number; priceInc: number }[] = [];
-        if (sel.oil) items.push({ productId: sel.oil.id, label: sel.oil.name, qty: sel.oilQty, priceInc: sel.oil.price });
-        if (sel.withFilter && sel.filter) items.push({ productId: sel.filter.id, label: sel.filter.name, qty: 1, priceInc: sel.filter.price });
-        for (const ex of sel.extras) items.push({ productId: ex.p.id, label: ex.p.spec ? `${ex.p.name} ${ex.p.spec}` : ex.p.name, qty: ex.qty, priceInc: ex.p.price });
-        if (sel.oil && autoService && !sel.extras.some((e) => e.p.id === autoService.id))
-          items.push({ productId: autoService.id, label: autoService.name, qty: 1, priceInc: autoService.price });
-        await call(`booking-selection/${b.bookingId}`, {
-          method: "PUT",
-          body: JSON.stringify({ items, withFilter: sel.withFilter, fromInvoice: sel.fromInvoice }),
-        });
-      } catch { /* الاختيار كماليات — الحجز نفسه نجح */ }
       setPending(null);
       setBooking(b); setView("ticket");
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
   }
 
-  async function _createNewBooking(f: FormValues): Promise<Booking> {
+  async function _createNewBooking(f: FormValues, selection: ReturnType<typeof buildSelectionPayload>): Promise<Booking> {
     return await call<Booking>(`booking/${branchId}`, {
         method: "POST",
         body: JSON.stringify({
@@ -1414,6 +1576,7 @@ export default function PublicBookingPage() {
             street: f.street.trim(), district: f.district.trim(), city: f.city.trim(),
             postalCode: f.postalCode.trim() || null, additionalNo: f.additionalNo.trim() || null,
           } : null,
+          ...selection,
         }),
       });
   }
@@ -1490,7 +1653,7 @@ export default function PublicBookingPage() {
         )}
 
         {view === "form" && (
-          <RegisterForm sType={sType} initial={draft} busy={busy} err={err}
+          <RegisterForm sType={sType} initial={draft} busy={busy} err={err} branchId={branchId}
                         onBack={(v) => { setDraft(v); setErr(""); setView(profile?.found ? "garage" : "type"); }}
                         onSubmit={submitNew} />
         )}
@@ -1504,6 +1667,10 @@ export default function PublicBookingPage() {
 
         {view === "filter" && pending && (
           <FilterPicker branchId={branchId} sel={sel} setSel={setSel}
+                        carBrand={pending.mode === "saved" ? (pending.car.brand || "") : pending.form.brand}
+                        carModel={pending.mode === "saved" ? (pending.car.name || "") : pending.form.carName}
+                        carYear={pending.mode === "saved" ? (pending.car.model_year || "") : pending.form.modelYear}
+                        carCylinders={pending.mode === "saved" ? "" : pending.form.cylinders}
                         onNext={() => { setErr(""); setView("extras"); }}
                         onBack={() => { setErr(""); setView("oil"); }} />
         )}
