@@ -135,9 +135,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {mobileNavOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileNavOpen(false)} />
       )}
-      <aside className={`fixed inset-y-0 right-0 z-50 flex w-72 shrink-0 flex-col bg-petrol-deep text-white
-                transition-transform duration-300 md:static md:z-auto md:w-60 md:translate-x-0
-                ${mobileNavOpen ? "translate-x-0" : "translate-x-full"}`}>
+      <aside className={`sticky top-0 z-50 flex h-screen max-h-screen w-72 shrink-0 flex-col overflow-hidden bg-petrol-deep text-white
+                        transition-transform duration-300 md:w-60 md:translate-x-0
+                        ${mobileNavOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
         <div className="flex items-center gap-3 px-5 py-5">
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 p-1.5">
             <img src="/logo-white.png" alt="مصدر الزيوت" className="h-full w-full object-contain" />
@@ -153,7 +153,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        <nav className="mt-2 flex-1 space-y-2 overflow-y-auto px-3 pb-3">
+        <nav className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden px-3 pb-3">
           {NAV_SECTIONS.map((sec) => {
             const items = visible.filter((mm) => mm.section === sec);
             if (items.length === 0) return null;
@@ -202,7 +202,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ── مساحة العمل ── */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col min-h-screen">
         <header className="flex h-14 items-center gap-2.5 border-b border-line bg-ink-2 px-5 shadow-card">
           {/* زر القائمة — الشاشات الضيقة بس (موبايل/تابلت عمودي) */}
           <button onClick={() => setMobileNavOpen(true)} aria-label="القائمة"

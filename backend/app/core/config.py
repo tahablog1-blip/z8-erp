@@ -2,7 +2,7 @@
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql://postgres:123456@localhost:5432/z8_car_manager"
+    DATABASE_URL: str = "postgresql://postgres:123@localhost:5432/z8_car_manager"
     JWT_SECRET: str = "z8SecretKey2026XyzAbc123456789QwErTy"
     JWT_EXPIRES_DAYS: int = 7
     PORT: int = 4001

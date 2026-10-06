@@ -284,7 +284,9 @@ function a4HTML(inv: InvoiceDetail): string {
   .totals .grand td { background:#0C5E66; color:#fff; font-weight:800; font-size:13px; }
   .qr-foot { display:flex; justify-content:space-between; align-items:flex-end; margin-top:14px; }
   .foot { text-align:center; font-size:10px; color:#556; border-top:1px solid #ccc; margin-top:16px; padding-top:6px; }
-</style></head><body>
+</style></head>
+
+<body style="margin:20px">
   <div class="head">
     <img src="${location.origin}/logo-navy.png" alt="" style="width:44px;height:44px;object-fit:contain;display:block;margin:0 auto 4px" />
     <div>
@@ -373,7 +375,9 @@ function a4HTML(inv: InvoiceDetail): string {
 
   <div class="foot">${esc(footerText())} — ${esc(CO.name)}</div>
   ${QR_SCRIPT(inv.qr_tlv || "")}
-</body></html>`;
+</body>
+
+</html>`;
 }
 
 // ══════════════════ الواجهة العامة ══════════════════
