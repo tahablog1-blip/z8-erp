@@ -1181,27 +1181,22 @@ export default function ProductsPage() {
           {brands.length > 0 && (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {brands.map((b) => (
-                <div key={b.id} className="rounded-xl border border-line p-2.5 text-center">
-                  <div className="grid h-12 w-full place-items-center">
-                    {b.logo_base64
-                      ? <img src={`data:image/png;base64,${b.logo_base64}`} alt={b.name} loading="lazy" decoding="async"
-                             className="max-h-full max-w-[80%] object-contain" />
-                      : <MIcon name="verified" className="!text-[26px] text-[#64748B]" />}
-                  </div>
-                  <div className="mt-1 text-[12.5px] font-black">{b.name}</div>
-                  <div className="mt-1.5 flex justify-center gap-1">
-                    <button onClick={() => openAssign(b)}
-                            className="rounded-md bg-petrol px-2 py-1 text-[10.5px] font-bold text-white hover:brightness-110">
-                      تعيين المنتجات
-                    </button>
-                    <button onClick={() => startBrandEdit(b)}
-                            className="rounded-md border border-line px-2 py-1 text-[10.5px] font-bold hover:border-petrol">
-                      تعديل
-                    </button>
-                    <button onClick={() => removeBrand(b)}
-                            className="rounded-md px-2 py-1 text-[10.5px] font-bold text-ember hover:bg-ember-bg">حذف</button>
-                  </div>
-                </div>
+                <div key={b.id} className="flex flex-col"> 
+                {/* كارد البراند */} 
+                <div className="flex min-h-[145px] flex-col rounded-xl border border-line bg-ink-2 p-3 text-center"> 
+                  {/* مساحة ثابتة للوجو */} 
+                  <div className="flex h-[75px] w-full items-center justify-center overflow-hidden"> 
+                    {b.logo_base64 ? ( <img src={`data:image/png;base64,${b.logo_base64}`} alt={b.name} loading="lazy" decoding="async" className="block h-full w-full object-contain p-1" /> ) : ( <MIcon name="verified" className="!text-[30px] text-[#64748B]" /> )} 
+                    </div> 
+                    {/* اسم البراند */} 
+                    <div className="mt-2 truncate text-[12.5px] font-black"> {b.name} 
+                      </div> </div> 
+                      {/* الأزرار خارج الكارد وتحت الـ border */} 
+                      <div className="flex items-center justify-center gap-1.5 pt-2"> 
+                        <Button onClick={() => openAssign(b)} className="rounded-md bg-petrol px-2.5 py-1.5 text-[10.5px] font-bold text-white transition hover:brightness-110" > تعيين المنتجات </Button> 
+                        <button onClick={() => startBrandEdit(b)} className="rounded-md border border-line bg-ink-2 px-2.5 py-1.5 text-[10.5px] font-bold transition hover:border-petrol" > تعديل </button> 
+                        <button onClick={() => removeBrand(b)} className="rounded-md px-2.5 py-1.5 text-[10.5px] font-bold text-ember transition hover:bg-ember-bg" > حذف </button> 
+                        </div> </div>
               ))}
             </div>
           )}

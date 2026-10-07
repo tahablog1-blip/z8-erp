@@ -1154,7 +1154,7 @@ async def public_booking_invoice_full(invoice_id: str, phone: str = ""):
     car = None
     if d.get("car_id"):
         crow = await _fr(
-            """SELECT plate, name AS model, brand, model_year, color, chassis_number,
+            """SELECT plate, name AS model, brand, model_year, fuel_type, color, chassis_number,
                       odometer_current, odometer_previous, checklist, notes, registrar_name
                FROM cars WHERE id=$1""", d["car_id"])
         if crow:

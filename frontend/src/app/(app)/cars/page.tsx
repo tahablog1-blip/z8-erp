@@ -95,7 +95,7 @@ function ComboSelect({ value, options, placeholder, onChange }: {
 
 const EMPTY = {
   branchId: "", plateLetters: "", plateNumbers: "", plateType: "saudi" as "saudi" | "other",
-  name: "", modelYear: "", brand: "", color: "", chassisNumber: "",
+  name: "", modelYear: "", fuelType: "", brand: "", color: "", chassisNumber: "",
   customerName: "", customerPhone: "", customerId: null as string | null,
   station: "", odometerCurrent: "", odometerPrevious: "", notes: "",
 };
@@ -680,7 +680,7 @@ export default function CarsPage() {
     setForm({
       ...EMPTY, branchId: c.branch_id,
       plateLetters: c.plate?.split(" ")[0] || "", plateNumbers: c.plate?.split(" ")[1] || "",
-      name: c.name || "", brand: c.brand || "", modelYear: c.model_year || "", color: c.color || "",
+      name: c.name || "", brand: c.brand || "", modelYear: c.model_year || "", fuelType: c.fuelType || "", color: c.color || "",
       chassisNumber: c.chassis_number || "", customerName: c.customer_name || "",
       customerPhone: c.customer_phone || "", odometerCurrent: c.odometer_current?.toString() || "",
       notes: c.notes || "",
@@ -1460,6 +1460,7 @@ export default function CarsPage() {
           customerId: result.customer?.id || null,
           brand: result.vehicle?.brand || f.brand,
           modelYear: result.vehicle?.modelYear || f.modelYear,
+          fuelType: result.vehicle?.fuelType || f.fuelType,
           color: result.vehicle?.color || f.color,
           chassisNumber: result.vehicle?.chassisNumber || f.chassisNumber,
           odometerPrevious: result.lastOdometer != null ? String(result.lastOdometer) : f.odometerPrevious,
@@ -1481,6 +1482,7 @@ export default function CarsPage() {
     if (!form.brand.trim()) return "الماركة إجبارية";
     if (!form.name.trim()) return "الموديل إجباري";
     if (!form.modelYear.trim()) return "سنة الصنع إجبارية";
+    if (!form.fuelType.trim()) return "نوع السيارة إجبارية";
     if (!form.color.trim()) return "اللون إجباري";
     if (form.odometerCurrent === "" || Number(form.odometerCurrent) < 0)
       return "ممشى السيارة الحالي إجباري";
@@ -1517,7 +1519,7 @@ export default function CarsPage() {
       } else if (modal?.mode === "edit") {
         const body = {
           plateLetters: form.plateLetters, plateNumbers: form.plateNumbers,
-          name: form.name, brand: form.brand, modelYear: form.modelYear, color: form.color,
+          name: form.name, brand: form.brand, modelYear: form.modelYear, fuelType: form.fuelType, color: form.color,
           chassisNumber: form.chassisNumber, customerName: form.customerName,
           customerPhone: form.customerPhone,
           odometerCurrent: form.odometerCurrent === "" ? null : Number(form.odometerCurrent),
@@ -2098,6 +2100,7 @@ export default function CarsPage() {
           )}
 
           <div className="grid gap-2 sm:grid-cols-3">
+
             <Field label="اسم العميل *">
               <Input value={form.customerName}
                      onChange={(e) => setForm({ ...form, customerName: e.target.value, customerId: null })} />
@@ -2106,7 +2109,25 @@ export default function CarsPage() {
               <Input value={form.customerPhone} className="tnum" onBlur={tryLookup} maxLength={10} inputMode="numeric"
                      onChange={(e) => setForm({ ...form, customerPhone: e.target.value.replace(/\D/g, "").slice(0, 10), customerId: null })} />
             </Field>
-            <Field label="القسم / المحطة">
+
+             <Field label="نوع السيارة *">
+                <Select
+                  value={form.fuelType}
+                  onChange={(e) =>
+                    setForm({ ...form, fuelType: e.target.value })
+                  }
+                >
+                  <option value="">اختر نوع السيارة</option>
+                  <option value="diesel">ديزل</option>
+                  <option value="gasoline">بنزين</option>
+                  <option value="hybrid">هايبرد</option>
+                </Select>
+             </Field>
+           
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-3">
+             <Field label="القسم / المحطة">
               <ComboSelect value={form.station}
                            options={[
                              ...(branches.find((b) => b.id === form.branchId)?.lines || []),
@@ -2115,9 +2136,6 @@ export default function CarsPage() {
                            placeholder="اسم المحطة"
                            onChange={(v) => setForm({ ...form, station: v })} />
             </Field>
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-3">
             <Field label="الماركة *">
               <ComboSelect value={form.brand} options={BRANDS} placeholder="اسم الماركة"
                            onChange={(v) => setForm({ ...form, brand: v, name: "" })} />
@@ -2131,13 +2149,11 @@ export default function CarsPage() {
                        onChange={(e) => setForm({ ...form, name: e.target.value })} />
               )}
             </Field>
-            <Field label="سنة الصنع *">
-              <ComboSelect value={form.modelYear} options={YEARS} placeholder="السنة"
-                           onChange={(v) => setForm({ ...form, modelYear: v })} />
-            </Field>
+           
           </div>
 
           <div className="grid gap-2 sm:grid-cols-3">
+             
             <Field label="اللون *">
               <ComboSelect value={form.color} options={COLORS} placeholder="اللون"
                            onChange={(v) => setForm({ ...form, color: v })} />
@@ -2153,12 +2169,18 @@ export default function CarsPage() {
               </Field>
             )}
           </div>
-
-          <Field label="رقم الهيكل *" hint={`17 حرف/رقم — المدخل: ${form.chassisNumber.length}`}>
-            <Input value={form.chassisNumber} className="tnum" maxLength={17}
-                   placeholder="مثال: JTDBT923771012345"
-                   onChange={(e) => setForm({ ...form, chassisNumber: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 17) })} />
-          </Field>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Field label="سنة الصنع *">
+              <ComboSelect value={form.modelYear} options={YEARS} placeholder="السنة"
+                           onChange={(v) => setForm({ ...form, modelYear: v })} />
+            </Field>
+            <Field label="رقم الهيكل *" hint={`17 حرف/رقم — المدخل: ${form.chassisNumber.length}`}>
+              <Input value={form.chassisNumber} className="tnum" maxLength={17}
+                    placeholder="مثال: JTDBT923771012345"
+                    onChange={(e) => setForm({ ...form, chassisNumber: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 17) })} />
+            </Field>
+             
+          </div>
 
           <Field label="ملاحظات">
             <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
@@ -2174,6 +2196,7 @@ export default function CarsPage() {
             </Button>
           </div>
         </div>
+        
       </Modal>
 
       {/* ══════════ نقاط التشييك ══════════ */}

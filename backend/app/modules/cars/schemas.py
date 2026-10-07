@@ -105,6 +105,7 @@ class CarOut(BaseModel):
     plate_type: str | None = None
     name: str | None = None
     model_year: str | None = None
+    fuel_type: str | None = None
     brand: str | None = None
     car_category: str | None = None
     cylinders: str | None = None
@@ -160,7 +161,8 @@ class BillingQueueRow(BaseModel):
     prepared_items: list[dict] | None = None   # عناصر مجهّزة تلقائياً (مسودة زيت أو تكرار آخر فاتورة)
     work_status: str = "ready"                 # queued | preparing | ready | invoiced
     prepared_by_name: str | None = None        # موظف الإعداد اللي أكّد أمر العمل
-    customer_id: str | None = None             # لازم للواجهة عشان تعديل بيانات العميل
+    customer_id: str | None = None              # لازم للواجهة عشان تعديل بيانات العميل
     model_year: str | None = None
+    fuel_type: str | None = None
     notes: str | None = None
 

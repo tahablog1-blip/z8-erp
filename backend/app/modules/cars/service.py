@@ -79,6 +79,7 @@ async def lookup(company_id: str, plate: str | None, phone: str | None) -> dict 
                        "phone": row["customer_phone"], "customerType": row["customer_type"]}
             vehicle = {"plate": row["plate"], "plateType": row["plate_type"], "brand": row["brand"],
                       "makeModel": row["make_model"], "modelYear": row["model_year"],
+                      "fuelType": row["fuel_type"],
                       "color": row["color"], "chassisNumber": row["chassis_number"]}
 
     # 2) لو مفيش تطابق باللوحة، دوّر على عميل بنفس رقم الجوال
@@ -317,7 +318,7 @@ async def create_car(company_id: str, user_id: str, user_email: str, d: dict) ->
             # يمنع أخطاء الكتابة من إفساد ملف السيارة الدائم.
             if customer_id and plate:
                 saved_car = await conn.fetchrow(
-                    """SELECT brand, name, model_year, car_category, cylinders,
+                    """SELECT brand, name, model_year, fuel_type, car_category, cylinders,
                               color, chassis_number
                        FROM customer_cars
                        WHERE company_id=$1 AND customer_id=$2 AND plate=$3""",
@@ -325,6 +326,7 @@ async def create_car(company_id: str, user_id: str, user_email: str, d: dict) ->
                 if saved_car:
                     _identity = (("brand", "brand"), ("name", "name"),
                                  ("model_year", "modelYear"),
+                                 ("fuel_type", "fuelType"),
                                  ("car_category", "carCategory"),
                                  ("cylinders", "cylinders"), ("color", "color"),
                                  ("chassis_number", "chassisNumber"))
@@ -334,13 +336,13 @@ async def create_car(company_id: str, user_id: str, user_email: str, d: dict) ->
 
             row = await conn.fetchrow(
                 """INSERT INTO cars
-                     (company_id, branch_id, plate, plate_type, name, model_year, brand, car_category,
+                     (company_id, branch_id, plate, plate_type, name, model_year, fuel_type, brand, car_category,
                       cylinders, color, chassis_number, customer_name, customer_phone, customer_id,
                       station, odometer_current, odometer_previous, notes, registrar_name, created_by)
                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
                    RETURNING *""",
                 company_id, d["branchId"], plate or None, d.get("plateType", "saudi"),
-                d.get("name"), d.get("modelYear"), d.get("brand"), d.get("carCategory"),
+                d.get("name"), d.get("modelYear"), d.get("fuelType"), d.get("brand"), d.get("carCategory"),
                 d.get("cylinders"), d.get("color"), d.get("chassisNumber"),
                 d["customerName"], d["customerPhone"], customer_id, d.get("station"),
                 d.get("odometerCurrent"), d.get("odometerPrevious"), d.get("notes"),
@@ -354,19 +356,20 @@ async def create_car(company_id: str, user_id: str, user_email: str, d: dict) ->
         try:
             await execute(
                 """INSERT INTO customer_cars
-                     (company_id, customer_id, plate, brand, name, model_year,
+                     (company_id, customer_id, plate, brand, name, model_year, fuel_type,
                       car_category, cylinders, color, chassis_number, last_odometer)
                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
                    ON CONFLICT (customer_id, plate) DO UPDATE SET
                      brand=COALESCE(customer_cars.brand, EXCLUDED.brand),
                      name=COALESCE(customer_cars.name, EXCLUDED.name),
                      model_year=COALESCE(customer_cars.model_year, EXCLUDED.model_year),
+                     fuel_type=COALESCE(customer_cars.fuel_type, EXCLUDED.fuel_type),
                      car_category=COALESCE(customer_cars.car_category, EXCLUDED.car_category),
                      cylinders=COALESCE(customer_cars.cylinders, EXCLUDED.cylinders),
                      color=COALESCE(customer_cars.color, EXCLUDED.color),
                      chassis_number=COALESCE(customer_cars.chassis_number, EXCLUDED.chassis_number),
                      last_odometer=COALESCE(EXCLUDED.last_odometer, customer_cars.last_odometer)""",
-                company_id, customer_id, plate, d.get("brand"), d.get("name"), d.get("modelYear"),
+                company_id, customer_id, plate, d.get("brand"), d.get("name"), d.get("modelYear"), d.get("fuelType"),
                 d.get("carCategory"), d.get("cylinders"), d.get("color"), d.get("chassisNumber"),
                 d.get("odometerCurrent"),
             )
@@ -479,7 +482,7 @@ async def cancel_order(company_id: str, car_id: str) -> dict:
 
 
 _EDIT_COL_MAP = {
-    "name": "name", "brand": "brand", "modelYear": "model_year", "color": "color",
+    "name": "name", "brand": "brand", "modelYear": "model_year", "fuelType": "fuel_type", "color": "color",
     "chassisNumber": "chassis_number", "customerName": "customer_name",
     "customerPhone": "customer_phone", "odometerCurrent": "odometer_current", "notes": "notes",
 }
@@ -683,13 +686,13 @@ async def gate_scan(company_id: str, letters: str, numbers: str, branch_id: str 
         if veh:
             row = await fetchrow(
                 """INSERT INTO cars
-                     (company_id, branch_id, plate, plate_type, brand, name, model_year,
+                     (company_id, branch_id, plate, plate_type, brand, name, model_year, fuel_type,
                       car_category, cylinders, color, chassis_number,
                       customer_name, customer_phone, customer_id,
                       odometer_current, service_type, entered_at, registrar_name)
                    VALUES ($1,$2,$3,'saudi',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, now(), 'دخول تلقائي — عميل مسجل')
                    RETURNING *""",
-                company_id, entry_branch_id, veh["plate"], veh["brand"], veh["name"], veh["model_year"],
+                company_id, entry_branch_id, veh["plate"], veh["brand"], veh["name"], veh["model_year"], veh["fuel_type"],
                 veh["car_category"], veh["cylinders"], veh["color"], veh["chassis_number"],
                 veh["cust_name"], veh["cust_phone"], veh["customer_id"],
                 veh["last_odometer"], veh["service_type"])
@@ -699,13 +702,13 @@ async def gate_scan(company_id: str, letters: str, numbers: str, branch_id: str 
         elif hist:
             row = await fetchrow(
                 """INSERT INTO cars
-                     (company_id, branch_id, plate, plate_type, brand, name, model_year,
+                     (company_id, branch_id, plate, plate_type, brand, name, model_year, fuel_type,
                       car_category, cylinders, color, chassis_number,
                       customer_name, customer_phone, customer_id,
                       odometer_current, service_type, entered_at, registrar_name)
                    VALUES ($1,$2,$3,'saudi',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, now(), 'دخول تلقائي — عميل مسجل')
                    RETURNING *""",
-                company_id, entry_branch_id, hist["plate"], hist["brand"], hist["name"], hist["model_year"],
+                company_id, entry_branch_id, hist["plate"], hist["brand"], hist["name"], hist["model_year"], hist["fuel_type"],
                 hist["car_category"], hist["cylinders"], hist["color"], hist["chassis_number"],
                 hist["customer_name"], hist["customer_phone"], hist["customer_id"],
                 hist["odometer_current"], hist["service_type"])
@@ -1148,13 +1151,14 @@ async def _upsert_garage(company_id: str, customer_id: str, plate: str, car: dic
              brand=COALESCE(customer_cars.brand, EXCLUDED.brand),
              name=COALESCE(customer_cars.name, EXCLUDED.name),
              model_year=COALESCE(customer_cars.model_year, EXCLUDED.model_year),
+             fuel_type=COALESCE(customer_cars.fuel_type, EXCLUDED.fuel_type),
              car_category=COALESCE(customer_cars.car_category, EXCLUDED.car_category),
              cylinders=COALESCE(customer_cars.cylinders, EXCLUDED.cylinders),
              color=COALESCE(customer_cars.color, EXCLUDED.color),
              chassis_number=COALESCE(customer_cars.chassis_number, EXCLUDED.chassis_number),
              service_type=EXCLUDED.service_type""",
         company_id, customer_id, plate, car.get("brand"), car.get("carName"),
-        car.get("modelYear"), car.get("carCategory"), car.get("cylinders"),
+        car.get("modelYear"), car.get("fuelType"), car.get("carCategory"), car.get("cylinders"),
         car.get("color"), car.get("chassisNumber"), service_type)
 
 
@@ -1198,14 +1202,14 @@ async def public_lookup(branch_id: str, phone: str, plate: str | None = None) ->
     # سيارات من تاريخ الزيارات مش متسجلة في الكراج؟ نكملها تلقائياً
     if not cars_rows:
         hist = await fetch(
-            """SELECT DISTINCT ON (plate) plate, brand, name, model_year
+            """SELECT DISTINCT ON (plate) plate, brand, name, model_year, fuel_type
                FROM cars WHERE customer_id=$1 AND plate IS NOT NULL AND is_deleted=FALSE
                ORDER BY plate, created_at DESC LIMIT 6""", cust["id"])
         for h in hist:
             await _upsert_garage(br["company_id"], str(cust["id"]), h["plate"],
-                                 {"brand": h["brand"], "carName": h["name"], "modelYear": h["model_year"]}, "basic")
+                                 {"brand": h["brand"], "carName": h["name"], "modelYear": h["model_year"], "fuelType": h["fuel_type"]}, "basic")
         cars_rows = await fetch(
-            """SELECT id, plate, brand, name, model_year, car_category, cylinders,
+            """SELECT id, plate, brand, name, model_year, fuel_type, car_category, cylinders,
                       color, chassis_number, service_type
                FROM customer_cars WHERE customer_id=$1 ORDER BY created_at DESC""", cust["id"])
     return {
@@ -1223,6 +1227,7 @@ def _validate_by_type(service_type: str, d: dict, car: dict):
     req(car.get("brand"), "ماركة السيارة مطلوبة")
     req(car.get("carName"), "موديل السيارة مطلوب")
     req(car.get("modelYear"), "سنة الصنع مطلوبة")
+    req(car.get("fuelType"), "نوع السيارة مطلوبة")
     req(car.get("odometer") not in (None, ""), "ممشى السيارة الحالي مطلوب")
     if service_type in ("warranty", "company"):
         req(car.get("carCategory"), "فئة السيارة مطلوبة لسيارات الضمان")
@@ -1454,7 +1459,7 @@ async def public_create_booking(branch_id: str, d: dict) -> dict:
         m = re.match(r"^(\d+)\s+([A-Z]{3})$", saved["plate"] or "")
         car = {"plateNumbers": m.group(1) if m else re.sub(r"[^0-9]", "", saved["plate"] or ""),
                "plateLetters": m.group(2) if m else re.sub(r"[^A-Z]", "", (saved["plate"] or "").upper()),
-               "brand": saved["brand"], "carName": saved["name"], "modelYear": saved["model_year"],
+               "brand": saved["brand"], "carName": saved["name"], "modelYear": saved["model_year"], "fuelType": saved["fuel_type"],
                "carCategory": saved["car_category"], "cylinders": saved["cylinders"],
                "color": saved["color"], "chassisNumber": saved["chassis_number"],
                "odometer": d.get("odometer") or (car.get("odometer") if car else None)}
@@ -1517,13 +1522,13 @@ async def public_create_booking(branch_id: str, d: dict) -> dict:
     except (TypeError, ValueError): odo = None
     row = await fetchrow(
         """INSERT INTO cars
-             (company_id, branch_id, plate, plate_type, brand, name, model_year,
+             (company_id, branch_id, plate, plate_type, brand, name, model_year, fuel_type,
               car_category, cylinders, color, chassis_number,
               customer_name, customer_phone, customer_id,
               odometer_current, service_type, registrar_name)
            VALUES ($1,$2,$3,'saudi',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'حجز أونلاين QR')
            RETURNING id""",
-        company_id, branch_id, plate, car.get("brand"), car.get("carName"), car.get("modelYear"),
+        company_id, branch_id, plate, car.get("brand"), car.get("carName"), car.get("modelYear"), car.get("fuelType"),
         car.get("carCategory"), car.get("cylinders"), car.get("color"), car.get("chassisNumber"),
         name, phone, cust["id"], odo, service_type)
     if d.get("items"):
@@ -1620,7 +1625,7 @@ async def public_profile(branch_id: str, phone: str | None, plate: str | None) -
 
 def _validate_booking_vehicle(ctype: str, v: dict) -> None:
     """قواعد الإلزام حسب نوع التسجيل"""
-    base_missing = [k for k in ("brand", "carName", "modelYear") if not (v.get(k) or "").strip()]
+    base_missing = [k for k in ("brand", "carName", "modelYear", "fuelType") if not (v.get(k) or "").strip()]
     if base_missing:
         raise HTTPException(422, "أكمل نوع السيارة وموديلها وسنة الصنع")
     if ctype in ("warranty", "company"):
@@ -1693,15 +1698,15 @@ async def public_register_and_book(branch_id: str, d: dict) -> dict:
             # ── الجراج: حفظ/تحديث السيارة (اللوحة مفتاح دائم) ──
             await conn.execute(
                 """INSERT INTO customer_vehicles
-                     (company_id, customer_id, plate, plate_norm, brand, name, model_year,
+                     (company_id, customer_id, plate, plate_norm, brand, name, model_year, fuel_type,
                       car_category, cylinders, color, chassis_number, last_odometer, service_type)
                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
                    ON CONFLICT (company_id, plate_norm) DO UPDATE SET
-                     customer_id=$2, brand=$5, name=$6, model_year=$7,
+                     customer_id=$2, brand=$5, name=$6, model_year=$7, fuel_type=$3,
                      car_category=$8, cylinders=$9, color=$10, chassis_number=$11,
                      last_odometer=$12, service_type=$13""",
                 company_id, customer_id, plate, plate_norm,
-                v.get("brand"), v.get("carName"), v.get("modelYear"),
+                v.get("brand"), v.get("carName"), v.get("modelYear"), v.get("fuelType"),
                 v.get("carCategory"), v.get("cylinders"), v.get("color"), v.get("chassisNumber"),
                 odometer, ctype)
 
@@ -1724,7 +1729,7 @@ async def public_quick_book(branch_id: str, vehicle_id: str, odometer: int | Non
     odo = int(odometer) if odometer is not None else veh["last_odometer"]
     if odo is not None:
         await execute("UPDATE customer_vehicles SET last_odometer=$1 WHERE id=$2", odo, vehicle_id)
-    vdata = {"brand": veh["brand"], "carName": veh["name"], "modelYear": veh["model_year"],
+    vdata = {"brand": veh["brand"], "carName": veh["name"], "modelYear": veh["model_year"], "fuelType": veh["fuel_type"],
              "carCategory": veh["car_category"], "cylinders": veh["cylinders"],
              "color": veh["color"], "chassisNumber": veh["chassis_number"]}
     return await _book_from_data(branch_id, br["company_id"], veh["customer_id"],
@@ -1751,14 +1756,14 @@ async def _book_from_data(branch_id, company_id, customer_id, name, phone,
 
     row = await fetchrow(
         """INSERT INTO cars
-             (company_id, branch_id, plate, plate_type, brand, name, model_year,
+             (company_id, branch_id, plate, plate_type, brand, name, model_year, fuel_type
               car_category, cylinders, color, chassis_number,
               customer_name, customer_phone, customer_id,
               odometer_current, odometer_previous, registrar_name)
            VALUES ($1,$2,$3,'saudi',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'حجز أونلاين QR')
            RETURNING id""",
         company_id, branch_id, plate,
-        v.get("brand"), v.get("carName"), v.get("modelYear"),
+        v.get("brand"), v.get("carName"), v.get("modelYear"), v.get("fuelType"),
         v.get("carCategory"), v.get("cylinders"), v.get("color"), v.get("chassisNumber"),
         name, phone, customer_id,
         odometer, prev["odometer_current"] if prev else None)
