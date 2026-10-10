@@ -29,7 +29,7 @@ type SType = "basic" | "warranty" | "company";
 type FormValues = {
   name: string; phone: string;
   plateNumbers: string; plateLetters: string; brand: string; carName: string; modelYear: string; odometer: string;
-  carCategory: string; cylinders: string; color: string; chassisNumber: string;
+  carCategory: string; cylinders: string; color: string; chassisNumber: string; fuelType: string;
   vat: string; cr: string; buildingNo: string; street: string; district: string; city: string; postalCode: string; additionalNo: string;
 };
 
@@ -43,7 +43,7 @@ const TYPE_META: Record<SType, { title: string; desc: string; icon: string }> = 
 const EMPTY_FORM: FormValues = {
   name: "", phone: "",
   plateNumbers: "", plateLetters: "", brand: "", carName: "", modelYear: "", odometer: "",
-  carCategory: "", cylinders: "", color: "", chassisNumber: "",
+  carCategory: "", cylinders: "", color: "", chassisNumber: "", fuelType: "",
   vat: "", cr: "", buildingNo: "", street: "", district: "", city: "", postalCode: "", additionalNo: "",
 };
 
@@ -104,15 +104,20 @@ function Combobox({ label, value, onChange, options, placeholder, allowCustom = 
       />
       {open && (options.length > 0 || value.trim()) && (
         <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-xl border bg-white shadow-lg"
-             style={{ borderColor: LINE }}>
+          style={{ borderColor: LINE }}>
           {filtered.length === 0 ? (
             <div className="px-4 py-2.5 text-[12.5px] font-bold" style={{ color: DIM }}>
               {allowCustom ? "لا يوجد مطابق — تقدر تكتب اسماً جديداً" : "لا يوجد مطابق"}
             </div>
           ) : filtered.map((o) => (
             <button
-              key={o} type="button"
-              onClick={() => { onChange(o); setOpen(false); }}
+              key={o}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onChange(o);
+                setOpen(false);
+              }}
               className="block w-full px-4 py-2.5 text-right text-[13px] font-bold transition hover:bg-[#F1F5F9]"
               style={{ color: value === o ? GREEN : NAVY }}
             >
@@ -138,7 +143,7 @@ function ErrBox({ msg }: { msg: string }) {
   if (!msg) return null;
   return (
     <p className="rounded-lg px-3 py-2 text-center text-[12px] font-bold"
-       style={{ background: "rgba(220,38,38,.08)", color: "#DC2626" }}>{msg}</p>
+      style={{ background: "rgba(220,38,38,.08)", color: "#DC2626" }}>{msg}</p>
   );
 }
 
@@ -157,14 +162,14 @@ function EntryCard({ busy, err, onSubmit }: {
         أدخل جوالك أو رقم لوحتك — لو سجّلت قبل كده هنرجّع بياناتك وسياراتك فوراً
       </p>
       <TInput label="رقم الجوال" inputMode="tel" placeholder="05xxxxxxxx" className="tnum"
-              value={phone} onChange={(e) => setPhone(e.target.value)} />
+        value={phone} onChange={(e) => setPhone(e.target.value)} />
       <div className="text-center text-[11px] font-bold" style={{ color: DIM }}>— أو —</div>
       <TInput label="رقم اللوحة (أرقام وحروف)" placeholder="1288HHR" dir="ltr" className="tnum text-center uppercase"
-              value={plate} onChange={(e) => setPlate(e.target.value)} />
+        value={plate} onChange={(e) => setPlate(e.target.value)} />
       <ErrBox msg={err} />
       <button onClick={() => onSubmit(phone, plate)} disabled={blocked}
-              className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-black text-white shadow-lg transition active:scale-[.98] disabled:opacity-40"
-              style={{ background: GREEN }}>
+        className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-black text-white shadow-lg transition active:scale-[.98] disabled:opacity-40"
+        style={{ background: GREEN }}>
         <MIcon name="arrow_back" className="!text-[20px] text-white" />
         {busy ? "جارِ البحث..." : "متابعة"}
       </button>
@@ -189,8 +194,8 @@ function GarageCard({ profile, busy, err, onBook, onAddNew }: {
       <div className="space-y-2">
         {(profile.cars || []).map((c) => (
           <button key={c.id} onClick={() => { setQuickCar(c); setQuickOdo(""); }}
-                  className="flex w-full items-center gap-3 rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
-                  style={{ borderColor: quickCar?.id === c.id ? GREEN : LINE, background: quickCar?.id === c.id ? "rgba(22,163,74,.06)" : "#fff" }}>
+            className="flex w-full items-center gap-3 rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
+            style={{ borderColor: quickCar?.id === c.id ? GREEN : LINE, background: quickCar?.id === c.id ? "rgba(22,163,74,.06)" : "#fff" }}>
             <MIcon name={TYPE_META[(c.service_type as SType) || "basic"]?.icon || "directions_car"} className="!text-[26px]" />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[13.5px] font-black">{[c.brand, c.name, c.model_year].filter(Boolean).join(" ") || "سيارة"}</span>
@@ -205,10 +210,10 @@ function GarageCard({ profile, busy, err, onBook, onAddNew }: {
       {quickCar && (
         <div className="kiosk-pop space-y-2 rounded-xl p-3" style={{ background: "#F6F8FA" }}>
           <TInput label={`ممشى ${quickCar.plate} الحالي (كم)`} inputMode="numeric" className="tnum" placeholder="مثال: 84500"
-                  value={quickOdo} onChange={(e) => setQuickOdo(e.target.value.replace(/\D/g, ""))} autoFocus />
+            value={quickOdo} onChange={(e) => setQuickOdo(e.target.value.replace(/\D/g, ""))} autoFocus />
           <button onClick={() => onBook(quickCar, quickOdo)} disabled={busy || !quickOdo}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-[14px] font-black text-white transition active:scale-[.98] disabled:opacity-40"
-                  style={{ background: GREEN }}>
+            className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-[14px] font-black text-white transition active:scale-[.98] disabled:opacity-40"
+            style={{ background: GREEN }}>
             <MIcon name="confirmation_number" className="!text-[19px] text-white" />
             {busy ? "جارِ الحجز..." : `تأكيد حجز ${quickCar.plate}`}
           </button>
@@ -216,8 +221,8 @@ function GarageCard({ profile, busy, err, onBook, onAddNew }: {
       )}
       <ErrBox msg={err} />
       <button onClick={onAddNew}
-              className="flex w-full items-center justify-center gap-1.5 rounded-xl border-2 border-dashed py-3 text-[13px] font-black transition active:scale-[.98]"
-              style={{ borderColor: LINE, color: NAVY }}>
+        className="flex w-full items-center justify-center gap-1.5 rounded-xl border-2 border-dashed py-3 text-[13px] font-black transition active:scale-[.98]"
+        style={{ borderColor: LINE, color: NAVY }}>
         <MIcon name="add_circle" className="!text-[18px]" /> إضافة سيارة أخرى
       </button>
     </div>
@@ -266,35 +271,69 @@ function RegisterForm({ sType, initial, busy, err, branchId, onBack, onSubmit }:
       <Section title="بياناتك">
         <TInput label="الاسم" value={f.name} onChange={set("name")} />
         <TInput label="رقم الجوال" inputMode="tel" className="tnum" placeholder="05xxxxxxxx"
-                value={f.phone} onChange={set("phone")} />
+          value={f.phone} onChange={set("phone")} />
       </Section>
 
       <Section title="بيانات السيارة">
         <div className="grid grid-cols-2 gap-2">
           <TInput label="أرقام اللوحة" inputMode="numeric" className="tnum text-center" placeholder="1288"
-                  value={f.plateNumbers} onChange={setClean("plateNumbers", (s) => s.replace(/\D/g, "").slice(0, 4))} />
+            value={f.plateNumbers} onChange={setClean("plateNumbers", (s) => s.replace(/\D/g, "").slice(0, 4))} />
           <TInput label="حروفها (إنجليزي)" dir="ltr" className="text-center uppercase" placeholder="HHR"
-                  value={f.plateLetters} onChange={setClean("plateLetters", (s) => s.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 3))} />
+            value={f.plateLetters} onChange={setClean("plateLetters", (s) => s.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 3))} />
           {/* كاسكيد حقيقي وشكل مخصص بهوية الموقع: الماركات من سيارات هذا الفرع
               المسجّلة فعلاً — تنمو تلقائياً بلا صيانة يدوية لقائمة ثابتة. */}
           <Combobox label="الماركة" value={f.brand}
-                    onChange={(v) => setF((p) => ({ ...p, brand: v, carName: "" }))}
-                    options={brandsList} placeholder="اختر أو اكتب الماركة" />
+            onChange={(v) => setF((p) => ({ ...p, brand: v, carName: "" }))}
+            options={brandsList} placeholder="اختر أو اكتب الماركة" />
+
+
+          <Combobox
+            label="نوع الوقود"
+            value={f.fuelType}
+            onChange={(v) => setF((p) => ({ ...p, fuelType: v }))}
+            options={["Diesel", "Gasoline", "Hybrid"]}
+            placeholder="اختر نوع الوقود"
+            allowCustom={false}
+          />
           {/* الموديل يترشّح فعلياً حسب الماركة المختارة فوق — يفضل فاضياً لحد
               ما تُختار ماركة، وبمجرد الاختيار يجيب موديلاتها هي فقط. */}
           <Combobox label="الموديل" value={f.carName}
-                    onChange={(v) => setF((p) => ({ ...p, carName: v }))}
-                    options={modelsList}
-                    placeholder={f.brand ? "اختر أو اكتب الموديل" : "اختر الماركة أولاً"} />
+            onChange={(v) => setF((p) => ({ ...p, carName: v }))}
+            options={modelsList}
+            placeholder={f.brand ? "اختر أو اكتب الموديل" : "اختر الماركة أولاً"} />
           <TInput label="سنة الصنع" inputMode="numeric" className="tnum" placeholder="2022"
-                  value={f.modelYear} onChange={setClean("modelYear", (s) => s.replace(/\D/g, "").slice(0, 4))} />
+            value={f.modelYear} onChange={setClean("modelYear", (s) => s.replace(/\D/g, "").slice(0, 4))} />
           <TInput label="الممشى الحالي (كم)" inputMode="numeric" className="tnum" placeholder="84500"
-                  value={f.odometer} onChange={setClean("odometer", (s) => s.replace(/\D/g, ""))} />
+            value={f.odometer} onChange={setClean("odometer", (s) => s.replace(/\D/g, ""))} />
           {/* إلزامية دائماً (بغض النظر عن نوع الخدمة) — أساسية لمطابقة الفلتر
               الصحيح بدقة بدل عرض قائمة عامة على العميل. */}
-          <Combobox label="عدد السلندرات" value={f.cylinders}
-                    onChange={(v) => setF((p) => ({ ...p, cylinders: v }))}
-                    options={["3", "4", "5", "6", "8", "10", "12"]} placeholder="اختر (إلزامي)" allowCustom={false} />
+
+          <div className="text-right">
+            <label
+              className="mb-1 block text-[11.5px] font-black"
+              style={{ color: NAVY }}
+            >
+              عدد السلندرات
+            </label>
+
+            <select
+              value={f.cylinders}
+              onChange={(e) =>
+                setF((p) => ({ ...p, cylinders: e.target.value }))
+              }
+              className={inputCls}
+              style={{ borderColor: LINE }}
+              required
+            >
+              <option value="">اختر (إلزامي)</option>
+              {["3", "4", "5", "6", "8", "10", "12"].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </div>
+
         </div>
       </Section>
 
@@ -306,17 +345,17 @@ function RegisterForm({ sType, initial, busy, err, branchId, onBack, onSubmit }:
             <label className="block text-right">
               <span className="mb-1 block text-[11.5px] font-black" style={{ color: NAVY }}>الفئة</span>
               <input list="car-category-suggestions" value={f.carCategory} onChange={set("carCategory")}
-                     placeholder="GLX / فل كامل" style={{ borderColor: LINE }} className={inputCls} />
+                placeholder="GLX / فل كامل" style={{ borderColor: LINE }} className={inputCls} />
               <datalist id="car-category-suggestions">
                 {["فل كامل", "نص فل", "ستاندرد", "GLX", "SE", "LE", "XLE", "Limited", "Base", "GL", "EX", "LX"]
                   .map((o) => <option key={o} value={o} />)}
               </datalist>
             </label>
             <Combobox label="اللون" value={f.color}
-                      onChange={(v) => setF((p) => ({ ...p, color: v }))}
-                      options={["أبيض", "أسود", "فضي", "رمادي", "أحمر", "أزرق", "بني", "ذهبي", "بيج", "أخرى"]} />
+              onChange={(v) => setF((p) => ({ ...p, color: v }))}
+              options={["أبيض", "أسود", "فضي", "رمادي", "أحمر", "أزرق", "بني", "ذهبي", "بيج", "أخرى"]} />
             <TInput label="رقم الهيكل (الشاصي)" dir="ltr" className="tnum uppercase"
-                    value={f.chassisNumber} onChange={setClean("chassisNumber", (s) => s.toUpperCase())} />
+              value={f.chassisNumber} onChange={setClean("chassisNumber", (s) => s.toUpperCase())} />
           </div>
         </Section>
       )}
@@ -325,18 +364,18 @@ function RegisterForm({ sType, initial, busy, err, branchId, onBack, onSubmit }:
         <Section title="بيانات الفاتورة الضريبية">
           <div className="grid grid-cols-2 gap-2">
             <TInput label="الرقم الضريبي (15 رقم)" inputMode="numeric" className="tnum" placeholder="3xxxxxxxxxxxxxx"
-                    value={f.vat} onChange={setClean("vat", (s) => s.replace(/\D/g, "").slice(0, 15))} />
+              value={f.vat} onChange={setClean("vat", (s) => s.replace(/\D/g, "").slice(0, 15))} />
             <TInput label="رقم السجل التجاري" inputMode="numeric" className="tnum"
-                    value={f.cr} onChange={set("cr")} />
+              value={f.cr} onChange={set("cr")} />
             <TInput label="رقم المبنى" inputMode="numeric" className="tnum"
-                    value={f.buildingNo} onChange={set("buildingNo")} />
+              value={f.buildingNo} onChange={set("buildingNo")} />
             <TInput label="الشارع" value={f.street} onChange={set("street")} />
             <TInput label="الحي" value={f.district} onChange={set("district")} />
             <TInput label="المدينة" value={f.city} onChange={set("city")} />
             <TInput label="الرمز البريدي (اختياري)" inputMode="numeric" className="tnum"
-                    value={f.postalCode} onChange={set("postalCode")} />
+              value={f.postalCode} onChange={set("postalCode")} />
             <TInput label="الرقم الإضافي (اختياري)" inputMode="numeric" className="tnum"
-                    value={f.additionalNo} onChange={set("additionalNo")} />
+              value={f.additionalNo} onChange={set("additionalNo")} />
           </div>
         </Section>
       )}
@@ -348,8 +387,8 @@ function RegisterForm({ sType, initial, busy, err, branchId, onBack, onSubmit }:
         </p>
       )}
       <button onClick={() => onSubmit(f)} disabled={busy || !f.cylinders}
-              className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-black text-white shadow-lg transition active:scale-[.98] disabled:opacity-50"
-              style={{ background: GREEN }}>
+        className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-black text-white shadow-lg transition active:scale-[.98] disabled:opacity-50"
+        style={{ background: GREEN }}>
         <MIcon name="confirmation_number" className="!text-[20px] text-white" />
         {busy ? "جارِ الحجز..." : "حفظ السيارة وحجز الدور"}
       </button>
@@ -404,7 +443,7 @@ function ChatBubble({ m }: { m: ChatMsg }) {
   return (
     <div className={`flex ${mine ? "justify-start" : "justify-end"}`}>
       <div className={`max-w-[82%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${mine ? "rounded-bl-sm text-white" : "rounded-br-sm border bg-white"}`}
-           style={mine ? { background: GREEN } : { borderColor: LINE, color: "#1E293B" }}>
+        style={mine ? { background: GREEN } : { borderColor: LINE, color: "#1E293B" }}>
         {m.attachment_url && (m.message_type === "voice" || m.attachment_url.endsWith(".wav")) ? (
           <audio controls preload="metadata" src={m.attachment_url} className="my-0.5 w-[215px] max-w-full" />
         ) : m.attachment_url ? (
@@ -459,7 +498,7 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
     fetch(`/api/service-notes/public/car-token/${carId}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d?.token && setToken(d.token))
-      .catch(() => {});
+      .catch(() => { });
   }, [token, carId]);
 
   // تحميل المحادثة + تحديث كل 10 ثوانٍ
@@ -476,7 +515,7 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
           countRef.current = d.messages.length;
           setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 120);
         }
-      } catch {}
+      } catch { }
     };
     load();
     const t = setInterval(load, 10000);
@@ -508,15 +547,15 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
     clearInterval(recTimer.current);
     const r = recRef.current;
     if (r) {
-      try { r.proc.disconnect(); r.src.disconnect(); } catch {}
-      try { r.stream.getTracks().forEach((t: any) => t.stop()); } catch {}
-      try { r.ctx.close(); } catch {}
+      try { r.proc.disconnect(); r.src.disconnect(); } catch { }
+      try { r.stream.getTracks().forEach((t: any) => t.stop()); } catch { }
+      try { r.ctx.close(); } catch { }
     }
     setRecOn(false);
   }
 
   // إيقاف التسجيل وتنضيف الموارد عند الخروج من الصفحة
-  useEffect(() => () => { try { teardownRec(); } catch {} }, []); // eslint-disable-line
+  useEffect(() => () => { try { teardownRec(); } catch { } }, []); // eslint-disable-line
 
   async function startRec() {
     if (recOn || sending || !token) return;
@@ -596,8 +635,8 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
       <div className="flex flex-wrap gap-1.5">
         {QUICK_REPLIES.map((q) => (
           <button key={q} disabled={sending} onClick={() => sendMsg(q)}
-                  className="rounded-full border px-3 py-1.5 text-[11px] font-black transition active:scale-[.97] disabled:opacity-40"
-                  style={{ borderColor: LINE, color: NAVY, background: "#fff" }}>
+            className="rounded-full border px-3 py-1.5 text-[11px] font-black transition active:scale-[.97] disabled:opacity-40"
+            style={{ borderColor: LINE, color: NAVY, background: "#fff" }}>
             {q}
           </button>
         ))}
@@ -606,18 +645,18 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
       {!recOn ? (
         <div className="flex gap-2">
           <button onClick={startRec} disabled={sending} title="تسجيل رسالة صوتية"
-                  className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-xl border transition active:scale-[.95] disabled:opacity-40"
-                  style={{ borderColor: LINE, color: NAVY }}>
+            className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-xl border transition active:scale-[.95] disabled:opacity-40"
+            style={{ borderColor: LINE, color: NAVY }}>
             <MIcon name="mic" className="!text-[21px]" />
           </button>
           <input value={text} onChange={(e) => setText(e.target.value)}
-                 onKeyDown={(e) => { if (e.key === "Enter") sendMsg(); }}
-                 placeholder="اكتب رسالتك هنا…" maxLength={2000}
-                 className="min-w-0 flex-1 rounded-xl border px-3.5 py-2.5 text-[13px] font-bold outline-none focus:border-[#0F2D52]"
-                 style={{ borderColor: LINE }} />
+            onKeyDown={(e) => { if (e.key === "Enter") sendMsg(); }}
+            placeholder="اكتب رسالتك هنا…" maxLength={2000}
+            className="min-w-0 flex-1 rounded-xl border px-3.5 py-2.5 text-[13px] font-bold outline-none focus:border-[#0F2D52]"
+            style={{ borderColor: LINE }} />
           <button onClick={() => sendMsg()} disabled={sending || !text.trim()}
-                  className="flex items-center gap-1 rounded-xl px-4 py-2.5 text-[13px] font-black text-white transition active:scale-[.97] disabled:opacity-40"
-                  style={{ background: GREEN }}>
+            className="flex items-center gap-1 rounded-xl px-4 py-2.5 text-[13px] font-black text-white transition active:scale-[.97] disabled:opacity-40"
+            style={{ background: GREEN }}>
             <MIcon name="send" className="!text-[17px] text-white" />
             {sending ? "…" : "إرسال"}
           </button>
@@ -629,11 +668,11 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
             جارِ التسجيل… {recSec} ث / 60
           </span>
           <button onClick={() => stopRec(true)}
-                  className="rounded-lg px-3.5 py-2 text-[12px] font-black text-white active:scale-[.97]"
-                  style={{ background: GREEN }}>إيقاف وإرسال</button>
+            className="rounded-lg px-3.5 py-2 text-[12px] font-black text-white active:scale-[.97]"
+            style={{ background: GREEN }}>إيقاف وإرسال</button>
           <button onClick={() => stopRec(false)}
-                  className="rounded-lg border px-3 py-2 text-[12px] font-black active:scale-[.97]"
-                  style={{ borderColor: LINE, color: DIM }}>إلغاء</button>
+            className="rounded-lg border px-3 py-2 text-[12px] font-black active:scale-[.97]"
+            style={{ borderColor: LINE, color: DIM }}>إلغاء</button>
         </div>
       )}
       {cErr && <ErrBox msg={cErr} />}
@@ -700,7 +739,7 @@ function OilCard({ carId }: { carId: string }) {
   return (
     <div className="kiosk-pop rounded-2xl bg-white p-4 shadow-lg">
       <button onClick={toggle}
-              className="flex w-full items-center justify-between text-right">
+        className="flex w-full items-center justify-between text-right">
         <span className="flex items-center gap-1.5 text-[13.5px] font-black" style={{ color: NAVY }}>
           🛢 زيت سيارتك
         </span>
@@ -722,7 +761,7 @@ function OilCard({ carId }: { carId: string }) {
           )}
           {!loading && (!info || info.oilQty == null) && (
             <p className="rounded-xl p-3 text-[12px] font-bold"
-               style={{ background: "#F6F8FA", color: DIM }}>
+              style={{ background: "#F6F8FA", color: DIM }}>
               لم تُحدد كمية الزيت لموديل سيارتك بعد — سيحددها الفني عند الخدمة وتظهر هنا تلقائياً لكل زياراتك القادمة.
             </p>
           )}
@@ -792,9 +831,9 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
 
   const ql = q.trim();
   const shown = (oils || []).filter((o) =>
-    (ql
-      ? o.name.includes(ql) || o.brand.includes(ql) || o.spec.includes(ql)
-      : !brandPick || ((o.brand || "").trim() || "أخرى") === brandPick));
+  (ql
+    ? o.name.includes(ql) || o.brand.includes(ql) || o.spec.includes(ql)
+    : !brandPick || ((o.brand || "").trim() || "أخرى") === brandPick));
 
   return (
     <div className="kiosk-step space-y-3 rounded-2xl bg-white p-5 shadow-lg">
@@ -803,8 +842,8 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
       {mode === "choose" && (
         <div className="space-y-2.5">
           <button onClick={openRepeat}
-                  className="flex w-full items-center gap-3 rounded-xl border-2 p-3.5 text-right transition active:scale-[.98]"
-                  style={{ borderColor: LINE }}>
+            className="flex w-full items-center gap-3 rounded-xl border-2 p-3.5 text-right transition active:scale-[.98]"
+            style={{ borderColor: LINE }}>
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white" style={{ background: GREEN }}>
               <MIcon name="replay" className="!text-[22px] text-white" />
             </span>
@@ -814,8 +853,8 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
             </span>
           </button>
           <button onClick={() => setMode("list")}
-                  className="flex w-full items-center gap-3 rounded-xl border-2 p-3.5 text-right transition active:scale-[.98]"
-                  style={{ borderColor: LINE }}>
+            className="flex w-full items-center gap-3 rounded-xl border-2 p-3.5 text-right transition active:scale-[.98]"
+            style={{ borderColor: LINE }}>
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white" style={{ background: NAVY }}>
               <MIcon name="oil_barrel" className="!text-[22px] text-white" />
             </span>
@@ -825,7 +864,7 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
             </span>
           </button>
           <button onClick={onNext}
-                  className="w-full rounded-xl py-2.5 text-[12px] font-black" style={{ color: DIM }}>
+            className="w-full rounded-xl py-2.5 text-[12px] font-black" style={{ color: DIM }}>
             التحديد عند الوصول — تخطي ›
           </button>
         </div>
@@ -841,8 +880,8 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
           )}
           {(invoices || []).map((inv) => (
             <button key={inv.id} onClick={() => repeatInvoice(inv)}
-                    className="flex w-full items-center justify-between rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
-                    style={{ borderColor: LINE }}>
+              className="flex w-full items-center justify-between rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
+              style={{ borderColor: LINE }}>
               <span>
                 <span className="tnum block text-[13px] font-black" style={{ color: NAVY }}>{inv.invoiceNo}</span>
                 <span className="tnum text-[11px] font-bold" style={{ color: DIM }}>
@@ -863,8 +902,8 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
       {mode === "list" && (
         <div className="space-y-2.5">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث: اسم / ماركة / لزوجة"
-                 className="w-full rounded-xl border-2 px-3.5 py-2.5 text-[13px] font-bold outline-none"
-                 style={{ borderColor: LINE }} />
+            className="w-full rounded-xl border-2 px-3.5 py-2.5 text-[13px] font-bold outline-none"
+            style={{ borderColor: LINE }} />
           {oils === null && <p className="py-4 text-center text-[12px]" style={{ color: DIM }}>جارِ التحميل...</p>}
 
           {/* ═══ الشركات أولاً — شبكة منظمة 3 أعمدة (الاسم + الشعار) ═══ */}
@@ -872,17 +911,17 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
             <div className="grid grid-cols-3 gap-2">
               {brands.map((b) => (
                 <button key={b.name} onClick={() => setBrandPick(b.name)}
-                        className="flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition active:scale-[.97]"
-                        style={{ borderColor: LINE, background: "#fff" }}>
+                  className="flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition active:scale-[.97]"
+                  style={{ borderColor: LINE, background: "#fff" }}>
                   {(() => {
                     const lg = brandLogoFor(b.name, brandLogos);
                     return lg
                       ? <img src={lg} alt="" loading="lazy"
-                             className="h-11 w-11 rounded-full object-contain" style={{ background: "#EEF3F9" }} />
+                        className="h-11 w-11 rounded-full object-contain" style={{ background: "#EEF3F9" }} />
                       : <span className="grid h-11 w-11 place-items-center rounded-full text-[20px]"
-                              style={{ background: "#EEF3F9", color: NAVY }}>
-                          <MIcon name="oil_barrel" className="!text-[22px]" />
-                        </span>;
+                        style={{ background: "#EEF3F9", color: NAVY }}>
+                        <MIcon name="oil_barrel" className="!text-[22px]" />
+                      </span>;
                   })()}
                   <span className="line-clamp-1 text-[11.5px] font-black" style={{ color: NAVY }}>{b.name}</span>
                   <span className="tnum text-[9.5px] font-bold" style={{ color: DIM }}>{b.count} منتج</span>
@@ -906,8 +945,8 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
               const active = sel.oil?.id === o.id;
               return (
                 <button key={o.id} onClick={() => setSel({ ...sel, oil: o, fromInvoice: null })}
-                        className="flex flex-col gap-2 rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
-                        style={{ borderColor: active ? GREEN : LINE, background: active ? "rgba(22,163,74,.06)" : "#fff" }}>
+                  className="flex flex-col gap-2 rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
+                  style={{ borderColor: active ? GREEN : LINE, background: active ? "rgba(22,163,74,.06)" : "#fff" }}>
                   {/* الصف العلوي: الصورة + الاسم كاملاً بلا قطع (يلف على أكثر من سطر) */}
                   <span className="flex w-full items-start gap-3">
                     {o.image
@@ -924,7 +963,7 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
                   </span>
                   {/* الصف السفلي: السعر بشارة بارزة بعرض كامل — لا يفوته أحد أثناء المرور السريع */}
                   <span className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5"
-                        style={{ background: "rgba(22,163,74,.08)" }}>
+                    style={{ background: "rgba(22,163,74,.08)" }}>
                     <span className="text-[9.5px] font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
                     <span className="tnum text-[15px] font-black" style={{ color: GREEN }}>{money(o.price)} ر.س</span>
                   </span>
@@ -940,10 +979,10 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
               <span className="text-[12px] font-black" style={{ color: NAVY }}>الكمية (عبوة)</span>
               <span className="flex items-center gap-3">
                 <button onClick={() => setSel({ ...sel, oilQty: Math.max(1, sel.oilQty - 1) })}
-                        className="grid h-9 w-9 place-items-center rounded-full text-[18px] font-black text-white" style={{ background: NAVY }}>−</button>
+                  className="grid h-9 w-9 place-items-center rounded-full text-[18px] font-black text-white" style={{ background: NAVY }}>−</button>
                 <b className="tnum w-6 text-center text-[16px]">{sel.oilQty}</b>
                 <button onClick={() => setSel({ ...sel, oilQty: Math.min(9, sel.oilQty + 1) })}
-                        className="grid h-9 w-9 place-items-center rounded-full text-[18px] font-black text-white" style={{ background: GREEN }}>+</button>
+                  className="grid h-9 w-9 place-items-center rounded-full text-[18px] font-black text-white" style={{ background: GREEN }}>+</button>
               </span>
             </div>
           )}
@@ -956,8 +995,8 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
       <div className="flex gap-2 pt-1">
         <button onClick={onBack} className="rounded-xl border-2 px-4 py-3 text-[13px] font-black" style={{ borderColor: LINE, color: DIM }}>رجوع</button>
         <button onClick={onNext} disabled={mode === "list" && !sel.oil}
-                className="flex-1 rounded-xl py-3 text-[14px] font-black text-white transition active:scale-[.98] disabled:opacity-40"
-                style={{ background: GREEN }}>
+          className="flex-1 rounded-xl py-3 text-[14px] font-black text-white transition active:scale-[.98] disabled:opacity-40"
+          style={{ background: GREEN }}>
           {sel.oil ? "التالي — فلتر الزيت ‹" : "متابعة بدون تحديد ‹"}
         </button>
       </div>
@@ -1008,15 +1047,19 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
       <h2 className="text-center text-[15px] font-black" style={{ color: NAVY }}>هل تريد تغيير فلتر الزيت؟</h2>
       <div className="grid grid-cols-2 gap-2">
         <button onClick={() => setSel({ ...sel, withFilter: true })}
-                className="rounded-xl border-2 py-3.5 text-[13.5px] font-black transition active:scale-[.98]"
-                style={{ borderColor: sel.withFilter === true ? GREEN : LINE,
-                         background: sel.withFilter === true ? "rgba(22,163,74,.06)" : "#fff", color: NAVY }}>
+          className="rounded-xl border-2 py-3.5 text-[13.5px] font-black transition active:scale-[.98]"
+          style={{
+            borderColor: sel.withFilter === true ? GREEN : LINE,
+            background: sel.withFilter === true ? "rgba(22,163,74,.06)" : "#fff", color: NAVY
+          }}>
           ✓ مع فلتر الزيت
         </button>
         <button onClick={() => setSel({ ...sel, withFilter: false, filter: null })}
-                className="rounded-xl border-2 py-3.5 text-[13.5px] font-black transition active:scale-[.98]"
-                style={{ borderColor: sel.withFilter === false ? NAVY : LINE,
-                         background: sel.withFilter === false ? "#E9EEF6" : "#fff", color: NAVY }}>
+          className="rounded-xl border-2 py-3.5 text-[13.5px] font-black transition active:scale-[.98]"
+          style={{
+            borderColor: sel.withFilter === false ? NAVY : LINE,
+            background: sel.withFilter === false ? "#E9EEF6" : "#fff", color: NAVY
+          }}>
           بدون فلتر الزيت
         </button>
       </div>
@@ -1031,7 +1074,7 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
                 ✓ هذا هو الفلتر الأصلي المطابق لسيارتك — محدد تلقائياً.
               </p>
               <div className="flex flex-col gap-2 rounded-xl border-2 p-3 text-right"
-                   style={{ borderColor: GREEN, background: "rgba(22,163,74,.06)" }}>
+                style={{ borderColor: GREEN, background: "rgba(22,163,74,.06)" }}>
                 <span className="flex w-full items-start gap-3">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-[18px]" style={{ background: "#F6F8FA" }}>⭕</span>
                   <span className="min-w-0 flex-1">
@@ -1046,7 +1089,7 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
                 </span>
               </div>
               <button onClick={() => setShowAllFilters(true)}
-                      className="w-full text-center text-[11.5px] font-bold underline" style={{ color: DIM }}>
+                className="w-full text-center text-[11.5px] font-bold underline" style={{ color: DIM }}>
                 عايز فلتر تاني؟ اعرض كل الخيارات
               </button>
             </div>
@@ -1054,21 +1097,21 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
             <>
               {matchedFilter && (
                 <button onClick={() => setShowAllFilters(false)}
-                        className="text-[11px] font-bold underline" style={{ color: GREEN }}>
+                  className="text-[11px] font-bold underline" style={{ color: GREEN }}>
                   ← الرجوع للفلتر الأصلي المطابق لسيارتك
                 </button>
               )}
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث عن الفلتر المناسب لسيارتك"
-                     className="w-full rounded-xl border-2 px-3.5 py-2.5 text-[13px] font-bold outline-none"
-                     style={{ borderColor: LINE }} />
+                className="w-full rounded-xl border-2 px-3.5 py-2.5 text-[13px] font-bold outline-none"
+                style={{ borderColor: LINE }} />
               {filters === null && <p className="py-3 text-center text-[12px]" style={{ color: DIM }}>جارِ التحميل...</p>}
               <div className="grid max-h-[38vh] gap-2 overflow-y-auto">
                 {shown.map((f) => {
                   const active = sel.filter?.id === f.id;
                   return (
                     <button key={f.id} onClick={() => setSel({ ...sel, filter: f })}
-                            className="flex flex-col gap-2 rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
-                            style={{ borderColor: active ? GREEN : LINE, background: active ? "rgba(22,163,74,.06)" : "#fff" }}>
+                      className="flex flex-col gap-2 rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
+                      style={{ borderColor: active ? GREEN : LINE, background: active ? "rgba(22,163,74,.06)" : "#fff" }}>
                       <span className="flex w-full items-start gap-3">
                         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-[18px]" style={{ background: "#F6F8FA" }}>⭕</span>
                         <span className="min-w-0 flex-1">
@@ -1076,13 +1119,13 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
                           {f.spec && <span className="tnum text-[10.5px] font-bold" style={{ color: DIM }}>{f.spec}</span>}
                           {matchedFilter?.id === f.id && (
                             <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[9.5px] font-black"
-                                  style={{ background: GREEN, color: "#fff" }}>الأصلي لسيارتك</span>
+                              style={{ background: GREEN, color: "#fff" }}>الأصلي لسيارتك</span>
                           )}
                         </span>
                         {active && <MIcon name="check_circle" filled className="!text-[18px] shrink-0" />}
                       </span>
                       <span className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5"
-                            style={{ background: "rgba(22,163,74,.08)" }}>
+                        style={{ background: "rgba(22,163,74,.08)" }}>
                         <span className="text-[9.5px] font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
                         <span className="tnum text-[14px] font-black" style={{ color: GREEN }}>{money(f.price)} ر.س</span>
                       </span>
@@ -1101,8 +1144,8 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
       <div className="flex gap-2 pt-1">
         <button onClick={onBack} className="rounded-xl border-2 px-4 py-3 text-[13px] font-black" style={{ borderColor: LINE, color: DIM }}>رجوع</button>
         <button onClick={onNext} disabled={sel.withFilter === null || (sel.withFilter === true && !sel.filter)}
-                className="flex-1 rounded-xl py-3 text-[14px] font-black text-white transition active:scale-[.98] disabled:opacity-40"
-                style={{ background: GREEN }}>
+          className="flex-1 rounded-xl py-3 text-[14px] font-black text-white transition active:scale-[.98] disabled:opacity-40"
+          style={{ background: GREEN }}>
           التالي — إضافات أخرى ‹
         </button>
       </div>
@@ -1157,9 +1200,11 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
   const qtyOf = (id: string) => sel.extras.find((e) => e.p.id === id)?.qty || 0;
   function add(p: CatProduct) {
     const has = sel.extras.some((e) => e.p.id === p.id);
-    setSel({ ...sel, extras: has
-      ? sel.extras.map((e) => (e.p.id === p.id ? { ...e, qty: Math.min(9, e.qty + 1) } : e))
-      : [...sel.extras, { p, qty: 1 }] });
+    setSel({
+      ...sel, extras: has
+        ? sel.extras.map((e) => (e.p.id === p.id ? { ...e, qty: Math.min(9, e.qty + 1) } : e))
+        : [...sel.extras, { p, qty: 1 }]
+    });
   }
   function dec(p: CatProduct) {
     setSel({ ...sel, extras: sel.extras.map((e) => (e.p.id === p.id ? { ...e, qty: e.qty - 1 } : e)).filter((e) => e.qty > 0) });
@@ -1184,8 +1229,8 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
             <div className="grid max-h-[46vh] grid-cols-3 gap-2 overflow-y-auto">
               {services.length > 0 && (
                 <button onClick={() => openCat("الخدمات")}
-                        className="flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition active:scale-[.97]"
-                        style={{ borderColor: LINE, background: "#fff" }}>
+                  className="flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition active:scale-[.97]"
+                  style={{ borderColor: LINE, background: "#fff" }}>
                   <span className="grid h-11 w-11 place-items-center rounded-full text-[20px]" style={{ background: "#EEF3F9" }}>🛠</span>
                   <span className="line-clamp-1 text-[11.5px] font-black" style={{ color: NAVY }}>الخدمات</span>
                   <span className="tnum text-[9.5px] font-bold" style={{ color: DIM }}>{services.length} خدمة</span>
@@ -1193,8 +1238,8 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
               )}
               {cats.map((c) => (
                 <button key={c.name} onClick={() => openCat(c.name)}
-                        className="flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition active:scale-[.97]"
-                        style={{ borderColor: LINE, background: "#fff" }}>
+                  className="flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition active:scale-[.97]"
+                  style={{ borderColor: LINE, background: "#fff" }}>
                   <span className="grid h-11 w-11 place-items-center rounded-full text-[20px]" style={{ background: "#EEF3F9" }}>{catIcon(c.name)}</span>
                   <span className="line-clamp-1 text-[11.5px] font-black" style={{ color: NAVY }}>{c.name}</span>
                   <span className="tnum text-[9.5px] font-bold" style={{ color: DIM }}>{c.count} صنف</span>
@@ -1217,19 +1262,19 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
             </button>
           </div>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث داخل القسم"
-                 className="w-full rounded-xl border-2 px-3.5 py-2.5 text-[13px] font-bold outline-none"
-                 style={{ borderColor: LINE }} />
+            className="w-full rounded-xl border-2 px-3.5 py-2.5 text-[13px] font-bold outline-none"
+            style={{ borderColor: LINE }} />
           {prods === null && <p className="py-4 text-center text-[12px]" style={{ color: DIM }}>جارِ التحميل...</p>}
           <div className="grid max-h-[42vh] gap-2 overflow-y-auto">
             {shown.map((p) => {
               const n = qtyOf(p.id);
               return (
                 <div key={p.id}
-                     className="flex items-center gap-3 rounded-xl border-2 p-3 text-right"
-                     style={{ borderColor: n > 0 ? GREEN : LINE, background: n > 0 ? "rgba(22,163,74,.06)" : "#fff" }}>
+                  className="flex items-center gap-3 rounded-xl border-2 p-3 text-right"
+                  style={{ borderColor: n > 0 ? GREEN : LINE, background: n > 0 ? "rgba(22,163,74,.06)" : "#fff" }}>
                   {p.hasImage
                     ? <img src={`/api/products/public/product-image/${p.id}`} alt="" loading="lazy"
-                           className="h-12 w-12 shrink-0 rounded-lg object-contain" style={{ background: "#F6F8FA" }} />
+                      className="h-12 w-12 shrink-0 rounded-lg object-contain" style={{ background: "#F6F8FA" }} />
                     : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg text-[20px]" style={{ background: "#F6F8FA" }}>{catIcon(pick)}</span>}
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13px] font-black leading-snug" style={{ color: NAVY }}>{p.name}</span>
@@ -1242,15 +1287,15 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
                   </span>
                   {n === 0 ? (
                     <button onClick={() => add(p)}
-                            className="shrink-0 rounded-xl px-3.5 py-2 text-[12px] font-black text-white transition active:scale-[.96]"
-                            style={{ background: GREEN }}>+ إضافة</button>
+                      className="shrink-0 rounded-xl px-3.5 py-2 text-[12px] font-black text-white transition active:scale-[.96]"
+                      style={{ background: GREEN }}>+ إضافة</button>
                   ) : (
                     <span className="flex shrink-0 items-center gap-2">
                       <button onClick={() => dec(p)}
-                              className="grid h-8 w-8 place-items-center rounded-full text-[16px] font-black text-white" style={{ background: NAVY }}>−</button>
+                        className="grid h-8 w-8 place-items-center rounded-full text-[16px] font-black text-white" style={{ background: NAVY }}>−</button>
                       <b className="tnum w-5 text-center text-[14px]">{n}</b>
                       <button onClick={() => add(p)}
-                              className="grid h-8 w-8 place-items-center rounded-full text-[16px] font-black text-white" style={{ background: GREEN }}>+</button>
+                        className="grid h-8 w-8 place-items-center rounded-full text-[16px] font-black text-white" style={{ background: GREEN }}>+</button>
                     </span>
                   )}
                 </div>
@@ -1273,8 +1318,8 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
       <div className="flex gap-2 pt-1">
         <button onClick={onBack} className="rounded-xl border-2 px-4 py-3 text-[13px] font-black" style={{ borderColor: LINE, color: DIM }}>رجوع</button>
         <button onClick={onNext}
-                className="flex-1 rounded-xl py-3 text-[14px] font-black text-white transition active:scale-[.98]"
-                style={{ background: GREEN }}>
+          className="flex-1 rounded-xl py-3 text-[14px] font-black text-white transition active:scale-[.98]"
+          style={{ background: GREEN }}>
           {count > 0 ? "التالي — ملخص الحجز ‹" : "تخطي — ملخص الحجز ‹"}
         </button>
       </div>
@@ -1377,10 +1422,10 @@ function BookingSummary({ carLabel, plate, odometer, sel, autoService, busy, err
       {err && <ErrBox msg={err} />}
       <div className="flex gap-2">
         <button onClick={onBack} disabled={busy}
-                className="rounded-xl border-2 px-4 py-3 text-[13px] font-black" style={{ borderColor: LINE, color: DIM }}>رجوع</button>
+          className="rounded-xl border-2 px-4 py-3 text-[13px] font-black" style={{ borderColor: LINE, color: DIM }}>رجوع</button>
         <button onClick={onConfirm} disabled={busy}
-                className="flex-1 rounded-xl py-3.5 text-[15px] font-black text-white transition active:scale-[.98] disabled:opacity-50"
-                style={{ background: GREEN }}>
+          className="flex-1 rounded-xl py-3.5 text-[15px] font-black text-white transition active:scale-[.98] disabled:opacity-50"
+          style={{ background: GREEN }}>
           {busy ? "جارِ الحجز..." : "✓ تأكيد الحجز"}
         </button>
       </div>
@@ -1394,8 +1439,8 @@ function ChatFab({ carId, urlToken }: { carId?: string | null; urlToken?: string
   return (
     <>
       <button onClick={() => setOpen(true)}
-              className="fixed bottom-5 left-5 z-40 flex items-center gap-2 rounded-full px-4 py-3.5 text-[13px] font-black text-white shadow-xl transition active:scale-95"
-              style={{ background: GREEN }}>
+        className="fixed bottom-5 left-5 z-40 flex items-center gap-2 rounded-full px-4 py-3.5 text-[13px] font-black text-white shadow-xl transition active:scale-95"
+        style={{ background: GREEN }}>
         <MIcon name="support_agent" className="!text-[20px] text-white" />
         تحدث مع موظف الخدمة
       </button>
@@ -1458,11 +1503,11 @@ export default function PublicBookingPage() {
     try {
       const t = new URLSearchParams(window.location.search).get("t");
       if (t && t.length >= 20) setChatToken(t);
-    } catch {}
+    } catch { }
   }, []);
 
   useEffect(() => {
-    call<Info>(`booking/${branchId}`).then(setInfo).catch(() => {});
+    call<Info>(`booking/${branchId}`).then(setInfo).catch(() => { });
     const savedBooking = localStorage.getItem(`z8_booking_${branchId}`);
     const savedPhone = localStorage.getItem("z8_cust_phone");
     if (savedBooking) {
@@ -1482,7 +1527,7 @@ export default function PublicBookingPage() {
     clearInterval(pollRef.current);
     if (view === "ticket" && booking) {
       pollRef.current = setInterval(() => {
-        call<Booking>(`booking-status/${booking.bookingId}`).then(setBooking).catch(() => {});
+        call<Booking>(`booking-status/${booking.bookingId}`).then(setBooking).catch(() => { });
       }, 8000);
     }
     return () => clearInterval(pollRef.current);
@@ -1502,9 +1547,11 @@ export default function PublicBookingPage() {
         setView((p.cars || []).length ? "garage" : "type");
       } else {
         setProfile(null);
-        setDraft((x) => ({ ...x, phone: phone || x.phone,
+        setDraft((x) => ({
+          ...x, phone: phone || x.phone,
           plateNumbers: plate.replace(/[^0-9]/g, "").slice(0, 4),
-          plateLetters: plate.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 3) }));
+          plateLetters: plate.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 3)
+        }));
         setView("type");
       }
     } catch (e: any) { setErr(e.message); setView("entry"); }
@@ -1546,8 +1593,10 @@ export default function PublicBookingPage() {
       if (pending.mode === "saved") {
         b = await call<Booking>(`booking/${branchId}`, {
           method: "POST",
-          body: JSON.stringify({ savedCarId: pending.car.id, odometer: pending.odometer,
-                                 serviceType: pending.car.service_type, ...selection }),
+          body: JSON.stringify({
+            savedCarId: pending.car.id, odometer: pending.odometer,
+            serviceType: pending.car.service_type, ...selection
+          }),
         });
       } else {
         const f = pending.form;
@@ -1563,29 +1612,35 @@ export default function PublicBookingPage() {
 
   async function _createNewBooking(f: FormValues, selection: ReturnType<typeof buildSelectionPayload>): Promise<Booking> {
     return await call<Booking>(`booking/${branchId}`, {
-        method: "POST",
-        body: JSON.stringify({
-          serviceType: sType, name: f.name.trim(), phone: f.phone.trim(),
-          car: { plateLetters: f.plateLetters, plateNumbers: f.plateNumbers,
-                 brand: f.brand.trim() || null, carName: f.carName.trim() || null,
-                 modelYear: f.modelYear.trim() || null, odometer: f.odometer,
-                 carCategory: f.carCategory.trim() || null, cylinders: f.cylinders.trim() || null,
-                 color: f.color.trim() || null, chassisNumber: f.chassisNumber.trim() || null },
-          company: sType === "company" ? {
-            vat: f.vat.trim(), cr: f.cr.trim(), buildingNo: f.buildingNo.trim(),
-            street: f.street.trim(), district: f.district.trim(), city: f.city.trim(),
-            postalCode: f.postalCode.trim() || null, additionalNo: f.additionalNo.trim() || null,
-          } : null,
-          ...selection,
-        }),
-      });
+      method: "POST",
+      body: JSON.stringify({
+        serviceType: sType, name: f.name.trim(), phone: f.phone.trim(),
+        car: {
+          plateLetters: f.plateLetters, plateNumbers: f.plateNumbers,
+          brand: f.brand.trim() || null, carName: f.carName.trim() || null,
+          modelYear: f.modelYear.trim() || null, odometer: f.odometer, fuelType: f.fuelType.trim() || null,
+          carCategory: f.carCategory.trim() || null, cylinders: f.cylinders.trim() || null,
+          color: f.color.trim() || null, chassisNumber: f.chassisNumber.trim() || null
+        },
+        company: sType === "company" ? {
+          vat: f.vat.trim(), cr: f.cr.trim(), buildingNo: f.buildingNo.trim(),
+          street: f.street.trim(), district: f.district.trim(), city: f.city.trim(),
+          postalCode: f.postalCode.trim() || null, additionalNo: f.additionalNo.trim() || null,
+        } : null,
+        ...selection,
+      }),
+    });
   }
 
   const stateUi = booking && {
-    waiting: { icon: "schedule", color: "#D97706", bg: "#FCF0DE", title: "في الانتظار",
-               sub: booking.ahead === 0 ? "أنت التالي — استعد!" : `أمامك ${booking.ahead} سيارة · انتظار متوقع ~${booking.estWaitMinutes} دقيقة` },
-    in_service: { icon: "build", color: GREEN, bg: "rgba(22,163,74,.1)", title: "سيارتك في الخدمة الآن 🎉",
-                  sub: booking.station ? `المحطة: ${booking.station}` : "جاري تنفيذ الخدمة" },
+    waiting: {
+      icon: "schedule", color: "#D97706", bg: "#FCF0DE", title: "في الانتظار",
+      sub: booking.ahead === 0 ? "أنت التالي — استعد!" : `أمامك ${booking.ahead} سيارة · انتظار متوقع ~${booking.estWaitMinutes} دقيقة`
+    },
+    in_service: {
+      icon: "build", color: GREEN, bg: "rgba(22,163,74,.1)", title: "سيارتك في الخدمة الآن 🎉",
+      sub: booking.station ? `المحطة: ${booking.station}` : "جاري تنفيذ الخدمة"
+    },
     done: { icon: "task_alt", color: NAVY, bg: "#E9EEF6", title: "اكتملت الخدمة — شكراً لزيارتك", sub: "نسعد بخدمتك دائماً" },
   }[booking.state];
 
@@ -1611,17 +1666,17 @@ export default function PublicBookingPage() {
         {view === "garage" && profile?.customer && (
           <>
             <GarageCard profile={profile} busy={busy} err={err}
-                        onBook={bookSaved}
-                        onAddNew={() => { setErr(""); setSType("basic"); setView("type"); }} />
+              onBook={bookSaved}
+              onAddNew={() => { setErr(""); setSType("basic"); setView("type"); }} />
             <div className="grid grid-cols-2 gap-2">
               <a href={`/booking/${branchId}/invoices`}
-                 className="flex items-center justify-center gap-1.5 rounded-xl border-2 bg-white py-3 text-[13px] font-black shadow transition active:scale-[.98]"
-                 style={{ borderColor: LINE, color: NAVY }}>
+                className="flex items-center justify-center gap-1.5 rounded-xl border-2 bg-white py-3 text-[13px] font-black shadow transition active:scale-[.98]"
+                style={{ borderColor: LINE, color: NAVY }}>
                 <MIcon name="receipt_long" className="!text-[18px]" /> فواتيري
               </a>
               <a href={APP_URL} target="_blank" rel="noopener"
-                 className="flex items-center justify-center gap-1.5 rounded-xl py-3 text-[13px] font-black text-white shadow transition active:scale-[.98]"
-                 style={{ background: GREEN }}>
+                className="flex items-center justify-center gap-1.5 rounded-xl py-3 text-[13px] font-black text-white shadow transition active:scale-[.98]"
+                style={{ background: GREEN }}>
                 <MIcon name="download" className="!text-[18px] text-white" /> تحميل التطبيق
               </a>
             </div>
@@ -1633,8 +1688,8 @@ export default function PublicBookingPage() {
             <h2 className="text-center text-[15px] font-black" style={{ color: NAVY }}>نوع تسجيل السيارة</h2>
             {(Object.keys(TYPE_META) as SType[]).map((t) => (
               <button key={t} onClick={() => { setSType(t); setView("form"); setErr(""); }}
-                      className="flex w-full items-center gap-3 rounded-xl border-2 p-3.5 text-right transition hover:-translate-y-0.5 active:scale-[.98]"
-                      style={{ borderColor: LINE }}>
+                className="flex w-full items-center gap-3 rounded-xl border-2 p-3.5 text-right transition hover:-translate-y-0.5 active:scale-[.98]"
+                style={{ borderColor: LINE }}>
                 <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white" style={{ background: NAVY }}>
                   <MIcon name={TYPE_META[t].icon} className="!text-[22px] text-white" />
                 </span>
@@ -1654,31 +1709,32 @@ export default function PublicBookingPage() {
 
         {view === "form" && (
           <RegisterForm sType={sType} initial={draft} busy={busy} err={err} branchId={branchId}
-                        onBack={(v) => { setDraft(v); setErr(""); setView(profile?.found ? "garage" : "type"); }}
-                        onSubmit={submitNew} />
+            onBack={(v) => { setDraft(v); setErr(""); setView(profile?.found ? "garage" : "type"); }}
+            onSubmit={submitNew} />
         )}
 
         {view === "oil" && pending && (
           <OilPicker branchId={branchId} sel={sel} setSel={setSel}
-                     phone={pending.mode === "saved" ? (profile?.customer?.phone || "") : pending.form.phone}
-                     onNext={() => { setErr(""); setView("filter"); }}
-                     onBack={() => { setErr(""); setView(pending.mode === "saved" ? "garage" : "form"); }} />
+            phone={pending.mode === "saved" ? (profile?.customer?.phone || "") : pending.form.phone}
+            onNext={() => { setErr(""); setView("filter"); }}
+            onBack={() => { setErr(""); setView(pending.mode === "saved" ? "garage" : "form"); }} />
         )}
 
         {view === "filter" && pending && (
           <FilterPicker branchId={branchId} sel={sel} setSel={setSel}
-                        carBrand={pending.mode === "saved" ? (pending.car.brand || "") : pending.form.brand}
-                        carModel={pending.mode === "saved" ? (pending.car.name || "") : pending.form.carName}
-                        carYear={pending.mode === "saved" ? (pending.car.model_year || "") : pending.form.modelYear}
-                        carCylinders={pending.mode === "saved" ? "" : pending.form.cylinders}
-                        onNext={() => { setErr(""); setView("extras"); }}
-                        onBack={() => { setErr(""); setView("oil"); }} />
+            carBrand={pending.mode === "saved" ? (pending.car.brand || "") : pending.form.brand}
+            carModel={pending.mode === "saved" ? (pending.car.name || "") : pending.form.carName}
+            carYear={pending.mode === "saved" ? (pending.car.model_year || "") : pending.form.modelYear}
+            carCylinders={pending.mode === "saved" ? "" : pending.form.cylinders}
+            carFuelType={pending.mode === "saved" ? (pending.car.fuel_type || "") : pending.form.fuelType}
+            onNext={() => { setErr(""); setView("extras"); }}
+            onBack={() => { setErr(""); setView("oil"); }} />
         )}
 
         {view === "extras" && pending && (
           <ExtrasPicker branchId={branchId} sel={sel} setSel={setSel}
-                        onNext={() => { setErr(""); setView("summary"); }}
-                        onBack={() => { setErr(""); setView("filter"); }} />
+            onNext={() => { setErr(""); setView("summary"); }}
+            onBack={() => { setErr(""); setView("filter"); }} />
         )}
 
         {view === "summary" && pending && (
@@ -1716,19 +1772,19 @@ export default function PublicBookingPage() {
             </div>
             <OilCard carId={booking.bookingId} />
             <a href={`/booking/${branchId}/invoices`}
-               className="flex w-full items-center justify-center gap-2 rounded-xl border-2 bg-white py-3 text-[13.5px] font-black transition active:scale-[.98]"
-               style={{ borderColor: LINE, color: NAVY }}>
+              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 bg-white py-3 text-[13.5px] font-black transition active:scale-[.98]"
+              style={{ borderColor: LINE, color: NAVY }}>
               <MIcon name="receipt_long" className="!text-[19px]" /> فواتيري
             </a>
             <p className="text-center text-[10.5px]" style={{ color: DIM }}>الصفحة بتتحدث تلقائياً — سيبها مفتوحة وتابع دورك</p>
             <button onClick={() => {
-                      localStorage.removeItem(`z8_booking_${branchId}`);
-                      const ph = localStorage.getItem("z8_cust_phone");
-                      setBooking(null);
-                      ph ? restoreProfile(ph, "") : setView("entry");
-                    }}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-xl border-2 bg-white py-3 text-[13px] font-black transition active:scale-[.98]"
-                    style={{ borderColor: LINE, color: NAVY }}>
+              localStorage.removeItem(`z8_booking_${branchId}`);
+              const ph = localStorage.getItem("z8_cust_phone");
+              setBooking(null);
+              ph ? restoreProfile(ph, "") : setView("entry");
+            }}
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl border-2 bg-white py-3 text-[13px] font-black transition active:scale-[.98]"
+              style={{ borderColor: LINE, color: NAVY }}>
               <MIcon name="add_circle" className="!text-[18px]" /> حجز جديد — اختر السيارة
             </button>
           </div>

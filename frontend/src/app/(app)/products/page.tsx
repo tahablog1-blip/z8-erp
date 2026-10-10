@@ -6,7 +6,7 @@ import { api, getToken } from "@/lib/api";
 import { MIcon } from "@/components/m-icon";
 import { useAuth } from "@/lib/auth";
 import { DataTable, Column } from "@/components/DataTable";
-import { Badge, Button, Card, ErrorNote, Field, Input, Modal , Select } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import { Product, productLabel, money } from "@/modules/products/types";
 
@@ -43,16 +43,16 @@ function SearchSelect({ value, onChange, options, placeholder, disabled }: {
   return (
     <div className="relative" ref={boxRef}>
       <button type="button" disabled={disabled}
-              onClick={() => { setOpen(!open); setQ(""); }}
-              className="flex w-full items-center justify-between rounded-xl border border-line bg-white px-3 py-2 text-[12.5px] font-bold disabled:opacity-50"
-              style={{ minHeight: 38 }}>
+        onClick={() => { setOpen(!open); setQ(""); }}
+        className="flex w-full items-center justify-between rounded-xl border border-line bg-white px-3 py-2 text-[12.5px] font-bold disabled:opacity-50"
+        style={{ minHeight: 38 }}>
         <span className={value ? "" : "text-text-dim"}>{value || placeholder || "— اختر —"}</span>
         <MIcon name={open ? "expand_less" : "expand_more"} className="!text-[16px] text-text-dim" />
       </button>
       {open && !disabled && (
         <div className="absolute z-30 mt-1 w-full rounded-xl border border-line bg-white shadow-lg">
           <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
-                 placeholder="بحث..." className="w-full border-b border-line px-3 py-2 text-[12px] outline-none" />
+            placeholder="بحث..." className="w-full border-b border-line px-3 py-2 text-[12px] outline-none" />
           <div className="max-h-56 overflow-y-auto">
             {filtered.length === 0 ? (
               <div className="px-3 py-2.5 text-[12px] text-text-dim">
@@ -60,16 +60,16 @@ function SearchSelect({ value, onChange, options, placeholder, disabled }: {
               </div>
             ) : filtered.map((o) => (
               <button key={o} type="button"
-                      onClick={() => { onChange(o); setOpen(false); setQ(""); }}
-                      className="block w-full px-3 py-2 text-right text-[12.5px] font-bold hover:bg-ink-3">
+                onClick={() => { onChange(o); setOpen(false); setQ(""); }}
+                className="block w-full px-3 py-2 text-right text-[12.5px] font-bold hover:bg-ink-3">
                 {o}
               </button>
             ))}
           </div>
           {q.trim() && (
             <button type="button"
-                    onClick={() => { onChange(q.trim()); setOpen(false); setQ(""); }}
-                    className="block w-full border-t border-line px-3 py-2 text-right text-[11.5px] font-bold text-petrol hover:bg-ink-3">
+              onClick={() => { onChange(q.trim()); setOpen(false); setQ(""); }}
+              className="block w-full border-t border-line px-3 py-2 text-right text-[11.5px] font-bold text-petrol hover:bg-ink-3">
               + استخدام "{q.trim()}" كما هو
             </button>
           )}
@@ -102,17 +102,17 @@ function ProductSearchSelect({ value, onChange, products, placeholder, disabled 
   const query = q.trim().toLowerCase();
   const filtered = query
     ? products.filter((p) =>
-        productLabel(p).toLowerCase().includes(query) ||
-        (p.barcode || "").toLowerCase().includes(query)
-      ).slice(0, 50)
+      productLabel(p).toLowerCase().includes(query) ||
+      (p.barcode || "").toLowerCase().includes(query)
+    ).slice(0, 50)
     : products.slice(0, 50);
 
   return (
     <div className="relative" ref={boxRef}>
       <button type="button" disabled={disabled}
-              onClick={() => { setOpen(!open); setQ(""); }}
-              className="flex w-full items-center justify-between rounded-xl border border-line bg-white px-3 py-2 text-[12.5px] font-bold disabled:opacity-50"
-              style={{ minHeight: 38 }}>
+        onClick={() => { setOpen(!open); setQ(""); }}
+        className="flex w-full items-center justify-between rounded-xl border border-line bg-white px-3 py-2 text-[12.5px] font-bold disabled:opacity-50"
+        style={{ minHeight: 38 }}>
         <span className={selected ? "" : "text-text-dim"}>
           {selected ? productLabel(selected) : (placeholder || "— اختر —")}
         </span>
@@ -121,15 +121,15 @@ function ProductSearchSelect({ value, onChange, products, placeholder, disabled 
       {open && !disabled && (
         <div className="absolute z-30 mt-1 w-full rounded-xl border border-line bg-white shadow-lg">
           <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
-                 placeholder="بحث بالاسم أو الباركود..."
-                 className="w-full border-b border-line px-3 py-2 text-[12px] outline-none" />
+            placeholder="بحث بالاسم أو الباركود..."
+            className="w-full border-b border-line px-3 py-2 text-[12px] outline-none" />
           <div className="max-h-64 overflow-y-auto">
             {filtered.length === 0 ? (
               <div className="px-3 py-2.5 text-[12px] text-text-dim">لا يوجد مطابق</div>
             ) : filtered.map((p) => (
               <button key={p.id} type="button"
-                      onClick={() => { onChange(p.id); setOpen(false); setQ(""); }}
-                      className="flex w-full items-center justify-between px-3 py-2 text-right hover:bg-ink-3">
+                onClick={() => { onChange(p.id); setOpen(false); setQ(""); }}
+                className="flex w-full items-center justify-between px-3 py-2 text-right hover:bg-ink-3">
                 <span className="text-[12.5px] font-bold">{productLabel(p)}</span>
                 {p.barcode && <span className="tnum text-[10.5px] text-text-dim">{p.barcode}</span>}
               </button>
@@ -149,6 +149,7 @@ export default function ProductsPage() {
   const importRef = useRef<HTMLInputElement>(null);
   const [importBusy, setImportBusy] = useState(false);
   const [importMsg, setImportMsg] = useState("");
+  const [productSearch, setProductSearch] = useState("");
   // ── مرحلتان إلزاميتان: معاينة (بلا كتابة) ← اعتماد — لكي مصيبة الأسعار الغلط ما تتكررش ──
   type ImportPreview = {
     totalRows: number;
@@ -364,17 +365,17 @@ export default function ProductsPage() {
     {
       key: "__sel", title: (
         <input type="checkbox" className="h-4 w-4 accent-petrol"
-               checked={filteredRows.length > 0 && filteredRows.every((r) => bulkSel.has(r.id))}
-               onChange={(e) => setBulkSel(e.target.checked ? new Set(filteredRows.map((r) => r.id)) : new Set())} />
+          checked={filteredRows.length > 0 && filteredRows.every((r) => bulkSel.has(r.id))}
+          onChange={(e) => setBulkSel(e.target.checked ? new Set(filteredRows.map((r) => r.id)) : new Set())} />
       ), width: "38px",
       render: (p) => (
         <input type="checkbox" className="h-4 w-4 accent-petrol"
-               checked={bulkSel.has(p.id)}
-               onChange={(e) => {
-                 const next = new Set(bulkSel);
-                 e.target.checked ? next.add(p.id) : next.delete(p.id);
-                 setBulkSel(next);
-               }} />
+          checked={bulkSel.has(p.id)}
+          onChange={(e) => {
+            const next = new Set(bulkSel);
+            e.target.checked ? next.add(p.id) : next.delete(p.id);
+            setBulkSel(next);
+          }} />
       ),
     },
     {
@@ -423,11 +424,11 @@ export default function ProductsPage() {
         <div className="flex justify-end gap-1.5">
           {canEdit && (
             <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
-                    onClick={() => openEdit(p)}>تعديل</Button>
+              onClick={() => openEdit(p)}>تعديل</Button>
           )}
           {canDelete && (
             <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]"
-                    onClick={() => remove(p)}>حذف</Button>
+              onClick={() => remove(p)}>حذف</Button>
           )}
         </div>
       ),
@@ -670,8 +671,10 @@ export default function ProductsPage() {
   const [cleanOpen, setCleanOpen] = useState(false);
   const [cleanBusy, setCleanBusy] = useState(false);
   const [cleanErr, setCleanErr] = useState("");
-  const [cleanRes, setCleanRes] = useState<null | { scanned: number; changed: number; applied: boolean;
-    remaining: number; items: { id: string; old: string; name: string; spec: string | null }[] }>(null);
+  const [cleanRes, setCleanRes] = useState<null | {
+    scanned: number; changed: number; applied: boolean;
+    remaining: number; items: { id: string; old: string; name: string; spec: string | null }[]
+  }>(null);
 
   async function runClean(apply: boolean) {
     setCleanErr(""); setCleanBusy(true);
@@ -686,8 +689,10 @@ export default function ProductsPage() {
   }
 
   // ══════════ قواعد تسعير الخدمة حسب السيارة ══════════
-  type ServiceRule = { id: string; service_product_id: string; product_name: string; product_category: string | null;
-                       brand: string | null; model: string | null; year_from: number | null; year_to: number | null; price: number };
+  type ServiceRule = {
+    id: string; service_product_id: string; product_name: string; product_category: string | null;
+    brand: string | null; model: string | null; year_from: number | null; year_to: number | null; price: number
+  };
   const [rulesOpen, setRulesOpen] = useState(false);
   const [rules, setRules] = useState<ServiceRule[]>([]);
   const [ruleForm, setRuleForm] = useState({ serviceProductId: "", brand: "", model: "", yearFrom: "", yearTo: "", price: "" });
@@ -772,198 +777,357 @@ export default function ProductsPage() {
 
       <ErrorNote msg={pageErr} />
 
+
+
+     
       <Card>
-        {/* ══════════ لوحة الفلاتر الاحترافية ══════════ */}
-        <div className="mb-3 rounded-xl border border-line bg-ink-3/30">
-          <button onClick={() => setFltOpen(!fltOpen)}
-                  className="flex w-full items-center justify-between px-3 py-2.5">
-            <span className="flex items-center gap-2 text-[12.5px] font-black">
-              <MIcon name="tune" className="!text-[16px]" />
-              الفلاتر
-              {activeFilterCount > 0 && (
-                <span className="rounded-full bg-petrol px-2 py-0.5 text-[10px] font-black text-white">
-                  {activeFilterCount}
+        {/* الفلاتر والبحث في صف واحد */}
+        <div className="mb-3 grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-start">
+
+          {/* النصف الأول: لوحة الفلاتر */}
+          <div className="min-w-0">
+            <div className="rounded-xl border border-line bg-ink-3/30">
+              <button
+                onClick={() => setFltOpen(!fltOpen)}
+                className="flex w-full items-center justify-between px-3 py-2.5"
+              >
+                <span className="flex items-center gap-2 text-[12.5px] font-black">
+                  <MIcon name="tune" className="!text-[16px]" />
+                  الفلاتر
+                  {activeFilterCount > 0 && (
+                    <span className="rounded-full bg-petrol px-2 py-0.5 text-[10px] font-black text-white">
+                      {activeFilterCount}
+                    </span>
+                  )}
                 </span>
-              )}
-            </span>
-            <span className="text-[11px] text-text-dim">
-              {filteredRows.length} من {rows.length} صنف
-              <MIcon name={fltOpen ? "expand_less" : "expand_more"} className="mr-1 !text-[16px] align-middle" />
-            </span>
-          </button>
-          {fltOpen && (
-            <div className="grid gap-2 border-t border-line p-3 sm:grid-cols-3 lg:grid-cols-6">
-              <Field label="الفئة">
-                <Select value={fltCategory} onChange={(e) => setFltCategory(e.target.value)}>
-                  <option value="">الكل</option>
-                  {availableCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-                </Select>
-              </Field>
-              <Field label="النوع">
-                <Select value={fltKind} onChange={(e) => setFltKind(e.target.value as any)}>
-                  <option value="">الكل</option>
-                  <option value="oil">🛢️ زيت</option>
-                  <option value="oilFilter">🔧 فلتر زيت</option>
-                  <option value="service">🛠 خدمة</option>
-                  <option value="regular">صنف عادي</option>
-                </Select>
-              </Field>
-              <Field label="نوع الزيت">
-                <Select value={fltOilType} onChange={(e) => setFltOilType(e.target.value)}>
-                  <option value="">الكل</option>
-                  {Object.entries(OIL_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </Select>
-              </Field>
-              <Field label="نوع الفلتر">
-                <Select value={fltFilterKind} onChange={(e) => setFltFilterKind(e.target.value)}>
-                  <option value="">الكل</option>
-                  {Object.entries(FILTER_KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </Select>
-              </Field>
-              <Field label="شركة الزيت">
-                <Select value={fltOilBrand} onChange={(e) => setFltOilBrand(e.target.value)}>
-                  <option value="">الكل</option>
-                  {brands.map((b) => <option key={b.id} value={b.name}>{b.name}</option>)}
-                </Select>
-              </Field>
-              <Field label="الحالة">
-                <Select value={fltActive} onChange={(e) => setFltActive(e.target.value as any)}>
-                  <option value="">الكل</option>
-                  <option value="active">نشط</option>
-                  <option value="inactive">موقوف</option>
-                </Select>
-              </Field>
-              <Field label="المخزون">
-                <Select value={fltStock} onChange={(e) => setFltStock(e.target.value as any)}>
-                  <option value="">الكل</option>
-                  <option value="low">منخفض فقط</option>
-                </Select>
-              </Field>
-              {activeFilterCount > 0 && (
-                <div className="col-span-full flex justify-end">
-                  <Button variant="ghost" className="!py-1.5 !text-[11.5px]" onClick={clearFilters}>
-                    ✕ مسح كل الفلاتر
-                  </Button>
+
+                <span className="text-[11px] text-text-dim">
+                  {filteredRows.length} من {rows.length} صنف
+                  <MIcon
+                    name={fltOpen ? "expand_less" : "expand_more"}
+                    className="mr-1 !text-[16px] align-middle"
+                  />
+                </span>
+              </button>
+
+              {fltOpen && (
+                <div className="grid gap-2 border-t border-line p-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+                  <Field label="الفئة">
+                    <Select
+                      value={fltCategory}
+                      onChange={(e) => setFltCategory(e.target.value)}
+                    >
+                      <option value="">الكل</option>
+                      {availableCategories.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </Select>
+                  </Field>
+
+                  <Field label="النوع">
+                    <Select
+                      value={fltKind}
+                      onChange={(e) => setFltKind(e.target.value as any)}
+                    >
+                      <option value="">الكل</option>
+                      <option value="oil">🛢️ زيت</option>
+                      <option value="oilFilter">🔧 فلتر زيت</option>
+                      <option value="service">🛠 خدمة</option>
+                      <option value="regular">صنف عادي</option>
+                    </Select>
+                  </Field>
+
+                  <Field label="نوع الزيت">
+                    <Select
+                      value={fltOilType}
+                      onChange={(e) => setFltOilType(e.target.value)}
+                    >
+                      <option value="">الكل</option>
+                      {Object.entries(OIL_TYPES).map(([k, v]) => (
+                        <option key={k} value={k}>{v}</option>
+                      ))}
+                    </Select>
+                  </Field>
+
+                  <Field label="نوع الفلتر">
+                    <Select
+                      value={fltFilterKind}
+                      onChange={(e) => setFltFilterKind(e.target.value)}
+                    >
+                      <option value="">الكل</option>
+                      {Object.entries(FILTER_KINDS).map(([k, v]) => (
+                        <option key={k} value={k}>{v}</option>
+                      ))}
+                    </Select>
+                  </Field>
+
+                  <Field label="شركة الزيت">
+                    <Select
+                      value={fltOilBrand}
+                      onChange={(e) => setFltOilBrand(e.target.value)}
+                    >
+                      <option value="">الكل</option>
+                      {brands.map((b) => (
+                        <option key={b.id} value={b.name}>{b.name}</option>
+                      ))}
+                    </Select>
+                  </Field>
+
+                  <Field label="الحالة">
+                    <Select
+                      value={fltActive}
+                      onChange={(e) => setFltActive(e.target.value as any)}
+                    >
+                      <option value="">الكل</option>
+                      <option value="active">نشط</option>
+                      <option value="inactive">موقوف</option>
+                    </Select>
+                  </Field>
+
+                  <Field label="المخزون">
+                    <Select
+                      value={fltStock}
+                      onChange={(e) => setFltStock(e.target.value as any)}
+                    >
+                      <option value="">الكل</option>
+                      <option value="low">منخفض فقط</option>
+                    </Select>
+                  </Field>
+
+                  {activeFilterCount > 0 && (
+                    <div className="col-span-full flex justify-end">
+                      <Button
+                        variant="ghost"
+                        className="!py-1.5 !text-[11.5px]"
+                        onClick={clearFilters}
+                      >
+                        ✕ مسح كل الفلاتر
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
+          </div>
+
+          {/* النصف الثاني: خانة البحث */}
+          <div className="min-w-0">
+            <DataTable
+              columns={columns}
+              rows={filteredRows}
+              loading={loading}
+              searchKeys={["name", "category", "spec", "barcode"]}
+              searchPlaceholder="بحث بالاسم أو الفئة أو الباركود..."
+              searchOnly
+              searchValue={productSearch}
+              onSearchChange={setProductSearch}
+              searchClassName="w-full"
+            />
+          </div>
         </div>
 
+        {/* الجدول الأساسي وأزرار الإجراءات بعرض الصفحة */}
         <DataTable
           columns={columns}
           rows={filteredRows}
           loading={loading}
           searchKeys={["name", "category", "spec", "barcode"]}
           searchPlaceholder="بحث بالاسم أو الفئة أو الباركود..."
+          searchOutside
+          searchValue={productSearch}
+          onSearchChange={setProductSearch}
           emptyText="لا توجد أصناف بعد — أضف أول صنف"
-          toolbar={<>
-            {bulkSel.size > 0 && (
-              <div className="flex items-center gap-2 rounded-xl border border-petrol bg-petrol/10 px-3 py-2">
-                <span className="text-[12px] font-black">
-                  محدد: <b className="tnum">{bulkSel.size}</b> صنف
-                </span>
-                <Select value={bulkType} onChange={(e) => setBulkType(e.target.value)}>
-                  <option value="">— اختر تصنيفاً —</option>
-                  <optgroup label="نوع الزيت">
-                    {Object.entries(OIL_TYPES).map(([k, v]) => <option key={"ot:" + k} value={"ot:" + k}>{v}</option>)}
-                    <option value="__clear_oiltype__">✕ إزالة تصنيف الزيت</option>
-                  </optgroup>
-                  <optgroup label="نوع الفلتر">
-                    {Object.entries(FILTER_KINDS).map(([k, v]) => <option key={"fk:" + k} value={"fk:" + k}>{v}</option>)}
-                    <option value="__clear_filterkind__">✕ إزالة تصنيف الفلتر</option>
-                  </optgroup>
-                </Select>
-                <Button className="!py-1.5 !text-[11.5px]" disabled={!bulkType || bulkBusy} onClick={applyBulkType}>
-                  {bulkBusy ? "جارِ التطبيق..." : "✓ تطبيق على المحدد"}
-                </Button>
-                <Button variant="ghost" className="!py-1.5 !text-[11.5px]" onClick={() => setBulkSel(new Set())}>
-                  إلغاء التحديد
-                </Button>
-              </div>
-            )}
-            {canCreate && <div className="flex gap-2">
-            <input ref={importRef} type="file" accept=".xlsx" hidden
-                   onChange={(e) => e.target.files?.[0] && importExcel(e.target.files[0])} />
-            <Button variant="ghost" disabled={importBusy} onClick={() => importRef.current?.click()}>
-              {importBusy ? "جارٍ القراءة…" : "📥 استيراد Excel"}
-            </Button>
-            {hasPerm("products.delete") && (
-              <Button variant="danger" onClick={() => setWipeOpen(true)}>🗑 مسح كل الأصناف</Button>
-            )}
-            <Button variant="ghost" onClick={() => { setCleanOpen(true); setCleanRes(null); setCleanErr(""); }}>
-              🧽 تنظيف الأسماء AI
-            </Button>
-            <Button variant="ghost" onClick={() => { setRulesOpen(true); setRuleErr(""); loadRules(); }}>
-              💼 أسعار الخدمة
-            </Button>
-            <Button variant="ghost" onClick={() => { setBrandsOpen(true); setBrandErr(""); }}>
-              🏷️ شركات الزيوت
-            </Button>
-            <Button variant="ghost" onClick={() => setTypesOpen(true)}>
-              🧪 تصنيف نوع الزيت
-            </Button>
-            <Button variant="ghost" onClick={() => { setFiltersMapOpen(true); loadCarFilters(); }}>
-              🔩 فلاتر السيارات
-            </Button>
-            <Button variant="ghost" onClick={() => { setClsOpen(true); setClsPreview(null); setClsErr(""); }}>
-              🪄 تصنيف ذكي
-            </Button>
-            <Button onClick={openCreate}>+ صنف جديد</Button>
-          </div>}
-          </>}
+          toolbar={
+            <>
+              {bulkSel.size > 0 && (
+                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-petrol bg-petrol/10 px-3 py-2">
+                  <span className="text-[12px] font-black">
+                    محدد: <b className="tnum">{bulkSel.size}</b> صنف
+                  </span>
+
+                  <Select
+                    value={bulkType}
+                    onChange={(e) => setBulkType(e.target.value)}
+                  >
+                    <option value="">— اختر تصنيفاً —</option>
+                    <optgroup label="نوع الزيت">
+                      {Object.entries(OIL_TYPES).map(([k, v]) => (
+                        <option key={"ot:" + k} value={"ot:" + k}>{v}</option>
+                      ))}
+                      <option value="__clear_oiltype__">✕ إزالة تصنيف الزيت</option>
+                    </optgroup>
+                    <optgroup label="نوع الفلتر">
+                      {Object.entries(FILTER_KINDS).map(([k, v]) => (
+                        <option key={"fk:" + k} value={"fk:" + k}>{v}</option>
+                      ))}
+                      <option value="__clear_filterkind__">✕ إزالة تصنيف الفلتر</option>
+                    </optgroup>
+                  </Select>
+
+                  <Button
+                    className="!py-1.5 !text-[11.5px]"
+                    disabled={!bulkType || bulkBusy}
+                    onClick={applyBulkType}
+                  >
+                    {bulkBusy ? "جارِ التطبيق..." : "✓ تطبيق على المحدد"}
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className="!py-1.5 !text-[11.5px]"
+                    onClick={() => setBulkSel(new Set())}
+                  >
+                    إلغاء التحديد
+                  </Button>
+                </div>
+              )}
+
+              {canCreate && (
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    ref={importRef}
+                    type="file"
+                    accept=".xlsx"
+                    hidden
+                    onChange={(e) =>
+                      e.target.files?.[0] && importExcel(e.target.files[0])
+                    }
+                  />
+
+                  <Button
+                    variant="ghost"
+                    disabled={importBusy}
+                    onClick={() => importRef.current?.click()}
+                  >
+                    {importBusy ? "جارٍ القراءة…" : "📥 استيراد Excel"}
+                  </Button>
+
+                  {hasPerm("products.delete") && (
+                    <Button variant="danger" onClick={() => setWipeOpen(true)}>
+                      🗑 مسح كل الأصناف
+                    </Button>
+                  )}
+
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setCleanOpen(true);
+                      setCleanRes(null);
+                      setCleanErr("");
+                    }}
+                  >
+                    🧽 تنظيف الأسماء AI
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setRulesOpen(true);
+                      setRuleErr("");
+                      loadRules();
+                    }}
+                  >
+                    💼 أسعار الخدمة
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setBrandsOpen(true);
+                      setBrandErr("");
+                    }}
+                  >
+                    🏷️ شركات الزيوت
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    onClick={() => setTypesOpen(true)}
+                  >
+                    🧪 تصنيف نوع الزيت
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setFiltersMapOpen(true);
+                      loadCarFilters();
+                    }}
+                  >
+                    🔩 فلاتر السيارات
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setClsOpen(true);
+                      setClsPreview(null);
+                      setClsErr("");
+                    }}
+                  >
+                    🪄 تصنيف ذكي
+                  </Button>
+
+                  <Button onClick={openCreate}>+ صنف جديد</Button>
+                </div>
+              )}
+            </>
+          }
         />
       </Card>
+   
+
+
 
       <Modal open={!!modal} onClose={() => setModal(null)}
-             title={modal?.mode === "create" ? "صنف جديد" : "تعديل الصنف"}>
+        title={modal?.mode === "create" ? "صنف جديد" : "تعديل الصنف"}>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <Field label="الاسم / الشركة المصنعة">
               <Input value={form.name} autoFocus
-                     onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </Field>
             <Field label="اللزوجة / المواصفة">
               <Input value={form.spec} placeholder="5W-30"
-                     onChange={(e) => setForm({ ...form, spec: e.target.value })} />
+                onChange={(e) => setForm({ ...form, spec: e.target.value })} />
             </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <Field label="الفئة" hint="اتركها فارغة وتُستنتج من الاسم">
               <Input value={form.category} placeholder="زيوت"
-                     onChange={(e) => setForm({ ...form, category: e.target.value })} />
+                onChange={(e) => setForm({ ...form, category: e.target.value })} />
             </Field>
             <Field label="الوحدة">
               <Input value={form.unit}
-                     onChange={(e) => setForm({ ...form, unit: e.target.value })} />
+                onChange={(e) => setForm({ ...form, unit: e.target.value })} />
             </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <Field label="سعر البيع (قبل الضريبة)">
               <Input type="number" min={0} step="0.01" className="tnum" value={form.price}
-                     onChange={(e) => setForm({ ...form, price: +e.target.value || 0 })} />
+                onChange={(e) => setForm({ ...form, price: +e.target.value || 0 })} />
             </Field>
             <Field label="سعر التكلفة">
               <Input type="number" min={0} step="0.01" className="tnum" value={form.costPrice}
-                     onChange={(e) => setForm({ ...form, costPrice: +e.target.value || 0 })} />
+                onChange={(e) => setForm({ ...form, costPrice: +e.target.value || 0 })} />
             </Field>
           </div>
 
           <div className="grid grid-cols-3 gap-2">
             <Field label="الباركود">
               <Input value={form.barcode} className="tnum"
-                     onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
+                onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
             </Field>
             <Field label="حد الانخفاض">
               <Input type="number" min={0} className="tnum" value={form.minQty}
-                     onChange={(e) => setForm({ ...form, minQty: +e.target.value || 0 })} />
+                onChange={(e) => setForm({ ...form, minQty: +e.target.value || 0 })} />
             </Field>
             <Field label="فترة التغيير (كم)">
               <Input type="number" min={0} className="tnum" value={form.serviceIntervalKm}
-                     placeholder="للزيوت فقط"
-                     onChange={(e) => setForm({ ...form, serviceIntervalKm: e.target.value })} />
+                placeholder="للزيوت فقط"
+                onChange={(e) => setForm({ ...form, serviceIntervalKm: e.target.value })} />
             </Field>
             <label className="col-span-full flex cursor-pointer items-center justify-between rounded-lg border border-line bg-ink-3 px-3 py-2.5">
               <div>
@@ -973,7 +1137,7 @@ export default function ProductsPage() {
                 </div>
               </div>
               <input type="checkbox" checked={form.isService} className="h-4 w-4 shrink-0 accent-petrol"
-                     onChange={(e) => setForm({ ...form, isService: e.target.checked })} />
+                onChange={(e) => setForm({ ...form, isService: e.target.checked })} />
             </label>
             <label className="col-span-full flex cursor-pointer items-center justify-between rounded-lg border border-line bg-ink-3 px-3 py-2.5">
               <div>
@@ -981,7 +1145,7 @@ export default function ProductsPage() {
                 <div className="text-[11px] text-text-dim">يظهر كخيار في بوابة اختيار الزيت الذاتية للعميل</div>
               </div>
               <input type="checkbox" checked={form.isOil} className="h-4 w-4 shrink-0 accent-petrol"
-                     onChange={(e) => setForm({ ...form, isOil: e.target.checked })} />
+                onChange={(e) => setForm({ ...form, isOil: e.target.checked })} />
             </label>
             <div className="col-span-full grid gap-2 sm:grid-cols-2">
               <Field label="صورة المنتج (تظهر للعميل في بوابة الزيت)">
@@ -990,20 +1154,20 @@ export default function ProductsPage() {
                     <img src={`data:image/jpeg;base64,${prodImage}`} alt="صورة" className="h-12 w-12 rounded-lg border border-line object-contain" />
                   ) : (
                     <span className="grid h-12 w-12 place-items-center rounded-lg border border-dashed border-line text-[20px]"
-                          title={prodImage === undefined ? "الصورة الحالية محفوظة — ارفع لتغييرها" : ""}>🖼️</span>
+                      title={prodImage === undefined ? "الصورة الحالية محفوظة — ارفع لتغييرها" : ""}>🖼️</span>
                   )}
                   <label className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[11.5px] font-bold hover:border-petrol">
                     رفع صورة
                     <input type="file" accept="image/*" hidden
-                           onChange={async (e) => {
-                             const f = e.target.files?.[0]; if (!f) return;
-                             try { setProdImage(await fileToBase64(f, 400)); } catch { /* */ }
-                             e.target.value = "";
-                           }} />
+                      onChange={async (e) => {
+                        const f = e.target.files?.[0]; if (!f) return;
+                        try { setProdImage(await fileToBase64(f, 400)); } catch { /* */ }
+                        e.target.value = "";
+                      }} />
                   </label>
                   {prodImage && (
                     <button type="button" onClick={() => setProdImage(null)}
-                            className="text-[11px] font-bold text-ember hover:underline">حذف</button>
+                      className="text-[11px] font-bold text-ember hover:underline">حذف</button>
                   )}
                 </div>
               </Field>
@@ -1038,7 +1202,7 @@ export default function ProductsPage() {
                 <div className="text-[11px] text-text-dim">يُضاف تلقائياً لو العميل اختار "مع فلتر" في بوابة الزيت</div>
               </div>
               <input type="checkbox" checked={form.isOilFilter} className="h-4 w-4 shrink-0 accent-petrol"
-                     onChange={(e) => setForm({ ...form, isOilFilter: e.target.checked })} />
+                onChange={(e) => setForm({ ...form, isOilFilter: e.target.checked })} />
             </label>
           </div>
 
@@ -1146,7 +1310,7 @@ export default function ProductsPage() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-[12.5px] font-black">⚡ توزيع الزيوت على الشركات تلقائياً</div>
               <Button variant="ghost" className="!py-1.5 !text-[11.5px]" disabled={autoBrandBusy}
-                      onClick={() => runAutoBrand(false)}>
+                onClick={() => runAutoBrand(false)}>
                 {autoBrandBusy ? "جارِ الفحص…" : "معاينة التوزيع"}
               </Button>
             </div>
@@ -1169,7 +1333,7 @@ export default function ProductsPage() {
                       <p className="font-black text-emerald">✓ اتطبق التوزيع</p>
                     ) : autoBrand.assigned > 0 && (
                       <Button className="!py-1.5 !text-[11.5px]" disabled={autoBrandBusy}
-                              onClick={() => runAutoBrand(true)}>
+                        onClick={() => runAutoBrand(true)}>
                         ✓ تطبيق التوزيع على {autoBrand.assigned} صنف
                       </Button>
                     )}
@@ -1181,22 +1345,22 @@ export default function ProductsPage() {
           {brands.length > 0 && (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {brands.map((b) => (
-                <div key={b.id} className="flex flex-col"> 
-                {/* كارد البراند */} 
-                <div className="flex min-h-[145px] flex-col rounded-xl border border-line bg-ink-2 p-3 text-center"> 
-                  {/* مساحة ثابتة للوجو */} 
-                  <div className="flex h-[75px] w-full items-center justify-center overflow-hidden"> 
-                    {b.logo_base64 ? ( <img src={`data:image/png;base64,${b.logo_base64}`} alt={b.name} loading="lazy" decoding="async" className="block h-full w-full object-contain p-1" /> ) : ( <MIcon name="verified" className="!text-[30px] text-[#64748B]" /> )} 
-                    </div> 
-                    {/* اسم البراند */} 
-                    <div className="mt-2 truncate text-[12.5px] font-black"> {b.name} 
-                      </div> </div> 
-                      {/* الأزرار خارج الكارد وتحت الـ border */} 
-                      <div className="flex items-center justify-center gap-1.5 pt-2"> 
-                        <Button onClick={() => openAssign(b)} className="rounded-md bg-petrol px-2.5 py-1.5 text-[10.5px] font-bold text-white transition hover:brightness-110" > تعيين المنتجات </Button> 
-                        <button onClick={() => startBrandEdit(b)} className="rounded-md border border-line bg-ink-2 px-2.5 py-1.5 text-[10.5px] font-bold transition hover:border-petrol" > تعديل </button> 
-                        <button onClick={() => removeBrand(b)} className="rounded-md px-2.5 py-1.5 text-[10.5px] font-bold text-ember transition hover:bg-ember-bg" > حذف </button> 
-                        </div> </div>
+                <div key={b.id} className="flex flex-col">
+                  {/* كارد البراند */}
+                  <div className="flex min-h-[145px] flex-col rounded-xl border border-line bg-ink-2 p-3 text-center">
+                    {/* مساحة ثابتة للوجو */}
+                    <div className="flex h-[75px] w-full items-center justify-center overflow-hidden">
+                      {b.logo_base64 ? (<img src={`data:image/png;base64,${b.logo_base64}`} alt={b.name} loading="lazy" decoding="async" className="block h-full w-full object-contain p-1" />) : (<MIcon name="verified" className="!text-[30px] text-[#64748B]" />)}
+                    </div>
+                    {/* اسم البراند */}
+                    <div className="mt-2 truncate text-[12.5px] font-black"> {b.name}
+                    </div> </div>
+                  {/* الأزرار خارج الكارد وتحت الـ border */}
+                  <div className="flex items-center justify-center gap-1.5 pt-2">
+                    <Button onClick={() => openAssign(b)} className="rounded-md bg-petrol px-2.5 py-1.5 text-[10.5px] font-bold text-white transition hover:brightness-110" > تعيين المنتجات </Button>
+                    <button onClick={() => startBrandEdit(b)} className="rounded-md border border-line bg-ink-2 px-2.5 py-1.5 text-[10.5px] font-bold transition hover:border-petrol" > تعديل </button>
+                    <button onClick={() => removeBrand(b)} className="rounded-md px-2.5 py-1.5 text-[10.5px] font-bold text-ember transition hover:bg-ember-bg" > حذف </button>
+                  </div> </div>
               ))}
             </div>
           )}
@@ -1208,15 +1372,15 @@ export default function ProductsPage() {
           )}
           <div className="grid gap-2 rounded-xl border border-dashed border-line p-3 sm:grid-cols-[1fr_auto_auto]">
             <Input value={brandName} placeholder="اسم الشركة — مثال: شيل، موبيل، كاسترول"
-                   onChange={(e) => setBrandName(e.target.value)} />
+              onChange={(e) => setBrandName(e.target.value)} />
             <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-[11.5px] font-bold hover:border-petrol">
               {brandLogo ? "✓ الشعار جاهز" : "رفع الشعار"}
               <input type="file" accept="image/*" hidden
-                     onChange={async (e) => {
-                       const f = e.target.files?.[0]; if (!f) return;
-                       try { setBrandLogo(await fileToSquareLogo(f, 240)); } catch { /* */ }
-                       e.target.value = "";
-                     }} />
+                onChange={async (e) => {
+                  const f = e.target.files?.[0]; if (!f) return;
+                  try { setBrandLogo(await fileToSquareLogo(f, 240)); } catch { /* */ }
+                  e.target.value = "";
+                }} />
             </label>
             <Button onClick={saveBrand} disabled={brandBusy || !brandName.trim()}>
               {brandBusy ? "..." : brandEdit ? "حفظ التعديل" : "+ إضافة"}
@@ -1228,7 +1392,7 @@ export default function ProductsPage() {
 
       {/* ══════════ تعيين منتجات لشركة ══════════ */}
       <Modal open={!!assignFor} size="lg" onClose={() => setAssignFor(null)}
-             title={`تعيين الزيوت لشركة «${assignFor?.name || ""}»`}>
+        title={`تعيين الزيوت لشركة «${assignFor?.name || ""}»`}>
         <div className="space-y-3">
           <p className="text-[12px] text-text-dim">
             حدّد المنتجات التابعة للشركة — المطابق لاسم الشركة اتحدد تلقائياً، راجع وعدّل ثم احفظ.
@@ -1238,11 +1402,11 @@ export default function ProductsPage() {
             {rows.filter((r) => r.is_oil).map((r) => (
               <label key={r.id} className="flex cursor-pointer items-center gap-2 px-3 py-2 text-[12.5px] hover:bg-ink-3">
                 <input type="checkbox" checked={assignSel.has(r.id)} className="h-4 w-4 accent-petrol"
-                       onChange={(e) => {
-                         const next = new Set(assignSel);
-                         e.target.checked ? next.add(r.id) : next.delete(r.id);
-                         setAssignSel(next);
-                       }} />
+                  onChange={(e) => {
+                    const next = new Set(assignSel);
+                    e.target.checked ? next.add(r.id) : next.delete(r.id);
+                    setAssignSel(next);
+                  }} />
                 <span className="flex-1 font-bold">{productLabel(r)}</span>
                 {r.oil_brand && r.oil_brand !== assignFor?.name && (
                   <span className="rounded-full bg-ink-3 px-2 py-0.5 text-[10px] text-text-dim">حالياً: {r.oil_brand}</span>
@@ -1282,7 +1446,7 @@ export default function ProductsPage() {
                     <b className="tnum">{count}</b> صنف مصنّف
                   </div>
                   <button onClick={() => openTypeAssign(key)}
-                          className="mt-2 w-full rounded-md bg-petrol px-2 py-1.5 text-[10.5px] font-bold text-white hover:brightness-110">
+                    className="mt-2 w-full rounded-md bg-petrol px-2 py-1.5 text-[10.5px] font-bold text-white hover:brightness-110">
                     تعيين المنتجات
                   </button>
                 </div>
@@ -1302,7 +1466,7 @@ export default function ProductsPage() {
 
       {/* ══════════ تعيين منتجات لنوع زيت (اختيار جماعي) ══════════ */}
       <Modal open={!!typeAssignFor} size="lg" onClose={() => setTypeAssignFor(null)}
-             title={`تعيين الزيوت لنوع «${(typeAssignFor && OIL_TYPES[typeAssignFor]) || ""}»`}>
+        title={`تعيين الزيوت لنوع «${(typeAssignFor && OIL_TYPES[typeAssignFor]) || ""}»`}>
         <div className="space-y-3">
           <p className="text-[12px] text-text-dim">
             حدّد كل الأصناف اللي تتبع هذا النوع مرة واحدة ثم احفظ — بديل التعليم الفردي صنف بصنف.
@@ -1312,11 +1476,11 @@ export default function ProductsPage() {
             {rows.filter((r) => r.is_oil).map((r) => (
               <label key={r.id} className="flex cursor-pointer items-center gap-2 px-3 py-2 text-[12.5px] hover:bg-ink-3">
                 <input type="checkbox" checked={typeAssignSel.has(r.id)} className="h-4 w-4 accent-petrol"
-                       onChange={(e) => {
-                         const next = new Set(typeAssignSel);
-                         e.target.checked ? next.add(r.id) : next.delete(r.id);
-                         setTypeAssignSel(next);
-                       }} />
+                  onChange={(e) => {
+                    const next = new Set(typeAssignSel);
+                    e.target.checked ? next.add(r.id) : next.delete(r.id);
+                    setTypeAssignSel(next);
+                  }} />
                 <span className="flex-1 font-bold">{productLabel(r)}</span>
                 {r.oil_type && r.oil_type !== typeAssignFor && (
                   <span className="rounded-full bg-ink-3 px-2 py-0.5 text-[10px] text-text-dim">
@@ -1354,12 +1518,12 @@ export default function ProductsPage() {
           <div className="flex gap-2">
             {Object.entries(FILTER_KINDS).map(([k, label]) => (
               <button key={k} onClick={() => { setCfKind(k as any); setCfProductId(""); }}
-                      className="rounded-full px-3.5 py-1.5 text-[11.5px] font-black transition"
-                      style={{
-                        background: cfKind === k ? "var(--petrol, #0f766e)" : "transparent",
-                        color: cfKind === k ? "#fff" : undefined,
-                        border: cfKind === k ? "none" : "1px solid var(--line, #E2E8F0)",
-                      }}>
+                className="rounded-full px-3.5 py-1.5 text-[11.5px] font-black transition"
+                style={{
+                  background: cfKind === k ? "var(--petrol, #0f766e)" : "transparent",
+                  color: cfKind === k ? "#fff" : undefined,
+                  border: cfKind === k ? "none" : "1px solid var(--line, #E2E8F0)",
+                }}>
                 {label}
               </button>
             ))}
@@ -1367,10 +1531,10 @@ export default function ProductsPage() {
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <SearchSelect value={cfBrand} onChange={(v) => { setCfBrand(v); setCfModel(""); }}
-                          options={cfBrandsList} placeholder="اختر أو اكتب الماركة" />
+              options={cfBrandsList} placeholder="اختر أو اكتب الماركة" />
             <SearchSelect value={cfModel} onChange={setCfModel} options={cfModelsList}
-                          placeholder={cfBrand ? "اختر أو اكتب الموديل" : "اختر الماركة أولاً"}
-                          disabled={!cfBrand} />
+              placeholder={cfBrand ? "اختر أو اكتب الموديل" : "اختر الماركة أولاً"}
+              disabled={!cfBrand} />
             <Select value={cfFrom} onChange={(e) => setCfFrom(e.target.value)}>
               <option value="">من سنة</option>
               {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
@@ -1386,7 +1550,7 @@ export default function ProductsPage() {
               مسبق، عشان محدش يتعطل بانتظار خطوة تصنيف قد تكون غير مكتملة. */}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_140px]">
             <ProductSearchSelect value={cfProductId} onChange={setCfProductId} products={rows}
-                                 placeholder={`ابحث عن ${FILTER_KINDS[cfKind]} بالاسم أو الباركود...`} />
+              placeholder={`ابحث عن ${FILTER_KINDS[cfKind]} بالاسم أو الباركود...`} />
             <Select value={cfCylinders} onChange={(e) => setCfCylinders(e.target.value)}>
               <option value="">أي محرك</option>
               {["3", "4", "5", "6", "8", "10", "12"].map((c) => <option key={c} value={c}>{c} سلندر</option>)}
@@ -1405,7 +1569,7 @@ export default function ProductsPage() {
               وتحلّل تقاريرها لاحقاً — مش شرط للبحث والربط هنا.
             </p>
             <Button variant="ghost" className="!shrink-0 !py-1.5 !text-[11px]"
-                    disabled={autoClsBusy} onClick={runAutoClassify}>
+              disabled={autoClsBusy} onClick={runAutoClassify}>
               {autoClsBusy ? "جارِ التصنيف..." : "⚡ تصنيف تلقائي من الفئة"}
             </Button>
           </div>
@@ -1431,7 +1595,7 @@ export default function ProductsPage() {
                   <span className="font-bold">{f.filter_name}{f.filter_spec ? ` ${f.filter_spec}` : ""}</span>
                 </span>
                 <button onClick={() => removeCarFilter(f.id)}
-                        className="rounded-md px-2 py-1 text-[11px] font-bold text-red-600 hover:bg-red-50">
+                  className="rounded-md px-2 py-1 text-[11px] font-bold text-red-600 hover:bg-red-50">
                   حذف
                 </button>
               </div>
@@ -1461,7 +1625,7 @@ export default function ProductsPage() {
             </Field>
             <Field label="السعر شامل الضريبة (ر.س)">
               <Input value={ruleForm.price} inputMode="decimal" placeholder="مثال: 40"
-                     onChange={(e) => setRuleForm({ ...ruleForm, price: e.target.value.replace(/[^0-9.]/g, "") })} />
+                onChange={(e) => setRuleForm({ ...ruleForm, price: e.target.value.replace(/[^0-9.]/g, "") })} />
             </Field>
             <Field label="الماركة (فارغ = كل السيارات)">
               <Input value={ruleForm.brand} placeholder="تويوتا" onChange={(e) => setRuleForm({ ...ruleForm, brand: e.target.value })} />
@@ -1471,15 +1635,15 @@ export default function ProductsPage() {
             </Field>
             <Field label="من سنة (اختياري)">
               <Input value={ruleForm.yearFrom} inputMode="numeric" placeholder="2015"
-                     onChange={(e) => setRuleForm({ ...ruleForm, yearFrom: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
+                onChange={(e) => setRuleForm({ ...ruleForm, yearFrom: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
             </Field>
             <Field label="إلى سنة (اختياري)">
               <Input value={ruleForm.yearTo} inputMode="numeric" placeholder="2024"
-                     onChange={(e) => setRuleForm({ ...ruleForm, yearTo: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
+                onChange={(e) => setRuleForm({ ...ruleForm, yearTo: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
             </Field>
             <div className="sm:col-span-2">
               <Button className="w-full justify-center" disabled={ruleBusy || !ruleForm.serviceProductId || !ruleForm.price}
-                      onClick={addRule}>
+                onClick={addRule}>
                 {ruleBusy ? "..." : "+ إضافة القاعدة"}
               </Button>
             </div>
@@ -1558,7 +1722,7 @@ export default function ProductsPage() {
       </Modal>
       {/* ══════════ معاينة الاستيراد — القرار قبل الكتابة ══════════ */}
       <Modal open={!!preview} onClose={() => { setPreview(null); setPendingFile(null); }}
-             title={`معاينة الاستيراد — ${preview?.totalRows ?? 0} صنف في الملف`}>
+        title={`معاينة الاستيراد — ${preview?.totalRows ?? 0} صنف في الملف`}>
         {preview && (
           <div className="space-y-3">
             <div className="rounded-lg bg-ink-2 p-3 text-[12px]">
@@ -1613,8 +1777,8 @@ export default function ProductsPage() {
             </p>
             <div className="flex gap-2">
               <Button className="flex-1 justify-center"
-                      disabled={importBusy || preview.columns.price_vat?.startsWith("❌")}
-                      onClick={confirmImport}>
+                disabled={importBusy || preview.columns.price_vat?.startsWith("❌")}
+                onClick={confirmImport}>
                 {preview.columns.price_vat?.startsWith("❌")
                   ? "⛔ الاعتماد متوقف — عمود السعر غير متعرف عليه"
                   : importBusy ? "جارٍ الاعتماد…" : `✓ اعتماد استيراد ${preview.totalRows} صنف`}

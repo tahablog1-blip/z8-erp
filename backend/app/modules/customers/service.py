@@ -223,7 +223,7 @@ async def add_vehicle(company_id: str, customer_id: str, d: dict) -> dict:
                   car_category, cylinders, color, chassis_number, notes)
                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *""",
             company_id, customer_id, d["plate"], d.get("plateType", "saudi"),
-            d.get("brand"), d.get("makeModel"), d.get("modelYear"), d.get("carCategory"),
+            d.get("brand"), d.get("makeModel"), d.get("modelYear"), d.get("carCategory"), d.get("fuelType"),
             d.get("cylinders"), d.get("color"), d.get("chassisNumber"), d.get("notes"),
         )
     except asyncpg.UniqueViolationError:

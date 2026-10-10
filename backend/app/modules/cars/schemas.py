@@ -34,6 +34,7 @@ class CarCreate(BaseModel):
     carCategory: str | None = None
     cylinders: str | None = None
     color: str = Field(min_length=1)                    # اللون
+    fuelType: str = Field(min_length=1)                 # نوع الوقود
     chassisNumber: str                                  # رقم الهيكل — 17 حرف/رقم
     customerName: str = Field(min_length=1)             # اسم العميل
     customerPhone: str                                  # 05 + 10 أرقام بالظبط
@@ -42,6 +43,7 @@ class CarCreate(BaseModel):
     odometerCurrent: int = Field(ge=0)                  # الممشى الحالي — إجباري
     odometerPrevious: int | None = Field(default=None, ge=0)
     notes: str | None = None
+    
 
     @field_validator("customerPhone")
     @classmethod
@@ -75,7 +77,7 @@ class CarCreate(BaseModel):
             raise ValueError("رقم الهيكل لازم يتكون من 17 حرف/رقم بالظبط")
         return v
 
-    @field_validator("name", "modelYear", "brand", "color", "customerName")
+    @field_validator("name", "modelYear", "brand", "color", "customerName", "fuelType")
     @classmethod
     def _strip_required(cls, v: str) -> str:
         v = (v or "").strip()
@@ -96,6 +98,7 @@ class CarEdit(BaseModel):
     customerPhone: str | None = None
     odometerCurrent: int | None = Field(default=None, ge=0)
     notes: str | None = None
+    fuelType: str | None = None
 
 
 class CarOut(BaseModel):

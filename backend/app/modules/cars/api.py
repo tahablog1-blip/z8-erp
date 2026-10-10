@@ -449,6 +449,7 @@ class PublicBookIn(_BM):
     plateNumbers: str
     brand: str | None = None
     carName: str | None = None
+    fuelType: str | None = None
 
 
 @router.get("/public/branch/{branch_id}")
@@ -572,7 +573,8 @@ class PublicCarIn(_BM):
     cylinders: str | None = None
     color: str | None = None
     chassisNumber: str | None = None
-    odometer: str | int | None = None
+    odometer: str | int | None = None 
+    fuelType: str | int | None = None
 
 
 class PublicCompanyIn(_BM):
@@ -759,7 +761,7 @@ async def oil_by_car(car_id: str, user: CurrentUser = Depends(get_current_user))
         raise HTTPException(404, "السيارة غير موجودة")
     spec = await _oil_lookup(user.company_id, car["brand"], car["name"], car["model_year"])
     return {"brand": car["brand"], "model": car["name"], "modelYear": car["model_year"],
-            "oilQty": float(spec["oil_qty"]) if spec else None,
+            "oilQty": float(spec["oil_qty"]) if spec else None, "fuelType": (spec["fuel_type"] if spec else "") or "",
             "oilType": (spec["oil_type"] if spec else "") or ""}
 
 
@@ -798,7 +800,7 @@ async def public_oil_info(car_id: str):
     if not car:
         raise HTTPException(404, "غير موجود")
     spec = await _oil_lookup(str(car["company_id"]), car["brand"], car["name"], car["model_year"])
-    return {"brand": car["brand"], "model": car["name"], "modelYear": car["model_year"],
+    return {"brand": car["brand"], "model": car["name"], "modelYear": car["model_year"], "fuelType": (spec["fuel_type"] if spec else "") or "",
             "oilQty": float(spec["oil_qty"]) if spec else None,
             "oilType": (spec["oil_type"] if spec else "") or ""}
 

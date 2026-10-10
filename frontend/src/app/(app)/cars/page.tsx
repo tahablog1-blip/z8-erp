@@ -680,7 +680,7 @@ export default function CarsPage() {
     setForm({
       ...EMPTY, branchId: c.branch_id,
       plateLetters: c.plate?.split(" ")[0] || "", plateNumbers: c.plate?.split(" ")[1] || "",
-      name: c.name || "", brand: c.brand || "", modelYear: c.model_year || "", fuelType: c.fuelType || "", color: c.color || "",
+      name: c.name || "", brand: c.brand || "", modelYear: c.model_year || "", fuelType: c.fuel_type || "", color: c.color || "",
       chassisNumber: c.chassis_number || "", customerName: c.customer_name || "",
       customerPhone: c.customer_phone || "", odometerCurrent: c.odometer_current?.toString() || "",
       notes: c.notes || "",

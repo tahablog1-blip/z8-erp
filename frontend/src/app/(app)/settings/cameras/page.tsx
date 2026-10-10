@@ -52,7 +52,7 @@ function QuickRegisterModal({ scan, onClose, onSaved }: { scan: any; onClose: ()
   const [letters, setLetters] = useState(scan.guessedLetters || parts[1] || "");
   const [form, setForm] = useState({
     customerName: "", customerPhone: "", brand: "", name: "", modelYear: "",
-    color: "", chassisNumber: "", odometerCurrent: "",
+    color: "", chassisNumber: "", odometerCurrent: "", fuelType: "",
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -68,7 +68,7 @@ function QuickRegisterModal({ scan, onClose, onSaved }: { scan: any; onClose: ()
         body: JSON.stringify({
           branchId: scan.branch_id, plateLetters: letters, plateNumbers: numbers, plateType: "saudi",
           brand: form.brand, name: form.name, modelYear: form.modelYear, color: form.color,
-          chassisNumber: form.chassisNumber || "00000000000000000",
+          chassisNumber: form.chassisNumber || "00000000000000000", fuelType: form.fuelType || null,
           customerName: form.customerName, customerPhone: form.customerPhone,
           odometerCurrent: Number(form.odometerCurrent) || 0,
         }),

@@ -42,13 +42,34 @@ const DICT: Record<string, { ar: string; en: string }> = {
 };
 
 // عناوين السجل (القائمة الجانبية) بالعربي → مفاتيح
+
 export const NAV_TITLE_KEYS: Record<string, string> = {
-  "لوحة القيادة": "nav.dashboard", "نقطة البيع": "nav.sales", "سجل الفواتير": "nav.invoices", "خط الخدمة": "nav.cars",
-  "العملاء": "nav.customers", "الأصناف": "nav.products", "المخزون": "nav.inventory",
-  "الموردون": "nav.suppliers", "المشتريات": "nav.purchases", "الخزينة": "nav.treasury",
-  "الحسابات": "nav.accounting", "التقارير": "nav.reports", "الفروع": "nav.branches",
-  "الموارد البشرية": "nav.hr", "الإعدادات": "nav.settings",
+  "لوحة القيادة": "nav.dashboard",
+  "نقطة البيع": "nav.sales",
+  "نقطة بيع الخدمة": "nav.sales",
+  "البيع المباشر": "nav.direct_sales",
+  "سجل الفواتير": "nav.invoices",
+  "إعداد أوامر العمل": "nav.prepare",
+  "مركز ملاحظات الخدمة": "nav.service_notes",
+  "خط الخدمة": "nav.cars",
+  "العملاء": "nav.customers",
+  "الأصناف": "nav.products",
+  "المخزون": "nav.inventory",
+  "الموردون": "nav.suppliers",
+  "المشتريات": "nav.purchases",
+  "الخزينة": "nav.treasury",
+  "الحسابات": "nav.accounting",
+  "التقارير": "nav.reports",
+  "الفروع": "nav.branches",
+  "الموارد البشرية": "nav.hr",
+  "المنشأة": "nav.company",
+  "المستخدمون والصلاحيات": "nav.users",
+  "كاميرات المحطات": "nav.cameras",
+  "الطباعة": "nav.printing",
+  "النظام": "nav.system",
+  "الإعدادات": "nav.settings",
 };
+
 export const SECTION_TITLE_KEYS: Record<string, string> = {
   "الرئيسية": "sec.home", "العمليات": "sec.ops", "المخزون والمشتريات": "sec.stock",
   "المالية": "sec.finance", "الإدارة": "sec.admin",

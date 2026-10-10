@@ -7,6 +7,7 @@ export type Car = {
   name: string | null;
   model_year: string | null;
   brand: string | null;
+  fuel_type: string | null;
   color: string | null;
   chassis_number: string | null;
   customer_name: string | null;

@@ -660,7 +660,7 @@ export default function SalesPage() {
 
   async function returnInvoice() {
     if (!viewInvoice) return;
-    if (!await appConfirm(`عمل مرتجع كامل للفاتورة ${viewInvoice.invoice_no}؟ هيرجّع المخزون ويعكس القيود المحاسبية.`)) return;
+    if (!await appConfirm(`عمل مرتجع كامل للفاتورة ${viewInvoice.invoice_no}؟`)) return;
     try {
       await api(`/invoices/${viewInvoice.id}/return`, { method: "POST" });
       setViewInvoice(null);
