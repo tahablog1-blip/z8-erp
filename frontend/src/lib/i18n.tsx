@@ -1,19 +1,15 @@
 "use client";
 // lib/i18n.tsx — بنية الترجمة العربية/الإنجليزية
-// المرحلة 1: الهيكل الرئيسي (القوائم، الشريط العلوي، العناصر المشتركة)
-// الشاشات الداخلية تُترجم تباعاً بإضافة مفاتيحها هنا واستدعاء t()
 import { createContext, useContext, useEffect, useState } from "react";
 
 export type Lang = "ar" | "en";
 
 const DICT: Record<string, { ar: string; en: string }> = {
-  // ── الأقسام ──
   "sec.home": { ar: "الرئيسية", en: "Home" },
   "sec.ops": { ar: "العمليات", en: "Operations" },
   "sec.stock": { ar: "المخزون والمشتريات", en: "Inventory & Purchasing" },
   "sec.finance": { ar: "المالية", en: "Finance" },
   "sec.admin": { ar: "الإدارة", en: "Administration" },
-  // ── الشاشات ──
   "nav.dashboard": { ar: "لوحة القيادة", en: "Dashboard" },
   "nav.sales": { ar: "نقطة البيع", en: "Point of Sale" },
   "nav.invoices": { ar: "سجل الفواتير", en: "Invoice Log" },
@@ -29,7 +25,6 @@ const DICT: Record<string, { ar: string; en: string }> = {
   "nav.branches": { ar: "الفروع", en: "Branches" },
   "nav.hr": { ar: "الموارد البشرية", en: "HR" },
   "nav.settings": { ar: "الإعدادات", en: "Settings" },
-  // ── الشريط العلوي والمشترك ──
   "top.logout": { ar: "خروج", en: "Logout" },
   "top.dark": { ar: "الوضع الليلي", en: "Dark mode" },
   "top.light": { ar: "الوضع النهاري", en: "Light mode" },
@@ -39,9 +34,28 @@ const DICT: Record<string, { ar: string; en: string }> = {
   "common.search": { ar: "بحث...", en: "Search..." },
   "common.print": { ar: "طباعة", en: "Print" },
   "common.loading": { ar: "جارِ التحميل...", en: "Loading..." },
+  "common.edit": { ar: "تعديل", en: "Edit" },
+  "common.delete": { ar: "حذف", en: "Delete" },
+  "common.add": { ar: "إضافة", en: "Add" },
+  "common.yes": { ar: "نعم", en: "Yes" },
+  "common.no": { ar: "لا", en: "No" },
+  "common.back": { ar: "رجوع", en: "Back" },
+  "common.next": { ar: "التالي", en: "Next" },
+  "common.confirm": { ar: "تأكيد", en: "Confirm" },
+  "common.error": { ar: "حدث خطأ", en: "An error occurred" },
+  "common.success": { ar: "تم بنجاح", en: "Success" },
+  "common.required": { ar: "هذا الحقل مطلوب", en: "This field is required" },
+  "common.noData": { ar: "لا توجد بيانات بعد", en: "No data yet" },
+  "common.noResults": { ar: "لا توجد نتائج مطابقة للبحث", en: "No matching results" },
+  "login.title": { ar: "تسجيل الدخول", en: "Sign in" },
+  "login.subtitle": { ar: "منصة إدارة مصدر الزيوت", en: "Masdar Al-Zuyout Management Platform" },
+  "login.username": { ar: "اسم المستخدم", en: "Username" },
+  "login.password": { ar: "كلمة المرور", en: "Password" },
+  "login.submit": { ar: "دخول", en: "Sign in" },
+  "login.loading": { ar: "جارِ الدخول...", en: "Signing in..." },
+  "login.error": { ar: "اسم المستخدم أو كلمة المرور غير صحيحة", en: "Invalid username or password" },
 };
 
-// عناوين السجل (القائمة الجانبية) بالعربي → مفاتيح
 export const NAV_TITLE_KEYS: Record<string, string> = {
   "لوحة القيادة": "nav.dashboard", "نقطة البيع": "nav.sales", "سجل الفواتير": "nav.invoices", "خط الخدمة": "nav.cars",
   "العملاء": "nav.customers", "الأصناف": "nav.products", "المخزون": "nav.inventory",
@@ -64,14 +78,14 @@ export function LangProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const saved = (localStorage.getItem("z8_lang") as Lang) || "ar";
     applyLang(saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function applyLang(l: Lang) {
     setLangState(l);
     localStorage.setItem("z8_lang", l);
     document.documentElement.lang = l;
-    // الاتجاه ثابت RTL حالياً — بيتقلب LTR فقط بعد اكتمال ترجمة كل الشاشات
-    document.documentElement.dir = "rtl";
+    document.documentElement.dir = l === "en" ? "ltr" : "rtl";
   }
 
   const t = (k: string, fallback?: string) => DICT[k]?.[lang] ?? fallback ?? k;

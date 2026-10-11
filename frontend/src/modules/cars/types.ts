@@ -1,5 +1,6 @@
 // modules/cars/types.ts — عقود السيارة المشتركة بين الشاشات
 export type Car = {
+  fuelType: string | null;
   id: string;
   branch_id: string;
   plate: string | null;
