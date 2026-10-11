@@ -1158,7 +1158,7 @@ async def _upsert_garage(company_id: str, customer_id: str, plate: str, car: dic
              chassis_number=COALESCE(customer_cars.chassis_number, EXCLUDED.chassis_number),
              service_type=EXCLUDED.service_type""",
         company_id, customer_id, plate, car.get("brand"), car.get("carName"),
-        car.get("modelYear"), car.get("fuelType"), car.get("carCategory"), car.get("cylinders"),
+        car.get("modelYear"), car.get("fuelType"), car.get("carCategory"), car.get("cylinders"), car.get("fuelType"),
         car.get("color"), car.get("chassisNumber"), service_type)
 
 

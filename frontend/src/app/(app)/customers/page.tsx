@@ -17,7 +17,7 @@ const EMPTY_CUSTOMER = {
 
 const EMPTY_VEHICLE = {
   plate: "", plateType: "saudi" as "saudi" | "other", brand: "", makeModel: "",
-  modelYear: "", carCategory: "", cylinders: "", color: "", chassisNumber: "", notes: "",
+  modelYear: "", carCategory: "", cylinders: "", color: "", chassisNumber: "", notes: "", fuelType: "",
 };
 
 const dateFmt = (s: string) =>

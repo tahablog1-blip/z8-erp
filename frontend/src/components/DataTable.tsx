@@ -13,6 +13,12 @@ export type Column<T> = {
 export function DataTable<T extends Record<string, any>>({
   columns, rows, loading, searchKeys, searchPlaceholder = "بحث...",
   emptyText = "لا توجد بيانات بعد", toolbar,
+  searchOutside = false,
+  searchClassName,
+  searchValue,
+  onSearchChange,
+  searchOnly = false,
+
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -21,8 +27,15 @@ export function DataTable<T extends Record<string, any>>({
   searchPlaceholder?: string;
   emptyText?: string;
   toolbar?: ReactNode;
+  searchOutside?: boolean;
+  searchClassName?: string;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+  searchOnly?: boolean;
 }) {
-  const [q, setQ] = useState("");
+  const [internalQ, setInternalQ] = useState("");
+  const q = searchValue ?? internalQ;
+  const setQ = onSearchChange ?? setInternalQ;
 
   const filtered = useMemo(() => {
     if (!q.trim() || !searchKeys?.length) return rows;
@@ -31,25 +44,35 @@ export function DataTable<T extends Record<string, any>>({
       searchKeys.some((k) => String(r[k] ?? "").toLowerCase().includes(needle)));
   }, [rows, q, searchKeys]);
 
+  const searchInput = searchKeys?.length ? (
+    <input
+      value={q}
+      onChange={(e) => setQ(e.target.value)}
+      placeholder={searchPlaceholder}
+      className={`w-full min-w-0 rounded-xl border border-line bg-ink-2 px-3.5 py-2.5 text-[12.5px] transition-all duration-200 focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15 ${searchClassName ?? ""}`}
+    />
+  ) : null;
+
+  if (searchOnly) {
+    return <div className="min-w-0">{searchInput}</div>;
+  }
+
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        {searchKeys?.length ? (
-          <input
-            value={q} onChange={(e) => setQ(e.target.value)} placeholder={searchPlaceholder}
-            className="w-64 max-w-full rounded-xl border border-line bg-ink-2 px-3.5 py-2.5 text-[12.5px] transition-all duration-200 focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15"
-          />
-        ) : <span />}
+        {!searchOutside ? (
+          searchKeys?.length ? searchInput : <span />
+        ) : null}
+
         {toolbar}
       </div>
-
       <div className="max-h-[65vh] overflow-auto rounded-card border border-line bg-ink-2 shadow-card">
         <table className="w-full border-collapse text-[13px]">
           <thead className="sticky top-0 z-10">
             <tr className="bg-ink-3 text-text-dim">
               {columns.map((c) => (
                 <th key={c.key} style={{ width: c.width }}
-                    className="whitespace-nowrap px-3 py-2.5 text-right text-[12px] font-extrabold">
+                  className="whitespace-nowrap px-3 py-2.5 text-right text-[12px] font-extrabold">
                   {c.title}
                 </th>
               ))}

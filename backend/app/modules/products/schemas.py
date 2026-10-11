@@ -23,6 +23,9 @@ class ProductCreate(BaseModel):
     isOil: bool = False           # يظهر في بوابة اختيار الزيت الذاتية
     isOilFilter: bool = False     # يُعرض كخيار "مع فلتر زيت"
     oilBrand: str | None = None   # شركة الزيت (لبوابة العميل)
+    oilType: str | None = None
+    filterKind: str | None = None
+
 
 
 class ProductUpdate(BaseModel):
@@ -39,6 +42,9 @@ class ProductUpdate(BaseModel):
     isOil: bool | None = None
     isOilFilter: bool | None = None
     oilBrand: str | None = None
+    oilType: str | None = None
+    filterKind: str | None = None
+
 
 
 class ProductOut(BaseModel):
@@ -57,6 +63,8 @@ class ProductOut(BaseModel):
     is_oil: bool = False
     is_oil_filter: bool = False
     oil_brand: str | None = None
+    oil_type: str | None = None
+    filter_kind: str | None = None
     is_active: bool = True
     created_at: datetime | None = None
 

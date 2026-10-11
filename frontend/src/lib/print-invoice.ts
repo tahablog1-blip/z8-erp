@@ -11,10 +11,37 @@ export type PrintFormat = "thermal" | "a4";
 const esc = (s: unknown) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-const fmtDT = (s: string) =>
-  new Date(s).toLocaleString("ar-SA-u-nu-latn", {
-    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
-  });
+// const fmtDT = (s: string) =>
+//   new Date(s).toLocaleString("ar-SA-u-nu-latn", {
+//     year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+//   });
+
+
+
+const fmtDT = (s: string) => {
+  if (!s) return "—";
+
+  const date = new Date(s);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Riyadh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+
+  const get = (type: string) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+
+  return `${get("day")}/${get("month")}/${get("year")} ${get("hour")}:${get("minute")}`;
+};
+
+
+
 
 const footerText = () => {
   try { return localStorage.getItem("z8_print_footer") || "شكراً لتعاملكم معنا"; }

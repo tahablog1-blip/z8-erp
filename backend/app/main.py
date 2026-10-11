@@ -119,6 +119,7 @@ async def lifespan(app: FastAPI):
         "ALTER TABLE cars ADD COLUMN IF NOT EXISTS car_category text",
         "ALTER TABLE cars ADD COLUMN IF NOT EXISTS cylinders text",
         "ALTER TABLE cars ADD COLUMN IF NOT EXISTS color text",
+        "ALTER TABLE cars ADD COLUMN IF NOT EXISTS fuel_type text",
         "ALTER TABLE cars ADD COLUMN IF NOT EXISTS chassis_number text",
         "ALTER TABLE cars ADD COLUMN IF NOT EXISTS customer_name text",
         "ALTER TABLE cars ADD COLUMN IF NOT EXISTS customer_phone text",
@@ -280,6 +281,8 @@ async def lifespan(app: FastAPI):
              UNIQUE (customer_id, plate)
            )""",
         "ALTER TABLE products ADD COLUMN IF NOT EXISTS oil_brand text",
+        "ALTER TABLE products ADD COLUMN IF NOT EXISTS oil_type text",
+        "ALTER TABLE products ADD COLUMN IF NOT EXISTS filter_kind text",
         "ALTER TABLE products ADD COLUMN IF NOT EXISTS original_name text",
         """CREATE TABLE IF NOT EXISTS company_settings (
              company_id uuid NOT NULL,

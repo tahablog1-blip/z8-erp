@@ -72,6 +72,7 @@ class VehicleCreate(BaseModel):
     color: str | None = None
     chassisNumber: str | None = None
     notes: str | None = None
+    fuelType: str | None = None
 
 
 class VehicleOut(BaseModel):
