@@ -599,6 +599,74 @@ export default function StocktakePage() {
 
       {detail && (
         <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+          <div className="flex flex-wrap gap-3 border-b border-slate-100 pb-4">
+            {detail.status === "in_progress" && (
+              <>
+                <label className={`${buttonClass} cursor-pointer bg-sky-700 text-white`}>
+                  رفع ملف Excel / CSV
+                  <input
+                    type="file"
+                    accept=".xlsx,.xlsm,.csv"
+                    className="hidden"
+                    onChange={pickImportFile}
+                    disabled={busy}
+                  />
+                </label>
+                <a
+                  className={`${buttonClass} bg-slate-100 text-slate-700`}
+                  href="data:text/csv;charset=utf-8,%EF%BB%BFbarcode%0A"
+                  download="stocktake-template.csv"
+                >
+                  تحميل قالب
+                </a>
+              </>
+            )}
+            {(detail.status === "in_progress" || detail.status === "review") && (
+              <button
+                className={`${buttonClass} border border-red-300 bg-white text-red-700`}
+                onClick={cancelSession}
+                disabled={busy}
+              >
+                إلغاء الجلسة
+              </button>
+            )}
+            {detail.status === "in_progress" && (
+              <button
+                className={`${buttonClass} bg-amber-600 text-white`}
+                onClick={submitReview}
+                disabled={busy || !!savingProduct || counted === 0}
+              >
+                إرسال للمراجعة
+              </button>
+            )}
+
+            {detail.status === "review" && canApprove && (
+              <button
+                className={`${buttonClass} bg-emerald-700 text-white`}
+                onClick={approveSession}
+                disabled={busy || !!savingProduct}
+              >
+                اعتماد الجرد وتسوية الأرصدة
+              </button>
+            )}
+
+            {detail.status === "review" && !canApprove && (
+              <p className="self-center text-sm text-amber-800">
+                الجرد بانتظار مستخدم لديه صلاحية اعتماد الجرد.
+              </p>
+            )}
+
+            {detail.status === "approved" && (
+              <p className="self-center text-sm font-bold text-emerald-700">
+                تم اعتماد الجرد.
+              </p>
+            )}
+
+            {detail.status === "cancelled" && (
+              <p className="self-center text-sm text-slate-500">هذه الجلسة ملغاة.</p>
+            )}
+          </div>
+
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-xl font-black">
@@ -778,75 +846,7 @@ export default function StocktakePage() {
               )}
             </div>
           )}
-
-          <div className="flex flex-wrap gap-3 border-t border-slate-100 pt-4">
-            {detail.status === "in_progress" && (
-              <>
-                <label className={`${buttonClass} cursor-pointer bg-sky-700 text-white`}>
-                  رفع ملف Excel / CSV
-                  <input
-                    type="file"
-                    accept=".xlsx,.xlsm,.csv"
-                    className="hidden"
-                    onChange={pickImportFile}
-                    disabled={busy}
-                  />
-                </label>
-                <a
-                  className={`${buttonClass} bg-slate-100 text-slate-700`}
-                  href="data:text/csv;charset=utf-8,%EF%BB%BFbarcode%0A"
-                  download="stocktake-template.csv"
-                >
-                  تحميل قالب
-                </a>
-              </>
-            )}
-            {(detail.status === "in_progress" || detail.status === "review") && (
-              <button
-                className={`${buttonClass} border border-red-300 bg-white text-red-700`}
-                onClick={cancelSession}
-                disabled={busy}
-              >
-                إلغاء الجلسة
-              </button>
-            )}
-            {detail.status === "in_progress" && (
-              <button
-                className={`${buttonClass} bg-amber-600 text-white`}
-                onClick={submitReview}
-                disabled={busy || !!savingProduct || counted === 0}
-              >
-                إرسال للمراجعة
-              </button>
-            )}
-
-            {detail.status === "review" && canApprove && (
-              <button
-                className={`${buttonClass} bg-emerald-700 text-white`}
-                onClick={approveSession}
-                disabled={busy || !!savingProduct}
-              >
-                اعتماد الجرد وتسوية الأرصدة
-              </button>
-            )}
-
-            {detail.status === "review" && !canApprove && (
-              <p className="self-center text-sm text-amber-800">
-                الجرد بانتظار مستخدم لديه صلاحية اعتماد الجرد.
-              </p>
-            )}
-
-            {detail.status === "approved" && (
-              <p className="self-center text-sm font-bold text-emerald-700">
-                تم اعتماد الجرد.
-              </p>
-            )}
-
-            {detail.status === "cancelled" && (
-              <p className="self-center text-sm text-slate-500">هذه الجلسة ملغاة.</p>
-            )}
-          </div>
-        </section>
+</section>
       )}
           {importPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
