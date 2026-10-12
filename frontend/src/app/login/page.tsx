@@ -1,6 +1,7 @@
 "use client";
 // شاشة الدخول — بنفس حسابات النظام الحالي (نفس bcrypt hashes في القاعدة)
 // + مؤشر فحص اتصال ذاتي: بيقولك فوراً لو الباك اند مش واصل قبل ما تكتب بياناتك
+import { PasswordInput } from "@/components/PasswordInput";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
@@ -103,7 +104,7 @@ export default function LoginPage() {
                    onChange={(e) => setEmail(e.target.value)} />
           </Field>
           <Field label="كلمة المرور">
-            <Input dir="ltr" type="password" value={password} required minLength={6}
+            <PasswordInput dir="ltr" type="password" value={password} required minLength={6}
                    onChange={(e) => setPassword(e.target.value)} />
           </Field>
           <ErrorNote msg={err} />

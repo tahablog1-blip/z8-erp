@@ -43,6 +43,8 @@ PERMISSIONS = [
         {"key": "products.import",     "label": "استيراد من إكسيل"},
         {"key": "inventory.request",    "label": "طلب أصناف لفرعي"},
         {"key": "inventory.approve_requests", "label": "الموافقة على طلبات الفروع"},
+        {"key": "inventory.stocktake", "label": "إدارة الجرد الفعلي"},
+        {"key": "inventory.stocktake_approve", "label": "اعتماد الجرد وتسوية الأرصدة"},
     ]},
     {"group": "المشتريات والموردون", "items": [
         {"key": "purchasing.suppliers",  "label": "إدارة الموردين"},

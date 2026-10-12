@@ -146,3 +146,182 @@ async def decide_request(request_id: str, body: DecideRequestIn,
 async def reorder(user: CurrentUser = Depends(require_permission("products.view_stock", "purchasing.invoices"))):
     """اقتراحات إعادة الطلب — الأصناف عند/تحت الحد الأدنى"""
     return await service.reorder_suggestions(user.company_id)
+
+
+# ══════════════════ الجرد الفعلي ══════════════════
+
+class StocktakeCreateBody(BaseModel):
+    locType: str
+    locId: str
+    note: str | None = None
+
+
+class StocktakeCountBody(BaseModel):
+    countedQty: int
+    note: str | None = None
+
+
+def _check_stocktake_location(user: CurrentUser, loc_type: str, loc_id: str):
+    """الأدمن لكل المواقع؛ الموظف يجب أن يكون مربوطاً بفرع محدد."""
+    if user.role == "admin":
+        return
+    if not user.branch_scope:
+        raise HTTPException(403, "حسابك غير مربوط بفرع؛ راجع مدير النظام")
+    if loc_type != "branch" or str(loc_id) != str(user.branch_scope):
+        raise HTTPException(403, "لا يمكنك الوصول إلى جرد هذا الموقع")
+
+
+async def _check_stocktake_scope(user: CurrentUser, session_id: str) -> dict:
+    """التحقق من أن جلسة الجرد ضمن نطاق المستخدم."""
+    session = await service.get_stocktake(user.company_id, session_id)
+    _check_stocktake_location(user, session["locType"], session["locId"])
+    return session
+
+
+@router.get("/stocktakes")
+async def list_stocktakes_api(
+    locType: str | None = Query(default=None),
+    user: CurrentUser = Depends(require_permission("inventory.stocktake")),
+):
+    """قائمة جلسات الجرد."""
+    if user.role != "admin" and not user.branch_scope:
+        raise HTTPException(403, "حسابك غير مربوط بفرع؛ راجع مدير النظام")
+    rows = await service.list_stocktakes(user.company_id, locType)
+    if user.role != "admin":
+        rows = [
+            row for row in rows
+            if row["locType"] == "branch"
+            and str(row["locId"]) == str(user.branch_scope)
+        ]
+    return rows
+
+
+@router.post("/stocktakes", status_code=201)
+async def create_stocktake_api(
+    body: StocktakeCreateBody,
+    user: CurrentUser = Depends(require_permission("inventory.stocktake")),
+):
+    """إنشاء جلسة جرد وأخذ لقطة للأرصدة."""
+    _check_stocktake_location(user, body.locType, body.locId)
+    return await service.create_stocktake(
+        user.company_id, user.user_id, user.full_name,
+        body.locType, body.locId, body.note,
+    )
+
+
+@router.get("/stocktakes/{session_id}")
+async def get_stocktake_api(
+    session_id: str,
+    user: CurrentUser = Depends(require_permission("inventory.stocktake")),
+):
+    """تفاصيل الجلسة والأصناف والكميات والفروق."""
+    return await _check_stocktake_scope(user, session_id)
+
+
+@router.put("/stocktakes/{session_id}/items/{product_id}")
+async def count_stocktake_item_api(
+    session_id: str,
+    product_id: str,
+    body: StocktakeCountBody,
+    user: CurrentUser = Depends(require_permission("inventory.stocktake")),
+):
+    """تسجيل العدّ الفعلي دون تغيير رصيد المخزون."""
+    await _check_stocktake_scope(user, session_id)
+    return await service.count_stocktake_item(
+        user.company_id, session_id, product_id,
+        body.countedQty, body.note,
+    )
+
+
+@router.post("/stocktakes/{session_id}/review")
+async def submit_stocktake_for_review_api(
+    session_id: str,
+    user: CurrentUser = Depends(require_permission("inventory.stocktake")),
+):
+    """إرسال جلسة الجرد للمراجعة."""
+    await _check_stocktake_scope(user, session_id)
+    return await service.submit_stocktake_for_review(user.company_id, session_id)
+
+
+@router.post("/stocktakes/{session_id}/approve")
+async def approve_stocktake_api(
+    session_id: str,
+    user: CurrentUser = Depends(require_permission("inventory.stocktake_approve")),
+):
+    """اعتماد الجرد وتسوية الأرصدة بعد التحقق من عدم تغيرها."""
+    await _check_stocktake_scope(user, session_id)
+    return await service.approve_stocktake(
+        user.company_id, user.user_id, user.full_name, session_id,
+    )
+
+
+# ══════════ إلغاء الجلسة + رفع ملف الجرد ══════════
+from fastapi import File, UploadFile  # noqa: E402
+
+_BARCODE_HEADERS = {"barcode", "الباركود", "باركود"}
+_MAX_UPLOAD = 10 * 1024 * 1024
+
+
+def _parse_barcodes(filename: str, data: bytes) -> dict:
+    """يقرأ العمود الأول فقط؛ كل صف = قطعة، والمكرر يُجمع."""
+    import csv
+    import io
+    from collections import Counter
+
+    name = (filename or "").lower()
+    cells: list = []
+    if name.endswith(".csv"):
+        text = data.decode("utf-8-sig", errors="ignore")
+        cells = [r[0] if r else None for r in csv.reader(io.StringIO(text))]
+    elif name.endswith((".xlsx", ".xlsm")):
+        from openpyxl import load_workbook
+        try:
+            wb = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
+            ws = wb.active
+            cells = [r[0] for r in ws.iter_rows(min_col=1, max_col=1, values_only=True)]
+            wb.close()
+        except Exception:
+            raise HTTPException(400, "تعذّر قراءة الملف؛ تأكد أنه Excel صالح")
+    else:
+        raise HTTPException(400, "الصيغة المسموحة: xlsx أو csv")
+
+    out: Counter = Counter()
+    for v in cells:
+        if v is None:
+            continue
+        if isinstance(v, float) and v.is_integer():
+            v = int(v)  # يمنع 6.28E+12 و .0
+        s = str(v).strip()
+        if not s or s.lower() in _BARCODE_HEADERS:
+            continue
+        out[s] += 1
+    return dict(out)
+
+
+@router.post("/stocktakes/{session_id}/cancel")
+async def cancel_stocktake_api(
+    session_id: str,
+    user: CurrentUser = Depends(require_permission("inventory.stocktake")),
+):
+    """إلغاء جلسة جرد غير معتمدة."""
+    await _check_stocktake_scope(user, session_id)
+    return await service.cancel_stocktake(user.company_id, session_id)
+
+
+@router.post("/stocktakes/{session_id}/import")
+async def import_stocktake_api(
+    session_id: str,
+    file: UploadFile = File(...),
+    commit: bool = Query(default=False),
+    zeroRest: bool = Query(default=False),
+    user: CurrentUser = Depends(require_permission("inventory.stocktake")),
+):
+    """معاينة (commit=false) أو حفظ (commit=true) كميات الجرد من ملف باركودات."""
+    await _check_stocktake_scope(user, session_id)
+    data = await file.read()
+    if len(data) > _MAX_UPLOAD:
+        raise HTTPException(413, "الملف أكبر من 10 ميجا")
+    scanned = _parse_barcodes(file.filename or "", data)
+    return await service.import_stocktake_counts(
+        user.company_id, session_id, scanned, commit, zeroRest,
+    )

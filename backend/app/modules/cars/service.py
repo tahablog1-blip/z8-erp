@@ -321,7 +321,7 @@ async def create_car(company_id: str, user_id: str, user_email: str, d: dict) ->
                     """SELECT brand, name, model_year, fuel_type, car_category, cylinders,
                               color, chassis_number
                        FROM customer_cars
-                       WHERE company_id=$1 AND customer_id=$2 AND plate=$3""",
+                       WHERE company_id=$1 AND customer_id=$2 AND z8_plate_key(plate)=z8_plate_key($3)""",
                     company_id, customer_id, plate)
                 if saved_car:
                     _identity = (("brand", "brand"), ("name", "name"),
@@ -339,7 +339,7 @@ async def create_car(company_id: str, user_id: str, user_email: str, d: dict) ->
                      (company_id, branch_id, plate, plate_type, name, model_year, fuel_type, brand, car_category,
                       cylinders, color, chassis_number, customer_name, customer_phone, customer_id,
                       station, odometer_current, odometer_previous, notes, registrar_name, created_by)
-                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
                    RETURNING *""",
                 company_id, d["branchId"], plate or None, d.get("plateType", "saudi"),
                 d.get("name"), d.get("modelYear"), d.get("fuelType"), d.get("brand"), d.get("carCategory"),
@@ -358,8 +358,8 @@ async def create_car(company_id: str, user_id: str, user_email: str, d: dict) ->
                 """INSERT INTO customer_cars
                      (company_id, customer_id, plate, brand, name, model_year, fuel_type,
                       car_category, cylinders, color, chassis_number, last_odometer)
-                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-                   ON CONFLICT (customer_id, plate) DO UPDATE SET
+                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+                   ON CONFLICT (customer_id, z8_plate_key(plate)) DO UPDATE SET
                      brand=COALESCE(customer_cars.brand, EXCLUDED.brand),
                      name=COALESCE(customer_cars.name, EXCLUDED.name),
                      model_year=COALESCE(customer_cars.model_year, EXCLUDED.model_year),
@@ -1142,12 +1142,13 @@ async def public_booking_info(branch_id: str) -> dict:
 
 async def _upsert_garage(company_id: str, customer_id: str, plate: str, car: dict, service_type: str):
     """حفظ السيارة في كراج العميل — ما بيضيعش أبداً حتى لو مسح بيانات موبايله"""
+    plate = " ".join((plate or "").upper().split())
     await execute(
         """INSERT INTO customer_cars
              (company_id, customer_id, plate, brand, name, model_year,
-              car_category, cylinders, color, chassis_number, service_type)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-           ON CONFLICT (customer_id, plate) DO UPDATE SET
+              fuel_type, car_category, cylinders, color, chassis_number, service_type)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+           ON CONFLICT (customer_id, z8_plate_key(plate)) DO UPDATE SET
              brand=COALESCE(customer_cars.brand, EXCLUDED.brand),
              name=COALESCE(customer_cars.name, EXCLUDED.name),
              model_year=COALESCE(customer_cars.model_year, EXCLUDED.model_year),
@@ -1158,7 +1159,7 @@ async def _upsert_garage(company_id: str, customer_id: str, plate: str, car: dic
              chassis_number=COALESCE(customer_cars.chassis_number, EXCLUDED.chassis_number),
              service_type=EXCLUDED.service_type""",
         company_id, customer_id, plate, car.get("brand"), car.get("carName"),
-        car.get("modelYear"), car.get("fuelType"), car.get("carCategory"), car.get("cylinders"), car.get("fuelType"),
+        car.get("modelYear"), car.get("fuelType"), car.get("carCategory"), car.get("cylinders"),
         car.get("color"), car.get("chassisNumber"), service_type)
 
 
@@ -1202,9 +1203,9 @@ async def public_lookup(branch_id: str, phone: str, plate: str | None = None) ->
     # سيارات من تاريخ الزيارات مش متسجلة في الكراج؟ نكملها تلقائياً
     if not cars_rows:
         hist = await fetch(
-            """SELECT DISTINCT ON (plate) plate, brand, name, model_year, fuel_type
+            """SELECT DISTINCT ON (z8_plate_key(plate)) plate, brand, name, model_year, fuel_type
                FROM cars WHERE customer_id=$1 AND plate IS NOT NULL AND is_deleted=FALSE
-               ORDER BY plate, created_at DESC LIMIT 6""", cust["id"])
+               ORDER BY z8_plate_key(plate), created_at DESC LIMIT 6""", cust["id"])
         for h in hist:
             await _upsert_garage(br["company_id"], str(cust["id"]), h["plate"],
                                  {"brand": h["brand"], "carName": h["name"], "modelYear": h["model_year"], "fuelType": h["fuel_type"]}, "basic")
@@ -1526,7 +1527,7 @@ async def public_create_booking(branch_id: str, d: dict) -> dict:
               car_category, cylinders, color, chassis_number,
               customer_name, customer_phone, customer_id,
               odometer_current, service_type, registrar_name)
-           VALUES ($1,$2,$3,'saudi',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'حجز أونلاين QR')
+           VALUES ($1,$2,$3,'saudi',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'حجز أونلاين QR')
            RETURNING id""",
         company_id, branch_id, plate, car.get("brand"), car.get("carName"), car.get("modelYear"), car.get("fuelType"),
         car.get("carCategory"), car.get("cylinders"), car.get("color"), car.get("chassisNumber"),
@@ -1756,11 +1757,11 @@ async def _book_from_data(branch_id, company_id, customer_id, name, phone,
 
     row = await fetchrow(
         """INSERT INTO cars
-             (company_id, branch_id, plate, plate_type, brand, name, model_year, fuel_type
+             (company_id, branch_id, plate, plate_type, brand, name, model_year, fuel_type,
               car_category, cylinders, color, chassis_number,
               customer_name, customer_phone, customer_id,
               odometer_current, odometer_previous, registrar_name)
-           VALUES ($1,$2,$3,'saudi',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'حجز أونلاين QR')
+           VALUES ($1,$2,$3,'saudi',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'حجز أونلاين QR')
            RETURNING id""",
         company_id, branch_id, plate,
         v.get("brand"), v.get("carName"), v.get("modelYear"), v.get("fuelType"),

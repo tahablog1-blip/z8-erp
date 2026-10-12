@@ -35,6 +35,7 @@ export const NAV_MODULES: NavModule[] = [
 
   // ── المخزون والمشتريات ──
   { path: "/products",   title: "الأصناف",        icon: "products", section: "المخزون والمشتريات", permissions: ["products.create", "products.edit", "products.view_stock"] },
+  { path: "/inventory/stocktake", title: "الجرد الفعلي", icon: "inventory", section: "المخزون والمشتريات", permissions: ["inventory.stocktake"] },
   { path: "/inventory",  title: "المخزون",        icon: "inventory", section: "المخزون والمشتريات", permissions: ["products.view_stock"] },
   { path: "/suppliers",  title: "الموردون",       icon: "suppliers", section: "المخزون والمشتريات", permissions: ["purchasing.suppliers"] },
   { path: "/purchases",  title: "المشتريات",      icon: "purchases", section: "المخزون والمشتريات", permissions: ["purchasing.invoices"] },

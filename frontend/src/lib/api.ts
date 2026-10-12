@@ -9,8 +9,9 @@ export function setToken(t: string) { localStorage.setItem(TOKEN_KEY, t); }
 export function clearToken() { localStorage.removeItem(TOKEN_KEY); }
 
 export async function api<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
+  const isForm = typeof FormData !== "undefined" && options.body instanceof FormData;
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(isForm ? {} : { "Content-Type": "application/json" }),
     ...(options.headers as Record<string, string>),
   };
   const token = getToken();

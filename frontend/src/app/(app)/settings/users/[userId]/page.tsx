@@ -1,6 +1,7 @@
 "use client";
 // الإعدادات ← موظف — صفحة كاملة للإضافة (/settings/users/new) والتعديل (/settings/users/{id})
 // شبكة الصلاحيات كاملة على مساحة الصفحة بدل مربع منبثق مزدحم
+import { PasswordInput } from "@/components/PasswordInput";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
@@ -192,12 +193,12 @@ export default function UserEditorPage() {
             </Field>
             {isNew ? (
               <Field label="كلمة المرور (8+ أحرف)">
-                <Input dir="ltr" type="password" value={uForm.password}
+                <PasswordInput dir="ltr" type="password" value={uForm.password}
                        onChange={(e) => setUForm({ ...uForm, password: e.target.value })} />
               </Field>
             ) : (
               <Field label="كلمة مرور جديدة (اختياري)">
-                <Input dir="ltr" type="password" value={uForm.newPassword} placeholder="اتركها فارغة للإبقاء"
+                <PasswordInput dir="ltr" type="password" value={uForm.newPassword} placeholder="اتركها فارغة للإبقاء"
                        onChange={(e) => setUForm({ ...uForm, newPassword: e.target.value })} />
               </Field>
             )}

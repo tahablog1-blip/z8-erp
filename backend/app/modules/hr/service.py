@@ -10,6 +10,7 @@ from decimal import Decimal
 import asyncpg
 from fastapi import HTTPException
 
+from ..treasury import service as _treasury
 from ...core.db import execute, fetch, fetchrow, transaction
 
 
@@ -412,6 +413,7 @@ async def run_payroll(company_id: str, user_id: str, period_month: int, period_y
                 company_id, period_month, period_year,
             )
             viol_map = {str(r["employee_id"]): Decimal(str(r["total"])) for r in viol_rows}
+            adv_map = await _treasury.payroll_advance_deductions(conn, company_id)
 
             slips = []
             for emp in employees:
@@ -425,17 +427,19 @@ async def run_payroll(company_id: str, user_id: str, period_month: int, period_y
                     gosi_employee = Decimal("0.00")
                     gosi_employer = (basic * Decimal(str(company["gosi_nonsaudi_employer_pct"])) / 100).quantize(Decimal("0.01"))
                 # ⚠ التأمينات محسوبة على الأساسي فقط — لو بدلاتك تدخل في وعاء GOSI راجعها مع محاسبك
-                net_pay = (basic + allowances - viol_deduction - gosi_employee).quantize(Decimal("0.01"))
+                net_pre = basic + allowances - viol_deduction - gosi_employee
+                adv_ded = min(adv_map.get(str(emp["id"]), Decimal("0.00")), max(net_pre, Decimal("0.00"))).quantize(Decimal("0.01"))
+                net_pay = (net_pre - adv_ded).quantize(Decimal("0.01"))
                 slips.append((run["id"], emp["id"], basic, allowances, viol_deduction,
-                              gosi_employee, gosi_employer, net_pay))
+                              gosi_employee, gosi_employer, net_pay, adv_ded))
 
             # إدخال كل القسائم دفعة واحدة
             if slips:
                 await conn.executemany(
                     """INSERT INTO hr_payslips
                          (payroll_run_id, employee_id, basic_salary, allowances, violations_deduction,
-                          gosi_employee, gosi_employer, net_pay)
-                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)""",
+                          gosi_employee, gosi_employer, net_pay, advance_deduction)
+                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)""",
                     slips,
                 )
 
@@ -454,7 +458,7 @@ async def get_payslips(company_id: str, run_id: str) -> list[dict]:
     out = []
     for r in rows:
         r = _row_id(r)
-        for k in ("basic_salary", "allowances", "violations_deduction", "other_deductions",
+        for k in ("basic_salary", "allowances", "violations_deduction", "other_deductions", "advance_deduction",
                  "gosi_employee", "gosi_employer", "net_pay"):
             r[k] = _num(r[k])
         out.append(r)
@@ -462,11 +466,34 @@ async def get_payslips(company_id: str, run_id: str) -> list[dict]:
 
 
 async def finalize_payroll_run(company_id: str, run_id: str) -> dict:
-    row = await fetchrow(
-        """UPDATE hr_payroll_runs SET status='finalized', finalized_at=now()
-           WHERE id=$1 AND company_id=$2 AND status='draft' RETURNING *""",
-        run_id, company_id,
-    )
-    if not row:
-        raise HTTPException(404, "الدورة غير موجودة أو مُعتمدة بالفعل")
+    from ...core import accounting
+    from ...core.db import transaction
+    async with transaction() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                """UPDATE hr_payroll_runs SET status='finalized', finalized_at=now()
+                   WHERE id=$1 AND company_id=$2 AND status='draft' RETURNING *""",
+                run_id, company_id)
+            if not row:
+                raise HTTPException(404, "الدورة غير موجودة أو مُعتمدة بالفعل")
+            slips = await conn.fetch(
+                "SELECT employee_id, advance_deduction FROM hr_payslips "
+                "WHERE payroll_run_id=$1 AND advance_deduction > 0", run_id)
+            total = Decimal("0.00")
+            for sl in slips:
+                total += await _treasury.apply_repayment(
+                    conn, company_id, str(sl["employee_id"]), sl["advance_deduction"],
+                    "payroll", run_id=row["id"], strict=False)
+            if total > 0:
+                exp_code, exp_name = _treasury.EXPENSE_ACCOUNTS["رواتب وأجور"]
+                exp_acc = await _treasury._get_or_create_account(conn, company_id, exp_code, exp_name, "expense")
+                adv_acc = await _treasury._get_or_create_account(
+                    conn, company_id, _treasury.ADVANCE_ACCOUNT[0], _treasury.ADVANCE_ACCOUNT[1], "asset")
+                await accounting.post_journal_entry(
+                    conn, company_id=company_id, source_type="payroll_advance_deduction",
+                    source_id=str(row["id"]),
+                    description=f"خصم سلف من رواتب {row['period_month']}/{row['period_year']}",
+                    lines=[{"account_id": exp_acc, "debit": total, "description": "رواتب — خصم سلف"},
+                           {"account_id": adv_acc, "credit": total, "description": "تسوية سلف الموظفين"}])
     return _row_id(row)
+

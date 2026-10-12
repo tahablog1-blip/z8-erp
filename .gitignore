@@ -1,10 +1,13 @@
 # الأسرار - لا تُرفع أبداً
 .env
 *.env
+.env.*
 !.env.example
 serviceAccountKey.json
 *secret*
 *Secret*
+*.pem
+*.key
 
 # سكريبتات فيها باسورد الداتابيز
 backup-z8.bat
@@ -55,7 +58,13 @@ desktop.ini
 # لوجات وتشخيص وأرشيفات
 *.log
 Z8-*-REPORT.txt
+Z8-DIAGNOSE.txt
 Z8-DIAGNOSIS.txt
 z8-hr.zip
 
 backend/storage/gate_snapshots/
+
+# نسخ احتياطية مؤقتة
+*.bak
+*.bak-*
+*~

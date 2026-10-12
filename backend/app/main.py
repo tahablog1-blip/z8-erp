@@ -532,6 +532,40 @@ async def lifespan(app: FastAPI):
              is_active boolean NOT NULL DEFAULT TRUE,
              created_at timestamptz NOT NULL DEFAULT now()
            )""",
+
+        # ═══ الجرد الفعلي: جلسات الجرد ═══
+        """CREATE TABLE IF NOT EXISTS stocktake_sessions (
+             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id UUID NOT NULL,
+             loc_type VARCHAR NOT NULL CHECK (loc_type IN ('warehouse','branch')),
+             loc_id VARCHAR NOT NULL,
+             status VARCHAR NOT NULL DEFAULT 'draft'
+               CHECK (status IN ('draft','in_progress','review','approved','cancelled')),
+             note TEXT,
+             created_by UUID,
+             created_by_name TEXT,
+             approved_by UUID,
+             approved_by_name TEXT,
+             created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+             approved_at TIMESTAMPTZ
+           )""",
+        """CREATE INDEX IF NOT EXISTS idx_stocktake_sessions_company
+             ON stocktake_sessions (company_id, created_at DESC)""",
+
+        # ═══ تفاصيل الأصناف والكميات ═══
+        """CREATE TABLE IF NOT EXISTS stocktake_items (
+             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+             session_id UUID NOT NULL REFERENCES stocktake_sessions(id) ON DELETE CASCADE,
+             product_id UUID NOT NULL REFERENCES products(id),
+             snapshot_qty INTEGER NOT NULL DEFAULT 0,
+             counted_qty INTEGER,
+             note TEXT,
+             created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+             updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+             UNIQUE (session_id, product_id)
+           )""",
+        """CREATE INDEX IF NOT EXISTS idx_stocktake_items_session
+             ON stocktake_items (session_id)""",
     ):
         try:
             await execute(stmt)
@@ -583,4 +617,26 @@ async def list_modules():
     return [{"name": m.name, "title": m.title, "prefix": m.prefix,
              "icon": m.icon, "navPermissions": m.nav_permissions}
             for m in LOADED_MODULES]
+
+
+
+# ── منع تكرار اللوحة: خرق القيد الفريد يتحول لرسالة واضحة بدل 500 ──
+import asyncpg as _asyncpg
+from fastapi import HTTPException as _HTTPException
+from fastapi.exception_handlers import http_exception_handler as _http_exc_handler
+
+_UNIQUE_MSGS = {
+    "uq_cars_active_plate": "السيارة دي مسجلة بالفعل في الدور ولسه ماخرجتش",
+    "uq_customer_cars_cust_platekey": "اللوحة دي مسجلة عندك بالفعل",
+    "uq_customer_cars_cust_plate": "اللوحة دي مسجلة عندك بالفعل",
+    "customer_cars_customer_id_plate_key": "اللوحة دي مسجلة عندك بالفعل",
+}
+
+
+@app.exception_handler(_asyncpg.UniqueViolationError)
+async def z8_unique_violation_handler(request, exc):
+    msg = _UNIQUE_MSGS.get(getattr(exc, "constraint_name", None))
+    if not msg:
+        raise exc
+    return await _http_exc_handler(request, _HTTPException(409, msg))
 

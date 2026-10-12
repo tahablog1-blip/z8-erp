@@ -11,6 +11,7 @@ from fastapi import HTTPException
 
 from ...core import accounting
 from ...core.db import execute, fetch, fetchrow, transaction
+from ...core.stock_lock import lock_stock_location, lock_stock_locations
 
 WAREHOUSE_LOC_ID = "main"      # موقع المستودع الثابت لكل شركة
 WAREHOUSE_LABEL = "المستودع الرئيسي"
@@ -181,6 +182,7 @@ async def receive(company_id: str, user_id: str, actor_name: str,
 
     async with transaction() as conn:
         async with conn.transaction():
+            await lock_stock_location(conn, company_id, 'warehouse', WAREHOUSE_LOC_ID)
             for it in items:
                 await conn.execute(
                     """INSERT INTO inventory (company_id, loc_type, loc_id, product_id, qty)
@@ -248,6 +250,10 @@ async def transfer(company_id: str, user_id: str, actor_name: str, d: dict) -> d
 
     async with transaction() as conn:
         async with conn.transaction():
+            await lock_stock_locations(conn, company_id, [
+                (d['fromLocType'], d['fromLocId']),
+                (d['toLocType'], d['toLocId']),
+            ])
             for it in d["items"]:
                 # FOR UPDATE بيقفل السطر لحد نهاية الـ transaction —
                 # سندين بيسحبوا نفس الصنف في نفس اللحظة ما يقدروش يوصّلوا الرصيد لسالب.
@@ -308,6 +314,16 @@ async def edit_voucher(company_id: str, user_id: str, actor_name: str,
 
             first = old_rows[0]
             is_transfer = first["move_type"] == "transfer"
+            locations = []
+            for old in old_rows:
+                if old['from_loc_type'] and old['from_loc_id'] is not None:
+                    locations.append((old['from_loc_type'], old['from_loc_id']))
+                if old['to_loc_type'] and old['to_loc_id'] is not None:
+                    locations.append((old['to_loc_type'], old['to_loc_id']))
+            if is_transfer:
+                locations.append((first['from_loc_type'], first['from_loc_id']))
+            locations.append((first['to_loc_type'], first['to_loc_id']))
+            await lock_stock_locations(conn, company_id, locations)
 
             # 1) عكس تأثير كل الأصناف القديمة على المخزون
             for old in old_rows:
@@ -532,3 +548,475 @@ async def reorder_suggestions(company_id: str) -> list[dict]:
             "lastSupplier": r["last_supplier"],
         })
     return out
+
+
+# ══════════════════ الجرد الفعلي ══════════════════
+
+async def create_stocktake(
+    company_id: str, user_id: str, actor_name: str,
+    loc_type: str, loc_id: str, note: str | None = None,
+) -> dict:
+    """إنشاء جلسة جرد وأخذ لقطة للأرصدة دون تعديل المخزون."""
+    from uuid import UUID
+
+    if loc_type not in ("warehouse", "branch"):
+        raise HTTPException(400, "نوع الموقع غير صحيح")
+
+    if loc_type == "warehouse":
+        if loc_id != WAREHOUSE_LOC_ID:
+            raise HTTPException(400, "معرّف المستودع غير صحيح")
+    else:
+        try:
+            branch_uuid = str(UUID(loc_id))
+        except (ValueError, TypeError):
+            raise HTTPException(400, "معرّف الفرع غير صحيح")
+
+        branch = await fetchrow(
+            "SELECT id FROM branches WHERE id=$1 AND company_id=$2 AND is_active=TRUE",
+            branch_uuid, company_id,
+        )
+        if not branch:
+            raise HTTPException(404, "الفرع غير موجود أو غير نشط")
+
+    async with transaction() as conn:
+        async with conn.transaction():
+            # توحيد القفل مع حركات المخزون قبل أخذ لقطة الأرصدة.
+            await lock_stock_location(conn, company_id, loc_type, loc_id)
+            session = await conn.fetchrow(
+                """INSERT INTO stocktake_sessions
+                     (company_id, loc_type, loc_id, status, note,
+                      created_by, created_by_name)
+                   VALUES ($1,$2,$3,'in_progress',$4,$5,$6)
+                   RETURNING id, company_id, loc_type, loc_id, status,
+                             note, created_at, created_by_name""",
+                company_id, loc_type, loc_id, (note or "").strip() or None,
+                user_id, actor_name,
+            )
+            await conn.execute(
+                """INSERT INTO stocktake_items
+                     (session_id, product_id, snapshot_qty, unit_cost)
+                   SELECT $1, p.id, COALESCE(i.qty,0), COALESCE(p.cost_price,0)
+                   FROM products p
+                   LEFT JOIN inventory i
+                     ON i.company_id=p.company_id
+                    AND i.product_id=p.id
+                    AND i.loc_type=$2
+                    AND i.loc_id=$3
+                   WHERE p.company_id=$4
+                     AND COALESCE(p.is_active,TRUE)=TRUE
+                     AND COALESCE(p.is_service,FALSE)=FALSE
+                   ON CONFLICT (session_id,product_id) DO NOTHING""",
+                session["id"], loc_type, loc_id, company_id,
+            )
+
+    return await get_stocktake(company_id, str(session["id"]))
+
+
+async def list_stocktakes(company_id: str, loc_type: str | None = None) -> list[dict]:
+    """قائمة جلسات الجرد التابعة للشركة."""
+    if loc_type is not None and loc_type not in ("warehouse", "branch"):
+        raise HTTPException(400, "نوع الموقع غير صحيح")
+
+    rows = await fetch(
+        """SELECT s.id, s.loc_type, s.loc_id, s.status, s.note,
+                  s.created_by_name, s.created_at, s.approved_by_name,
+                  s.approved_at,
+                  COUNT(i.id)::int AS total_items,
+                  COUNT(i.counted_qty)::int AS counted_items
+           FROM stocktake_sessions s
+           LEFT JOIN stocktake_items i ON i.session_id=s.id
+           WHERE s.company_id=$1
+             AND ($2::text IS NULL OR s.loc_type=$2)
+           GROUP BY s.id
+           ORDER BY s.created_at DESC""",
+        company_id, loc_type,
+    )
+    return [
+        {
+            "id": str(r["id"]),
+            "locType": r["loc_type"],
+            "locId": r["loc_id"],
+            "status": r["status"],
+            "note": r["note"],
+            "createdByName": r["created_by_name"],
+            "createdAt": r["created_at"].isoformat() if r["created_at"] else None,
+            "approvedByName": r["approved_by_name"],
+            "approvedAt": r["approved_at"].isoformat() if r["approved_at"] else None,
+            "totalItems": r["total_items"],
+            "countedItems": r["counted_items"],
+        }
+        for r in rows
+    ]
+
+
+async def get_stocktake(company_id: str, session_id: str) -> dict:
+    """تفاصيل الجلسة والأرصدة المتوقعة والمعدودة والفروق."""
+    session = await fetchrow(
+        """SELECT id, loc_type, loc_id, status, note,
+                  created_by_name, created_at, approved_by_name, approved_at
+           FROM stocktake_sessions
+           WHERE id=$1 AND company_id=$2""",
+        session_id, company_id,
+    )
+    if not session:
+        raise HTTPException(404, "جلسة الجرد غير موجودة")
+
+    rows = await fetch(
+        """SELECT i.id, i.product_id, p.name, p.barcode, p.category,
+                  p.spec, p.unit, i.snapshot_qty, i.counted_qty, i.note, i.unit_cost,
+                  COALESCE(inv.qty,0) AS current_qty
+           FROM stocktake_items i
+           JOIN products p ON p.id=i.product_id
+           LEFT JOIN inventory inv
+             ON inv.company_id=$2
+            AND inv.product_id=i.product_id
+            AND inv.loc_type=$3
+            AND inv.loc_id=$4
+           WHERE i.session_id=$1
+           ORDER BY p.category, p.name""",
+        session_id, company_id, session["loc_type"], session["loc_id"],
+    )
+
+    items = []
+    for r in rows:
+        expected = r["snapshot_qty"]
+        counted = r["counted_qty"]
+        items.append({
+            "id": str(r["id"]),
+            "productId": str(r["product_id"]),
+            "name": r["name"],
+            "barcode": r["barcode"],
+            "category": r["category"],
+            "spec": r["spec"],
+            "unit": r["unit"],
+            "expectedQty": expected,
+            "countedQty": counted,
+            "difference": counted - expected if counted is not None else None,
+            "unitCost": float(r["unit_cost"] or 0),
+            "diffValue": round((counted - expected) * float(r["unit_cost"] or 0), 2) if counted is not None else None,
+            "currentQty": r["current_qty"],
+            "note": r["note"],
+        })
+
+    return {
+        "id": str(session["id"]),
+        "locType": session["loc_type"],
+        "locId": session["loc_id"],
+        "status": session["status"],
+        "note": session["note"],
+        "createdByName": session["created_by_name"],
+        "createdAt": session["created_at"].isoformat() if session["created_at"] else None,
+        "approvedByName": session["approved_by_name"],
+        "approvedAt": session["approved_at"].isoformat() if session["approved_at"] else None,
+        "totalItems": len(items),
+        "countedItems": sum(1 for item in items if item["countedQty"] is not None),
+        "shortageValue": round(sum(-x["diffValue"] for x in items if x["diffValue"] is not None and x["diffValue"] < 0), 2),
+        "surplusValue": round(sum(x["diffValue"] for x in items if x["diffValue"] is not None and x["diffValue"] > 0), 2),
+        "zeroCostDiffItems": sum(1 for x in items if x["difference"] not in (None, 0) and x["unitCost"] == 0),
+        "items": items,
+    }
+
+
+async def count_stocktake_item(
+    company_id: str, session_id: str, product_id: str,
+    counted_qty: int, note: str | None = None,
+) -> dict:
+    """حفظ العدّ فقط؛ لا يغيّر رصيد المخزون."""
+    if counted_qty < 0:
+        raise HTTPException(400, "الكمية المعدودة لا يمكن أن تكون سالبة")
+
+    async with transaction() as conn:
+        async with conn.transaction():
+            session = await conn.fetchrow(
+                """SELECT id, status FROM stocktake_sessions
+                   WHERE id=$1 AND company_id=$2 FOR UPDATE""",
+                session_id, company_id,
+            )
+            if not session:
+                raise HTTPException(404, "جلسة الجرد غير موجودة")
+            if session["status"] != "in_progress":
+                raise HTTPException(409, "الجلسة ليست في حالة تسمح بتسجيل العدّ")
+
+            result = await conn.execute(
+                """UPDATE stocktake_items i
+                   SET counted_qty=$1, note=$2, updated_at=now()
+                   FROM stocktake_sessions s
+                   WHERE i.session_id=s.id
+                     AND s.id=$3 AND s.company_id=$4
+                     AND i.product_id=$5""",
+                counted_qty, (note or "").strip() or None,
+                session_id, company_id, product_id,
+            )
+            if result.endswith(" 0"):
+                raise HTTPException(404, "الصنف غير موجود ضمن جلسة الجرد")
+
+    return await get_stocktake(company_id, session_id)
+
+
+async def submit_stocktake_for_review(company_id: str, session_id: str) -> dict:
+    """نقل الجلسة للمراجعة بعد إدخال كمية فعلية لصنف واحد على الأقل."""
+    async with transaction() as conn:
+        async with conn.transaction():
+            session = await conn.fetchrow(
+                """SELECT id, status FROM stocktake_sessions
+                   WHERE id=$1 AND company_id=$2 FOR UPDATE""",
+                session_id, company_id,
+            )
+            if not session:
+                raise HTTPException(404, "جلسة الجرد غير موجودة")
+            if session["status"] != "in_progress":
+                raise HTTPException(409, "الجلسة ليست قيد العدّ")
+
+            counts = await conn.fetchrow(
+                """SELECT COUNT(*)::int AS total,
+                          COUNT(counted_qty)::int AS counted
+                   FROM stocktake_items WHERE session_id=$1""",
+                session_id,
+            )
+            if not counts or counts["counted"] == 0:
+                raise HTTPException(400, "سجّل الكميات الفعلية قبل إرسال الجرد للمراجعة")
+
+            await conn.execute(
+                """UPDATE stocktake_sessions SET status='review'
+                   WHERE id=$1 AND company_id=$2""",
+                session_id, company_id,
+            )
+
+    return await get_stocktake(company_id, session_id)
+
+
+async def approve_stocktake(
+    company_id: str, user_id: str, actor_name: str, session_id: str,
+) -> dict:
+    """اعتماد الجرد بعد التحقق من عدم تغير الأرصدة منذ أخذ اللقطة."""
+    async with transaction() as conn:
+        async with conn.transaction():
+            session = await conn.fetchrow(
+                """SELECT id, loc_type, loc_id, status
+                   FROM stocktake_sessions
+                   WHERE id=$1 AND company_id=$2 FOR UPDATE""",
+                session_id, company_id,
+            )
+            if not session:
+                raise HTTPException(404, "جلسة الجرد غير موجودة")
+            if session["status"] != "review":
+                raise HTTPException(409, "يجب إرسال الجلسة للمراجعة أولاً")
+
+            await lock_stock_location(
+                conn, company_id, session['loc_type'], session['loc_id']
+            )
+
+            items = await conn.fetch(
+                """SELECT i.product_id, i.snapshot_qty, i.counted_qty,
+                          p.name, i.unit_cost, COALESCE(inv.qty,0) AS current_qty
+                   FROM stocktake_items i
+                   JOIN products p ON p.id=i.product_id
+                   LEFT JOIN inventory inv
+                     ON inv.company_id=$2
+                    AND inv.product_id=i.product_id
+                    AND inv.loc_type=$3 AND inv.loc_id=$4
+                   WHERE i.session_id=$1
+                   ORDER BY i.product_id
+                   FOR UPDATE OF i""",
+                session_id, company_id, session["loc_type"], session["loc_id"],
+            )
+
+            counted_items = [r for r in items if r["counted_qty"] is not None]
+            if not counted_items:
+                raise HTTPException(400, "لا توجد أصناف تم عدّها")
+
+            changed = [
+                {
+                    "productId": str(r["product_id"]),
+                    "name": r["name"],
+                    "snapshotQty": r["snapshot_qty"],
+                    "currentQty": r["current_qty"],
+                }
+                for r in counted_items
+                if r["current_qty"] != r["snapshot_qty"]
+            ]
+            if changed:
+                raise HTTPException(
+                    409,
+                    detail={
+                        "message": "تغيّرت أرصدة بعض الأصناف منذ بدء الجرد. راجعها وأنشئ جلسة جديدة قبل الاعتماد.",
+                        "changedProducts": changed,
+                    },
+                )
+
+            changed_count = 0
+            positive_adjustments = 0
+            negative_adjustments = 0
+            shortage_value = 0.0
+            surplus_value = 0.0
+
+            for r in counted_items:
+                expected = r["snapshot_qty"]
+                actual = r["counted_qty"]
+                delta = actual - expected
+                val = delta * float(r["unit_cost"] or 0)
+                if val > 0:
+                    surplus_value += val
+                elif val < 0:
+                    shortage_value += -val
+                if delta == 0:
+                    continue
+
+                result = await conn.execute(
+                    """INSERT INTO inventory
+                         (company_id, loc_type, loc_id, product_id, qty, updated_at)
+                       VALUES ($1,$2,$3,$4,$5,now())
+                       ON CONFLICT (loc_type, loc_id, product_id)
+                       DO UPDATE SET qty=EXCLUDED.qty, updated_at=now()
+                       WHERE inventory.company_id=EXCLUDED.company_id""",
+                    company_id, session["loc_type"], session["loc_id"],
+                    r["product_id"], actual,
+                )
+                if not result.endswith(' 1'):
+                    raise HTTPException(
+                        409, 'تعذر تحديث رصيد أحد الأصناف؛ تم إلغاء اعتماد الجرد بالكامل'
+                    )
+                changed_count += 1
+                if delta > 0:
+                    positive_adjustments += delta
+                else:
+                    negative_adjustments += abs(delta)
+
+            await conn.execute(
+                """UPDATE stocktake_sessions
+                   SET status='approved', approved_by=$1,
+                       approved_by_name=$2, approved_at=now()
+                   WHERE id=$3 AND company_id=$4""",
+                user_id, actor_name, session_id, company_id,
+            )
+            await conn.execute(
+                """INSERT INTO audit_log
+                     (company_id, actor_id, actor_name, action, scope, details)
+                   VALUES ($1,$2,$3,'stocktake_approved','stock',$4)""",
+                company_id, user_id, actor_name,
+                f"جلسة {session_id} — الموقع {session['loc_type']}:{session['loc_id']} — "
+                f"الأصناف المعدودة {len(counted_items)} — الأصناف المعدلة {changed_count} — "
+                f"زيادة {positive_adjustments} — نقص {negative_adjustments} — "
+                f"قيمة العجز {shortage_value:.2f} — قيمة الزيادة {surplus_value:.2f}",
+            )
+
+    return await get_stocktake(company_id, session_id)
+
+
+# ══════════ إلغاء جلسة الجرد + استيراد الكميات من ملف ══════════
+
+async def cancel_stocktake(company_id: str, session_id: str) -> dict:
+    """إلغاء جلسة جرد غير معتمدة؛ لا يغيّر أي رصيد."""
+    async with transaction() as conn:
+        async with conn.transaction():
+            session = await conn.fetchrow(
+                """SELECT id, status FROM stocktake_sessions
+                   WHERE id=$1 AND company_id=$2 FOR UPDATE""",
+                session_id, company_id,
+            )
+            if not session:
+                raise HTTPException(404, "جلسة الجرد غير موجودة")
+            if session["status"] == "approved":
+                raise HTTPException(409, "لا يمكن إلغاء جلسة معتمدة")
+            if session["status"] == "cancelled":
+                raise HTTPException(409, "الجلسة ملغاة بالفعل")
+            await conn.execute(
+                """UPDATE stocktake_sessions SET status='cancelled'
+                   WHERE id=$1 AND company_id=$2""",
+                session_id, company_id,
+            )
+    return await get_stocktake(company_id, session_id)
+
+
+async def import_stocktake_counts(
+    company_id: str, session_id: str, scanned: dict[str, int],
+    commit: bool = False, zero_rest: bool = False,
+) -> dict:
+    """مطابقة الباركودات بأصناف الجلسة (كل تكرار = قطعة).
+    commit=False معاينة فقط. commit=True يستبدل الكمية المعدودة للأصناف المطابقة.
+    zero_rest=True يجعل الأصناف التي لم تُجرد ولم تظهر في الملف = 0."""
+    if not scanned:
+        raise HTTPException(400, "الملف لا يحتوي على باركودات")
+
+    async with transaction() as conn:
+        async with conn.transaction():
+            session = await conn.fetchrow(
+                """SELECT id, status FROM stocktake_sessions
+                   WHERE id=$1 AND company_id=$2 FOR UPDATE""",
+                session_id, company_id,
+            )
+            if not session:
+                raise HTTPException(404, "جلسة الجرد غير موجودة")
+            if session["status"] != "in_progress":
+                raise HTTPException(409, "الجلسة ليست قيد العدّ")
+
+            rows = await conn.fetch(
+                """SELECT i.product_id, p.name, p.barcode, p.unit,
+                          i.snapshot_qty, i.counted_qty
+                   FROM stocktake_items i
+                   JOIN products p ON p.id=i.product_id
+                   WHERE i.session_id=$1 AND p.barcode = ANY($2::text[])""",
+                session_id, list(scanned.keys()),
+            )
+            by_barcode = {r["barcode"]: r for r in rows}
+            matched_ids = [r["product_id"] for r in rows]
+
+            matched = []
+            for bc, r in by_barcode.items():
+                qty = scanned[bc]
+                matched.append({
+                    "productId": str(r["product_id"]),
+                    "name": r["name"],
+                    "barcode": bc,
+                    "unit": r["unit"],
+                    "scanned": qty,
+                    "expectedQty": r["snapshot_qty"],
+                    "previousCounted": r["counted_qty"],
+                    "difference": qty - r["snapshot_qty"],
+                })
+            matched.sort(key=lambda m: m["name"] or "")
+
+            unmatched = sorted(
+                ({"barcode": bc, "count": n} for bc, n in scanned.items()
+                 if bc not in by_barcode),
+                key=lambda u: -u["count"],
+            )
+
+            rest_count = await conn.fetchval(
+                """SELECT COUNT(*)::int FROM stocktake_items
+                   WHERE session_id=$1 AND counted_qty IS NULL
+                     AND NOT (product_id = ANY($2::uuid[]))""",
+                session_id, matched_ids,
+            )
+
+            if commit:
+                if not matched:
+                    raise HTTPException(400, "لا توجد باركودات مطابقة لأصناف هذه الجلسة")
+                await conn.executemany(
+                    """UPDATE stocktake_items
+                       SET counted_qty=$1, updated_at=now()
+                       WHERE session_id=$2 AND product_id=$3""",
+                    [(scanned[m["barcode"]], session_id, by_barcode[m["barcode"]]["product_id"])
+                     for m in matched],
+                )
+                if zero_rest:
+                    await conn.execute(
+                        """UPDATE stocktake_items
+                           SET counted_qty=0, updated_at=now()
+                           WHERE session_id=$1 AND counted_qty IS NULL
+                             AND NOT (product_id = ANY($2::uuid[]))""",
+                        session_id, matched_ids,
+                    )
+
+    result = {
+        "committed": commit,
+        "totalPieces": sum(scanned.values()),
+        "distinctBarcodes": len(scanned),
+        "matched": matched,
+        "unmatched": unmatched,
+        "uncountedRemaining": rest_count,
+        "zeroRest": zero_rest,
+    }
+    if commit:
+        result["session"] = await get_stocktake(company_id, session_id)
+    return result

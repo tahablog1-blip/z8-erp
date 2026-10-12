@@ -7,6 +7,7 @@ from fastapi import HTTPException
 
 from ...core import accounting
 from ...core.db import fetch, fetchrow, transaction
+from ...core.stock_lock import lock_stock_location
 
 WAREHOUSE_LOC_ID = "main"
 _B36 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -85,6 +86,7 @@ async def create_purchase_invoice(company_id: str, user_id: str, d: dict) -> dic
             # شراء مباشر: يزوّد مخزون المستودع فوراً، ويربط الحركة بمعرّف الفاتورة
             move_no = f"R-{_base36(int(time.time() * 1000))}"
             supplier = await conn.fetchrow("SELECT name FROM suppliers WHERE id=$1", d["supplierId"])
+            await lock_stock_location(conn, company_id, 'warehouse', WAREHOUSE_LOC_ID)
             for it in d["items"]:
                 await conn.execute(
                     """INSERT INTO inventory (company_id, loc_type, loc_id, product_id, qty)

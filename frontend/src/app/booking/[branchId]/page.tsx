@@ -12,7 +12,7 @@ import { useParams } from "next/navigation";
 import { MIcon } from "@/components/m-icon";
 
 type Info = { branchName: string; waiting: number; inService: number; estWaitMinutes: number };
-type SavedCar = { id: string; plate: string; brand: string | null; name: string | null; model_year: string | null; service_type: string };
+type SavedCar = { id: string; plate: string; brand: string | null; name: string | null; model_year: string | null; fuel_type?: string | null; service_type: string };
 type Profile = { found: boolean; customer?: { id: string; name: string; phone: string }; cars?: SavedCar[] };
 type Booking = {
   bookingId: string; state: "waiting" | "in_service" | "done";
@@ -260,7 +260,7 @@ function RegisterForm({ sType, initial, busy, err, branchId, onBack, onSubmit }:
   return (
     <div className="kiosk-step space-y-3 rounded-2xl bg-white p-5 shadow-lg">
       <div className="flex items-center justify-between">
-        <button onClick={() => onBack(f)} className="flex items-center gap-1 text-[12px] font-black" style={{ color: DIM }}>
+        <button onClick={() => onBack(f)} className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-[12px] font-black text-slate-700 hover:bg-slate-200 transition">
           <MIcon name="arrow_forward" className="!text-[15px]" /> رجوع
         </button>
         <span className="rounded-full px-3 py-1 text-[11px] font-black text-white" style={{ background: NAVY }}>
@@ -893,7 +893,7 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
             </button>
           ))}
           {err && <ErrBox msg={err} />}
-          <button onClick={() => setMode("choose")} className="mx-auto flex items-center gap-1 text-[12px] font-black" style={{ color: DIM }}>
+          <button onClick={() => setMode("choose")} className="mx-auto flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-[12px] font-black text-slate-700 hover:bg-slate-200 transition">
             <MIcon name="arrow_forward" className="!text-[15px]" /> رجوع
           </button>
         </div>
@@ -986,14 +986,14 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
               </span>
             </div>
           )}
-          <button onClick={() => setMode("choose")} className="mx-auto flex items-center gap-1 text-[12px] font-black" style={{ color: DIM }}>
+          <button onClick={() => setMode("choose")} className="mx-auto flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-[12px] font-black text-slate-700 hover:bg-slate-200 transition">
             <MIcon name="arrow_forward" className="!text-[15px]" /> رجوع
           </button>
         </div>
       )}
 
       <div className="flex gap-2 pt-1">
-        <button onClick={onBack} className="rounded-xl border-2 px-4 py-3 text-[13px] font-black" style={{ borderColor: LINE, color: DIM }}>رجوع</button>
+        <button onClick={onBack} className="rounded-xl px-4 py-3 text-[13px] font-black bg-slate-100 text-slate-700 hover:bg-slate-200 transition">رجوع</button>
         <button onClick={onNext} disabled={mode === "list" && !sel.oil}
           className="flex-1 rounded-xl py-3 text-[14px] font-black text-white transition active:scale-[.98] disabled:opacity-40"
           style={{ background: GREEN }}>
@@ -1005,9 +1005,9 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
 }
 
 /* ═══════════ خطوة فلتر الزيت ═══════════ */
-function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carCylinders, onNext, onBack }: {
+function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carCylinders, carFuelType, onNext, onBack }: {
   branchId: string; sel: Selection; setSel: (s: Selection) => void;
-  carBrand: string; carModel: string; carYear: string; carCylinders: string;
+  carBrand: string; carModel: string; carYear: string; carCylinders: string; carFuelType?: string;
   onNext: () => void; onBack: () => void;
 }) {
   const [filters, setFilters] = useState<OilProduct[] | null>(null);
@@ -1142,7 +1142,7 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
       )}
 
       <div className="flex gap-2 pt-1">
-        <button onClick={onBack} className="rounded-xl border-2 px-4 py-3 text-[13px] font-black" style={{ borderColor: LINE, color: DIM }}>رجوع</button>
+        <button onClick={onBack} className="rounded-xl px-4 py-3 text-[13px] font-black bg-slate-100 text-slate-700 hover:bg-slate-200 transition">رجوع</button>
         <button onClick={onNext} disabled={sel.withFilter === null || (sel.withFilter === true && !sel.filter)}
           className="flex-1 rounded-xl py-3 text-[14px] font-black text-white transition active:scale-[.98] disabled:opacity-40"
           style={{ background: GREEN }}>
@@ -1316,7 +1316,7 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
       )}
 
       <div className="flex gap-2 pt-1">
-        <button onClick={onBack} className="rounded-xl border-2 px-4 py-3 text-[13px] font-black" style={{ borderColor: LINE, color: DIM }}>رجوع</button>
+        <button onClick={onBack} className="rounded-xl px-4 py-3 text-[13px] font-black bg-slate-100 text-slate-700 hover:bg-slate-200 transition">رجوع</button>
         <button onClick={onNext}
           className="flex-1 rounded-xl py-3 text-[14px] font-black text-white transition active:scale-[.98]"
           style={{ background: GREEN }}>
@@ -1422,7 +1422,7 @@ function BookingSummary({ carLabel, plate, odometer, sel, autoService, busy, err
       {err && <ErrBox msg={err} />}
       <div className="flex gap-2">
         <button onClick={onBack} disabled={busy}
-          className="rounded-xl border-2 px-4 py-3 text-[13px] font-black" style={{ borderColor: LINE, color: DIM }}>رجوع</button>
+          className="rounded-xl px-4 py-3 text-[13px] font-black bg-slate-100 text-slate-700 hover:bg-slate-200 transition">رجوع</button>
         <button onClick={onConfirm} disabled={busy}
           className="flex-1 rounded-xl py-3.5 text-[15px] font-black text-white transition active:scale-[.98] disabled:opacity-50"
           style={{ background: GREEN }}>
@@ -1466,6 +1466,25 @@ function ChatFab({ carId, urlToken }: { carId?: string | null; urlToken?: string
 export default function PublicBookingPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const [view, setView] = useState<"loading" | "entry" | "garage" | "type" | "form" | "oil" | "filter" | "extras" | "summary" | "ticket">("loading");
+  // ربط زر رجوع المتصفح/الموبايل بخطوات الحجز بدل إغلاق الصفحة
+  const skipNextPush = useRef(false);
+  useEffect(() => {
+    if (skipNextPush.current) { skipNextPush.current = false; return; }
+    window.history.pushState({ z8view: view }, "", window.location.href);
+  }, [view]);
+  useEffect(() => {
+    function onPopState(e: PopStateEvent) {
+      const prevView = e.state?.z8view as typeof view | undefined;
+      if (prevView) {
+        skipNextPush.current = true;
+        setView(prevView);
+      }
+    }
+    window.history.replaceState({ z8view: view }, "", window.location.href);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // الاختيار المسبق (زيت + فلتر) — يُحفظ مع الحجز ويظهر للفني
   const [sel, setSel] = useState<Selection>(EMPTY_SEL);
   // الحجز المعلّق: بيانات السيارة محفوظة لحين تأكيد الملخص
@@ -1700,7 +1719,7 @@ export default function PublicBookingPage() {
               </button>
             ))}
             {profile?.found && (
-              <button onClick={() => setView("garage")} className="mx-auto flex items-center gap-1 text-[12px] font-black" style={{ color: DIM }}>
+              <button onClick={() => setView("garage")} className="mx-auto flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-[12px] font-black text-slate-700 hover:bg-slate-200 transition">
                 <MIcon name="arrow_forward" className="!text-[15px]" /> رجوع لسياراتي
               </button>
             )}

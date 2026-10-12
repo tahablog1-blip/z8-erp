@@ -55,7 +55,16 @@ async def _build_shift_report(company_id: str, shift_id: str) -> dict | None:
     )
 
     # النقد المتوقع في الدرج = عهدة البداية + تحصيل نقدي − مرتجعات نقدية
-    expected_cash = round(_num(shift["opening_cash"]) + by_method["cash"] - _num(returns["cash_refunds"]), 2)
+    tv = await fetchrow(
+        """SELECT COALESCE(SUM(amount) FILTER (WHERE type='receipt'),0)::numeric(12,2) AS rec,
+                  COALESCE(SUM(amount) FILTER (WHERE type='payment'),0)::numeric(12,2) AS pay
+           FROM treasury_vouchers
+           WHERE company_id=$1 AND created_by=$2 AND method='cash' AND status='active'
+             AND created_at >= $3 AND ($4::timestamptz IS NULL OR created_at <= $4)""",
+        company_id, shift["user_id"], shift["opened_at"], shift["closed_at"],
+    )
+    expected_cash = round(_num(shift["opening_cash"]) + by_method["cash"] - _num(returns["cash_refunds"])
+                          + _num(tv["rec"]) - _num(tv["pay"]), 2)
     counted_cash = None if shift["closing_cash_counted"] is None else _num(shift["closing_cash_counted"])
     difference = None if counted_cash is None else round(counted_cash - expected_cash, 2)
 
@@ -95,6 +104,7 @@ async def _build_shift_report(company_id: str, shift_id: str) -> dict | None:
             "counted": counted_cash,
             "difference": difference,
         },
+        "treasury": {"cashReceipts": _num(tv["rec"]), "cashPayments": _num(tv["pay"])},
         "topItems": [{"label": r["label"], "qty": r["qty"], "total": _num(r["total"])} for r in top_items],
     }
 

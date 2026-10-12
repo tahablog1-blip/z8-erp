@@ -11,6 +11,7 @@ from fastapi import HTTPException
 
 from ...core import accounting, zatca
 from ...core.db import fetch, fetchrow, transaction
+from ...core.stock_lock import lock_stock_location
 from ..shifts.service import require_open_shift
 
 
@@ -91,6 +92,10 @@ async def create_invoice(company_id: str, user_id: str, user_email: str, d: dict
             )
             cost_map = {str(r["id"]): accounting.dec(r["cost_price"]) for r in cost_rows}
             service_ids = {str(r["id"]) for r in cost_rows if r["is_service"]}
+            if any(it['productId'] not in service_ids for it in d['items']):
+                await lock_stock_location(
+                    conn, company_id, 'branch', d['branchId']
+                )
 
             for it in d["items"]:
                 if it["productId"] in service_ids:
@@ -385,6 +390,10 @@ async def return_invoice(company_id: str, user_id: str, user_email: str, invoice
                 """SELECT ii.product_id, ii.qty, COALESCE(p.is_service, FALSE) AS is_service
                    FROM invoice_items ii LEFT JOIN products p ON p.id = ii.product_id
                    WHERE ii.invoice_id=$1""", invoice_id)
+            if any(it['product_id'] and not it['is_service'] for it in items):
+                await lock_stock_location(
+                    conn, company_id, 'branch', invoice['branch_id']
+                )
             for it in items:
                 if not it["product_id"] or it["is_service"]:
                     continue  # صنف خدمة — لا مخزون يُعاد
