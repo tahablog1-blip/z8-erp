@@ -179,7 +179,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                       <Link key={m.path} href={m.path} onClick={() => setMobileNavOpen(false)}
                         className={`mx-2 flex h-10 items-center gap-2.5 px-3.5 text-[13px] font-bold transition-all duration-200
                               ${sec !== "الرئيسية" ? "pr-6" : ""}
-                              ${active ? "m3 rounded-full bg-white/[0.22] font-black text-white" : "m3 rounded-full text-white/70 hover:text-white"}`}>
+                              ${active ? "m3 rounded-lg bg-blue-500 font-black text-white" : "m3 rounded-lg text-white/70 hover:bg-white/10 hover:text-white"}`}>
                         <NavIcon name={m.icon} />
                         <span className="flex-1">{t(NAV_TITLE_KEYS[m.title] || "", m.title)}</span>
                         {m.path === "/service-notes" && unread > 0 && (
@@ -202,7 +202,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ── مساحة العمل ── */}
-      <div className="flex min-w-0 flex-1 flex-col min-h-screen p-3 md:p-4">
+      <div className="flex min-w-0 flex-1 flex-col h-screen p-3 md:p-4">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-ink2 elev-1">
           <header className="flex h-14 shrink-0 items-center gap-2.5 border-b border-line px-5">
             {/* زر القائمة — الشاشات الضيقة بس (موبايل/تابلت عمودي) */}
@@ -248,7 +248,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               {t("top.logout")}
             </button>
           </header>
-          <main className="min-w-0 flex-1 p-6">{children}</main>
+          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto p-6">{children}</main>
         </div>
       </div>
     </div>

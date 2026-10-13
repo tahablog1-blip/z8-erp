@@ -54,6 +54,15 @@ const DICT: Record<string, { ar: string; en: string }> = {
   "login.submit": { ar: "دخول", en: "Sign in" },
   "login.loading": { ar: "جارِ الدخول...", en: "Signing in..." },
   "login.error": { ar: "اسم المستخدم أو كلمة المرور غير صحيحة", en: "Invalid username or password" },
+  "sec.settings": { ar: "الإعدادات", en: "Settings" },
+  "nav.direct_sales": { ar: "البيع المباشر", en: "Direct Sales" },
+  "nav.prepare": { ar: "إعداد أوامر العمل", en: "Work Orders Prep" },
+  "nav.service_notes": { ar: "مركز ملاحظات الخدمة", en: "Service Notes Center" },
+  "nav.company": { ar: "المنشأة", en: "Company" },
+  "nav.users": { ar: "المستخدمون والصلاحيات", en: "Users & Permissions" },
+  "nav.cameras": { ar: "كاميرات المحطات", en: "Station Cameras" },
+  "nav.printing": { ar: "الطباعة", en: "Printing" },
+  "nav.system": { ar: "النظام", en: "System" },
 };
 
 // عناوين السجل (القائمة الجانبية) بالعربي → مفاتيح
@@ -91,7 +100,7 @@ export const SECTION_TITLE_KEYS: Record<string, string> = {
 };
 
 const LangCtx = createContext<{ lang: Lang; setLang: (l: Lang) => void; t: (k: string, fallback?: string) => string }>({
-  lang: "ar", setLang: () => {}, t: (k, f) => f || k,
+  lang: "ar", setLang: () => { }, t: (k, f) => f || k,
 });
 
 export function LangProvider({ children }: { children: React.ReactNode }) {

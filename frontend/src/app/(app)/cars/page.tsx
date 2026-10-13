@@ -1746,7 +1746,7 @@ export default function CarsPage() {
     <div className="min-h-screen space-y-5 pb-24" style={{ background: UI.bg }}>
 
       {/* ═══════ الهيدر اللاصق: العنوان + بوابات الدخول ═══════ */}
-      <div className="sticky top-0 z-20 -mx-4 border-b bg-[#F8FAFC]/85 px-4 py-3 backdrop-blur-md"
+      <div className="relative z-20 -mx-4 border-b bg-[#F8FAFC]/85 px-4 py-3"
            style={{ borderColor: UI.border }}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

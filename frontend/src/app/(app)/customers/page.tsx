@@ -592,54 +592,54 @@ function CustomerCardsV2({ rows, loading, onOpen, onCreate }: {
           {rows.length === 0 && onCreate && <div className="mt-3"><Button onClick={onCreate}>إضافة عميل جديد</Button></div>}
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {shown.map((c) => {
-            const bal = c.balance ?? 0;
-            const link = c.phone ? wa(c.phone) : null;
-            return (
-              <div key={c.id} onClick={() => onOpen(c)}
-                   className="cursor-pointer rounded-card border border-line bg-ink-2 p-4 shadow-card transition hover:border-petrol hover:shadow-panel">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="truncate text-[14px] font-black">{c.name}</div>
-                    <div dir="ltr" className="tnum mt-0.5 text-right text-[12px] text-text-dim">{c.phone || "—"}</div>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <Badge tone="neutral">{c.customer_type === "company" ? "شركة" : "فرد"}</Badge>
-                    {isNew(c) && <Badge tone="good">جديد</Badge>}
-                  </div>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-center">
-                  <div className="rounded-lg bg-ink-3 p-2">
-                    <div className="text-[11px] text-text-dim">السيارات</div>
-                    <div className="tnum font-black">{c.vehicle_count ?? 0}</div>
-                  </div>
-                  <div className="rounded-lg bg-ink-3 p-2">
-                    <div className="text-[11px] text-text-dim">الرصيد الآجل</div>
-                    <div className={`tnum font-black ${bal > 0 ? "text-ember" : "text-text"}`}>
-                      {money(bal)}{bal > 0 && <span className="mr-1 text-[10.5px] font-bold">مستحق</span>}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  <Button onClick={() => onOpen(c)}>عرض التفاصيل</Button>
-                  {link && (
-                    <a href={link} target="_blank" rel="noreferrer" aria-label={`واتساب ${c.name}`}
-                       className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol">
-                      <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                    </a>
-                  )}
-                  {c.phone && (
-                    <a href={`tel:${c.phone}`} aria-label={`اتصال بـ ${c.name}`}
-                       className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol">
-                      <Phone className="h-4 w-4" aria-hidden="true" />
-                    </a>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+  {shown.map((c) => {
+    const bal = c.balance ?? 0;
+    const link = c.phone ? wa(c.phone) : null;
+    return (
+      <div key={c.id} onClick={() => onOpen(c)}
+           className="cursor-pointer rounded-card border border-line bg-ink-2 p-5 shadow-card transition hover:border-petrol hover:shadow-panel">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="truncate text-[17px] font-black">{c.name}</div>
+            <div dir="ltr" className="tnum mt-1 text-right text-[14px] text-text-dim">{c.phone || "—"}</div>
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <Badge tone="neutral">{c.customer_type === "company" ? "شركة" : "فرد"}</Badge>
+            {isNew(c) && <Badge tone="good">جديد</Badge>}
+          </div>
         </div>
+        <div className="mt-4 grid grid-cols-2 gap-2.5 text-center">
+          <div className="rounded-lg bg-ink-3 p-2.5">
+            <div className="text-[13px] text-text-dim">السيارات</div>
+            <div className="tnum text-[17px] font-black">{c.vehicle_count ?? 0}</div>
+          </div>
+          <div className="rounded-lg bg-ink-3 p-2.5">
+            <div className="text-[13px] text-text-dim">الرصيد الآجل</div>
+            <div className={`tnum text-[17px] font-black ${bal > 0 ? "text-ember" : "text-text"}`}>
+              {money(bal)}{bal > 0 && <span className="mr-1 text-[12px] font-bold">مستحق</span>}
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <Button onClick={() => onOpen(c)}>عرض التفاصيل</Button>
+          {link && (
+            <a href={link} target="_blank" rel="noreferrer" aria-label={`واتساب ${c.name}`}
+               className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol">
+              <MessageCircle className="h-[18px] w-[18px]" aria-hidden="true" />
+            </a>
+          )}
+          {c.phone && (
+            <a href={`tel:${c.phone}`} aria-label={`اتصال بـ ${c.name}`}
+               className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol">
+              <Phone className="h-[18px] w-[18px]" aria-hidden="true" />
+            </a>
+          )}
+        </div>
+      </div>
+    );
+  })}
+</div>
       )}
     </div>
   );
