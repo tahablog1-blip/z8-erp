@@ -67,6 +67,8 @@ class ProductOut(BaseModel):
     filter_kind: str | None = None
     is_active: bool = True
     created_at: datetime | None = None
+    stock_qty: float = 0          # مجموع أرصدة الفروع
+    has_image: bool = False
 
 
 class SpecOut(BaseModel):

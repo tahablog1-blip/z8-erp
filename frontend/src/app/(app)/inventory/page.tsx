@@ -593,7 +593,7 @@ export default function InventoryPage() {
       </Card>
 
       {/* ══════════ سند استلام من مورد ══════════ */}
-      <Modal open={receiveOpen} size="lg" onClose={() => setReceiveOpen(false)}
+      <Modal open={receiveOpen} size="full" onClose={() => setReceiveOpen(false)}
              title="استلام من مورد إلى المستودع">
         <div className="space-y-3">
           <div className="grid gap-2 sm:grid-cols-2">
@@ -628,7 +628,7 @@ export default function InventoryPage() {
 
       {/* ══════════ سند تحويل داخلي ══════════ */}
       {/* ══════════ إنشاء طلب أصناف لفرعي ══════════ */}
-      <Modal open={reqOpen} size="lg" onClose={() => setReqOpen(false)} title="+ طلب أصناف لفرعي">
+      <Modal open={reqOpen} size="full" onClose={() => setReqOpen(false)} title="+ طلب أصناف لفرعي">
         <div className="space-y-3">
           <p className="text-[12px] text-text-dim">
             حدد الأصناف والكميات اللي فرعك محتاجها — الطلب هيروح لصاحب الصلاحية للموافقة والتنفيذ، مش تحويل مباشر.
@@ -705,7 +705,7 @@ export default function InventoryPage() {
         )}
       </Modal>
 
-      <Modal open={transferOpen} size="lg" onClose={() => setTransferOpen(false)}
+      <Modal open={transferOpen} size="full" onClose={() => setTransferOpen(false)}
              title="تحويل مخزون بين المواقع">
         <div className="space-y-3">
           <div className="grid gap-2 sm:grid-cols-3">
@@ -741,7 +741,7 @@ export default function InventoryPage() {
       </Modal>
 
       {/* ══════════ عرض / تعديل سند ══════════ */}
-      <Modal open={!!voucher} size="lg" onClose={() => setVoucher(null)}
+      <Modal open={!!voucher} size="full" onClose={() => setVoucher(null)}
              title={`سند ${voucher?.moveNo ?? ""}`}>
         {voucher && (
           <div className="space-y-3">

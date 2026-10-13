@@ -14,6 +14,7 @@ export type Product = {
   cost_price: number;
   min_qty: number;
   stock_qty?: number | null;
+  has_image?: boolean;
   service_interval_km: number | null;
   is_service: boolean;
   is_oil: boolean;

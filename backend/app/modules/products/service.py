@@ -68,7 +68,8 @@ async def list_products(company_id: str, search: str | None = None) -> list[dict
     rows = await fetch(
         f"""SELECT {cols},
                   COALESCE((SELECT SUM(inv.qty) FROM inventory inv
-                             WHERE inv.product_id = p.id AND inv.loc_type = 'branch'), 0) AS stock_qty
+                             WHERE inv.product_id = p.id AND inv.loc_type = 'branch'), 0) AS stock_qty,
+                  (p.image_base64 IS NOT NULL) AS has_image
            FROM products p WHERE {where} ORDER BY p.category, p.name, p.spec""", *params
     )
     return [_row_out(r) for r in rows]
@@ -963,3 +964,69 @@ async def public_brand_logo(brand_id: str) -> dict | None:
         return {"bytes": _b64.b64decode(b64), "mime": mime}
     except Exception:
         return None
+
+
+# ══════════════════ صفحة الصنف (كروت الأصناف) ══════════════════
+
+async def get_product_detail(company_id: str, product_id: str) -> dict:
+    """بيانات الصنف + أرصدته في كل موقع + آخر الحركات (قراءة فقط)."""
+    from uuid import UUID
+    try:
+        pid = str(UUID(product_id))
+    except (ValueError, TypeError):
+        raise HTTPException(404, "الصنف غير موجود")
+
+    row = await fetchrow(
+        f"""SELECT {_COLS},
+                   (image_base64 IS NOT NULL AND image_base64 <> '') AS has_image
+            FROM products WHERE id = $1 AND company_id = $2""",
+        pid, company_id,
+    )
+    if not row:
+        raise HTTPException(404, "الصنف غير موجود")
+
+    stock_rows = await fetch(
+        """SELECT inv.loc_type, inv.loc_id, inv.qty,
+                  CASE WHEN inv.loc_type = 'warehouse' THEN 'المستودع الرئيسي'
+                       ELSE COALESCE(b.name, inv.loc_id) END AS loc_name
+           FROM inventory inv
+           LEFT JOIN branches b
+             ON inv.loc_type = 'branch' AND b.id::text = inv.loc_id
+           WHERE inv.company_id = $1 AND inv.product_id = $2
+           ORDER BY inv.loc_type DESC, loc_name""",
+        company_id, pid,
+    )
+    stock = [
+        {"locType": r["loc_type"], "locId": r["loc_id"],
+         "locName": r["loc_name"], "qty": r["qty"]}
+        for r in stock_rows
+    ]
+
+    move_rows = await fetch(
+        """SELECT move_type, qty, move_no, note, supplier_name, unit_cost, created_at,
+                  from_loc_type, from_loc_id, to_loc_type, to_loc_id
+           FROM stock_moves
+           WHERE company_id = $1 AND product_id = $2
+           ORDER BY created_at DESC LIMIT 20""",
+        company_id, pid,
+    )
+    moves = []
+    for m in move_rows:
+        moves.append({
+            "type": m["move_type"], "qty": m["qty"], "moveNo": m["move_no"],
+            "note": m["note"], "supplier": m["supplier_name"],
+            "unitCost": float(m["unit_cost"]) if m["unit_cost"] is not None else None,
+            "createdAt": m["created_at"].isoformat() if m["created_at"] else None,
+            "fromLoc": f'{m["from_loc_type"] or ""}:{m["from_loc_id"] or ""}'.strip(":"),
+            "toLoc": f'{m["to_loc_type"] or ""}:{m["to_loc_id"] or ""}'.strip(":"),
+        })
+
+    product = _row_out(row)
+    if product.get("created_at"):
+        product["created_at"] = product["created_at"].isoformat()
+    return {
+        "product": product,
+        "stock": stock,
+        "totalStock": sum(s["qty"] or 0 for s in stock),
+        "moves": moves,
+    }

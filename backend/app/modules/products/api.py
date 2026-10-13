@@ -372,3 +372,13 @@ async def public_brand_logo(brand_id: str):
         raise HTTPException(404, "لا يوجد شعار")
     return _Response(content=img["bytes"], media_type=img["mime"],
                      headers={"Cache-Control": "public, max-age=86400"})
+
+
+@router.get("/{product_id}/detail")
+async def product_detail(
+    product_id: str,
+    user: CurrentUser = Depends(require_permission(
+        "products.create", "products.edit", "products.view_stock")),
+):
+    """صفحة الصنف: البيانات + الأرصدة بكل موقع + آخر الحركات."""
+    return await service.get_product_detail(user.company_id, product_id)

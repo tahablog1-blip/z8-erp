@@ -99,9 +99,12 @@ export function Tabs<T extends string>({ value, onChange, items }:
   );
 }
 
+import FullScreenModal from "@/components/FullScreenModal";
+
 export function Modal({ open, title, children, onClose, size = "md" }:
-  { open: boolean; title: string; children: ReactNode; onClose: () => void; size?: "md" | "lg" }) {
+  { open: boolean; title: string; children: ReactNode; onClose: () => void; size?: "md" | "lg" | "full" }) {
   if (!open) return null;
+  if (size === "full") return <FullScreenModal title={title} onClose={onClose}>{children}</FullScreenModal>;
   const width = size === "lg" ? "max-w-3xl" : "max-w-md";
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-[3px]" onClick={onClose}>

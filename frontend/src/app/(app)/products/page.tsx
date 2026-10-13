@@ -9,6 +9,7 @@ import { DataTable, Column } from "@/components/DataTable";
 import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import { Product, productLabel, money } from "@/modules/products/types";
+import ProductCards from "@/components/ProductCards";
 
 const EMPTY = {
   category: "", name: "", spec: "", unit: "قطعة", barcode: "",
@@ -297,6 +298,7 @@ export default function ProductsPage() {
   const [fltOilBrand, setFltOilBrand] = useState("");
   const [fltActive, setFltActive] = useState<"" | "active" | "inactive">("");
   const [fltStock, setFltStock] = useState<"" | "low">("");
+  const [view, setView] = useState<"cards" | "table">("cards");
 
   // قائمة الفئات المتاحة فعلياً من بيانات الأصناف نفسها — تتحدث تلقائياً
   const availableCategories = useMemo(
@@ -772,7 +774,15 @@ export default function ProductsPage() {
       )}
       <div className="flex items-center justify-between">
         <h1 className="text-[19px] font-extrabold">الأصناف</h1>
-        <span className="text-[12px] text-text-dim tnum">{rows.length} صنف نشط</span>
+        <div className="flex items-center gap-3">
+          <span className="text-[12px] text-text-dim tnum">{rows.length} صنف نشط</span>
+          <div className="flex overflow-hidden rounded-xl border border-line">
+            <button type="button" onClick={() => setView("cards")}
+              className={`px-3 py-1.5 text-[12px] font-bold ${view === "cards" ? "bg-petrol text-white" : "bg-white"}`}>كروت</button>
+            <button type="button" onClick={() => setView("table")}
+              className={`px-3 py-1.5 text-[12px] font-bold ${view === "table" ? "bg-petrol text-white" : "bg-white"}`}>جدول</button>
+          </div>
+        </div>
       </div>
 
       <ErrorNote msg={pageErr} />
@@ -927,6 +937,7 @@ export default function ProductsPage() {
         </div>
 
         {/* الجدول الأساسي وأزرار الإجراءات بعرض الصفحة */}
+        <div className={view === "cards" ? "[&_table]:hidden" : ""}>
         <DataTable
           columns={columns}
           rows={filteredRows}
@@ -1074,6 +1085,10 @@ export default function ProductsPage() {
             </>
           }
         />
+        </div>
+        {view === "cards" && (
+          <ProductCards rows={filteredRows} search={productSearch} loading={loading} />
+        )}
       </Card>
    
 
