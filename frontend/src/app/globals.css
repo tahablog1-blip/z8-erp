@@ -37,12 +37,13 @@
 }
 
 /* شريط تصنيفات قابل للتمرير بدون شريط تمرير ظاهر */
-.scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
-.scrollbar-none::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
 /* ── Material Symbols Rounded: مكتبة الأيقونات الموحدة ──
    24px · Weight 400 · Optical 24 · Rounded — لون افتراضي #64748B */
 .msr {
+  
   font-family: "Material Symbols Rounded";
   font-weight: 400;
   font-style: normal;

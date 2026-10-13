@@ -148,12 +148,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
           {/* إغلاق الدرج — الشاشات الضيقة بس */}
           <button onClick={() => setMobileNavOpen(false)}
-                  className="grid h-8 w-8 place-items-center rounded-lg text-white/70 hover:bg-white/10 md:hidden">
+            className="grid h-8 w-8 place-items-center rounded-lg text-white/70 hover:bg-white/10 md:hidden">
             ✕
           </button>
         </div>
 
-        <nav className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden px-3 pb-3">
+        <nav className="no-scrollbar mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden px-3 pb-3">
           {NAV_SECTIONS.map((sec) => {
             const items = visible.filter((mm) => mm.section === sec);
             if (items.length === 0) return null;
@@ -162,7 +162,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 {/* رأس القسم — حواف حادة، نفس لون القضيب */}
                 {sec !== "الرئيسية" && (
                   <button onClick={() => toggleSec(sec)}
-                          className={`flex h-10 w-full items-center gap-2.5 px-3 text-[12.5px] font-extrabold transition
+                    className={`flex h-10 w-full items-center gap-2.5 px-3 text-[12.5px] font-extrabold transition
                             ${openSecs[sec] ? "bg-white/10 text-white" : "text-white/60 hover:bg-white/5 hover:text-white"}`}>
                     <NavIcon name={SECTION_ICONS[sec] || "sec_ops"} />
                     <span className="flex-1 text-right">{t(SECTION_TITLE_KEYS[sec] || "", sec)}</span>
@@ -177,7 +177,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                     const active = m.path === activePath;
                     return (
                       <Link key={m.path} href={m.path} onClick={() => setMobileNavOpen(false)}
-                            className={`mx-2 flex h-10 items-center gap-2.5 px-3.5 text-[13px] font-bold transition-all duration-200
+                        className={`mx-2 flex h-10 items-center gap-2.5 px-3.5 text-[13px] font-bold transition-all duration-200
                               ${sec !== "الرئيسية" ? "pr-6" : ""}
                               ${active ? "m3 rounded-full bg-white/[0.22] font-black text-white" : "m3 rounded-full text-white/70 hover:text-white"}`}>
                         <NavIcon name={m.icon} />
@@ -202,52 +202,54 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ── مساحة العمل ── */}
-      <div className="flex min-w-0 flex-1 flex-col min-h-screen">
-        <header className="flex h-14 items-center gap-2.5 border-b border-line bg-ink-2 px-5 shadow-card">
-          {/* زر القائمة — الشاشات الضيقة بس (موبايل/تابلت عمودي) */}
-          <button onClick={() => setMobileNavOpen(true)} aria-label="القائمة"
-                  className="grid h-9 w-9 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol md:hidden">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                 strokeLinecap="round" className="h-[18px] w-[18px]">
-              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-          <div className="flex-1" />
+      <div className="flex min-w-0 flex-1 flex-col min-h-screen p-3 md:p-4">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-ink2 elev-1">
+          <header className="flex h-14 shrink-0 items-center gap-2.5 border-b border-line px-5">
+            {/* زر القائمة — الشاشات الضيقة بس (موبايل/تابلت عمودي) */}
+            <button onClick={() => setMobileNavOpen(true)} aria-label="القائمة"
+              className="grid h-9 w-9 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol md:hidden">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                strokeLinecap="round" className="h-[18px] w-[18px]">
+                <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <div className="flex-1" />
 
-          {/* ع / EN — يظهر لكل الموظفين في كل الأقسام */}
-          <button onClick={() => setLang(lang === "ar" ? "en" : "ar")}
-                  title={lang === "ar" ? "Switch to English" : "التبديل للعربية"}
-                  className="grid h-9 min-w-9 place-items-center rounded-lg border border-line px-2 text-[12px] font-black text-text-dim transition hover:border-petrol hover:text-petrol">
-            {lang === "ar" ? "EN" : "ع"}
-          </button>
+            {/* ع / EN — يظهر لكل الموظفين في كل الأقسام */}
+            <button onClick={() => setLang(lang === "ar" ? "en" : "ar")}
+              title={lang === "ar" ? "Switch to English" : "التبديل للعربية"}
+              className="grid h-9 min-w-9 place-items-center rounded-lg border border-line px-2 text-[12px] font-black text-text-dim transition hover:border-petrol hover:text-petrol">
+              {lang === "ar" ? "EN" : "ع"}
+            </button>
 
-          {/* الوضع الليلي */}
-          <button onClick={toggleTheme} title={dark ? t("top.light") : t("top.dark")}
-                  className="grid h-9 w-9 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-                 strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]">
-              {dark
-                ? <><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></>
-                : <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/>}
-            </svg>
-          </button>
+            {/* الوضع الليلي */}
+            <button onClick={toggleTheme} title={dark ? t("top.light") : t("top.dark")}
+              className="grid h-9 w-9 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+                strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]">
+                {dark
+                  ? <><circle cx="12" cy="12" r="4.5" /><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>
+                  : <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z" />}
+              </svg>
+            </button>
 
-          <div className="mx-1 h-6 w-px bg-line" />
+            <div className="mx-1 h-6 w-px bg-line" />
 
-          <div className="text-[12.5px] text-text-dim">
-            <span className="font-bold text-text">{user?.fullName}</span>
-            <span className="mx-1.5">·</span>
-            {user?.role === "admin" ? (lang === "ar" ? "مدير النظام" : "Administrator") : (lang === "ar" ? "موظف" : "Employee")}
-          </div>
-          <div className="grid h-9 w-9 place-items-center rounded-full bg-petrol text-[13px] font-black text-white">
-            {user?.fullName?.trim().charAt(0) || "؟"}
-          </div>
-          <button onClick={logout}
-            className="rounded-lg border border-line px-3 py-1.5 text-[12px] font-bold text-text-dim hover:border-ember hover:text-ember">
-            {t("top.logout")}
-          </button>
-        </header>
-        <main className="min-w-0 flex-1 p-6">{children}</main>
+            <div className="text-[12.5px] text-text-dim">
+              <span className="font-bold text-text">{user?.fullName}</span>
+              <span className="mx-1.5">·</span>
+              {user?.role === "admin" ? (lang === "ar" ? "مدير النظام" : "Administrator") : (lang === "ar" ? "موظف" : "Employee")}
+            </div>
+            <div className="grid h-9 w-9 place-items-center rounded-full bg-petrol text-[13px] font-black text-white">
+              {user?.fullName?.trim().charAt(0) || "؟"}
+            </div>
+            <button onClick={logout}
+              className="rounded-lg border border-line px-3 py-1.5 text-[12px] font-bold text-text-dim hover:border-ember hover:text-ember">
+              {t("top.logout")}
+            </button>
+          </header>
+          <main className="min-w-0 flex-1 p-6">{children}</main>
+        </div>
       </div>
     </div>
   );

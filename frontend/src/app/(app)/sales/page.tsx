@@ -904,7 +904,7 @@ export default function SalesPage() {
 
                 {/* شريط المربعات — تمرير أفقي ناعم */}
                 <div ref={catStripRef} dir="rtl"
-                     className="scrollbar-none min-w-0 flex-1 overflow-x-auto scroll-smooth">
+                     className="no-scrollbar min-w-0 flex-1 overflow-x-auto scroll-smooth">
                   <div className="flex w-max gap-2 py-0.5">
                     {[
                       { key: "__all__", label: "الكل", icon: "apps" },

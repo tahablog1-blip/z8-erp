@@ -354,7 +354,7 @@ export default function DashboardPage() {
 
       {/* ══════════ شريط التيكر — أسلوب شاشات البورصة ══════════ */}
       {dash && (
-        <div className="scrollbar-none flex items-stretch gap-0 overflow-x-auto rounded-card bg-[#0F172A] px-1 py-2.5 shadow-panel">
+        <div className="no-scrollbar flex items-stretch gap-0 overflow-x-auto rounded-card bg-[#0F172A] px-1 py-2.5 shadow-panel">
           {[
             { l: "مبيعات اليوم", v: `${money(dash.today.total)}`, d: <Delta curr={dash.today.total} prev={yesterdayTotal} /> },
             { l: "فواتير اليوم", v: `${dash.today.count}`, d: null },
