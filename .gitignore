@@ -68,3 +68,11 @@ backend/storage/gate_snapshots/
 *.bak
 *.bak-*
 *~
+
+.env
+.env.*
+node_modules/
+.next/
+*.sql
+*.dump
+*.bak

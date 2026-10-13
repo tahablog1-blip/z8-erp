@@ -1,6 +1,8 @@
 "use client";
 // شاشة العملاء — سجل العملاء (أفراد/شركات) + أسطول سياراتهم + كشف الحساب
 import { useEffect, useState } from "react";
+import { Phone, MessageCircle, Search, X, RotateCcw } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { printReport, tableHTML, kpisHTML } from "@/lib/print";
 import { useAuth } from "@/lib/auth";
@@ -30,6 +32,8 @@ export default function CustomersPage() {
   const canDelete = hasPerm("customers.delete");
   const canStatement = hasPerm("customers.view_statement");
   const canPay = hasPerm("customers.record_payment");
+  const router = useRouter();
+  const [view, setView] = useState<"cards" | "table">("cards");
 
   const [rows, setRows] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -229,7 +233,17 @@ export default function CustomersPage() {
 
       <ErrorNote msg={pageErr} />
 
-      <Card>
+      <>
+        <div className="flex justify-end">
+          <Button variant="ghost" onClick={() => setView(view === "cards" ? "table" : "cards")}>
+            {view === "cards" ? "عرض جدول" : "عرض كروت"}
+          </Button>
+        </div>
+        {view === "cards" ? (
+          <CustomerCardsV2 rows={rows} loading={loading} onOpen={(c) => router.push(`/customers/${c.id}`)}
+                         onCreate={canCreate ? openCreate : undefined} />
+        ) : (
+          <Card>
         <DataTable
           columns={columns}
           rows={rows}
@@ -240,6 +254,8 @@ export default function CustomersPage() {
           toolbar={canCreate && <Button onClick={openCreate}>+ عميل جديد</Button>}
         />
       </Card>
+        )}
+      </>
 
       {/* ══════════ إنشاء / تعديل عميل ══════════ */}
       <Modal open={!!modal} size="lg" onClose={() => setModal(null)}
@@ -498,6 +514,133 @@ export default function CustomersPage() {
           </div>
         )}
       </Modal>
+    </div>
+  );
+}
+
+
+// ── عرض الكروت (النسخة 2) ──
+function CustomerCardsV2({ rows, loading, onOpen, onCreate }: {
+  rows: Customer[]; loading: boolean; onOpen: (c: Customer) => void; onCreate?: () => void;
+}) {
+  const [q, setQ] = useState("");
+  const [dq, setDq] = useState("");
+  const [flt, setFlt] = useState<"all" | "debt" | "clear" | "cars">("all");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDq(q), 250);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  const wa = (p: string) => {
+    const d = p.replace(/\D/g, "");
+    if (d.length < 9) return null;
+    return "https://wa.me/" + (d.startsWith("0") ? "966" + d.slice(1) : d);
+  };
+  const ql = dq.trim().toLowerCase();
+  const shown = rows.filter((c) =>
+    (!ql || (c.name || "").toLowerCase().includes(ql) || (c.phone || "").includes(ql) || (c.vat_number || "").includes(ql)) &&
+    (flt === "all" ||
+      (flt === "debt" && (c.balance ?? 0) > 0) ||
+      (flt === "clear" && (c.balance ?? 0) <= 0) ||
+      (flt === "cars" && (c.vehicle_count ?? 0) > 0)));
+  const isNew = (c: Customer) => !!c.created_at && Date.now() - new Date(c.created_at).getTime() < 30 * 864e5;
+  const active = flt !== "all" || q !== "";
+  const reset = () => { setQ(""); setDq(""); setFlt("all"); };
+  const filters = [["all", "الكل"], ["debt", "عليه مستحق"], ["clear", "بدون مديونية"], ["cars", "له سيارات"]] as const;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[240px] flex-1">
+          <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-dim" aria-hidden="true" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} aria-label="بحث في العملاء"
+                 placeholder="ابحث باسم العميل أو الجوال أو الرقم الضريبي..."
+                 className="w-full rounded-xl border border-line bg-ink-2 py-2.5 pr-9 pl-9 text-[13px] text-text placeholder:text-text-dim/60 focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15" />
+          {q && (
+            <button onClick={() => { setQ(""); setDq(""); }} aria-label="مسح البحث"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-text-dim hover:bg-ink-3">
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
+        </div>
+        {onCreate && <Button onClick={onCreate}>+ عميل جديد</Button>}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {filters.map(([k, l]) => (
+          <Button key={k} size="sm" variant={flt === k ? "primary" : "ghost"} onClick={() => setFlt(k)}>{l}</Button>
+        ))}
+        {active && (
+          <Button size="sm" variant="tool" onClick={reset}>
+            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> إعادة تعيين الفلاتر
+          </Button>
+        )}
+        <span className="tnum mr-auto text-[12px] text-text-dim">{shown.length} من {rows.length}</span>
+      </div>
+
+      {loading ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-[190px] animate-pulse rounded-card border border-line bg-ink-3" />
+          ))}
+        </div>
+      ) : shown.length === 0 ? (
+        <div className="rounded-card border border-line bg-ink-2 p-10 text-center">
+          <p className="text-[14px] font-bold">{rows.length === 0 ? "لا يوجد عملاء لعرضهم حاليًا" : "لم نعثر على عميل مطابق لبحثك"}</p>
+          {rows.length > 0 && active && <div className="mt-3"><Button variant="ghost" onClick={reset}>مسح البحث والفلاتر</Button></div>}
+          {rows.length === 0 && onCreate && <div className="mt-3"><Button onClick={onCreate}>إضافة عميل جديد</Button></div>}
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {shown.map((c) => {
+            const bal = c.balance ?? 0;
+            const link = c.phone ? wa(c.phone) : null;
+            return (
+              <div key={c.id} onClick={() => onOpen(c)}
+                   className="cursor-pointer rounded-card border border-line bg-ink-2 p-4 shadow-card transition hover:border-petrol hover:shadow-panel">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="truncate text-[14px] font-black">{c.name}</div>
+                    <div dir="ltr" className="tnum mt-0.5 text-right text-[12px] text-text-dim">{c.phone || "—"}</div>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <Badge tone="neutral">{c.customer_type === "company" ? "شركة" : "فرد"}</Badge>
+                    {isNew(c) && <Badge tone="good">جديد</Badge>}
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+                  <div className="rounded-lg bg-ink-3 p-2">
+                    <div className="text-[11px] text-text-dim">السيارات</div>
+                    <div className="tnum font-black">{c.vehicle_count ?? 0}</div>
+                  </div>
+                  <div className="rounded-lg bg-ink-3 p-2">
+                    <div className="text-[11px] text-text-dim">الرصيد الآجل</div>
+                    <div className={`tnum font-black ${bal > 0 ? "text-ember" : "text-text"}`}>
+                      {money(bal)}{bal > 0 && <span className="mr-1 text-[10.5px] font-bold">مستحق</span>}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <Button onClick={() => onOpen(c)}>عرض التفاصيل</Button>
+                  {link && (
+                    <a href={link} target="_blank" rel="noreferrer" aria-label={`واتساب ${c.name}`}
+                       className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol">
+                      <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                    </a>
+                  )}
+                  {c.phone && (
+                    <a href={`tel:${c.phone}`} aria-label={`اتصال بـ ${c.name}`}
+                       className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol">
+                      <Phone className="h-4 w-4" aria-hidden="true" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

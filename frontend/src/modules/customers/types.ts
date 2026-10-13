@@ -16,6 +16,7 @@ export type Customer = {
   additional_no: string | null;
   balance: number;
   vehicle_count: number;
+  created_at?: string | null;
 };
 
 export type Vehicle = {

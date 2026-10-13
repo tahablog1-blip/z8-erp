@@ -1,0 +1,294 @@
+"use client";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { Badge, Button, Card, ErrorNote } from "@/components/ui";
+import { Customer, Vehicle, Statement, money } from "@/modules/customers/types";
+
+type Invoice = {
+  id: string; invoice_no: string; issued_at: string; total_inc: number;
+  paid_total: number; credit_total: number; is_returned: boolean;
+};
+type Tab = "info" | "invoices" | "vehicles" | "statement" | "stats";
+
+const VIP_THRESHOLD = 10000;
+
+const dateFmt = (s: string) =>
+  new Date(s).toLocaleDateString("ar-SA-u-nu-latn", { year: "numeric", month: "2-digit", day: "2-digit" });
+
+const waLink = (phone: string) => {
+  const d = phone.replace(/\D/g, "");
+  return "https://wa.me/" + (d.startsWith("0") ? "966" + d.slice(1) : d);
+};
+
+function invStatus(i: Invoice): { label: string; tone: "good" | "warn" | "info" | "neutral" } {
+  if (i.is_returned) return { label: "مرتجعة", tone: "info" };
+  if (i.credit_total > 0) return i.paid_total > 0 ? { label: "جزئية", tone: "warn" } : { label: "آجلة", tone: "warn" };
+  return { label: "مدفوعة", tone: "good" };
+}
+
+export default function CustomerDetailPage() {
+  const params = useParams<{ id: string }>();
+  const id = params.id;
+  const router = useRouter();
+
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [statement, setStatement] = useState<Statement | null>(null);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [tab, setTab] = useState<Tab>("info");
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+  const [invErr, setInvErr] = useState("");
+  const [stErr, setStErr] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const all = await api<Customer[]>("/customers");
+        const c = all.find((x) => x.id === id) ?? null;
+        if (!alive) return;
+        if (!c) { setErr("العميل غير موجود"); setLoading(false); return; }
+        setCustomer(c);
+      } catch (e: any) { if (alive) { setErr(e.message); setLoading(false); } return; }
+      try { const v = await api<Vehicle[]>(`/customers/${id}/vehicles`); if (alive) setVehicles(v); } catch {}
+      try { const i = await api<Invoice[]>(`/invoices?customerId=${id}&limit=500`); if (alive) setInvoices(i); }
+      catch (e: any) { if (alive) setInvErr(e.message); }
+      try { const s = await api<Statement>(`/customers/${id}/statement`); if (alive) setStatement(s); }
+      catch (e: any) { if (alive) setStErr(e.message); }
+      if (alive) setLoading(false);
+    })();
+    return () => { alive = false; };
+  }, [id]);
+
+  const valid = useMemo(() => invoices.filter((i) => !i.is_returned), [invoices]);
+  const total = valid.reduce((s, i) => s + i.total_inc, 0);
+  const avg = valid.length ? total / valid.length : 0;
+  const last = valid.length ? valid.map((i) => i.issued_at).sort().slice(-1)[0] : null;
+
+  const months = useMemo(() => {
+    const m: Record<string, number> = {};
+    valid.forEach((i) => { const k = i.issued_at.slice(0, 7); m[k] = (m[k] || 0) + i.total_inc; });
+    return Object.entries(m).sort(([a], [b]) => a.localeCompare(b)).slice(-6);
+  }, [valid]);
+  const maxMonth = Math.max(1, ...months.map(([, v]) => v));
+
+  if (loading) return <div className="p-6 text-text-dim">جارٍ التحميل...</div>;
+  if (!customer) return (
+    <div className="space-y-3 p-2">
+      <ErrorNote msg={err} />
+      <Button variant="ghost" onClick={() => router.push("/customers")}>← رجوع للعملاء</Button>
+    </div>
+  );
+
+  const balance = statement?.balance ?? customer.balance ?? 0;
+  const tier = balance > 0 ? { label: "مدين", tone: "warn" as const }
+    : total >= VIP_THRESHOLD ? { label: "VIP", tone: "good" as const }
+    : { label: "منتظم", tone: "neutral" as const };
+
+  const tabs: [Tab, string][] = [
+    ["info", "البيانات"], ["invoices", `الفواتير (${invoices.length})`],
+    ["vehicles", `السيارات (${vehicles.length})`], ["statement", "كشف الحساب"], ["stats", "الإحصائيات"],
+  ];
+  const row = (label: string, value?: string | null) => (
+    <div className="flex justify-between border-b border-line/60 py-2 text-[13px]">
+      <span className="text-text-dim">{label}</span><span className="font-bold">{value || "—"}</span>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" onClick={() => router.push("/customers")}>← العملاء</Button>
+            <div>
+              <h1 className="text-[18px] font-black">{customer.name}</h1>
+              <div className="mt-1 flex items-center gap-2 text-[12px] text-text-dim">
+                <Badge tone="info">{customer.customer_type === "company" ? "شركة" : "فرد"}</Badge>
+                <Badge tone={tier.tone}>{tier.label}</Badge>
+                <span className="tnum">{customer.phone || ""}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-center">
+              <div className="text-[11px] text-text-dim">الرصيد الآجل</div>
+              <div className={`tnum text-[18px] font-black ${balance > 0 ? "text-ember" : "text-emerald"}`}>{money(balance)} ر.س</div>
+            </div>
+            {customer.phone && (
+              <>
+                <a href={`tel:${customer.phone}`}><Button variant="ghost">📞 اتصال</Button></a>
+                <a href={waLink(customer.phone)} target="_blank" rel="noreferrer"><Button variant="ghost">💬 واتساب</Button></a>
+              </>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      <div className="flex flex-wrap gap-2">
+        {tabs.map(([k, l]) => (
+          <button key={k} onClick={() => setTab(k)}
+                  className={`rounded-lg px-3 py-1.5 text-[12.5px] font-bold ${tab === k ? "bg-ink-3 text-text" : "text-text-dim hover:bg-ink-3"}`}>
+            {l}
+          </button>
+        ))}
+      </div>
+
+      <Card>
+        <div className="p-4">
+          {tab === "info" && (
+            <div className="grid gap-x-8 sm:grid-cols-2">
+              {row("الاسم", customer.name)}
+              {row("الجوال", customer.phone)}
+              {row("البريد", customer.email)}
+              {row("الرقم الضريبي", customer.vat_number)}
+              {row("السجل التجاري", customer.cr_number)}
+              {row("المدينة", customer.city)}
+              {row("الحي", customer.district)}
+              {row("الشارع", customer.street)}
+              {row("رقم المبنى", customer.building_no)}
+              {row("الرمز البريدي", customer.postal_code)}
+              {row("الرقم الإضافي", customer.additional_no)}
+              {row("تاريخ التسجيل", customer.created_at ? dateFmt(customer.created_at) : null)}
+            </div>
+          )}
+
+          {tab === "invoices" && (
+            <div className="space-y-2">
+              <ErrorNote msg={invErr} />
+              <div className="overflow-x-auto rounded-lg border border-line">
+                <table className="w-full border-collapse text-[12.5px]">
+                  <thead>
+                    <tr className="bg-ink-3 text-[11.5px] font-extrabold text-text-dim">
+                      <th className="px-3 py-2 text-right">رقم الفاتورة</th>
+                      <th className="px-3 py-2 text-right">التاريخ</th>
+                      <th className="px-3 py-2 text-right">الحالة</th>
+                      <th className="px-3 py-2 text-right">الإجمالي</th>
+                      <th className="px-3 py-2 text-right">المدفوع</th>
+                      <th className="px-3 py-2 text-right">الآجل</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoices.length === 0 ? (
+                      <tr><td colSpan={6} className="px-3 py-5 text-center text-text-dim">لا توجد فواتير</td></tr>
+                    ) : invoices.map((i) => {
+                      const s = invStatus(i);
+                      return (
+                        <tr key={i.id} className="border-t border-line/70">
+                          <td className="px-3 py-2 tnum font-bold">{i.invoice_no}</td>
+                          <td className="px-3 py-2 text-text-dim">{dateFmt(i.issued_at)}</td>
+                          <td className="px-3 py-2"><Badge tone={s.tone}>{s.label}</Badge></td>
+                          <td className="px-3 py-2 tnum font-bold">{money(i.total_inc)}</td>
+                          <td className="px-3 py-2 tnum">{money(i.paid_total)}</td>
+                          <td className={`px-3 py-2 tnum ${i.credit_total > 0 ? "font-bold text-ember" : ""}`}>{money(i.credit_total)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {tab === "vehicles" && (
+            <div className="overflow-x-auto rounded-lg border border-line">
+              <table className="w-full border-collapse text-[12.5px]">
+                <thead>
+                  <tr className="bg-ink-3 text-[11.5px] font-extrabold text-text-dim">
+                    <th className="px-3 py-2 text-right">اللوحة</th>
+                    <th className="px-3 py-2 text-right">الموديل</th>
+                    <th className="px-3 py-2 text-right">اللون</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vehicles.length === 0 ? (
+                    <tr><td colSpan={3} className="px-3 py-5 text-center text-text-dim">لا توجد سيارات مسجّلة</td></tr>
+                  ) : vehicles.map((v) => (
+                    <tr key={v.id} className="border-t border-line/70">
+                      <td className="px-3 py-2 tnum font-bold">{v.plate}</td>
+                      <td className="px-3 py-2">{[v.brand, v.make_model, v.model_year].filter(Boolean).join(" ") || "—"}</td>
+                      <td className="px-3 py-2">{v.color || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {tab === "statement" && (
+            <div className="space-y-2">
+              <ErrorNote msg={stErr} />
+              {statement && (
+                <div className="max-h-96 overflow-y-auto rounded-lg border border-line">
+                  <table className="w-full border-collapse text-[12px]">
+                    <thead>
+                      <tr className="bg-ink-3 text-[11px] font-extrabold text-text-dim">
+                        <th className="px-3 py-2 text-right">التاريخ</th>
+                        <th className="px-3 py-2 text-right">النوع</th>
+                        <th className="px-3 py-2 text-right">المرجع</th>
+                        <th className="px-3 py-2 text-right">المبلغ</th>
+                        <th className="px-3 py-2 text-right">الرصيد</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {statement.entries.length === 0 ? (
+                        <tr><td colSpan={5} className="px-3 py-5 text-center text-text-dim">لا توجد حركات بعد</td></tr>
+                      ) : statement.entries.map((e) => (
+                        <tr key={e.id} className="border-t border-line/70">
+                          <td className="px-3 py-2 text-text-dim">{dateFmt(e.created_at)}</td>
+                          <td className="px-3 py-2">
+                            {e.entry_type === "invoice" ? <Badge tone="warn">فاتورة آجل</Badge>
+                              : e.entry_type === "payment" ? <Badge tone="good">سداد</Badge>
+                              : <Badge tone="info">مرتجع</Badge>}
+                          </td>
+                          <td className="px-3 py-2 tnum">{e.invoice_no || "—"}</td>
+                          <td className={`px-3 py-2 tnum font-bold ${e.amount > 0 ? "text-ember" : "text-emerald"}`}>{e.amount > 0 ? "+" : ""}{money(e.amount)}</td>
+                          <td className="px-3 py-2 tnum font-bold">{money(e.running_balance)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <p className="text-[11.5px] text-text-dim">لتسجيل سداد أو طباعة الكشف: من قائمة العملاء بدّل لعرض الجدول ثم «عرض».</p>
+            </div>
+          )}
+
+          {tab === "stats" && (
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  ["إجمالي المشتريات", money(total) + " ر.س"],
+                  ["متوسط الفاتورة", money(avg) + " ر.س"],
+                  ["عدد الزيارات", String(valid.length)],
+                  ["آخر زيارة", last ? dateFmt(last) : "—"],
+                ].map(([l, v]) => (
+                  <div key={l} className="rounded-lg bg-ink-3 p-3 text-center">
+                    <div className="text-[11.5px] text-text-dim">{l}</div>
+                    <div className="tnum mt-1 text-[16px] font-black">{v}</div>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <p className="mb-2 text-[12.5px] font-bold">المشتريات الشهرية (آخر 6 أشهر)</p>
+                {months.length === 0 ? <p className="text-text-dim">لا بيانات</p> : (
+                  <div className="flex h-40 items-end gap-3">
+                    {months.map(([m, v]) => (
+                      <div key={m} className="flex flex-1 flex-col items-center justify-end gap-1">
+                        <span className="tnum text-[11px]">{money(v)}</span>
+                        <div className="w-full rounded-t bg-emerald" style={{ height: `${Math.max(4, (v / maxMonth) * 100)}px` }} />
+                        <span className="tnum text-[11px] text-text-dim">{m}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}

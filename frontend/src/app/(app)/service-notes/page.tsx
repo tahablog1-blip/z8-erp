@@ -1,4 +1,5 @@
 "use client";
+import { FileText, Sparkles, RefreshCw, CheckCircle2, XCircle, Wrench, Gavel } from "lucide-react";
 // ═══ مركز ملاحظات الخدمة — قسم واحد منظم حول العميل:
 //     كل عميل (سيارة) = بطاقة فيها ملاحظاته + زر دردشة بشارة غير المقروء.
 //     المحادثات محفوظة بالكامل في قاعدة البيانات — لا تُحذف أبداً.
@@ -88,6 +89,7 @@ export default function ServiceNotesPage() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [type, setType] = useState("");
+  const stats: Record<string, number> = (counts as unknown as Record<string, number> | null) ?? { total: 0, new: 0, followUp: 0, closed: 0, outOfStock: 0, technical: 0, managementDecision: 0 };
 
   const load = useCallback(async () => {
     setErr("");
@@ -151,15 +153,64 @@ export default function ServiceNotesPage() {
 
       {/* ═══ بطاقات الإحصائيات ═══ */}
       {counts && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-          <StatCard label="إجمالي الملاحظات" value={counts.total} />
-          <StatCard label="جديدة" value={counts.new} accent="#DC2626" />
-          <StatCard label="تحتاج متابعة" value={counts.follow_up} accent="#D97706" />
-          <StatCard label="مغلقة" value={counts.closed} />
-          <StatCard label="منتجات غير متوفرة" value={counts.out_of_stock} accent="#DC2626" />
-          <StatCard label="ملاحظات فنية" value={counts.technical} accent="#2563EB" />
-          <StatCard label="تحتاج قرار الإدارة" value={counts.needs_management} accent="#D97706" />
-        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+  <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden relative transition hover:shadow-md">
+    <div className="h-1.5 bg-slate-700 w-full"></div>
+    <div className="p-4 text-center">
+      <div className="flex justify-center items-center mb-1 text-slate-700"><FileText className="w-5 h-5 ml-1" /></div>
+      <div className="text-2xl font-bold text-slate-800">{stats.total}</div>
+      <div className="text-xs text-slate-500 mt-1">إجمالي الملاحظات</div>
+    </div>
+  </div>
+  <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden relative transition hover:shadow-md">
+    <div className="h-1.5 bg-purple-600 w-full"></div>
+    <div className="p-4 text-center">
+      <div className="flex justify-center items-center mb-1 text-purple-600"><Sparkles className="w-5 h-5 ml-1" /></div>
+      <div className="text-2xl font-bold text-purple-600">{stats.new}</div>
+      <div className="text-xs text-slate-500 mt-1">جديدة</div>
+    </div>
+  </div>
+  <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden relative transition hover:shadow-md">
+    <div className="h-1.5 bg-amber-500 w-full"></div>
+    <div className="p-4 text-center">
+      <div className="flex justify-center items-center mb-1 text-amber-500"><RefreshCw className="w-5 h-5 ml-1" /></div>
+      <div className="text-2xl font-bold text-amber-600">{stats.followUp}</div>
+      <div className="text-xs text-slate-500 mt-1">تحتاج متابعة</div>
+    </div>
+  </div>
+  <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden relative transition hover:shadow-md">
+    <div className="h-1.5 bg-emerald-600 w-full"></div>
+    <div className="p-4 text-center">
+      <div className="flex justify-center items-center mb-1 text-emerald-600"><CheckCircle2 className="w-5 h-5 ml-1" /></div>
+      <div className="text-2xl font-bold text-emerald-600">{stats.closed}</div>
+      <div className="text-xs text-slate-500 mt-1">مغلقة</div>
+    </div>
+  </div>
+  <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden relative transition hover:shadow-md">
+    <div className="h-1.5 bg-rose-600 w-full"></div>
+    <div className="p-4 text-center">
+      <div className="flex justify-center items-center mb-1 text-rose-600"><XCircle className="w-5 h-5 ml-1" /></div>
+      <div className="text-2xl font-bold text-rose-600">{stats.outOfStock}</div>
+      <div className="text-xs text-slate-500 mt-1">منتجات غير متوفرة</div>
+    </div>
+  </div>
+  <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden relative transition hover:shadow-md">
+    <div className="h-1.5 bg-blue-600 w-full"></div>
+    <div className="p-4 text-center">
+      <div className="flex justify-center items-center mb-1 text-blue-600"><Wrench className="w-5 h-5 ml-1" /></div>
+      <div className="text-2xl font-bold text-blue-600">{stats.technical}</div>
+      <div className="text-xs text-slate-500 mt-1">ملاحظات فنية</div>
+    </div>
+  </div>
+  <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden relative transition hover:shadow-md">
+    <div className="h-1.5 bg-amber-600 w-full"></div>
+    <div className="p-4 text-center">
+      <div className="flex justify-center items-center mb-1 text-amber-600"><Gavel className="w-5 h-5 ml-1" /></div>
+      <div className="text-2xl font-bold text-amber-700">{stats.managementDecision}</div>
+      <div className="text-xs text-slate-500 mt-1">تحتاج قرار الإدارة</div>
+    </div>
+  </div>
+</div>
       )}
 
       {/* ═══ البحث (+ فلاتر الجدول) ═══ */}
