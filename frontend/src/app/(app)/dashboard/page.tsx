@@ -5,13 +5,14 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useLang } from "@/lib/i18n";
 import { Button, Card, ErrorNote, Input } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 import { money } from "@/modules/invoices/types";
 
 type Dash = {
-  today: { total: number; count: number ; profit: number };
-  month: { total: number; count: number; vat: number ; profit: number };
+  today: { total: number; count: number; profit: number };
+  month: { total: number; count: number; vat: number; profit: number };
   cars: { queued: number; inService: number; doneToday?: number };
   lowStock: number;
   creditOutstanding: number;
@@ -36,7 +37,8 @@ const compact = (v: number) =>
 
 /* Δ% — سهم صاعد/هابط بأسلوب شاشات الأسهم */
 function Delta({ curr, prev }: { curr: number; prev: number }) {
-  if (!prev) return <span className="tnum text-[10.5px] font-bold text-text-dim">جديد</span>;
+  const { t } = useLang();
+  if (!prev) return <span className="tnum text-[10.5px] font-bold text-text-dim">{t("dash.new", "جديد")}</span>;
   const pct = Math.round(((curr - prev) / prev) * 100);
   const up = pct >= 0;
   return (
@@ -79,7 +81,8 @@ function Spark({ data, color = "var(--petrol)", id }: { data: number[]; color?: 
 
 /* ── الرسم الرئيسي الهندسي: محاور + شبكة + مساحة + متوسط متحرك 7 أيام + تعليق القمة ── */
 function EngineChart({ series }: { series: Dash["series"] }) {
-  if (!series.length) return <p className="py-10 text-center text-[12px] text-text-dim">لا توجد بيانات بعد</p>;
+  const { t } = useLang();
+  if (!series.length) return <p className="py-10 text-center text-[12px] text-text-dim">{t("dash.noData", "لا توجد بيانات بعد")}</p>;
   const W = 640, H = 220, L = 46, R = 10, T = 14, B = 24;
   const iw = W - L - R, ih = H - T - B;
   const max = Math.max(...series.map((s) => s.total), 1) * 1.08;
@@ -109,8 +112,8 @@ function EngineChart({ series }: { series: Dash["series"] }) {
   const tipX = hov === null ? 0 : Math.max(L, Math.min(X(hov) - tipW / 2, W - R - tipW));
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full cursor-crosshair" role="img"
-         aria-label="الإيراد اليومي بمحاور"
-         onMouseMove={onMove} onMouseLeave={() => setHov(null)}>
+      aria-label="الإيراد اليومي بمحاور"
+      onMouseMove={onMove} onMouseLeave={() => setHov(null)}>
       <defs>
         <linearGradient id="eng-area" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="var(--petrol)" stopOpacity="0.20" />
@@ -121,7 +124,7 @@ function EngineChart({ series }: { series: Dash["series"] }) {
       {grid.map((g) => (
         <g key={g}>
           <line x1={L} x2={W - R} y1={Y(max * g)} y2={Y(max * g)}
-                stroke="var(--line)" strokeWidth="1" strokeDasharray={g === 1 ? "" : "3 4"} />
+            stroke="var(--line)" strokeWidth="1" strokeDasharray={g === 1 ? "" : "3 4"} />
           <text x={L - 6} y={Y(max * g) + 3} textAnchor="end" fontSize="8.5" fill="var(--text-dim)" className="tnum">
             {compact(max * g)}
           </text>
@@ -137,7 +140,7 @@ function EngineChart({ series }: { series: Dash["series"] }) {
       {pts.map(([x, y], i) => (
         <g key={i}>
           <circle cx={x} cy={y} r="2.6" fill="var(--ink2)" stroke="var(--petrol)" strokeWidth="1.8">
-            <title>{`${series[i].date} — ${money(series[i].total)} ر.س (${series[i].count} فاتورة)`}</title>
+            <title>{`${series[i].date} — ${money(series[i].total)} ${t("dash.sar", " ر.س")} (${series[i].count} فاتورة)`}</title>
           </circle>
           {i % 2 === 0 && (
             <text x={x} y={H - 8} textAnchor="middle" fontSize="8" fill="var(--text-dim)" className="tnum">
@@ -166,25 +169,25 @@ function EngineChart({ series }: { series: Dash["series"] }) {
       {hov !== null && (
         <g pointerEvents="none">
           <line x1={X(hov)} x2={X(hov)} y1={T} y2={T + ih}
-                stroke="var(--petrol)" strokeWidth="1.2" strokeDasharray="4 3" opacity="0.55" />
+            stroke="var(--petrol)" strokeWidth="1.2" strokeDasharray="4 3" opacity="0.55" />
           <circle cx={X(hov)} cy={Y(series[hov].total)} r="5"
-                  fill="var(--petrol)" stroke="var(--ink2)" strokeWidth="2" />
+            fill="var(--petrol)" stroke="var(--ink2)" strokeWidth="2" />
           <circle cx={X(hov)} cy={Y(ma[hov])} r="3.5"
-                  fill="var(--brass)" stroke="var(--ink2)" strokeWidth="1.5" />
+            fill="var(--brass)" stroke="var(--ink2)" strokeWidth="1.5" />
           <g>
             <rect x={tipX} y={T + 2} width={tipW} height="40" rx="8"
-                  fill="var(--ink2)" stroke="var(--line)" strokeWidth="1"
-                  style={{ filter: "drop-shadow(0 2px 6px rgba(15,23,42,.18))" }} />
+              fill="var(--ink2)" stroke="var(--line)" strokeWidth="1"
+              style={{ filter: "drop-shadow(0 2px 6px rgba(15,23,42,.18))" }} />
             <text x={tipX + tipW / 2} y={T + 14} textAnchor="middle" fontSize="8.5"
-                  fill="var(--text-dim)" fontWeight="bold" className="tnum">
+              fill="var(--text-dim)" fontWeight="bold" className="tnum">
               {series[hov].date.slice(8)}/{series[hov].date.slice(5, 7)} — {series[hov].count} فاتورة
             </text>
             <text x={tipX + tipW / 2} y={T + 26} textAnchor="middle" fontSize="10.5"
-                  fill="var(--petrol)" fontWeight="900" className="tnum">
-              {money(series[hov].total)} ر.س
+              fill="var(--petrol)" fontWeight="900" className="tnum">
+              {money(series[hov].total)} {t("dash.sar", " ر.س")}
             </text>
             <text x={tipX + tipW / 2} y={T + 37} textAnchor="middle" fontSize="8"
-                  fill="var(--brass)" fontWeight="bold" className="tnum">
+              fill="var(--brass)" fontWeight="bold" className="tnum">
               متوسط 7ي: {money(ma[hov])}
             </text>
           </g>
@@ -203,7 +206,7 @@ function Gauge({ value, total, label }: { value: number; total: number; label: s
       <svg viewBox="0 0 120 70" className="w-40">
         <path d={`M14,64 A${R2},${R2} 0 0 1 106,64`} fill="none" stroke="var(--ink4)" strokeWidth="11" strokeLinecap="round" />
         <path d={`M14,64 A${R2},${R2} 0 0 1 106,64`} fill="none" stroke="var(--petrol)" strokeWidth="11" strokeLinecap="round"
-              strokeDasharray={`${pct * C} ${C}`} className="transition-all duration-700" />
+          strokeDasharray={`${pct * C} ${C}`} className="transition-all duration-700" />
         <text x="60" y="52" textAnchor="middle" fontSize="19" fontWeight="900" fill="var(--text)" className="tnum">
           {Math.round(pct * 100)}%
         </text>
@@ -217,7 +220,10 @@ function Gauge({ value, total, label }: { value: number; total: number; label: s
 /* ── دائرة طرق الدفع ── */
 function PayDonut({ methods }: { methods: Dash["payMethods"] }) {
   const total = methods.reduce((s, m) => s + m.total, 0);
-  if (!total) return <p className="py-6 text-center text-[12px] text-text-dim">لا توجد مدفوعات بعد</p>;
+  const { t } = useLang();
+  if (!total) return <p className="py-6 text-center text-[12px] text-text-dim">
+    {t("dash.noPayments", "لا توجد مدفوعات بعد")}
+  </p>;
   const R2 = 42, C = 2 * Math.PI * R2;
   let acc = 0;
   return (
@@ -227,8 +233,8 @@ function PayDonut({ methods }: { methods: Dash["payMethods"] }) {
           {methods.map((m) => {
             const frac = m.total / total, dash = frac * C, off = -acc * C; acc += frac;
             return <circle key={m.method} cx="55" cy="55" r={R2} fill="none" stroke={PAY_COLOR[m.method] || "#94A3B8"}
-                           strokeWidth="13" strokeDasharray={`${dash} ${C - dash}`} strokeDashoffset={off}
-                           className="transition-all duration-500" />;
+              strokeWidth="13" strokeDasharray={`${dash} ${C - dash}`} strokeDashoffset={off}
+              className="transition-all duration-500" />;
           })}
         </svg>
         <div className="absolute inset-0 grid place-items-center">
@@ -252,6 +258,7 @@ function PayDonut({ methods }: { methods: Dash["payMethods"] }) {
 
 export default function DashboardPage() {
   const { user, hasPerm } = useAuth();
+  const { t } = useLang();
   const canSeeShift = hasPerm("shifts.manage_own");
   const canSeeInvoices = hasPerm("invoices.view_today", "invoices.view_all");
 
@@ -266,9 +273,9 @@ export default function DashboardPage() {
     let stop = false;
     async function sync() {
       api<{ status: string }>("/health").then(() => !stop && setApiOk(true)).catch(() => !stop && setApiOk(false));
-      api<Dash>("/reports/dashboard").then((d) => { if (!stop) { setDash(d); setLastSync(new Date()); } }).catch(() => {});
-      if (canSeeShift) api<ShiftReport>("/shifts/current").then((r) => !stop && setShift(r)).catch(() => {});
-      if (canSeeInvoices) api<MiniInvoice[]>("/invoices?limit=7").then((r) => !stop && setRecent(r)).catch(() => {});
+      api<Dash>("/reports/dashboard").then((d) => { if (!stop) { setDash(d); setLastSync(new Date()); } }).catch(() => { });
+      if (canSeeShift) api<ShiftReport>("/shifts/current").then((r) => !stop && setShift(r)).catch(() => { });
+      if (canSeeInvoices) api<MiniInvoice[]>("/invoices?limit=7").then((r) => !stop && setRecent(r)).catch(() => { });
     }
     sync();
     const t = setInterval(sync, 15000);
@@ -296,7 +303,7 @@ export default function DashboardPage() {
   const [anomBusy, setAnomBusy] = useState(false);
   const canAi = hasPerm("reports.view");
   useEffect(() => {
-    if (canAi) api<{ brief: string }>("/reports/daily-brief").then((r) => setBrief(r.brief)).catch(() => {});
+    if (canAi) api<{ brief: string }>("/reports/daily-brief").then((r) => setBrief(r.brief)).catch(() => { });
   }, [canAi]);
 
   async function askAi() {
@@ -321,31 +328,37 @@ export default function DashboardPage() {
   }
 
   const dateAr = new Date().toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "long" });
+  console.log({
 
+    todaySales: t("dash.todaySales", "مبيعات اليوم"),
+    todayInvoices: t("dash.todayInvoices", "فواتير اليوم"),
+    avgInvoice: t("dash.avgInvoice", "متوسط الفاتورة"),
+  });
   return (
     <div className="space-y-4">
 
       {/* ══════════ رأس القيادة ══════════ */}
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="text-[21px] font-black">أهلاً {user?.fullName?.split(" ")[0] || "المدير"} 👋</h1>
-          <p className="text-[11.5px] font-bold text-text-dim">{dateAr} — لوحة القيادة الحية</p>
+          <h1 className="text-[21px] font-black"> {t("dash.welcome", "أهلاً")} {user?.fullName?.split(" ")[0] || t("dash.manager", "المدير")} 👋</h1>
+          <p className="text-[11.5px] font-bold text-text-dim">{dateAr} — {t("dash.liveDashboard", "لوحة القيادة الحية")}</p>
         </div>
         <div className="flex items-center gap-3">
           {canSeeShift && (shift ? (
             <Link href="/sales" className="flex items-center gap-2 rounded-xl border border-line bg-ink-2 px-3 py-1.5 text-[11.5px] font-bold shadow-card transition hover:border-petrol">
               <span className="h-2 w-2 animate-pulse rounded-full bg-emerald" />
-              وردية مفتوحة · <b className="tnum">{money(shift.sales.totalInc)}</b> ({shift.sales.invoiceCount})
+              {t("dash.openShift", "وردية مفتوحة")} —
+              <b className="tnum">{money(shift.sales.totalInc)}</b> ({shift.sales.invoiceCount})
             </Link>
           ) : (
             <Link href="/sales" className="rounded-xl bg-brass-soft px-3 py-1.5 text-[11.5px] font-black text-brass">
-              ⚠ افتح وردية ←
+              {t("dash.openShiftAction", "افتح وردية")} ←
             </Link>
           ))}
           {apiOk !== null && (
             <span className={`flex items-center gap-1.5 text-[11px] font-bold ${apiOk ? "text-emerald" : "text-ember"}`}>
               <span className={`h-2 w-2 animate-pulse rounded-full ${apiOk ? "bg-emerald" : "bg-ember"}`} />
-              {apiOk ? "متصل" : "منقطع"}
+              {apiOk ? t("dash.connected", "متصل") : t("dash.disconnected", "منقطع")}
               {lastSync && <span className="tnum text-text-dim">· {lastSync.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}</span>}
             </span>
           )}
@@ -356,14 +369,14 @@ export default function DashboardPage() {
       {dash && (
         <div className="no-scrollbar flex items-stretch gap-0 overflow-x-auto rounded-card bg-[#0F172A] px-1 py-2.5 shadow-panel">
           {[
-            { l: "مبيعات اليوم", v: `${money(dash.today.total)}`, d: <Delta curr={dash.today.total} prev={yesterdayTotal} /> },
-            { l: "فواتير اليوم", v: `${dash.today.count}`, d: null },
-            { l: "متوسط الفاتورة", v: money(avgInvoice), d: null },
-            { l: "أسبوع", v: compact(weekTotal), d: <Delta curr={weekTotal} prev={prevWeekTotal} /> },
-            { l: "الشهر", v: compact(dash.month.total), d: null },
-            { l: "ضريبة الشهر", v: compact(dash.month.vat), d: null },
-            { l: "آجل قائم", v: compact(dash.creditOutstanding), d: null, warn: dash.creditOutstanding > 0 },
-            { l: "نواقص مخزون", v: `${dash.lowStock}`, d: null, warn: dash.lowStock > 0 },
+            { l: t("dashboard.salesToday", "مبيعات اليوم"), v: `${money(dash.today.total)}`, d: <Delta curr={dash.today.total} prev={yesterdayTotal} /> },
+            { l: t("dashboard.invoicesToday", "فواتير اليوم"), v: `${dash.today.count}`, d: null },
+            { l: t("dash.avgInvoice", "متوسط الفاتورة"), v: money(avgInvoice), d: null },
+            { l: t("dash.week", "أسبوع"), v: compact(weekTotal), d: <Delta curr={weekTotal} prev={prevWeekTotal} /> },
+            { l: t("dash.month", "الشهر"), v: compact(dash.month.total), d: null },
+            { l: t("dash.monthVat", "ضريبة الشهر"), v: compact(dash.month.vat), d: null },
+            { l: t("dash.creditOutstanding", "آجل قائم"), v: compact(dash.creditOutstanding), d: null, warn: dash.creditOutstanding > 0 },
+            { l: t("dash.lowStock", "نواقص مخزون"), v: `${dash.lowStock}`, d: null, warn: dash.lowStock > 0 },
           ].map((t, i) => (
             <div key={i} className="flex min-w-fit items-center gap-2.5 border-l border-white/10 px-4 last:border-l-0">
               <span className="text-[10px] font-bold text-white/50">{t.l}</span>
@@ -377,16 +390,16 @@ export default function DashboardPage() {
       {/* ══════════ يحتاج انتباهك ══════════ */}
       {dash && (() => {
         const alerts: { icon: string; tone: string; text: string; href: string }[] = [];
-        if (dash.lowStock > 0) alerts.push({ icon: "warning", tone: "text-ember", text: `${dash.lowStock} صنف تحت الحد الأدنى`, href: "/inventory" });
-        if (dash.creditOutstanding > 0) alerts.push({ icon: "schedule", tone: "text-brass", text: `${money(dash.creditOutstanding)} آجل غير محصل`, href: "/sales/history" });
-        if (dash.cars.queued > 0) alerts.push({ icon: "directions_car", tone: "text-petrol", text: `${dash.cars.queued} سيارة في الطابور`, href: "/cars" });
-        if ((dash.newCustomers?.today ?? 0) > 0) alerts.push({ icon: "person_add", tone: "text-emerald", text: `${dash.newCustomers!.today} عميل جديد اليوم`, href: "/customers" });
+        if (dash.lowStock > 0) alerts.push({ icon: "warning", tone: "text-ember", text: `${dash.lowStock} ${t("dash.lowStock", "صنف تحت الحد الأدنى")}`, href: "/inventory" });
+        if (dash.creditOutstanding > 0) alerts.push({ icon: "schedule", tone: "text-brass", text: `${money(dash.creditOutstanding)} ${t("dash.creditOutstanding", "آجل غير محصل")}`, href: "/sales/history" });
+        if (dash.cars.queued > 0) alerts.push({ icon: "directions_car", tone: "text-petrol", text: `${dash.cars.queued} ${t("dash.carsQueued", "سيارة في الطابور")}`, href: "/cars" });
+        if ((dash.newCustomers?.today ?? 0) > 0) alerts.push({ icon: "person_add", tone: "text-emerald", text: `${dash.newCustomers!.today} ${t("dash.newCustomer", "عميل جديد اليوم")}`, href: "/customers" });
         if (!alerts.length) return null;
         return (
           <div className="flex flex-wrap gap-2">
             {alerts.map((a, i) => (
               <Link key={i} href={a.href}
-                    className="flex items-center gap-1.5 rounded-full border border-line bg-ink-2 px-3 py-1.5 text-[11.5px] font-bold shadow-card transition-all duration-200 hover:-translate-y-px hover:border-petrol">
+                className="flex items-center gap-1.5 rounded-full border border-line bg-ink-2 px-3 py-1.5 text-[11.5px] font-bold shadow-card transition-all duration-200 hover:-translate-y-px hover:border-petrol">
                 <MIcon name={a.icon} className={`!text-[15px] ${a.tone}`} /> {a.text}
               </Link>
             ))}
@@ -398,14 +411,14 @@ export default function DashboardPage() {
       {dash ? (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {[
-            { l: "مبيعات اليوم", v: money(dash.today.total), unit: "ر.س", d: <Delta curr={dash.today.total} prev={yesterdayTotal} />, spark: revSpark, color: "var(--petrol)", id: "sp1" },
-            { l: "ربح اليوم (قبل المصاريف)", v: money(dash.today.profit ?? 0), unit: "ر.س", d: <></>, spark: [] as number[], color: "var(--emerald)", id: "spProfit" },
-            { l: "فواتير اليوم", v: String(dash.today.count), unit: "فاتورة", d: <Delta curr={dash.today.count} prev={dash.series.filter((s) => s.date !== todayStr).slice(-1)[0]?.count ?? 0} />, spark: cntSpark, color: "#8B5CF6", id: "sp2" },
-            { l: "متوسط الفاتورة", v: money(avgInvoice), unit: "ر.س", d: null, spark: revSpark.map((v, i) => (cntSpark[i] ? v / cntSpark[i] : 0)), color: "#22C55E", id: "sp3" },
-            { l: "إيراد الشهر", v: money(dash.month.total), unit: `${dash.month.count} فاتورة`, d: null, spark: revSpark, color: "#F59E0B", id: "sp4" },
+            { l: t("dash.todaySales", "مبيعات اليوم"), v: money(dash.today.total), unit: t("dash.sar", " ر.س"), d: <Delta curr={dash.today.total} prev={yesterdayTotal} />, spark: revSpark, color: "var(--petrol)", id: "sp1" },
+            { l: t("dash.profitToday", "ربح اليوم (قبل المصاريف)"), v: money(dash.today.profit ?? 0), unit: t("dash.sar", " ر.س"), d: <></>, spark: [] as number[], color: "var(--emerald)", id: "spProfit" },
+            { l: t("dash.todayInvoices", "فواتير اليوم"), v: String(dash.today.count), unit: t("dash.invoices", " فاتورة"), d: <Delta curr={dash.today.count} prev={dash.series.filter((s) => s.date !== todayStr).slice(-1)[0]?.count ?? 0} />, spark: cntSpark, color: "#8B5CF6", id: "sp2" },
+            { l: t("dash.avgInvoice", "متوسط الفاتورة"), v: money(avgInvoice), unit: t("dash.sar", " ر.س"), d: null, spark: revSpark.map((v, i) => (cntSpark[i] ? v / cntSpark[i] : 0)), color: "#22C55E", id: "sp3" },
+            { l: t("dash.monthRevenue", "إيراد الشهر"), v: money(dash.month.total), unit: `${t("dash.invoices", " فاتورة")} ${dash.month.count}`, d: null, spark: revSpark, color: "#F59E0B", id: "sp4" },
           ].map((k) => (
             <div key={k.id}
-                 className="rounded-card border border-line bg-ink-2 p-4 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+              className="rounded-card border border-line bg-ink-2 p-4 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-text-dim">{k.l}</span>
                 {k.d}
@@ -431,24 +444,24 @@ export default function DashboardPage() {
           <Card>
             <div className="mb-1 flex items-center justify-between">
               <h2 className="flex items-center gap-1.5 text-[13.5px] font-black">
-                <MIcon name="monitoring" className="!text-[19px] text-petrol" /> الإيراد اليومي — 14 يوم
+                <MIcon name="monitoring" className="!text-[19px] text-petrol" /> {t("dash.dailyRevenue14", "الإيراد اليومي — 14 يوم")}
               </h2>
               <div className="flex items-center gap-3 text-[10px] font-bold text-text-dim">
-                <span className="flex items-center gap-1"><span className="h-0.5 w-4 rounded bg-petrol" /> الإيراد</span>
-                <span className="flex items-center gap-1"><span className="h-0.5 w-4 rounded border-t-2 border-dashed border-brass" /> متوسط 7 أيام</span>
+                <span className="flex items-center gap-1"><span className="h-0.5 w-4 rounded bg-petrol" /> {t("dash.revenue", "الإيراد")}</span>
+                <span className="flex items-center gap-1"><span className="h-0.5 w-4 rounded border-t-2 border-dashed border-brass" /> {t("dash.average7Days", "متوسط 7 أيام")}</span>
               </div>
             </div>
             <EngineChart series={dash.series} />
           </Card>
           <div className="space-y-3">
             <Card className="!py-4">
-              <h2 className="mb-1 text-center text-[12.5px] font-black">طاقة التشغيل اليوم</h2>
+              <h2 className="mb-1 text-center text-[12.5px] font-black">{t("dash.operatingCapacity", "طاقة التشغيل اليوم")}</h2>
               <Gauge value={dash.cars.doneToday ?? 0}
-                     total={(dash.cars.doneToday ?? 0) + dash.cars.inService + dash.cars.queued}
-                     label={`${dash.cars.queued} انتظار · ${dash.cars.inService} خدمة · ${dash.cars.doneToday ?? 0} اكتملت`} />
+                total={(dash.cars.doneToday ?? 0) + dash.cars.inService + dash.cars.queued}
+                label={`${dash.cars.queued} ${t("dash.waiting", "انتظار")} · ${dash.cars.inService} ${t("dash.inService", "خدمة")} · ${dash.cars.doneToday ?? 0} ${t("dash.completed", "اكتملت")}`} />
             </Card>
             <Card>
-              <h2 className="mb-2 text-[12.5px] font-black">طرق الدفع — الشهر</h2>
+              <h2 className="mb-2 text-[12.5px] font-black">{t("dash.paymentMethodsMonth", "طرق الدفع — الشهر")}</h2>
               <PayDonut methods={dash.payMethods} />
             </Card>
           </div>
@@ -461,7 +474,7 @@ export default function DashboardPage() {
           {dash.topProducts && dash.topProducts.length > 0 && (
             <Card>
               <h2 className="mb-2 flex items-center gap-1.5 text-[13px] font-black">
-                <MIcon name="trophy" className="!text-[18px] text-brass" /> الأكثر مبيعاً — الشهر
+                <MIcon name="trophy" className="!text-[18px] text-brass" /> {t("dash.bestSellingMonth", "الأكثر مبيعاً — الشهر")}
               </h2>
               {dash.topProducts.map((tp, i) => {
                 const max = dash.topProducts![0].total || 1;
@@ -485,7 +498,7 @@ export default function DashboardPage() {
           {dash.topSuppliers && dash.topSuppliers.length > 0 && (
             <Card>
               <h2 className="mb-2 flex items-center gap-1.5 text-[13px] font-black">
-                <MIcon name="local_shipping" className="!text-[18px] text-petrol" /> أفضل الموردين — الشهر
+                <MIcon name="local_shipping" className="!text-[18px] text-petrol" /> {t("dash.topSuppliersMonth", "أفضل الموردين — الشهر")}
               </h2>
               {dash.topSuppliers.map((s, i) => {
                 const max = dash.topSuppliers![0].total || 1;
@@ -507,12 +520,12 @@ export default function DashboardPage() {
             <Card>
               <div className="mb-2 flex items-center justify-between">
                 <h2 className="flex items-center gap-1.5 text-[13px] font-black">
-                  <MIcon name="person_add" className="!text-[18px] text-emerald" /> العملاء الجدد
+                  <MIcon name="person_add" className="!text-[18px] text-emerald" /> {t("dash.newCustomers", "العملاء الجدد")}
                 </h2>
-                <span className="tnum rounded-full bg-emerald-bg px-2 py-0.5 text-[10.5px] font-black text-emerald">+{dash.newCustomers.week} أسبوع</span>
+                <span className="tnum rounded-full bg-emerald-bg px-2 py-0.5 text-[10.5px] font-black text-emerald">+{dash.newCustomers.week} {t("dash.week", "أسبوع")}</span>
               </div>
               {dash.newCustomers.latest.length === 0 ? (
-                <p className="py-3 text-center text-[11.5px] text-text-dim">لا يوجد بعد</p>
+                <p className="py-3 text-center text-[11.5px] text-text-dim">{t("dash.noCustomersYet", "لا يوجد بعد")}</p>
               ) : dash.newCustomers.latest.map((c, i) => (
                 <div key={i} className="flex items-center gap-2 border-t border-line/60 py-1.5 first:border-t-0">
                   <span className="grid h-7 w-7 place-items-center rounded-full bg-petrol-soft text-[11px] font-black text-petrol">
@@ -529,7 +542,7 @@ export default function DashboardPage() {
           {dash.topCustomers && dash.topCustomers.length > 0 && (
             <Card>
               <h2 className="mb-2 flex items-center gap-1.5 text-[13px] font-black">
-                <MIcon name="loyalty" className="!text-[18px] text-petrol" /> العملاء الأكثر زيارة
+                <MIcon name="loyalty" className="!text-[18px] text-petrol" />{t("dash.topCustomers", "العملاء الأكثر زيارة")}
               </h2>
               {dash.topCustomers.map((c, i) => (
                 <div key={i} className="flex items-center gap-2 border-t border-line/60 py-1.5 first:border-t-0">
@@ -542,8 +555,8 @@ export default function DashboardPage() {
                     <div className="tnum text-[10px] text-text-dim">{c.phone || "—"}</div>
                   </div>
                   <div className="text-left">
-                    <div className="tnum text-[12.5px] font-black text-petrol">{c.visits} زيارة</div>
-                    <div className="tnum text-[10px] text-text-dim">{money(c.total)} ر.س</div>
+                    <div className="tnum text-[12.5px] font-black text-petrol">{c.visits} {t("dash.visits", "زيارة")}</div>
+                    <div className="tnum text-[10px] text-text-dim">{money(c.total)}{t("dash.sar", " ر.س")}</div>
                   </div>
                 </div>
               ))}
@@ -556,15 +569,15 @@ export default function DashboardPage() {
       {canSeeInvoices && recent.length > 0 && (
         <Card className="!p-0 overflow-hidden">
           <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
-            <h2 className="text-[13px] font-extrabold">آخر الفواتير — مباشر</h2>
-            <Link href="/sales/history" className="text-[11.5px] font-bold text-petrol hover:underline">السجل الكامل ←</Link>
+            <h2 className="text-[13px] font-extrabold">{t("dash.recentInvoices", "آخر الفواتير — مباشر")}</h2>
+            <Link href="/sales/history" className="text-[11.5px] font-bold text-petrol hover:underline">{t("dash.fullHistory", "السجل الكامل")} ←</Link>
           </div>
           <div className="divide-y divide-line/60">
             {recent.map((i) => (
               <div key={i.id} className="flex items-center gap-3 px-4 py-2 text-[12px] transition-colors hover:bg-ink-3/40">
                 <span className="tnum font-black text-petrol">#{i.invoice_no}</span>
-                <span className="min-w-0 flex-1 truncate font-bold">{i.customer_name || "بيع نقدي"}</span>
-                {i.is_returned && <span className="rounded-full bg-ember-bg px-2 py-0.5 text-[10px] font-black text-ember">مرتجعة</span>}
+                <span className="min-w-0 flex-1 truncate font-bold">{i.customer_name || t("dash.cashSale", "بيع نقدي")}</span>
+                {i.is_returned && <span className="rounded-full bg-ember-bg px-2 py-0.5 text-[10px] font-black text-ember">{t("dash.returned", "مرتجعة")}</span>}
                 <span className="tnum font-black">{money(i.total_inc)}</span>
                 <span className="tnum text-[10.5px] text-text-dim">
                   {new Date(i.issued_at).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
@@ -578,15 +591,15 @@ export default function DashboardPage() {
       {/* ══════════ إجراءات سريعة ══════════ */}
       <div className="flex flex-wrap gap-2">
         {[
-          { href: "/sales/direct", icon: "point_of_sale", label: "بيع مباشر" },
-          { href: "/sales", icon: "receipt_long", label: "فاتورة خدمة" },
-          { href: "/cars", icon: "directions_car", label: "تسجيل سيارة" },
-          { href: "/products", icon: "inventory_2", label: "صنف جديد" },
-          { href: "/customers", icon: "person_add", label: "عميل جديد" },
-          { href: "/reports", icon: "monitoring", label: "التقارير" },
+          { href: "/sales/direct", icon: "point_of_sale", label: t("dash.directSale", "بيع مباشر") },
+          { href: "/sales", icon: "receipt_long", label: t("dash.serviceInvoice", "فاتورة خدمة") },
+          { href: "/cars", icon: "directions_car", label: t("dash.registerCar", "تسجيل سيارة") },
+          { href: "/products", icon: "inventory_2", label: t("dash.newProduct", "صنف جديد") },
+          { href: "/customers", icon: "person_add", label: t("dash.newCustomer", "عميل جديد") },
+          { href: "/reports", icon: "monitoring", label: t("dash.reports", "التقارير") },
         ].map((a) => (
           <Link key={a.href} href={a.href}
-                className="flex items-center gap-1.5 rounded-xl border border-line bg-ink-2 px-3.5 py-2 text-[12.5px] font-bold text-text shadow-card transition-all duration-200 hover:-translate-y-px hover:border-petrol hover:text-petrol hover:shadow-md">
+            className="flex items-center gap-1.5 rounded-xl border border-line bg-ink-2 px-3.5 py-2 text-[12.5px] font-bold text-text shadow-card transition-all duration-200 hover:-translate-y-px hover:border-petrol hover:text-petrol hover:shadow-md">
             <MIcon name={a.icon} className="!text-[17px]" /> {a.label}
           </Link>
         ))}
@@ -597,13 +610,15 @@ export default function DashboardPage() {
         <div className="grid gap-3 lg:grid-cols-2">
           <Card className="space-y-2.5">
             <h2 className="flex items-center gap-1.5 text-[13.5px] font-black">
-              <MIcon name="auto_awesome" className="!text-[19px] text-petrol" /> اسأل بياناتك
+              <MIcon name="auto_awesome" className="!text-[19px] text-petrol" /> {t("dash.askYourData", "اسأل بياناتك")}
             </h2>
             <div className="flex gap-2">
-              <Input value={aiQ} placeholder="مثال: أكتر 5 أصناف مبيعاً الشهر ده؟"
-                     onChange={(e) => setAiQ(e.target.value)}
-                     onKeyDown={(e) => e.key === "Enter" && askAi()} />
-              <Button onClick={askAi} disabled={aiBusy}>{aiBusy ? "..." : "اسأل"}</Button>
+              <Input value={aiQ} placeholder={t("dash.aiPlaceholder", "مثال: أكتر 5 أصناف مبيعاً الشهر ده؟")}
+                onChange={(e) => setAiQ(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && askAi()} />
+              <Button onClick={askAi} disabled={aiBusy}>{aiBusy
+                ? t("dash.preparing", "جارِ التحضير...")
+                : t("dash.ask", "اسأل")}</Button>
             </div>
             <ErrorNote msg={aiErr} />
             {aiAns && (
@@ -632,21 +647,21 @@ export default function DashboardPage() {
             <Card className="space-y-2">
               <div className="flex items-center justify-between">
                 <h2 className="flex items-center gap-1.5 text-[13.5px] font-black">
-                  <MIcon name="wb_sunny" className="!text-[19px] text-brass" /> الملخص الصباحي
+                  <MIcon name="wb_sunny" className="!text-[19px] text-brass" />{t("dash.morningBrief", "الملخص الصباحي")}
                 </h2>
                 <Button variant="ghost" className="!px-2 !py-1 !text-[10.5px]" disabled={briefBusy} onClick={refreshBrief}>
-                  {briefBusy ? "..." : "تحديث"}
+                  {briefBusy ? t("dash.preparing", "جارِ التحضير...") : t("dash.refresh", "تحديث")}
                 </Button>
               </div>
-              <p className="whitespace-pre-line text-[12.5px] leading-relaxed">{brief || "جارِ التحضير..."}</p>
+              <p className="whitespace-pre-line text-[12.5px] leading-relaxed">{brief || t("dash.preparing", "جارِ التحضير...")}</p>
             </Card>
             <Card className="space-y-2">
               <div className="flex items-center justify-between">
                 <h2 className="flex items-center gap-1.5 text-[13.5px] font-black">
-                  <MIcon name="policy" className="!text-[19px] text-ember" /> كشف الشذوذ المالي
+                  <MIcon name="policy" className="!text-[19px] text-ember" />{t("dash.anomalyDetection", "كشف الشذوذ المالي")}
                 </h2>
                 <Button variant="ghost" className="!px-2 !py-1 !text-[10.5px]" disabled={anomBusy} onClick={runAnomalies}>
-                  {anomBusy ? "جارِ الفحص..." : "افحص الآن"}
+                  {anomBusy ? t("dash.checking", "جارِ الفحص...") : t("dash.checkNow", "افحص الآن")}
                 </Button>
               </div>
               {anom && <p className="whitespace-pre-line text-[12.5px] leading-relaxed">{anom}</p>}

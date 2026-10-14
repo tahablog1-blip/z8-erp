@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useLang } from "@/lib/i18n";
 import { DataTable, Column } from "@/components/DataTable";
 import { Button, Card, Field, Input, Modal, ErrorNote } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
@@ -18,6 +19,7 @@ const EMPTY = { name: "", capacitySir: 0, capacityHafr: 0, capacityRafaat: 0, li
 
 export default function BranchesPage() {
   const { hasPerm } = useAuth();
+  const { t, lang } = useLang();
   const canManage = hasPerm("branches.manage");
 
   const [rows, setRows] = useState<Branch[]>([]);
@@ -67,35 +69,54 @@ export default function BranchesPage() {
     } catch (e: any) { await appAlert(e.message); }
   }
 
+  
   async function remove(b: Branch) {
-    if (!await appConfirm(`إلغاء تفعيل فرع «${b.name}»؟ البيانات التاريخية المرتبطة به تبقى محفوظة.`)) return;
-    try { await api(`/branches/${b.id}`, { method: "DELETE" }); await load(); }
-    catch (e: any) { await appAlert(e.message); }
+    const message = `${t("branches.deleteConfirm", "إلغاء تفعيل فرع")} «${b.name}»؟ ${t("branches.historyNote", "البيانات التاريخية المرتبطة به تبقى محفوظة.")}`;
+
+    if (!await appConfirm(message)) return;
+
+    try {
+      await api(`/branches/${b.id}`, { method: "DELETE" });
+      await load();
+    } catch (e: any) {
+      await appAlert(e.message);
+    }
   }
 
+
   const columns: Column<Branch>[] = [
-    { key: "name", title: "اسم الفرع",
+    { key: "name", title: t("branches.name", "اسم الفرع"),
       render: (b) => <span className="font-extrabold">{b.name}</span> },
-    { key: "capacity_sir",    title: "خطوط السير",  width: "110px",
+    { key: "capacity_sir",    title: t("branches.lines", "خطوط السير"),  width: "110px",
       render: (b) => <span className="tnum">{b.capacity_sir}</span> },
-    { key: "capacity_hafr",   title: "سعة الحفرة",  width: "110px",
+    { key: "capacity_hafr",   title: t("branches.capacityHafr", "سعة الحفرة"),  width: "110px",
       render: (b) => <span className="tnum">{b.capacity_hafr}</span> },
-    { key: "capacity_rafaat", title: "سعة الرافعات", width: "110px",
+    { key: "capacity_rafaat", title: t("branches.capacityRafaat", "سعة الرافعات"), width: "110px",
       render: (b) => <span className="tnum">{b.capacity_rafaat}</span> },
-    { key: "is_frozen", title: "الحالة", width: "110px",
+    { key: "is_frozen", title: t("branches.status", "الحالة"), width: "110px",
       render: (b) => b.is_frozen
-        ? <span className="rounded-full bg-ember-bg px-2.5 py-1 text-[11px] font-bold text-ember">مجمّد</span>
-        : <span className="rounded-full bg-emerald-bg px-2.5 py-1 text-[11px] font-bold text-emerald">نشط</span> },
+        ? <span className="rounded-full bg-ember-bg px-2.5 py-1 text-[11px] font-bold text-ember">
+          {t("branches.frozen", "مجمّد")}
+        </span>
+        : <span className="rounded-full bg-emerald-bg px-2.5 py-1 text-[11px] font-bold text-emerald">
+          {t("branches.active", "نشط")}
+        </span> },
     ...(canManage ? [{
       key: "actions", title: "", width: "300px",
       render: (b: Branch) => (
         <div className="flex justify-end gap-1.5">
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => printBookingQR(b)}>QR الحجز</Button>
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => openEdit(b)}>تعديل</Button>
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => toggleFreeze(b)}>
-            {b.is_frozen ? "فك التجميد" : "تجميد"}
+          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => printBookingQR(b)}>
+            {t("branches.bookingQR", "QR الحجز")}
           </Button>
-          <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => remove(b)}>حذف</Button>
+          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => openEdit(b)}>
+            {t("branches.edit", "تعديل")}
+          </Button>
+          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => toggleFreeze(b)}>
+            {b.is_frozen ? t("branches.unfreeze", "فك التجميد") : t("branches.freeze", "تجميد")}
+          </Button>
+          <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => remove(b)}>
+            {t("branches.delete", "حذف")}
+          </Button>
         </div>
       ),
     } satisfies Column<Branch>] : []),
@@ -143,7 +164,9 @@ export default function BranchesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-[19px] font-extrabold">الفروع</h1>
+        <h1 className="text-[19px] font-extrabold">
+          {t("branches.title", "الفروع")}
+        </h1>
       </div>
 
       <Card>
@@ -152,25 +175,26 @@ export default function BranchesPage() {
           rows={rows}
           loading={loading}
           searchKeys={["name"]}
-          searchPlaceholder="بحث باسم الفرع..."
-          emptyText="لا توجد فروع بعد — أضف أول فرع"
-          toolbar={canManage && <Button onClick={openCreate}>+ فرع جديد</Button>}
+          searchPlaceholder={t("branches.search", "بحث باسم الفرع...")}
+          emptyText={t("branches.empty", "لا توجد فروع بعد — أضف أول فرع")}
+          toolbar={canManage && <Button onClick={openCreate}> {t("branches.new", "+ فرع جديد")}
+          </Button>}
         />
       </Card>
 
       <Modal open={!!modal} onClose={() => setModal(null)}
-             title={modal?.mode === "create" ? "فرع جديد" : "تعديل الفرع"}>
+             title={modal?.mode === "create" ? t("branches.createTitle", "فرع جديد") : t("branches.editTitle", "تعديل الفرع")}>
         <div className="space-y-3">
-          <Field label="اسم الفرع">
+          <Field label={t("branches.name", "اسم الفرع")}>
             <Input value={form.name} autoFocus
                    onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </Field>
           <div className="grid grid-cols-3 gap-2">
-            <Field label={`خطوط السير (${form.lines.length})`} hint="فرع واحد ممكن يكون فيه أكثر من سير — كل خط باسمه">
+            <Field label={t("branches.lines", "خطوط السير")} hint={t("branches.linesHint", "فرع واحد ممكن يكون فيه أكثر من سير — كل خط باسمه")}>
               <div className="space-y-1.5">
                 {form.lines.map((ln, i) => (
                   <div key={i} className="flex items-center gap-1.5">
-                    <Input value={ln} placeholder={`سير ${i + 1}`}
+                    <Input value={ln} placeholder={t("branches.linePlaceholder", `سير ${i + 1}`)}
                            onChange={(e) => setForm({ ...form,
                              lines: form.lines.map((x, xi) => xi === i ? e.target.value : x) })} />
                     <button type="button" aria-label="حذف الخط"
@@ -181,24 +205,26 @@ export default function BranchesPage() {
                 <button type="button"
                         onClick={() => setForm({ ...form, lines: [...form.lines, `سير ${form.lines.length + 1}`] })}
                         className="w-full rounded-lg border border-dashed border-line py-1.5 text-[12px] font-bold text-text-dim hover:border-petrol hover:text-petrol">
-                  + إضافة خط سير
+                 {t("branches.addLine", "+ إضافة خط سير")}
                 </button>
               </div>
             </Field>
-            <Field label="سعة الحفرة">
+            <Field label={t("branches.capacityHafr", "سعة الحفرة")}>
               <Input type="number" min={0} className="tnum" value={form.capacityHafr}
                      onChange={(e) => setForm({ ...form, capacityHafr: +e.target.value || 0 })} />
             </Field>
-            <Field label="سعة الرافعات">
+            <Field label={t("branches.capacityRafaat", "سعة الرافعات")}>
               <Input type="number" min={0} className="tnum" value={form.capacityRafaat}
                      onChange={(e) => setForm({ ...form, capacityRafaat: +e.target.value || 0 })} />
             </Field>
           </div>
           <ErrorNote msg={err} />
           <div className="flex justify-end gap-2 pt-1">
-            <Button variant="ghost" onClick={() => setModal(null)}>إلغاء</Button>
+            <Button variant="ghost" onClick={() => setModal(null)}>
+              {t("branches.cancel", "إلغاء")}
+            </Button>
             <Button onClick={save} disabled={busy || form.name.trim().length < 2}>
-              {busy ? "جارِ الحفظ..." : "حفظ"}
+              {busy ? t("branches.saving", "جارِ الحفظ...") : t("branches.save", "حفظ")}
             </Button>
           </div>
         </div>
