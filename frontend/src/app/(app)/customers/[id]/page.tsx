@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, getToken } from "@/lib/api";
+import { Eye, Download, MessageCircle } from "lucide-react";
 import { Badge, Button, Card, ErrorNote } from "@/components/ui";
 import { Customer, Vehicle, Statement, money } from "@/modules/customers/types";
 
@@ -41,6 +42,50 @@ export default function CustomerDetailPage() {
   const [err, setErr] = useState("");
   const [invErr, setInvErr] = useState("");
   const [stErr, setStErr] = useState("");
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  async function fetchPdf(inv: Invoice): Promise<Blob> {
+    const token = getToken();
+    const res = await fetch(`/api/invoices/${inv.id}/pdf`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      let m = `تعذر تحميل الفاتورة (${res.status})`;
+      try { const d = await res.json(); m = d?.error || d?.detail || m; } catch {}
+      throw new Error(m);
+    }
+    return await res.blob();
+  }
+  async function openPdf(inv: Invoice) {
+    setBusyKey("view:" + inv.id); setNotice(null);
+    const w = window.open("", "_blank");
+    try {
+      const url = URL.createObjectURL(await fetchPdf(inv));
+      if (w) w.location.href = url; else window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e: any) { if (w) w.close(); setNotice({ ok: false, msg: e.message }); }
+    finally { setBusyKey(null); }
+  }
+  async function downloadPdf(inv: Invoice) {
+    setBusyKey("dl:" + inv.id); setNotice(null);
+    try {
+      const url = URL.createObjectURL(await fetchPdf(inv));
+      const a = document.createElement("a");
+      a.href = url; a.download = `${inv.invoice_no}.pdf`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (e: any) { setNotice({ ok: false, msg: e.message }); }
+    finally { setBusyKey(null); }
+  }
+  async function sendWa(inv: Invoice) {
+    setBusyKey("wa:" + inv.id); setNotice(null);
+    try {
+      await api(`/invoices/${inv.id}/send-whatsapp`, { method: "POST" });
+      setNotice({ ok: true, msg: `تمت جدولة إرسال الفاتورة ${inv.invoice_no} عبر واتساب` });
+    } catch (e: any) { setNotice({ ok: false, msg: e.message }); }
+    finally { setBusyKey(null); }
+  }
 
   useEffect(() => {
     let alive = true;
@@ -158,6 +203,11 @@ export default function CustomerDetailPage() {
           {tab === "invoices" && (
             <div className="space-y-2">
               <ErrorNote msg={invErr} />
+              {notice && (
+                <div role="status" className={`rounded-lg px-3 py-2 text-[13px] font-bold ${notice.ok ? "bg-emerald-bg text-emerald" : "bg-ember-bg text-ember"}`}>
+                  {notice.msg}
+                </div>
+              )}
               <div className="overflow-x-auto rounded-lg border border-line">
                 <table className="w-full border-collapse text-[12.5px]">
                   <thead>
@@ -168,11 +218,12 @@ export default function CustomerDetailPage() {
                       <th className="px-3 py-2 text-right">الإجمالي</th>
                       <th className="px-3 py-2 text-right">المدفوع</th>
                       <th className="px-3 py-2 text-right">الآجل</th>
+                      <th className="px-3 py-2 text-right">إجراءات</th>
                     </tr>
                   </thead>
                   <tbody>
                     {invoices.length === 0 ? (
-                      <tr><td colSpan={6} className="px-3 py-5 text-center text-text-dim">لا توجد فواتير</td></tr>
+                      <tr><td colSpan={7} className="px-3 py-5 text-center text-text-dim">لا توجد فواتير</td></tr>
                     ) : invoices.map((i) => {
                       const s = invStatus(i);
                       return (
@@ -183,6 +234,25 @@ export default function CustomerDetailPage() {
                           <td className="px-3 py-2 tnum font-bold">{money(i.total_inc)}</td>
                           <td className="px-3 py-2 tnum">{money(i.paid_total)}</td>
                           <td className={`px-3 py-2 tnum ${i.credit_total > 0 ? "font-bold text-ember" : ""}`}>{money(i.credit_total)}</td>
+                          <td className="px-3 py-2">
+                            <div className="flex gap-1.5">
+                              <button onClick={() => openPdf(i)} disabled={busyKey === "view:" + i.id}
+                                      aria-label={`عرض الفاتورة ${i.invoice_no} PDF`} title="عرض PDF"
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol disabled:opacity-45">
+                                <Eye className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                              <button onClick={() => downloadPdf(i)} disabled={busyKey === "dl:" + i.id}
+                                      aria-label={`تحميل الفاتورة ${i.invoice_no} PDF`} title="تحميل PDF"
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol disabled:opacity-45">
+                                <Download className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                              <button onClick={() => sendWa(i)} disabled={busyKey === "wa:" + i.id}
+                                      aria-label={`إرسال الفاتورة ${i.invoice_no} واتساب`} title="إرسال واتساب"
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol disabled:opacity-45">
+                                <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}

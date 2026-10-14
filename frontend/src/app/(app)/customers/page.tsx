@@ -553,10 +553,10 @@ function CustomerCardsV2({ rows, loading, onOpen, onCreate }: {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[240px] flex-1">
-          <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-dim" aria-hidden="true" />
+          <Search className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-dim" aria-hidden="true" />
           <input value={q} onChange={(e) => setQ(e.target.value)} aria-label="بحث في العملاء"
                  placeholder="ابحث باسم العميل أو الجوال أو الرقم الضريبي..."
-                 className="w-full rounded-xl border border-line bg-ink-2 py-2.5 pr-9 pl-9 text-[13px] text-text placeholder:text-text-dim/60 focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15" />
+                 className="w-full rounded-xl border border-line bg-ink-2 py-3 pr-10 pl-10 text-[15px] text-text placeholder:text-text-dim/60 focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15" />
           {q && (
             <button onClick={() => { setQ(""); setDq(""); }} aria-label="مسح البحث"
                     className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-text-dim hover:bg-ink-3">
@@ -569,14 +569,14 @@ function CustomerCardsV2({ rows, loading, onOpen, onCreate }: {
 
       <div className="flex flex-wrap items-center gap-2">
         {filters.map(([k, l]) => (
-          <Button key={k} size="sm" variant={flt === k ? "primary" : "ghost"} onClick={() => setFlt(k)}>{l}</Button>
+          <Button key={k} className="!px-4 !py-2 !text-[14px]" variant={flt === k ? "primary" : "ghost"} onClick={() => setFlt(k)}>{l}</Button>
         ))}
         {active && (
           <Button size="sm" variant="tool" onClick={reset}>
             <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> إعادة تعيين الفلاتر
           </Button>
         )}
-        <span className="tnum mr-auto text-[12px] text-text-dim">{shown.length} من {rows.length}</span>
+        <span className="tnum mr-auto text-[14px] text-text-dim">{shown.length} من {rows.length}</span>
       </div>
 
       {loading ? (
@@ -622,7 +622,7 @@ function CustomerCardsV2({ rows, loading, onOpen, onCreate }: {
           </div>
         </div>
         <div className="mt-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          <Button onClick={() => onOpen(c)}>عرض التفاصيل</Button>
+          <Button className="!px-5 !py-2.5 !text-[14px]" onClick={() => onOpen(c)}>عرض التفاصيل</Button>
           {link && (
             <a href={link} target="_blank" rel="noreferrer" aria-label={`واتساب ${c.name}`}
                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol">

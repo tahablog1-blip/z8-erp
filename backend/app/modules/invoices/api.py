@@ -125,7 +125,13 @@ async def invoice_pdf(invoice_id: str,
     except ImportError:
         raise HTTPException(501, "محرك PDF غير مثبت — شغّل INSTALL-Z8.bat لتثبيت المتطلبات الجديدة")
     from fastapi.responses import Response
-    pdf = await build_invoice_pdf(user.company_id, invoice_id)
+    try:
+        from .pdf_v2 import build_invoice_pdf_v2
+        pdf = await build_invoice_pdf_v2(user.company_id, invoice_id)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("pdf_v2 failed, falling back to legacy pdf")
+        pdf = await build_invoice_pdf(user.company_id, invoice_id)
     return Response(content=pdf, media_type="application/pdf",
                     headers={"Content-Disposition": f"inline; filename={invoice_id}.pdf"})
 
