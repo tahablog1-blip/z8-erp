@@ -327,7 +327,7 @@ export default function DashboardPage() {
     finally { setAnomBusy(false); }
   }
 
-  const dateAr = new Date().toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "long" });
+  const dateAr = new Date().toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA"), { weekday: "long", day: "numeric", month: "long" });
   console.log({
 
     todaySales: t("dash.todaySales", "مبيعات اليوم"),
@@ -359,7 +359,7 @@ export default function DashboardPage() {
             <span className={`flex items-center gap-1.5 text-[11px] font-bold ${apiOk ? "text-emerald" : "text-ember"}`}>
               <span className={`h-2 w-2 animate-pulse rounded-full ${apiOk ? "bg-emerald" : "bg-ember"}`} />
               {apiOk ? t("dash.connected", "متصل") : t("dash.disconnected", "منقطع")}
-              {lastSync && <span className="tnum text-text-dim">· {lastSync.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}</span>}
+              {lastSync && <span className="tnum text-text-dim">· {lastSync.toLocaleTimeString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA"), { hour: "2-digit", minute: "2-digit" })}</span>}
             </span>
           )}
         </div>
@@ -580,7 +580,7 @@ export default function DashboardPage() {
                 {i.is_returned && <span className="rounded-full bg-ember-bg px-2 py-0.5 text-[10px] font-black text-ember">{t("dash.returned", "مرتجعة")}</span>}
                 <span className="tnum font-black">{money(i.total_inc)}</span>
                 <span className="tnum text-[10.5px] text-text-dim">
-                  {new Date(i.issued_at).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
+                  {new Date(i.issued_at).toLocaleTimeString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA"), { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
             ))}

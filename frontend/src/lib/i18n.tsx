@@ -1,6 +1,7 @@
 "use client";
 // lib/i18n.tsx — بنية الترجمة العربية/الإنجليزية
 import { createContext, useContext, useEffect, useState } from "react";
+import { startAutoTranslate } from "@/lib/auto-translate";
 
 export type Lang = "ar" | "en";
 
@@ -342,6 +343,17 @@ export function LangProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (lang !== "en") return;
+    return startAutoTranslate();
+  }, [lang]);
+
+  function changeLang(l: Lang) {
+    const was = lang;
+    applyLang(l);
+    if (was === "en" && l === "ar") window.location.reload();
+  }
+
   function applyLang(l: Lang) {
     setLangState(l);
     localStorage.setItem("z8_lang", l);
@@ -350,7 +362,7 @@ export function LangProvider({ children }: { children: React.ReactNode }) {
   }
 
   const t = (k: string, fallback?: string) => DICT[k]?.[lang] ?? fallback ?? k;
-  return <LangCtx.Provider value={{ lang, setLang: applyLang, t }}>{children}</LangCtx.Provider>;
+  return <LangCtx.Provider value={{ lang, setLang: changeLang, t }}>{children}</LangCtx.Provider>;
 }
 
 export const useLang = () => useContext(LangCtx);

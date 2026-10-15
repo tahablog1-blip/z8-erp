@@ -269,7 +269,7 @@ export default function NoteDetailsPage() {
             <div className="mb-2 text-[13px] font-black text-petrol">الملاحظة</div>
             <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed">{note.description}</p>
             <div className="mt-2 text-[11px] text-text-dim">
-              {note.employee_name} · {note.branch_name} · {new Date(note.created_at).toLocaleString("ar-SA")}
+              {note.employee_name} · {note.branch_name} · {new Date(note.created_at).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA"))}
             </div>
             {note.attachments.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
@@ -304,7 +304,7 @@ export default function NoteDetailsPage() {
                   <p className="whitespace-pre-wrap">{m.message}</p>
                 )}
                 <div className={`mt-1 text-[10px] ${m.sender_type === "employee" ? "text-white/70" : "text-text-dim"}`}>
-                  {new Date(m.created_at).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
+                  {new Date(m.created_at).toLocaleTimeString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA"), { hour: "2-digit", minute: "2-digit" })}
                   {m.sender_type === "employee" && (m.read_at ? " · ✓✓ قُرئت" : " · ✓ أُرسلت")}
                 </div>
               </div>

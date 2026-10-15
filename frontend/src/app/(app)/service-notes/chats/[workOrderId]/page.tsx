@@ -14,14 +14,14 @@ type Msg = {
 type CarInfo = { plate?: string; customer_name?: string; customer_phone?: string; brand?: string; car_name?: string };
 
 function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("ar-SA-u-nu-latn", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { hour: "2-digit", minute: "2-digit" });
 }
 function dayLabel(iso: string): string {
   const d = new Date(iso); const now = new Date();
   if (d.toDateString() === now.toDateString()) return "اليوم";
   const y = new Date(now); y.setDate(now.getDate() - 1);
   if (d.toDateString() === y.toDateString()) return "أمس";
-  return d.toLocaleDateString("ar-SA-u-nu-latn", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return d.toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 function isVoice(m: Msg): boolean {
   return !!m.attachment_url && (m.message_type === "voice" || m.attachment_url.endsWith(".wav"));

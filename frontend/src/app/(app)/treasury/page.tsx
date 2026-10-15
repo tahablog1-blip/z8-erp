@@ -25,7 +25,7 @@ const REASONS: Record<string, string> = { advance: "سلفة", advance_repay: "�
 const EXPENSE_CATS = ["إيجار", "كهرباء ومياه", "اتصالات وإنترنت", "صيانة", "رواتب وأجور", "تسويق وإعلان", "رسوم حكومية", "نظافة وضيافة", "مصروفات أخرى"];
 // تاريخ محلي (مش UTC) — عشان بين 12 و3 الفجر بتوقيت الرياض ما يرجعش اليوم اللي فات
 const todayISO = () => new Date().toLocaleDateString("en-CA");
-const dtFmt = (s: string) => new Date(s).toLocaleString("ar-SA-u-nu-latn", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+const dtFmt = (s: string) => new Date(s).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 
 const emptyForm = () => ({
   amount: "", method: "cash", branchId: "", partyType: "other",
@@ -157,7 +157,7 @@ export default function TreasuryPage() {
        </div>` +
       tableHTML(["البيان", "القيمة"], [
         ["رقم السند", v.voucher_no],
-        ["التاريخ", v.voucher_date || new Date(v.created_at).toLocaleString("ar-SA-u-nu-latn")],
+        ["التاريخ", v.voucher_date || new Date(v.created_at).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"))],
         [isRec ? "استلمنا من" : "صرفنا إلى", party],
         ["المبلغ (ر.س)", money(v.amount)],
         ["طريقة الدفع", METHODS[v.method] || v.method],

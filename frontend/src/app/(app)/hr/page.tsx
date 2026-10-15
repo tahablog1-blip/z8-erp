@@ -15,9 +15,9 @@ type Branch = { id: string; name: string };
 type Tab = "employees" | "attendance" | "leave" | "violations" | "payroll";
 
 const dateFmt = (s: string) =>
-  new Date(s).toLocaleDateString("ar-SA-u-nu-latn", { year: "numeric", month: "2-digit", day: "2-digit" });
+  new Date(s).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { year: "numeric", month: "2-digit", day: "2-digit" });
 const timeFmt = (s: string | null) =>
-  s ? new Date(s).toLocaleTimeString("ar-SA-u-nu-latn", { hour: "2-digit", minute: "2-digit" }) : "—";
+  s ? new Date(s).toLocaleTimeString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { hour: "2-digit", minute: "2-digit" }) : "—";
 
 const EMPTY_EMP = {
   branchId: "", fullName: "", nationalId: "", nationality: "", isSaudi: false, phone: "",

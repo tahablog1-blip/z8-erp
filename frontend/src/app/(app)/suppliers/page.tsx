@@ -10,7 +10,7 @@ import { Supplier, SupplierStatement, money } from "@/modules/suppliers/types";
 const EMPTY = { name: "", phone: "", vatNumber: "", address: "", paymentTermsDays: 0 };
 
 const dateFmt = (s: string) =>
-  new Date(s).toLocaleDateString("ar-SA-u-nu-latn", { year: "numeric", month: "2-digit", day: "2-digit" });
+  new Date(s).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { year: "numeric", month: "2-digit", day: "2-digit" });
 
 export default function SuppliersPage() {
   const [rows, setRows] = useState<Supplier[]>([]);

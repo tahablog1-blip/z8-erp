@@ -24,7 +24,7 @@ async function call<T>(path: string): Promise<T> {
 }
 
 function money(n: number): string {
-  return n.toLocaleString("ar-SA-u-nu-latn", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return n.toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
@@ -99,7 +99,7 @@ export default function MyInvoicesPage() {
                 <div>
                   <div className="tnum text-[15px] font-black" style={{ color: NAVY }}>{inv.invoiceNo}</div>
                   <div className="tnum mt-0.5 text-[11.5px] font-bold" style={{ color: DIM }}>
-                    📅 {new Date(inv.issuedAt).toLocaleDateString("ar-SA-u-nu-latn", { year: "numeric", month: "2-digit", day: "2-digit" })}
+                    📅 {new Date(inv.issuedAt).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { year: "numeric", month: "2-digit", day: "2-digit" })}
                     {inv.odometer != null && <> · 🛞 عداد {inv.odometer.toLocaleString("en")}</>}
                   </div>
                 </div>

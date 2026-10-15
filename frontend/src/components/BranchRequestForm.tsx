@@ -208,7 +208,7 @@ export default function BranchRequestForm({ id }: { id?: string }) {
             <div><span className="text-text-dim">الفرع الطالب:</span> <b>{req.requestingBranchName}</b></div>
             <div><span className="text-text-dim">المصدر:</span> <b>{req.sourceBranchName || "—"}</b></div>
             <div><span className="text-text-dim">بواسطة:</span> <b>{req.requestedByName}</b></div>
-            <div><span className="text-text-dim">التاريخ:</span> <b>{new Date(req.createdAt).toLocaleString("ar-SA-u-nu-latn")}</b></div>
+            <div><span className="text-text-dim">التاريخ:</span> <b>{new Date(req.createdAt).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"))}</b></div>
             {req.note && <div className="sm:col-span-4"><span className="text-text-dim">ملاحظة:</span> {req.note}</div>}
           </div>
           <div className="overflow-x-auto rounded-lg border border-line">

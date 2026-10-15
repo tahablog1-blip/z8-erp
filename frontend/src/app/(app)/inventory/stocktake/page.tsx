@@ -569,7 +569,7 @@ export default function StocktakePage() {
                       {locationName(s.locType, s.locId)}
                     </td>
                     <td className="p-3">
-                      {s.createdAt ? new Date(s.createdAt).toLocaleString("ar-SA") : "—"}
+                      {s.createdAt ? new Date(s.createdAt).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA")) : "—"}
                     </td>
                     <td className="p-3">{s.createdByName || "—"}</td>
                     <td className="p-3">

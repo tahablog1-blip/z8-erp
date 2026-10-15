@@ -13,7 +13,7 @@ import {
 type Tab = "accounts" | "journal" | "trial-balance" | "income-statement" | "balance-sheet";
 
 const dateFmt = (s: string) =>
-  new Date(s).toLocaleDateString("ar-SA-u-nu-latn", { year: "numeric", month: "2-digit", day: "2-digit" });
+  new Date(s).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { year: "numeric", month: "2-digit", day: "2-digit" });
 
 export default function AccountingPage() {
   const { user } = useAuth();

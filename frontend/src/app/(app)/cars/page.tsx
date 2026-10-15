@@ -101,7 +101,7 @@ const EMPTY = {
 };
 
 const timeFmt = (s: string | null) =>
-  s ? new Date(s).toLocaleTimeString("ar-SA-u-nu-latn", { hour: "2-digit", minute: "2-digit" }) : "—";
+  s ? new Date(s).toLocaleTimeString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { hour: "2-digit", minute: "2-digit" }) : "—";
 
 function elapsed(from: string | null, now: number): string {
   if (!from) return "";
@@ -663,7 +663,7 @@ export default function CarsPage() {
     const body = filteredRows.map((c) => [
       c.plate || "", c.customer_name || "", c.customer_phone || "",
       [c.brand, c.name, c.model_year].filter(Boolean).join(" "),
-      branchName[c.branch_id] || "", carStatus(c), new Date(c.created_at).toLocaleString("ar-SA"),
+      branchName[c.branch_id] || "", carStatus(c), new Date(c.created_at).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA")),
     ]);
     const csv = "\ufeff" + [head, ...body].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
     const a = document.createElement("a");
@@ -841,7 +841,7 @@ export default function CarsPage() {
   const MAX_VISION_PER_MIN = 20;              // سقف أمان لنداءات الرؤية
 
   function liveAddLog(msg: string, tone: "ok" | "warn" | "err" | "info") {
-    const t = new Date().toLocaleTimeString("ar-SA-u-nu-latn", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const t = new Date().toLocaleTimeString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     setLiveLog((prev) => [{ t, msg, tone }, ...prev].slice(0, 8));
   }
 
@@ -1686,7 +1686,7 @@ export default function CarsPage() {
       ${c.color ? `<div class="row"><span>اللون</span><b>${esc(c.color)}</b></div>` : ""}
       ${c.odometer_current ? `<div class="row"><span>العداد الحالي</span><b class="tnum">${esc(c.odometer_current)}</b></div>` : ""}
       ${c.odometer_previous ? `<div class="row"><span>العداد السابق</span><b class="tnum">${esc(c.odometer_previous)}</b></div>` : ""}
-      <div class="row"><span>وقت التسجيل</span><b class="tnum">${esc(new Date(c.created_at).toLocaleString("ar-SA-u-nu-latn"))}</b></div>
+      <div class="row"><span>وقت التسجيل</span><b class="tnum">${esc(new Date(c.created_at).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn")))}</b></div>
       ${ckRows ? `<div class="dash"></div><div style="font-weight:800;margin:2px 0">نقاط التشييك</div>${ckRows}` : ""}
       <div class="perfo">✂ - - - - - - - - - - - - - - - - - - ✂</div>
       <div style="text-align:center">

@@ -84,7 +84,7 @@ const STATUS_STYLE: Record<string, { label: string; bg: string; fg: string }> = 
 };
 
 const money = (n?: number | null) =>
-  (n ?? 0).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  (n ?? 0).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA"), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /* ------------------------------------------------------- لوحة السيارة */
 
@@ -388,9 +388,9 @@ export default function GatePage() {
                     label="العداد المقدّر"
                     value={
                       active.stats?.estimated_odometer_now
-                        ? `${active.stats.estimated_odometer_now.toLocaleString("ar-SA")} كم`
+                        ? `${active.stats.estimated_odometer_now.toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA"))} كم`
                         : active.car?.last_odometer
-                          ? `${active.car.last_odometer.toLocaleString("ar-SA")} كم`
+                          ? `${active.car.last_odometer.toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA"))} كم`
                           : null
                     }
                   />

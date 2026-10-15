@@ -417,7 +417,7 @@ export default function ProductsPage() {
     {
       key: "service_interval_km", title: "فترة التغيير", width: "110px",
       render: (p) => p.service_interval_km
-        ? <Badge tone="info">{p.service_interval_km.toLocaleString("ar-SA-u-nu-latn")} كم</Badge>
+        ? <Badge tone="info">{p.service_interval_km.toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"))} كم</Badge>
         : <span className="text-text-dim">—</span>,
     },
     ...((canEdit || canDelete) ? [{

@@ -226,7 +226,7 @@ export default function ProductPage() {
               <tbody>
                 {d.moves.map((m, i) => (
                   <tr key={i} className="border-b border-line/60">
-                    <td className="p-2 tnum">{m.createdAt ? new Date(m.createdAt).toLocaleString("ar-SA-u-nu-latn") : "—"}</td>
+                    <td className="p-2 tnum">{m.createdAt ? new Date(m.createdAt).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn")) : "—"}</td>
                     <td className="p-2">{MOVE_TYPE[m.type] || m.type}</td>
                     <td className="p-2 font-bold tnum">{m.qty}</td>
                     <td className="p-2">{locLabel(m.fromLoc)}</td>

@@ -12,7 +12,7 @@ import { Supplier } from "@/modules/suppliers/types";
 import { PurchaseInvoice, PurchaseInvoiceDetail, money } from "@/modules/purchases/types";
 
 const dateFmt = (s: string) =>
-  new Date(s).toLocaleDateString("ar-SA-u-nu-latn", { year: "numeric", month: "2-digit", day: "2-digit" });
+  new Date(s).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { year: "numeric", month: "2-digit", day: "2-digit" });
 
 const STATUS_BADGE: Record<PurchaseInvoice["status"], { tone: "good" | "warn" | "neutral"; label: string }> = {
   paid: { tone: "good", label: "مدفوعة" },
@@ -116,8 +116,8 @@ export default function PurchasesPage() {
         api<{ name: string; vat_number: string | null; cr_number: string | null; address: string | null; phone: string | null }>("/settings/company"),
       ]);
       const sup = suppliers.find((x) => x.id === inv.supplier_id);
-      const fmt = (n: number) => Number(n).toLocaleString("ar-SA-u-nu-latn", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      const d = new Date(detail.invoice_date as any).toLocaleDateString("ar-SA-u-nu-latn");
+      const fmt = (n: number) => Number(n).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const d = new Date(detail.invoice_date as any).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"));
       const w = window.open("", "_blank", "width=860,height=1000");
       if (!w) return;
       w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
@@ -170,7 +170,7 @@ export default function PurchasesPage() {
           <div><span>ضريبة القيمة المضافة 15%</span><b>${fmt(detail.vat_total)} ر.س</b></div>
           <div class="grand"><span>الإجمالي شامل الضريبة</span><b>${fmt(detail.total)} ر.س</b></div>
         </div>
-        <div class="foot">${comp.name || ""} — منصة Z8 · ${detail.payment_terms === "credit" ? `آجلة — الاستحقاق: ${detail.due_date ? new Date(detail.due_date as any).toLocaleDateString("ar-SA-u-nu-latn") : ""}` : "نقدية"}</div>
+        <div class="foot">${comp.name || ""} — منصة Z8 · ${detail.payment_terms === "credit" ? `آجلة — الاستحقاق: ${detail.due_date ? new Date(detail.due_date as any).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn")) : ""}` : "نقدية"}</div>
         <div class="noprint"><button onclick="window.print()">🖨 طباعة</button></div>
         </body></html>`);
       w.document.close();

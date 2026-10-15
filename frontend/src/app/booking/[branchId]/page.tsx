@@ -410,7 +410,7 @@ const QUICK_REPLIES = [
 
 function fmtChatTime(iso: string): string {
   try {
-    return new Date(iso).toLocaleString("ar-SA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    return new Date(iso).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA"), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   } catch { return ""; }
 }
 
@@ -705,7 +705,7 @@ const EMPTY_SEL: Selection = { oil: null, oilQty: 1, withFilter: null, filter: n
 // رابط تحميل التطبيق — عدّله لرابط متجرك الفعلي
 const APP_URL = "https://play.google.com/store/apps/details?id=com.carexpert.entrymanager";
 
-function money(n: number): string { return n.toLocaleString("ar-SA-u-nu-latn", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function money(n: number): string { return n.toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
 // مطابقة مرنة بين اسم كارت الشركة (المستنتج من الأصناف) واسم الشركة في جدول الشعارات
 function brandLogoFor(name: string, logos: BrandLogo[]): string | null {
@@ -885,7 +885,7 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
               <span>
                 <span className="tnum block text-[13px] font-black" style={{ color: NAVY }}>{inv.invoiceNo}</span>
                 <span className="tnum text-[11px] font-bold" style={{ color: DIM }}>
-                  {new Date(inv.issuedAt).toLocaleDateString("ar-SA-u-nu-latn")}
+                  {new Date(inv.issuedAt).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"))}
                   {inv.odometer != null && <> · عداد {inv.odometer.toLocaleString("en")}</>}
                 </span>
               </span>

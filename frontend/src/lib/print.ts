@@ -43,7 +43,7 @@ function reportShell(title: string, subtitle: string, bodyHTML: string) {
       <div class="sub">الرقم الضريبي: <span class="tnum">${esc(co.vat)}</span> — س.ت: <span class="tnum">${esc(co.cr)}</span></div>
       ${co.address ? `<div class="sub">${esc(co.address)}${co.phone ? ` — هاتف: <span class="tnum">${esc(co.phone)}</span>` : ""}</div>` : ""}
     </div>
-    <div class="sub tnum">${new Date().toLocaleString("ar-SA-u-nu-latn")}</div>
+    <div class="sub tnum">${new Date().toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"))}</div>
   </div>
   <div class="title">${esc(title)}</div>
   ${subtitle ? `<div class="subtitle">${esc(subtitle)}</div>` : ""}

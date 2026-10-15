@@ -36,7 +36,7 @@ export function productLabel(p: Pick<Product, "category" | "name" | "spec">) {
 
 /** تنسيق المبالغ — خانتين عشريتين دايماً عشان أعمدة الأرقام تتراص */
 export const money = (n: number) =>
-  Number(n || 0).toLocaleString("ar-SA-u-nu-latn", {
+  Number(n || 0).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });

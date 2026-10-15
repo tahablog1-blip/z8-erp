@@ -12,7 +12,7 @@ const esc = (s: unknown) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 // const fmtDT = (s: string) =>
-//   new Date(s).toLocaleString("ar-SA-u-nu-latn", {
+//   new Date(s).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), {
 //     year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
 //   });
 

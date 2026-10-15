@@ -49,7 +49,7 @@ const loadHeld = (): HeldInvoice[] => {
 const saveHeld = (list: HeldInvoice[]) => localStorage.setItem(HELD_KEY, JSON.stringify(list));
 
 const dateFmt = (s: string) =>
-  new Date(s).toLocaleString("ar-SA-u-nu-latn", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  new Date(s).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 
 export default function SalesPage() {
   const { hasPerm } = useAuth();
@@ -1433,7 +1433,7 @@ export default function SalesPage() {
                   <span>
                     <b className="tnum">{inv.invoice_no}</b>
                     <span className="mr-2 tnum text-[11px] text-text-dim">
-                      {new Date(inv.issued_at).toLocaleDateString("ar-SA-u-nu-latn")}
+                      {new Date(inv.issued_at).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"))}
                     </span>
                     {inv.is_returned && <span className="mr-2 rounded-full bg-ember-bg px-2 py-0.5 text-[9.5px] font-bold text-ember">مرتجعة</span>}
                   </span>

@@ -49,7 +49,7 @@ export default function UsersSettingsPage() {
                 <div className="tnum text-[11px] text-text-dim" dir="ltr">{u.email}</div>
                 <div className="text-[11px] text-text-dim">
                   {u.branch_name || "كل الفروع"}
-                  {u.last_login_at && <> · آخر دخول {new Date(u.last_login_at).toLocaleString("ar-SA-u-nu-latn", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</>}
+                  {u.last_login_at && <> · آخر دخول {new Date(u.last_login_at).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</>}
                 </div>
               </div>
               <span className="shrink-0 text-[12px] font-bold text-petrol">فتح ←</span>

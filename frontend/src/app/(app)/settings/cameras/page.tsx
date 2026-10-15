@@ -229,7 +229,7 @@ export default function CamerasSettingsPage() {
       const map: Record<string, boolean> = {};
       r.cameras.forEach((c) => { map[c.id] = c.ok; });
       setHealth(map);
-      setHealthAt(new Date().toLocaleTimeString("ar-SA-u-nu-latn", { hour: "2-digit", minute: "2-digit" }));
+      setHealthAt(new Date().toLocaleTimeString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { hour: "2-digit", minute: "2-digit" }));
     } catch (e: any) { setCamErr(e.message); }
     finally { setHealthBusy(false); }
   }

@@ -70,8 +70,8 @@ function timeLabel(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso); const now = new Date();
   if (d.toDateString() === now.toDateString())
-    return d.toLocaleTimeString("ar-SA-u-nu-latn", { hour: "2-digit", minute: "2-digit" });
-  return d.toLocaleDateString("ar-SA-u-nu-latn", { day: "2-digit", month: "2-digit" });
+    return d.toLocaleTimeString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { day: "2-digit", month: "2-digit" });
 }
 
 export default function ServiceNotesPage() {
@@ -363,7 +363,7 @@ export default function ServiceNotesPage() {
                   </td>
                   <td className="px-3 py-2.5">{r.employee_name ?? "—"}</td>
                   <td className="px-3 py-2.5">{r.branch_name ?? "—"}</td>
-                  <td className="px-3 py-2.5 tnum">{new Date(r.created_at).toLocaleDateString("ar-SA")}</td>
+                  <td className="px-3 py-2.5 tnum">{new Date(r.created_at).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA"))}</td>
                   <td className="px-3 py-2.5 tnum">{r.attachments_count > 0 ? `📷 ${r.attachments_count}` : "—"}</td>
                 </tr>
               ))}

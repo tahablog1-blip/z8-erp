@@ -54,7 +54,7 @@ type Move = {
 };
 
 const dateFmt = (s: string) =>
-  new Date(s).toLocaleString("ar-SA-u-nu-latn", {
+  new Date(s).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), {
     year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
   });
 
@@ -509,7 +509,7 @@ export default function InventoryPage() {
                         <Badge tone={ui.tone}>{ui.label}</Badge>
                       </div>
                       <div className="mt-1 text-[11.5px] text-text-dim">
-                        بواسطة {r.requestedByName} — {new Date(r.createdAt).toLocaleString("ar-SA-u-nu-latn")}
+                        بواسطة {r.requestedByName} — {new Date(r.createdAt).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"))}
                         {r.note && <span> · {r.note}</span>}
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1.5">
