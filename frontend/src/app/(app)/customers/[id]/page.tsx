@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, getToken } from "@/lib/api";
-import { Eye, Download, MessageCircle } from "lucide-react";
+import { Eye, Download, MessageCircle, User, Phone, ArrowRight, IdCard, Receipt, Car, FileText, BarChart3 } from "lucide-react";
 import { Badge, Button, Card, ErrorNote } from "@/components/ui";
 import { Customer, Vehicle, Statement, money } from "@/modules/customers/types";
 
@@ -144,41 +144,60 @@ export default function CustomerDetailPage() {
 
   return (
     <div className="space-y-4">
+      {/* HeaderV2 */}
       <Card>
-        <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => router.push("/customers")}>← العملاء</Button>
+        <div className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-petrol-soft text-petrol">
+              <User className="h-8 w-8" aria-hidden="true" />
+            </div>
             <div>
-              <h1 className="text-[18px] font-black">{customer.name}</h1>
-              <div className="mt-1 flex items-center gap-2 text-[12px] text-text-dim">
+              <h1 className="text-[22px] font-bold leading-snug">{customer.name}</h1>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[14px] text-text-dim">
+                <span dir="ltr" className="tnum">{customer.phone || ""}</span>
+                <Badge tone="neutral">{tier.label}</Badge>
                 <Badge tone="info">{customer.customer_type === "company" ? "شركة" : "فرد"}</Badge>
-                <Badge tone={tier.tone}>{tier.label}</Badge>
-                <span className="tnum">{customer.phone || ""}</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-center">
-              <div className="text-[11px] text-text-dim">الرصيد الآجل</div>
-              <div className={`tnum text-[18px] font-black ${balance > 0 ? "text-ember" : "text-emerald"}`}>{money(balance)} ر.س</div>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-3">
+              <div className="text-left">
+                <div className="text-[13px] text-text-dim">الرصيد الآجل</div>
+                <div className={`tnum text-[24px] font-bold ${balance > 0 ? "text-ember" : "text-text"}`}>
+                  {money(balance)} ر.س{balance > 0 && <span className="mr-1 text-[12px]">مستحق</span>}
+                </div>
+              </div>
+              <Button variant="ghost" onClick={() => router.push("/customers")}>
+                <ArrowRight className="h-4 w-4" aria-hidden="true" /> العملاء
+              </Button>
             </div>
             {customer.phone && (
-              <>
-                <a href={`tel:${customer.phone}`}><Button variant="ghost">📞 اتصال</Button></a>
-                <a href={waLink(customer.phone)} target="_blank" rel="noreferrer"><Button variant="ghost">💬 واتساب</Button></a>
-              </>
+              <div className="flex gap-2">
+                <a href={waLink(customer.phone)} target="_blank" rel="noreferrer"
+                   className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-3.5 py-2 text-[13px] font-semibold text-petrol hover:border-petrol">
+                  <MessageCircle className="h-4 w-4" aria-hidden="true" /> واتساب
+                </a>
+                <a href={`tel:${customer.phone}`}
+                   className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-3.5 py-2 text-[13px] font-semibold text-petrol hover:border-petrol">
+                  <Phone className="h-4 w-4" aria-hidden="true" /> اتصال
+                </a>
+              </div>
             )}
           </div>
         </div>
       </Card>
 
-      <div className="flex flex-wrap gap-2">
-        {tabs.map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)}
-                  className={`rounded-lg px-3 py-1.5 text-[12.5px] font-bold ${tab === k ? "bg-ink-3 text-text" : "text-text-dim hover:bg-ink-3"}`}>
-            {l}
-          </button>
-        ))}
+      <div className="flex flex-wrap gap-2" role="tablist">
+        {tabs.map(([k, l]) => {
+          const Icon = { info: IdCard, invoices: Receipt, vehicles: Car, statement: FileText, stats: BarChart3 }[k];
+          return (
+            <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
+                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[14px] font-bold transition ${tab === k ? "bg-petrol-soft text-petrol" : "text-text-dim hover:bg-ink-3"}`}>
+              <Icon className="h-4 w-4" aria-hidden="true" /> {l}
+            </button>
+          );
+        })}
       </div>
 
       <Card>
