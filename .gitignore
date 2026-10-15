@@ -76,3 +76,4 @@ node_modules/
 *.sql
 *.dump
 *.bak
+frontend/tsconfig.tsbuildinfo
