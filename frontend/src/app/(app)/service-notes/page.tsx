@@ -174,7 +174,7 @@ export default function ServiceNotesPage() {
     <div className="h-1.5 bg-amber-500 w-full"></div>
     <div className="p-4 text-center">
       <div className="flex justify-center items-center mb-1 text-amber-500"><RefreshCw className="w-5 h-5 ml-1" /></div>
-      <div className="text-2xl font-bold text-amber-600">{stats.followUp}</div>
+      <div className="text-2xl font-bold text-amber-600">{stats.followUp ?? 0}</div>
       <div className="text-xs text-slate-500 mt-1">تحتاج متابعة</div>
     </div>
   </div>
@@ -190,7 +190,7 @@ export default function ServiceNotesPage() {
     <div className="h-1.5 bg-rose-600 w-full"></div>
     <div className="p-4 text-center">
       <div className="flex justify-center items-center mb-1 text-rose-600"><XCircle className="w-5 h-5 ml-1" /></div>
-      <div className="text-2xl font-bold text-rose-600">{stats.outOfStock}</div>
+      <div className="text-2xl font-bold text-rose-600">{stats.outOfStock ?? 0}</div>
       <div className="text-xs text-slate-500 mt-1">منتجات غير متوفرة</div>
     </div>
   </div>
@@ -206,7 +206,7 @@ export default function ServiceNotesPage() {
     <div className="h-1.5 bg-amber-600 w-full"></div>
     <div className="p-4 text-center">
       <div className="flex justify-center items-center mb-1 text-amber-600"><Gavel className="w-5 h-5 ml-1" /></div>
-      <div className="text-2xl font-bold text-amber-700">{stats.managementDecision}</div>
+      <div className="text-2xl font-bold text-amber-700">{stats.managementDecision ?? 0}</div>
       <div className="text-xs text-slate-500 mt-1">تحتاج قرار الإدارة</div>
     </div>
   </div>

@@ -38,6 +38,73 @@ function toForm(p: Product): Form {
   };
 }
 
+function EditCopyInput({
+  value,
+  disabled,
+  onChange,
+  ...rest
+}: {
+  value: string;
+  disabled?: boolean;
+  onChange: (v: string) => void;
+} & Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "disabled">) {
+  const [editing, setEditing] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(String(value ?? ""));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // المتصفح مانع النسخ
+    }
+  };
+
+  return (
+    <div className="relative">
+      <Input
+        {...rest}
+        value={value}
+        disabled={!!disabled || !editing}
+        onChange={(e) => onChange(e.target.value)}
+        className="pe-16"
+      />
+
+      <div className="absolute inset-y-0 end-1.5 flex items-center gap-0.5">
+        <button
+          type="button"
+          title={editing ? "إغلاق التعديل" : "تعديل"}
+          disabled={!!disabled}
+          onClick={() => setEditing((v) => !v)}
+          className={`rounded-md p-1 transition hover:bg-ink-3 disabled:cursor-not-allowed disabled:opacity-40 ${
+            editing ? "text-petrol" : "text-text-dim"
+          }`}
+        >
+          <MIcon
+            name={editing ? "lock_open" : "edit"}
+            className="!text-[18px]"
+          />
+        </button>
+
+        <button
+          type="button"
+          title="نسخ"
+          onClick={copy}
+          className={`rounded-md p-1 transition hover:bg-ink-3 ${
+            copied ? "text-emerald" : "text-text-dim"
+          }`}
+        >
+          <MIcon
+            name={copied ? "check" : "content_copy"}
+            className="!text-[18px]"
+          />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -153,18 +220,18 @@ export default function ProductPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="space-y-3 p-4 md:col-span-2">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="الاسم"><Input value={form.name} disabled={dis} onChange={(e) => set("name", e.target.value)} /></Field>
-            <Field label="الفئة"><Input value={form.category} disabled={dis} onChange={(e) => set("category", e.target.value)} /></Field>
-            <Field label="المواصفة / اللزوجة"><Input value={form.spec} disabled={dis} onChange={(e) => set("spec", e.target.value)} /></Field>
-            <Field label="الوحدة"><Input value={form.unit} disabled={dis} onChange={(e) => set("unit", e.target.value)} /></Field>
-            <Field label="الباركود"><Input dir="ltr" value={form.barcode} disabled={dis} onChange={(e) => set("barcode", e.target.value)} /></Field>
-            <Field label="الحد الأدنى للمخزون"><Input inputMode="numeric" value={form.minQty} disabled={dis} onChange={(e) => set("minQty", e.target.value)} /></Field>
+            <Field label="الاسم"><EditCopyInput value={form.name} disabled={dis} onChange={(v) => set("name", v)} /></Field>
+            <Field label="الفئة"><EditCopyInput value={form.category} disabled={dis} onChange={(v) => set("category", v)} /></Field>
+            <Field label="المواصفة / اللزوجة"><EditCopyInput value={form.spec} disabled={dis} onChange={(v) => set("spec", v)} /></Field>
+            <Field label="الوحدة"><EditCopyInput value={form.unit} disabled={dis} onChange={(v) => set("unit", v)} /></Field>
+            <Field label="الباركود"><EditCopyInput dir="ltr" value={form.barcode} disabled={dis} onChange={(v) => set("barcode", v)} /></Field>
+            <Field label="الحد الأدنى للمخزون"><EditCopyInput inputMode="numeric" value={form.minQty} disabled={dis} onChange={(v) => set("minQty", v)} /></Field>
             <Field label="سعر البيع (قبل الضريبة)" hint={`شامل الضريبة: ${money(p.price_vat)}`}>
-              <Input inputMode="decimal" value={form.price} disabled={dis} onChange={(e) => set("price", e.target.value)} />
+              <EditCopyInput inputMode="decimal" value={form.price} disabled={dis} onChange={(v) => set("price", v)} />
             </Field>
-            <Field label="التكلفة (آخر سعر شراء)"><Input inputMode="decimal" value={form.costPrice} disabled={dis} onChange={(e) => set("costPrice", e.target.value)} /></Field>
-            <Field label="شركة الزيت"><Input value={form.oilBrand} disabled={dis} onChange={(e) => set("oilBrand", e.target.value)} /></Field>
-            <Field label="فترة التغيير (كم)"><Input inputMode="numeric" value={form.serviceIntervalKm} disabled={dis} onChange={(e) => set("serviceIntervalKm", e.target.value)} /></Field>
+            <Field label="التكلفة (آخر سعر شراء)"><EditCopyInput inputMode="decimal" value={form.costPrice} disabled={dis} onChange={(v) => set("costPrice", v)} /></Field>
+            <Field label="شركة الزيت"><EditCopyInput value={form.oilBrand} disabled={dis} onChange={(v) => set("oilBrand", v)} /></Field>
+            <Field label="فترة التغيير (كم)"><EditCopyInput inputMode="numeric" value={form.serviceIntervalKm} disabled={dis} onChange={(v) => set("serviceIntervalKm", v)} /></Field>
           </div>
           <div className="flex flex-wrap gap-4 pt-1 text-[12.5px] font-bold">
             <label className="flex items-center gap-2"><input type="checkbox" disabled={dis} checked={form.isService} onChange={(e) => set("isService", e.target.checked)} /> صنف خدمة (بدون مخزون)</label>
