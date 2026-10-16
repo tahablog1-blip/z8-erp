@@ -52,8 +52,22 @@ function EditCopyInput({
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
+    const text = String(value ?? "");
     try {
-      await navigator.clipboard.writeText(String(value ?? ""));
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // fallback للسياقات اللي الـ Clipboard API مش متاحة فيها (http أو بدون صلاحية)
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -68,7 +82,7 @@ function EditCopyInput({
         value={value}
         disabled={!!disabled || !editing}
         onChange={(e) => onChange(e.target.value)}
-        className="pe-16"
+        className="pe-16 text-right"
       />
 
       <div className="absolute inset-y-0 end-1.5 flex items-center gap-0.5">
