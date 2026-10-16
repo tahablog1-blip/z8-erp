@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ...core.deps import CurrentUser, get_current_user, require_permission
 from . import service
-from .schemas import InvoiceCreate, InvoiceDetailOut, InvoiceOut
+from .schemas import InvoiceCreate, InvoiceDetailOut, InvoiceOut, PartialReturnIn, PartialReturnOut
 
 router = APIRouter()
 
@@ -114,6 +114,23 @@ async def return_invoice(invoice_id: str,
                          user: CurrentUser = Depends(require_permission("invoices.return"))):
     await service.return_invoice(user.company_id, user.user_id, user.email, invoice_id)
     return {"success": True}
+
+
+@router.post("/{invoice_id}/partial-return", response_model=PartialReturnOut, status_code=201)
+async def partial_return_invoice(invoice_id: str, body: PartialReturnIn,
+                                 user: CurrentUser = Depends(require_permission("invoices.return"))):
+    """مرتجع بنود/كميات معينة من فاتورة صادرة — الفاتورة الأصلية تفضل كما هي
+    (متطلبات ZATCA)، والمرتجع يتسجّل كحركة منفصلة. يتطلب رمز اعتماد مشرف لو
+    الشركة مفعّلة رموز اعتماد (نفس حارس اعتماد أوامر العمل)."""
+    return await service.partial_return_invoice(
+        user.company_id, user.user_id, user.email, invoice_id,
+        [it.model_dump() for it in body.items], body.note, body.approvalPin,
+    )
+
+
+@router.get("/{invoice_id}/returns", response_model=list[PartialReturnOut])
+async def invoice_returns(invoice_id: str, user: CurrentUser = Depends(require_permission(*_VIEW_PERMS))):
+    return await service.list_invoice_returns(user.company_id, invoice_id)
 
 
 @router.get("/{invoice_id}/pdf")

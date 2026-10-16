@@ -36,12 +36,39 @@ export type InvoiceItem = {
   label: string;
   barcode?: string;
   qty: number;
+  returned_qty: number;
   unit_price: number;
   unit_price_vat: number;
   discount_amount: number;
   line_ex: number;
   line_vat: number;
   line_inc: number;
+};
+
+export type InvoicePartialReturnItem = {
+  id: string;
+  invoice_item_id: string;
+  product_id: string | null;
+  label: string;
+  qty: number;
+  unit_price: number;
+  unit_price_vat: number;
+  line_ex: number;
+  line_vat: number;
+  line_inc: number;
+};
+
+export type InvoicePartialReturn = {
+  id: string;
+  invoice_id: string;
+  return_no: string;
+  total_ex: number;
+  total_vat: number;
+  total_inc: number;
+  note: string | null;
+  approved_name: string | null;
+  created_at: string;
+  items: InvoicePartialReturnItem[];
 };
 
 export type InvoicePayment = {
@@ -56,6 +83,7 @@ export type InvoiceDetail = Invoice & {
   customer_phone: string | null;
   items: InvoiceItem[];
   payments: InvoicePayment[];
+  returns: InvoicePartialReturn[];
   car: {
     plate: string | null;
     model: string | null;

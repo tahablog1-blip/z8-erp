@@ -104,6 +104,14 @@ export default function SalesPage() {
   // ── عرض فاتورة ──
   const [viewInvoice, setViewInvoice] = useState<InvoiceDetail | null>(null);
 
+  // ── مرتجع جزئي ──
+  const [partialReturnOpen, setPartialReturnOpen] = useState(false);
+  const [returnQtys, setReturnQtys] = useState<Record<string, string>>({});
+  const [returnPin, setReturnPin] = useState("");
+  const [returnNote, setReturnNote] = useState("");
+  const [returnErr, setReturnErr] = useState("");
+  const [returnBusy, setReturnBusy] = useState(false);
+
   // ── تبويب الشاشة: نقطة البيع / سجل الفواتير ──
   // فتح الشاشة من "سجل الفواتير" في القائمة يوديك مباشرة لتبويب السجل — من "نقطة البيع" يفتح على البيع
   const pathname = usePathname();
@@ -666,6 +674,40 @@ export default function SalesPage() {
       setViewInvoice(null);
       await load();
     } catch (e: any) { await appAlert(e.message); }
+  }
+
+  // ── مرتجع جزئي: بنود/كميات معينة من الفاتورة المعروضة ──
+  function openPartialReturn() {
+    setReturnQtys({}); setReturnPin(""); setReturnNote(""); setReturnErr("");
+    setPartialReturnOpen(true);
+  }
+
+  const partialReturnLines = (viewInvoice?.items || [])
+    .map((it) => ({ it, qty: Math.max(0, Math.min(Number(returnQtys[it.id] || 0), it.qty - it.returned_qty)) }))
+    .filter((l) => l.qty > 0);
+  const partialReturnTotal = partialReturnLines.reduce(
+    (sum, l) => sum + (l.it.line_inc / l.it.qty) * l.qty, 0);
+
+  async function submitPartialReturn() {
+    if (!viewInvoice) return;
+    if (partialReturnLines.length === 0) { setReturnErr("حدّد كمية صنف واحد على الأقل للإرجاع"); return; }
+    if (!await appConfirm(`تأكيد مرتجع جزئي بقيمة ${money(partialReturnTotal)} ر.س من الفاتورة ${viewInvoice.invoice_no}؟`)) return;
+    setReturnBusy(true); setReturnErr("");
+    try {
+      await api(`/invoices/${viewInvoice.id}/partial-return`, {
+        method: "POST",
+        body: JSON.stringify({
+          items: partialReturnLines.map((l) => ({ invoiceItemId: l.it.id, qty: l.qty })),
+          note: returnNote.trim() || null,
+          approvalPin: returnPin.trim() || null,
+        }),
+      });
+      setPartialReturnOpen(false);
+      const refreshed = await api<InvoiceDetail>(`/invoices/${viewInvoice.id}`);
+      setViewInvoice(refreshed);
+      await load();
+    } catch (e: any) { setReturnErr(e.message); }
+    finally { setReturnBusy(false); }
   }
 
   const invoiceCols: Column<Invoice>[] = [
@@ -1594,7 +1636,14 @@ export default function SalesPage() {
                 <tbody>
                   {viewInvoice.items.map((it) => (
                     <tr key={it.id} className="border-t border-line/70">
-                      <td className="px-3 py-1.5">{it.label}</td>
+                      <td className="px-3 py-1.5">
+                        {it.label}
+                        {it.returned_qty > 0 && (
+                          <span className="mr-1.5 rounded-full bg-ember-bg px-2 py-0.5 text-[10px] font-bold text-ember">
+                            مرتجع {it.returned_qty}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-2 py-1.5 tnum">{it.qty}</td>
                       <td className="px-2 py-1.5 tnum text-text-dim">{money(it.unit_price_vat)}</td>
                       <td className="px-2 py-1.5 tnum font-bold">{money(it.line_inc)}</td>
@@ -1629,13 +1678,107 @@ export default function SalesPage() {
 
             {viewInvoice.is_returned && <Badge tone="warn">هذه الفاتورة مرتجعة بالكامل</Badge>}
 
+            {viewInvoice.returns.length > 0 && (
+              <div className="space-y-1.5 rounded-lg border border-line p-3">
+                <div className="flex items-center gap-1.5 text-[12px] font-extrabold text-text-dim">
+                  <MIcon name="assignment_return" className="!text-[16px]" /> مرتجعات جزئية سابقة
+                </div>
+                {viewInvoice.returns.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between text-[12px]">
+                    <span>
+                      <span className="tnum font-bold">{r.return_no}</span>
+                      {" — "}{r.items.map((it) => `${it.label} ×${it.qty}`).join("، ")}
+                      {r.approved_name && <span className="text-text-dim"> — اعتماد: {r.approved_name}</span>}
+                    </span>
+                    <span className="tnum font-bold text-ember">-{money(r.total_inc)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="ghost" onClick={() => setViewInvoice(null)}>إغلاق</Button>
-              <Button variant="ghost" onClick={() => printById(viewInvoice.id, "thermal")}>🖨 حراري 80مم</Button>
-              <Button variant="ghost" onClick={() => printById(viewInvoice.id, "a4")}>🖨 فاتورة A4</Button>
+              <Button variant="ghost" onClick={() => printById(viewInvoice.id, "thermal")}>
+                <MIcon name="print" className="!text-[16px]" /> حراري 80مم
+              </Button>
+              <Button variant="ghost" onClick={() => printById(viewInvoice.id, "a4")}>
+                <MIcon name="print" className="!text-[16px]" /> فاتورة A4
+              </Button>
               {canReturn && !viewInvoice.is_returned && (
-                <Button variant="danger" onClick={returnInvoice}>مرتجع كامل</Button>
+                <>
+                  <Button variant="ghost" onClick={openPartialReturn}>مرتجع جزئي</Button>
+                  <Button variant="danger" onClick={returnInvoice}>مرتجع كامل</Button>
+                </>
               )}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal open={partialReturnOpen} onClose={() => setPartialReturnOpen(false)} title="مرتجع جزئي">
+        {viewInvoice && (
+          <div className="space-y-3">
+            <p className="text-[12.5px] text-text-dim">
+              حدّد الكمية المطلوب إرجاعها من كل صنف — السعر نفس سعر البند في الفاتورة الأصلية.
+            </p>
+            <div className="overflow-x-auto rounded-lg border border-line">
+              <table className="w-full border-collapse text-[12.5px]">
+                <thead>
+                  <tr className="bg-ink-3 text-[11.5px] font-extrabold text-text-dim">
+                    <th className="px-3 py-2 text-right">الصنف</th>
+                    <th className="w-20 px-2 py-2 text-right">المتاح</th>
+                    <th className="w-24 px-2 py-2 text-right">كمية الإرجاع</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {viewInvoice.items.map((it) => {
+                    const available = it.qty - it.returned_qty;
+                    return (
+                      <tr key={it.id} className="border-t border-line/70">
+                        <td className="px-3 py-1.5">{it.label}</td>
+                        <td className="px-2 py-1.5 tnum text-text-dim">{available}</td>
+                        <td className="px-2 py-1.5">
+                          <Input
+                            inputMode="numeric"
+                            disabled={available <= 0}
+                            value={returnQtys[it.id] || ""}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/\D/g, "");
+                              const n = digits === "" ? "" : String(Math.min(Number(digits), available));
+                              setReturnQtys((m) => ({ ...m, [it.id]: n }));
+                            }}
+                            placeholder="0"
+                            className="!py-1.5 text-center"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <Field label="رمز اعتماد المشرف (لو مفعّل بالشركة)">
+              <Input inputMode="numeric" value={returnPin}
+                    onChange={(e) => setReturnPin(e.target.value.replace(/\D/g, ""))}
+                    placeholder="••••" />
+            </Field>
+            <Field label="ملاحظة (اختياري)">
+              <Input value={returnNote} onChange={(e) => setReturnNote(e.target.value)} />
+            </Field>
+
+            <ErrorNote msg={returnErr} />
+
+            <div className="flex items-center justify-between pt-1">
+              <div className="text-[13px]">
+                إجمالي المرتجع: <span className="tnum font-black text-ember">{money(partialReturnTotal)}</span>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="ghost" onClick={() => setPartialReturnOpen(false)}>إلغاء</Button>
+                <Button variant="danger" disabled={returnBusy || partialReturnLines.length === 0} onClick={submitPartialReturn}>
+                  {returnBusy ? "جارِ التنفيذ..." : "تنفيذ المرتجع"}
+                </Button>
+              </div>
             </div>
           </div>
         )}

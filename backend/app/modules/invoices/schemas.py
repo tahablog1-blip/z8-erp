@@ -76,6 +76,7 @@ class InvoiceItemOut(BaseModel):
     label: str
     barcode: str = ""
     qty: int
+    returned_qty: int = 0
     unit_price: float
     unit_price_vat: float
     discount_amount: float = 0
@@ -110,9 +111,49 @@ class InvoiceCarInfo(BaseModel):
     checker_name: str | None = None
 
 
+# ══════════════════ مرتجع جزئي ══════════════════
+
+class PartialReturnItemIn(BaseModel):
+    invoiceItemId: str
+    qty: int = Field(ge=1)
+
+
+class PartialReturnIn(BaseModel):
+    items: list[PartialReturnItemIn] = Field(min_length=1)
+    note: str | None = None
+    approvalPin: str | None = None   # رمز اعتماد مشرف — مطلوب لو الشركة فعّلت رموز اعتماد
+
+
+class PartialReturnItemOut(BaseModel):
+    id: str
+    invoice_item_id: str
+    product_id: str | None = None
+    label: str
+    qty: int
+    unit_price: float
+    unit_price_vat: float
+    line_ex: float
+    line_vat: float
+    line_inc: float
+
+
+class PartialReturnOut(BaseModel):
+    id: str
+    invoice_id: str
+    return_no: str
+    total_ex: float
+    total_vat: float
+    total_inc: float
+    note: str | None = None
+    approved_name: str | None = None
+    created_at: datetime
+    items: list[PartialReturnItemOut]
+
+
 class InvoiceDetailOut(InvoiceOut):
     cashier_name: str | None = None
     customer_phone: str | None = None
     items: list[InvoiceItemOut]
     payments: list[InvoicePaymentOut]
     car: InvoiceCarInfo | None = None
+    returns: list[PartialReturnOut] = []
