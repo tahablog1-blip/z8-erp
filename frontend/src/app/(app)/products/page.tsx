@@ -769,7 +769,7 @@ export default function ProductsPage() {
       {importMsg && (
         <div className={`rounded-lg px-4 py-2.5 text-[12.5px] font-bold ${importMsg.startsWith("✅") ? "bg-emerald-bg text-emerald" : "bg-ember-bg text-ember"}`}>
           {importMsg}
-          <button onClick={() => setImportMsg("")} className="mr-2 opacity-60 hover:opacity-100">✕</button>
+          <button onClick={() => setImportMsg("")} className="mr-2 opacity-60 hover:opacity-100"><MIcon name="close" className="!text-[15px]" /></button>
         </div>
       )}
       <div className="flex items-center justify-between">
@@ -908,10 +908,10 @@ export default function ProductsPage() {
                     <div className="col-span-full flex justify-end">
                       <Button
                         variant="ghost"
-                        className="!py-1.5 !text-[11.5px]"
+                        className="!py-1.5 !text-[11.5px] gap-1"
                         onClick={clearFilters}
                       >
-                        ✕ مسح كل الفلاتر
+                        <MIcon name="close" className="!text-[14px]" /> مسح كل الفلاتر
                       </Button>
                     </div>
                   )}
@@ -976,11 +976,11 @@ export default function ProductsPage() {
                   </Select>
 
                   <Button
-                    className="!py-1.5 !text-[11.5px]"
+                    className="!py-1.5 !text-[11.5px] gap-1"
                     disabled={!bulkType || bulkBusy}
                     onClick={applyBulkType}
                   >
-                    {bulkBusy ? "جارِ التطبيق..." : "✓ تطبيق على المحدد"}
+                    {bulkBusy ? "جارِ التطبيق..." : <><MIcon name="check" className="!text-[14px]" /> تطبيق على المحدد</>}
                   </Button>
 
                   <Button
@@ -1300,8 +1300,8 @@ export default function ProductsPage() {
               ) : (
                 <div className="flex gap-2">
                   <Button variant="ghost" className="flex-1 justify-center" onClick={() => setClsPreview(null)}>رجوع</Button>
-                  <Button className="flex-[2] justify-center" disabled={clsBusy} onClick={() => runClassify(true)}>
-                    {clsBusy ? "جارِ التطبيق..." : `✓ تطبيق التصنيف على ${clsPreview.classified} صنف`}
+                  <Button className="flex-[2] justify-center gap-1" disabled={clsBusy} onClick={() => runClassify(true)}>
+                    {clsBusy ? "جارِ التطبيق..." : <><MIcon name="check" className="!text-[15px]" /> {`تطبيق التصنيف على ${clsPreview.classified} صنف`}</>}
                   </Button>
                 </div>
               )}
@@ -1344,9 +1344,9 @@ export default function ProductsPage() {
                     {autoBrand.applied ? (
                       <p className="font-black text-emerald">✓ اتطبق التوزيع</p>
                     ) : autoBrand.assigned > 0 && (
-                      <Button className="!py-1.5 !text-[11.5px]" disabled={autoBrandBusy}
+                      <Button className="!py-1.5 !text-[11.5px] gap-1" disabled={autoBrandBusy}
                         onClick={() => runAutoBrand(true)}>
-                        ✓ تطبيق التوزيع على {autoBrand.assigned} صنف
+                        <MIcon name="check" className="!text-[14px]" /> تطبيق التوزيع على {autoBrand.assigned} صنف
                       </Button>
                     )}
                   </>
@@ -1433,8 +1433,8 @@ export default function ProductsPage() {
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setAssignFor(null)}>إلغاء</Button>
-            <Button onClick={saveAssign} disabled={brandBusy}>
-              {brandBusy ? "جارِ الحفظ..." : `✓ حفظ التعيين (${assignSel.size})`}
+            <Button className="gap-1" onClick={saveAssign} disabled={brandBusy}>
+              {brandBusy ? "جارِ الحفظ..." : <><MIcon name="check" className="!text-[15px]" /> {`حفظ التعيين (${assignSel.size})`}</>}
             </Button>
           </div>
         </div>
@@ -1510,8 +1510,8 @@ export default function ProductsPage() {
           <ErrorNote msg={typeErr} />
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setTypeAssignFor(null)}>إلغاء</Button>
-            <Button onClick={saveTypeAssign} disabled={typeBusy}>
-              {typeBusy ? "جارِ الحفظ..." : `✓ حفظ التعيين (${typeAssignSel.size})`}
+            <Button className="gap-1" onClick={saveTypeAssign} disabled={typeBusy}>
+              {typeBusy ? "جارِ الحفظ..." : <><MIcon name="check" className="!text-[15px]" /> {`حفظ التعيين (${typeAssignSel.size})`}</>}
             </Button>
           </div>
         </div>
@@ -1717,14 +1717,14 @@ export default function ProductsPage() {
                 {cleanRes.items.length === 0 && <p className="p-4 text-center text-[12px] text-text-dim">لا تغييرات في الدفعة دي</p>}
               </div>
               {cleanRes.applied ? (
-                <Button className="w-full justify-center" disabled={cleanBusy} onClick={() => runClean(false)}>
-                  {cleanBusy ? "..." : `↻ الدفعة التالية (متبقي ${cleanRes.remaining})`}
+                <Button className="w-full justify-center gap-1" disabled={cleanBusy} onClick={() => runClean(false)}>
+                  {cleanBusy ? "..." : <><MIcon name="autorenew" className="!text-[15px]" /> {`الدفعة التالية (متبقي ${cleanRes.remaining})`}</>}
                 </Button>
               ) : (
                 <div className="flex gap-2">
                   <Button variant="ghost" className="flex-1 justify-center" onClick={() => setCleanRes(null)}>إلغاء</Button>
-                  <Button className="flex-[2] justify-center" disabled={cleanBusy || cleanRes.changed === 0} onClick={() => runClean(true)}>
-                    {cleanBusy ? "..." : `✓ تطبيق التنظيف (${cleanRes.changed})`}
+                  <Button className="flex-[2] justify-center gap-1" disabled={cleanBusy || cleanRes.changed === 0} onClick={() => runClean(true)}>
+                    {cleanBusy ? "..." : <><MIcon name="check" className="!text-[15px]" /> {`تطبيق التنظيف (${cleanRes.changed})`}</>}
                   </Button>
                 </div>
               )}
@@ -1788,12 +1788,12 @@ export default function ProductsPage() {
               الموجود بنفس الباركود سيتم تحديثه، والجديد سيُضاف — دون أي تكرار.
             </p>
             <div className="flex gap-2">
-              <Button className="flex-1 justify-center"
+              <Button className="flex-1 justify-center gap-1"
                 disabled={importBusy || preview.columns.price_vat?.startsWith("❌")}
                 onClick={confirmImport}>
                 {preview.columns.price_vat?.startsWith("❌")
                   ? "الاعتماد متوقف — عمود السعر غير متعرف عليه"
-                  : importBusy ? "جارٍ الاعتماد…" : `✓ اعتماد استيراد ${preview.totalRows} صنف`}
+                  : importBusy ? "جارٍ الاعتماد…" : <><MIcon name="check" className="!text-[15px]" /> {`اعتماد استيراد ${preview.totalRows} صنف`}</>}
               </Button>
               <Button variant="ghost" onClick={() => { setPreview(null); setPendingFile(null); }}>إلغاء</Button>
             </div>

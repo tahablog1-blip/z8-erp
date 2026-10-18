@@ -9,6 +9,9 @@ import {
   type DesignInfo, type ArFontKey, type EnFontKey, type ButtonShape, type FontScale,
 } from "@/lib/design";
 import { Button, Card, ErrorNote, Field, Select, Switch } from "@/components/ui";
+import { MIcon } from "@/components/m-icon";
+import { contrastRatio } from "@/lib/colorUtils";
+import { toast } from "@/components/toast";
 
 type ToneKey = "primaryColor" | "successColor" | "warningColor" | "errorColor";
 const TONES: { key: ToneKey; label: string; fallback: string; hint: string }[] = [
@@ -50,8 +53,24 @@ export default function DesignSettingsPage() {
       const saved = await api<DesignInfo>("/settings/design", { method: "PUT", body: JSON.stringify(next) });
       setSettings(saved);
       cacheDesign(saved);
+      toast.success("تم حفظ إعدادات التصميم");
     } catch (e: any) {
       setErr(e.message || "تعذر حفظ إعدادات التصميم");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function undo() {
+    setSaving(true);
+    setErr("");
+    try {
+      const saved = await api<DesignInfo>("/settings/design/undo", { method: "POST" });
+      setSettings(saved);
+      cacheDesign(saved);
+      toast.success("تم التراجع عن آخر تعديل");
+    } catch (e: any) {
+      setErr(e.message || "تعذر التراجع عن آخر تعديل");
     } finally {
       setSaving(false);
     }
@@ -62,10 +81,17 @@ export default function DesignSettingsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-[19px] font-extrabold">الإعدادات — التصميم</h1>
-      <p className="text-[12.5px] text-text-dim">
-        إعداد موحّد للشركة كاملة — أي تغيير هنا ينعكس فوراً على كل المستخدمين في كل صفحات النظام.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[19px] font-extrabold">الإعدادات — التصميم</h1>
+          <p className="text-[12.5px] text-text-dim">
+            إعداد موحّد للشركة كاملة — أي تغيير هنا ينعكس فوراً على كل المستخدمين في كل صفحات النظام.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" className="shrink-0 gap-1" disabled={!settings.hasBackup || saving} onClick={undo}>
+          <MIcon name="undo" className="!text-[15px]" /> تراجع عن آخر تعديل
+        </Button>
+      </div>
 
       {/* ── الألوان ── */}
       <Card>
@@ -73,6 +99,8 @@ export default function DesignSettingsPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           {TONES.map((tone) => {
             const value = settings[tone.key];
+            const activeColor = value || tone.fallback;
+            const weakContrast = contrastRatio(activeColor, "#FFFFFF") < 4.5;
             return (
               <div key={tone.key} className="rounded-lg border border-line p-3">
                 <div className="mb-2 flex items-center justify-between">
@@ -100,6 +128,12 @@ export default function DesignSettingsPage() {
                          placeholder={tone.fallback} />
                   {!value && <span className="text-[11px] text-text-dim">افتراضي</span>}
                 </div>
+                {weakContrast && (
+                  <div className="mt-2 flex items-start gap-1.5 text-[10.5px] font-bold text-brass">
+                    <MIcon name="warning" className="!text-[13px]" />
+                    تباين ضعيف مع النص الأبيض على الأزرار — قد يصعب قراءته لبعض المستخدمين
+                  </div>
+                )}
               </div>
             );
           })}
@@ -156,6 +190,12 @@ export default function DesignSettingsPage() {
             </button>
           ))}
         </div>
+        {settings.fontScale === "xl" && (
+          <div className="mt-3 flex items-start gap-1.5 text-[11px] font-bold text-brass">
+            <MIcon name="warning" className="!text-[14px]" />
+            الجداول المزدحمة (مثل المخزون والتقارير) قد تبدو متقاربة على الشاشات الصغيرة بهذا الحجم.
+          </div>
+        )}
       </Card>
 
       {/* ── شكل الأزرار ── */}

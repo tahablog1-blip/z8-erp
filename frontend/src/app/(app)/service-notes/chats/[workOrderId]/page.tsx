@@ -178,7 +178,9 @@ export default function ChatRoomPage() {
       <Card className="!py-2.5">
         <div className="flex items-center gap-3">
           <button onClick={() => router.push("/service-notes/chats")}
-                  className="grid h-9 w-9 place-items-center rounded-full text-[16px] transition hover:bg-ink-2">→</button>
+                  className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-ink-2">
+            <MIcon name="arrow_forward" className="!text-[18px]" />
+          </button>
           <div className="grid h-10 w-10 place-items-center rounded-full bg-petrol text-[14px] font-black text-white">
             {(car?.customer_name || car?.plate || "؟").trim().charAt(0)}
           </div>
@@ -254,8 +256,8 @@ export default function ChatRoomPage() {
                  onKeyDown={(e) => { if (e.key === "Enter") sendText(); }}
                  placeholder="اكتب رسالة…" maxLength={2000}
                  className="min-w-0 flex-1 rounded-full border border-line bg-ink px-4 py-2.5 text-[13.5px] font-bold outline-none focus:border-petrol" />
-          <Button disabled={busy || !text.trim()} onClick={sendText} className="!rounded-full">
-            {busy ? "…" : "إرسال ⬅"}
+          <Button disabled={busy || !text.trim()} onClick={sendText} className="!rounded-full gap-1">
+            {busy ? "…" : <>إرسال <MIcon name="send" className="!text-[15px]" /></>}
           </Button>
         </div>
       ) : (

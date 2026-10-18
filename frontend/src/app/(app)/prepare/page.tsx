@@ -11,6 +11,7 @@ import { Product, productLabel, money } from "@/modules/products/types";
 import { BillingQueueRow } from "@/modules/cars/types";
 import { appAlert, appConfirm } from "@/components/dialog";
 import AddNoteModal from "@/components/AddNoteModal";
+import { MIcon } from "@/components/m-icon";
 
 type CartLine = {
   productId: string;
@@ -289,8 +290,8 @@ export default function PreparePage() {
                       <Input className="w-52" placeholder="مثال: 5W-30 تخليقي"
                              value={oilTypeIn} onChange={(e) => setOilTypeIn(e.target.value)} />
                     </Field>
-                    <Button disabled={oilBusy || !oilQtyIn.trim()} onClick={saveOil}>
-                      {oilBusy ? "جارٍ الحفظ…" : "✓ حفظ وتثبيت للموديل"}
+                    <Button className="gap-1" disabled={oilBusy || !oilQtyIn.trim()} onClick={saveOil}>
+                      {oilBusy ? "جارٍ الحفظ…" : <><MIcon name="check" className="!text-[15px]" /> حفظ وتثبيت للموديل</>}
                     </Button>
                     <Button variant="ghost" onClick={() => setOilOpen(false)}>إغلاق</Button>
                   </div>
@@ -389,7 +390,7 @@ export default function PreparePage() {
                           </td>
                           <td className="px-2 py-2 text-center tnum">{money(l.unitPriceVat * (l.isService ? 1 : l.qty))}</td>
                           <td className="px-1 py-2">
-                            <Button variant="ghost" className="h-7 w-7 p-0 text-ember" onClick={() => removeLine(l.productId)}>✕</Button>
+                            <Button variant="ghost" className="h-7 w-7 p-0 text-ember" onClick={() => removeLine(l.productId)}><MIcon name="delete" className="!text-[15px]" /></Button>
                           </td>
                         </tr>
                       ))}
@@ -421,8 +422,8 @@ export default function PreparePage() {
                     value={approvalPin}
                     onChange={(e) => setApprovalPin(e.target.value.replace(/\D/g, ""))}
                   />
-                  <Button className="!px-7 !py-3 !text-[15px]" disabled={saving || cart.length === 0} onClick={confirmAndSend}>
-                    {saving ? "جارٍ الإرسال…" : "✓ إرسال إلى الكاشير"}
+                  <Button className="!px-7 !py-3 !text-[15px] gap-1.5" disabled={saving || cart.length === 0} onClick={confirmAndSend}>
+                    {saving ? "جارٍ الإرسال…" : <><MIcon name="check" className="!text-[17px]" /> إرسال إلى الكاشير</>}
                   </Button>
                 </div>
               </div>

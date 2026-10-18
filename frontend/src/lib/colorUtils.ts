@@ -83,3 +83,17 @@ export function deriveTone(baseHex: string, mode: "light" | "dark") {
   const base = hslToHex(h, sat, lit);
   return { base, bg: hexToRgba(base, mode === "light" ? 0.10 : 0.14) };
 }
+
+/** السطوع النسبي لنظام WCAG — أساس حساب نسبة التباين بين لون ونص أبيض/أسود فوقه */
+function relativeLuminance(hex: string): number {
+  const { r, g, b } = hexToRgb(hex);
+  const ch = (c: number) => { const cs = c / 255; return cs <= 0.03928 ? cs / 12.92 : Math.pow((cs + 0.055) / 1.055, 2.4); };
+  return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+}
+
+/** نسبة التباين (WCAG) بين لونين — 1 = بلا تباين إطلاقاً، 21 = أقصى تباين ممكن (أسود/أبيض) */
+export function contrastRatio(hexA: string, hexB: string): number {
+  const L1 = relativeLuminance(hexA), L2 = relativeLuminance(hexB);
+  const lighter = Math.max(L1, L2), darker = Math.min(L1, L2);
+  return (lighter + 0.05) / (darker + 0.05);
+}

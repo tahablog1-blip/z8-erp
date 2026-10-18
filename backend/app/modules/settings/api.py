@@ -254,6 +254,13 @@ async def update_design_settings(body: DesignSettingsIn,
     return row
 
 
+@router.post("/design/undo", response_model=DesignSettingsOut)
+async def undo_design_settings(user: CurrentUser = Depends(require_permission("settings.company"))):
+    row = await service.undo_design_settings(user.company_id)
+    await log_action(user, "edit", "settings", details="تراجع عن آخر تعديل في التصميم")
+    return row
+
+
 # ══════════════════ مفتاح المراقبة الذكية بالكاميرات ══════════════════
 class AiSupervisorIn(BaseModel):
     enabled: bool

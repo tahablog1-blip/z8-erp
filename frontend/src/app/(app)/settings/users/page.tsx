@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Button, Card } from "@/components/ui";
+import { MIcon } from "@/components/m-icon";
 
 type UserRow = {
   id: string; email: string; full_name: string; role: string;
@@ -52,7 +53,7 @@ export default function UsersSettingsPage() {
                   {u.last_login_at && <> · آخر دخول {new Date(u.last_login_at).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</>}
                 </div>
               </div>
-              <span className="shrink-0 text-[12px] font-bold text-petrol">فتح ←</span>
+              <span className="flex shrink-0 items-center gap-0.5 text-[12px] font-bold text-petrol">فتح <MIcon name="chevron_left" className="!text-[16px]" /></span>
             </button>
           ))}
           {users.length === 0 && (

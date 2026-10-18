@@ -145,7 +145,7 @@ export default function RolesSettingsPage() {
             <h2 className="text-[14px] font-black">
               {selectedId === "new" ? "دور جديد" : `تعديل — ${selectedRole?.name}`}
             </h2>
-            <Button variant="ghost" onClick={closeEditor}>✕ إغلاق</Button>
+            <Button variant="ghost" className="gap-1" onClick={closeEditor}><MIcon name="close" className="!text-[14px]" /> إغلاق</Button>
           </div>
 
           <div className="mb-3 grid gap-2 sm:grid-cols-[1fr_90px_2fr]">

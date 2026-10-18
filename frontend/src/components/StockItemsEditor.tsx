@@ -7,6 +7,7 @@ import { useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { Button, Input } from "@/components/ui";
 import { Product, productLabel } from "@/modules/products/types";
+import { MIcon } from "@/components/m-icon";
 
 export type StockLine = {
   productId: string;
@@ -265,7 +266,9 @@ export function StockItemsEditor({
                   )}
                   <td className="px-2 py-1.5 text-center">
                     <button onClick={() => removeLine(i)} aria-label="حذف السطر"
-                            className="rounded-md px-2 py-1 text-text-dim hover:bg-ember-bg hover:text-ember">✕</button>
+                            className="rounded-md px-2 py-1 text-text-dim hover:bg-ember-bg hover:text-ember">
+                      <MIcon name="delete" className="!text-[16px]" />
+                    </button>
                   </td>
                 </tr>
               );

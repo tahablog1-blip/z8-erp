@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { DataTable, Column } from "@/components/DataTable";
 import { StockItemsEditor, StockLine } from "@/components/StockItemsEditor";
 import { Product } from "@/modules/products/types";
+import { MIcon } from "@/components/m-icon";
 import {
   Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch, Tabs,
 } from "@/components/ui";
@@ -695,8 +696,8 @@ export default function InventoryPage() {
             <ErrorNote msg={reqErr} />
             <div className="flex justify-between gap-2 pt-1">
               <Button variant="ghost" className="text-ember" disabled={reqBusy} onClick={() => submitDecision(false)}>رفض الطلب</Button>
-              <Button disabled={reqBusy || !decideSource} onClick={() => submitDecision(true)}>
-                {reqBusy ? "..." : "✓ الموافقة وتنفيذ التحويل"}
+              <Button className="gap-1" disabled={reqBusy || !decideSource} onClick={() => submitDecision(true)}>
+                {reqBusy ? "..." : <><MIcon name="check" className="!text-[15px]" /> الموافقة وتنفيذ التحويل</>}
               </Button>
             </div>
           </div>

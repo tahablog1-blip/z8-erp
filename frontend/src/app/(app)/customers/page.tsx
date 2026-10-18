@@ -383,7 +383,9 @@ export default function CustomersPage() {
                           <td className="px-2 py-2 text-center">
                             {canEdit && (
                               <button onClick={() => removeVehicle(v)} aria-label="حذف"
-                                      className="rounded-md px-2 py-1 text-text-dim hover:bg-ember-bg hover:text-ember">✕</button>
+                                      className="rounded-md px-2 py-1 text-text-dim hover:bg-ember-bg hover:text-ember">
+                                <MIcon name="delete" className="!text-[16px]" />
+                              </button>
                             )}
                           </td>
                         </tr>

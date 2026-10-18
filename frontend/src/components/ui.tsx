@@ -178,7 +178,9 @@ export function Modal({ open, title, children, onClose, size = "md" }:
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-[15px] font-extrabold text-text">{title}</h3>
           <button onClick={onClose} aria-label="إغلاق"
-                  className="grid h-8 w-8 place-items-center rounded-full text-text-dim transition-all duration-200 hover:rotate-90 hover:bg-ink-3 hover:text-text">✕</button>
+                  className="grid h-8 w-8 place-items-center rounded-full text-text-dim transition-all duration-200 hover:rotate-90 hover:bg-ink-3 hover:text-text">
+            <MIcon name="close" className="!text-[18px]" />
+          </button>
         </div>
         {children}
       </div>

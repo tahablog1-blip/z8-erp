@@ -2514,8 +2514,8 @@ export default function CarsPage() {
               {liveStatus === "error" && "تعذّر تشغيل الكاميرا"}
             </div>
             <button onClick={stopLive}
-                    className="rounded-lg bg-white/15 px-4 py-1.5 text-[12.5px] font-black text-white hover:bg-white/25">
-              ✕ إيقاف البوابة
+                    className="flex items-center justify-center gap-1 rounded-lg bg-white/15 px-4 py-1.5 text-[12.5px] font-black text-white hover:bg-white/25">
+              <MIcon name="close" className="!text-[15px]" /> إيقاف البوابة
             </button>
           </div>
 
@@ -2629,9 +2629,9 @@ export default function CarsPage() {
                           onClick={() => liveMode ? startLive(liveMode) : setLiveStatus("idle")}>
                     إعادة المحاولة
                   </Button>
-                  <Button variant="ghost" className="w-full justify-center"
+                  <Button variant="ghost" className="w-full justify-center gap-1"
                           onClick={() => { setLiveErr(""); setLiveStatus("idle"); }}>
-                    ↩ تغيير مصدر الكاميرا
+                    <MIcon name="swap_horiz" className="!text-[15px]" /> تغيير مصدر الكاميرا
                   </Button>
                 </div>
               </div>

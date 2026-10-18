@@ -288,6 +288,7 @@ class DesignSettingsOut(BaseModel):
     buttonShape: str = "rounded"      # sharp | rounded | pill
     buttonAnimation: bool = True      # حركة عند التحويم/الضغط — موحّدة لكل الأزرار بالنظام (مش القوائم)
     sidebarDefault: str = "expanded"  # expanded | collapsed
+    hasBackup: bool = False           # فيه نسخة سابقة محفوظة تلقائياً يمكن التراجع لها (آخر تعديل واحد)
 
 
 class DesignSettingsIn(BaseModel):

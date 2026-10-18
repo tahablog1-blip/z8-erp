@@ -1064,12 +1064,12 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
       <h2 className="text-center text-[15px] font-black" style={{ color: NAVY }}>هل تريد تغيير فلتر الزيت؟</h2>
       <div className="grid grid-cols-2 gap-2">
         <button onClick={() => setSel({ ...sel, withFilter: true })}
-          className="rounded-xl border-2 py-3.5 text-[13.5px] font-black transition active:scale-[.98]"
+          className="flex items-center justify-center gap-1 rounded-xl border-2 py-3.5 text-[13.5px] font-black transition active:scale-[.98]"
           style={{
             borderColor: sel.withFilter === true ? GREEN : LINE,
             background: sel.withFilter === true ? "rgba(22,163,74,.06)" : "#fff", color: NAVY
           }}>
-          ✓ مع فلتر الزيت
+          <MIcon name="check" className="!text-[15px]" /> مع فلتر الزيت
         </button>
         <button onClick={() => setSel({ ...sel, withFilter: false, filter: null })}
           className="rounded-xl border-2 py-3.5 text-[13.5px] font-black transition active:scale-[.98]"
@@ -1114,8 +1114,8 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
             <>
               {matchedFilter && (
                 <button onClick={() => setShowAllFilters(false)}
-                  className="text-[11px] font-bold underline" style={{ color: GREEN }}>
-                  ← الرجوع للفلتر الأصلي المطابق لسيارتك
+                  className="flex items-center gap-1 text-[11px] font-bold underline" style={{ color: GREEN }}>
+                  <MIcon name="arrow_forward" className="!text-[13px]" /> الرجوع للفلتر الأصلي المطابق لسيارتك
                 </button>
               )}
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث عن الفلتر المناسب لسيارتك"
@@ -1443,7 +1443,7 @@ function BookingSummary({ carLabel, plate, odometer, sel, autoService, busy, err
         <button onClick={onConfirm} disabled={busy}
           className="flex-1 rounded-xl py-3.5 text-[15px] font-black text-white transition active:scale-[.98] disabled:opacity-50"
           style={{ background: GREEN }}>
-          {busy ? "جارِ الحجز..." : "✓ تأكيد الحجز"}
+          {busy ? "جارِ الحجز..." : <span className="flex items-center justify-center gap-1"><MIcon name="check" className="!text-[16px]" /> تأكيد الحجز</span>}
         </button>
       </div>
     </div>
@@ -1466,7 +1466,7 @@ function ChatFab({ carId, urlToken }: { carId?: string | null; urlToken?: string
           <div className="w-full max-w-md rounded-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-2 flex justify-between px-1">
               <span className="rounded-full bg-white/90 px-3 py-1 text-[11px] font-black" style={{ color: GREEN }}>● الموظف متاح خلال ساعات العمل</span>
-              <button onClick={() => setOpen(false)} className="rounded-full bg-white/90 px-3 py-1 text-[12px] font-black" style={{ color: NAVY }}>✕ إغلاق</button>
+              <button onClick={() => setOpen(false)} className="flex items-center gap-1 rounded-full bg-white/90 px-3 py-1 text-[12px] font-black" style={{ color: NAVY }}><MIcon name="close" className="!text-[14px]" /> إغلاق</button>
             </div>
             <div className="max-h-[75vh] overflow-y-auto">
               <ChatSection carId={carId} urlToken={urlToken} />

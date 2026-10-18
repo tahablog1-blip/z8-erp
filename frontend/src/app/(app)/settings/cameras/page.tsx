@@ -117,7 +117,7 @@ function QuickRegisterModal({ scan, onClose, onSaved }: { scan: any; onClose: ()
         <ErrorNote msg={err} />
         <div className="mt-3 flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>إلغاء</Button>
-          <Button onClick={save} disabled={busy}>{busy ? "جارِ الحفظ..." : "✓ حفظ وتأكيد الدخول"}</Button>
+          <Button className="gap-1" onClick={save} disabled={busy}>{busy ? "جارِ الحفظ..." : <><MIcon name="check" className="!text-[15px]" /> حفظ وتأكيد الدخول</>}</Button>
         </div>
       </div>
     </div>

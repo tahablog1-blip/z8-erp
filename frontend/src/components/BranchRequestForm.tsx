@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Badge, Button, Card, ErrorNote, Field, Input, Select } from "@/components/ui";
+import { MIcon } from "@/components/m-icon";
 import { appConfirm } from "@/components/dialog";
 import { StockItemsEditor, StockLine } from "@/components/StockItemsEditor";
 import { Product } from "@/modules/products/types";
@@ -145,7 +146,7 @@ export default function BranchRequestForm({ id }: { id?: string }) {
 
   const back = (
     <button type="button" onClick={goList} className="inline-flex items-center gap-1 text-[12.5px] font-bold text-petrol">
-      ← المخزون / طلبات الفروع
+      <MIcon name="arrow_forward" className="!text-[15px]" /> المخزون / طلبات الفروع
     </button>
   );
 

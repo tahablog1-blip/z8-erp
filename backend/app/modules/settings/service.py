@@ -415,10 +415,20 @@ async def get_design_settings(company_id: str) -> dict:
             out[k] = raw == "1"
         else:
             out[k] = raw
+    # هل يوجد نسخة سابقة محفوظة تلقائياً يمكن التراجع لها؟ (آخر تعديل واحد فقط)
+    backup_kv = await _get_kv(company_id, [f"design.backup.{k}" for k in _DESIGN_DEFAULTS])
+    out["hasBackup"] = any(f"design.backup.{k}" in backup_kv for k in _DESIGN_DEFAULTS)
     return out
 
 
 async def update_design_settings(company_id: str, body) -> dict:
+    # نحفظ القيم الحالية كنسخة احتياطية بخطوة واحدة قبل الكتابة فوقها — تسمح بالتراجع عن آخر تعديل
+    current_raw = await _get_kv(company_id, [f"design.{k}" for k in _DESIGN_DEFAULTS])
+    backup_kv = {
+        f"design.backup.{k}": current_raw.get(f"design.{k}", default)
+        for k, default in _DESIGN_DEFAULTS.items()
+    }
+    await _set_kv(company_id, backup_kv)
     await _set_kv(company_id, {
         "design.primaryColor": body.primaryColor or "",
         "design.successColor": body.successColor or "",
@@ -431,6 +441,21 @@ async def update_design_settings(company_id: str, body) -> dict:
         "design.buttonAnimation": "1" if body.buttonAnimation else "0",
         "design.sidebarDefault": body.sidebarDefault,
     })
+    return await get_design_settings(company_id)
+
+
+async def undo_design_settings(company_id: str) -> dict:
+    """تراجع بخطوة واحدة: تبديل القيم الحالية بالنسخة الاحتياطية (وتخزين القديمة بديلاً عنها،
+    فضغط التراجع مرة ثانية يرجّع التعديل الملغي — سلوك toggle آمن وبسيط بلا سجل تاريخ كامل)."""
+    current_raw = await _get_kv(company_id, [f"design.{k}" for k in _DESIGN_DEFAULTS])
+    backup_raw = await _get_kv(company_id, [f"design.backup.{k}" for k in _DESIGN_DEFAULTS])
+    swap_kv: dict[str, str] = {}
+    for k, default in _DESIGN_DEFAULTS.items():
+        cur_val = current_raw.get(f"design.{k}", default)
+        bak_val = backup_raw.get(f"design.backup.{k}", default)
+        swap_kv[f"design.{k}"] = bak_val
+        swap_kv[f"design.backup.{k}"] = cur_val
+    await _set_kv(company_id, swap_kv)
     return await get_design_settings(company_id)
 
 

@@ -236,7 +236,7 @@ export default function NoteDetailsPage() {
           )}
           {canManage && !["closed", "handled", "rejected"].includes(note.status) && (
             <>
-              <Button variant="ghost" disabled={busy} onClick={() => changeStatus("handled")}>✓ تم التعامل</Button>
+              <Button variant="ghost" className="gap-1" disabled={busy} onClick={() => changeStatus("handled")}><MIcon name="check" className="!text-[14px]" /> تم التعامل</Button>
               <Button variant="danger" disabled={busy} onClick={() => changeStatus("closed")}>إغلاق</Button>
             </>
           )}

@@ -8,6 +8,7 @@ import { useLang } from "@/lib/i18n";
 import { DataTable, Column } from "@/components/DataTable";
 import { Button, Card, Field, Input, Select, Badge, Modal, ErrorNote } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
+import { MIcon } from "@/components/m-icon";
 
 type BranchCategory = "service" | "retail";
 
@@ -224,7 +225,9 @@ export default function BranchesPage() {
                                lines: form.lines.map((x, xi) => xi === i ? e.target.value : x) })} />
                       <button type="button" aria-label="حذف الخط"
                               onClick={() => setForm({ ...form, lines: form.lines.filter((_, xi) => xi !== i) })}
-                              className="shrink-0 rounded-md px-2 py-1.5 text-text-dim hover:bg-ember-bg hover:text-ember">✕</button>
+                              className="shrink-0 rounded-md px-2 py-1.5 text-text-dim hover:bg-ember-bg hover:text-ember">
+                        <MIcon name="delete" className="!text-[16px]" />
+                      </button>
                     </div>
                   ))}
                   <button type="button"

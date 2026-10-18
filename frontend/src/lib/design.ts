@@ -22,12 +22,13 @@ export type DesignInfo = {
   buttonShape: ButtonShape;
   buttonAnimation: boolean;
   sidebarDefault: "expanded" | "collapsed";
+  hasBackup?: boolean;
 };
 
 const FALLBACK: DesignInfo = {
   primaryColor: null, successColor: null, warningColor: null, errorColor: null,
   fontFamilyAr: "cairo", fontFamilyEn: "inter", fontScale: "md",
-  buttonShape: "rounded", buttonAnimation: true, sidebarDefault: "expanded",
+  buttonShape: "rounded", buttonAnimation: true, sidebarDefault: "expanded", hasBackup: false,
 };
 
 const CACHE_KEY = "z8_design";

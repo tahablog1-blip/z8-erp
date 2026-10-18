@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Button, Card, ErrorNote, Field, Input, Select, Switch } from "@/components/ui";
+import { MIcon } from "@/components/m-icon";
 
 type Branch = { id: string; name: string };
 type UserRow = {
@@ -108,7 +109,7 @@ export default function UserEditorPage() {
 
   if (!canUsers) return <Card>لا تملك صلاحية «إدارة حسابات الموظفين».</Card>;
   if (!loaded) return <Card>جارِ التحميل…</Card>;
-  if (notFound) return <Card>الموظف غير موجود. <Button variant="ghost" onClick={() => router.push("/settings/users")}>→ رجوع للقائمة</Button></Card>;
+  if (notFound) return <Card>الموظف غير موجود. <Button variant="ghost" className="gap-1" onClick={() => router.push("/settings/users")}><MIcon name="arrow_forward" className="!text-[15px]" /> رجوع للقائمة</Button></Card>;
 
   return (
     <div className="space-y-4">
@@ -116,7 +117,7 @@ export default function UserEditorPage() {
         <h1 className="text-[19px] font-extrabold">
           {isNew ? "إضافة موظف جديد" : `تعديل — ${savedName}`}
         </h1>
-        <Button variant="ghost" onClick={() => router.push("/settings/users")}>→ رجوع للقائمة</Button>
+        <Button variant="ghost" className="gap-1" onClick={() => router.push("/settings/users")}><MIcon name="arrow_forward" className="!text-[15px]" /> رجوع للقائمة</Button>
       </div>
 
       <Card>
@@ -183,8 +184,8 @@ export default function UserEditorPage() {
                   </button>
                 ))}
                 <button type="button" onClick={() => setUForm({ ...uForm, roleId: null, permissions: [] })}
-                        className="rounded-lg border border-line bg-ink-2 px-3 py-1.5 text-[11.5px] font-bold text-text-dim hover:border-ember hover:text-ember">
-                  ✕ مسح الكل
+                        className="flex items-center gap-1 rounded-lg border border-line bg-ink-2 px-3 py-1.5 text-[11.5px] font-bold text-text-dim hover:border-ember hover:text-ember">
+                  <MIcon name="close" className="!text-[14px]" /> مسح الكل
                 </button>
               </div>
             </div>

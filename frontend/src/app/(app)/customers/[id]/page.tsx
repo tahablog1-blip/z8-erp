@@ -123,7 +123,7 @@ export default function CustomerDetailPage() {
   if (!customer) return (
     <div className="space-y-3 p-2">
       <ErrorNote msg={err} />
-      <Button variant="ghost" onClick={() => router.push("/customers")}>← رجوع للعملاء</Button>
+      <Button variant="ghost" className="gap-1" onClick={() => router.push("/customers")}><MIcon name="arrow_forward" className="!text-[15px]" /> رجوع للعملاء</Button>
     </div>
   );
 

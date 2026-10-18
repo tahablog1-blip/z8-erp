@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch } from "@/components/ui";
 import { money } from "@/modules/invoices/types";
 import { Customer } from "@/modules/customers/types";
+import { MIcon } from "@/components/m-icon";
 
 type Voucher = {
   id: string; voucher_no: string; type: "receipt" | "payment";
@@ -189,12 +190,12 @@ export default function TreasuryPage() {
         {canCreate && (
           <div className="flex gap-2">
             <button onClick={() => openModal("receipt")}
-                    className="rounded-xl bg-emerald px-5 py-2.5 text-[13.5px] font-black text-white shadow-card transition hover:brightness-110 active:scale-[.98]">
-              ⬇ سند قبض
+                    className="flex items-center gap-1 rounded-xl bg-emerald px-5 py-2.5 text-[13.5px] font-black text-white shadow-card transition hover:brightness-110 active:scale-[.98]">
+              <MIcon name="arrow_downward" className="!text-[16px]" /> سند قبض
             </button>
             <button onClick={() => openModal("payment")}
-                    className="rounded-xl bg-ember px-5 py-2.5 text-[13.5px] font-black text-white shadow-card transition hover:brightness-110 active:scale-[.98]">
-              ⬆ سند صرف
+                    className="flex items-center gap-1 rounded-xl bg-ember px-5 py-2.5 text-[13.5px] font-black text-white shadow-card transition hover:brightness-110 active:scale-[.98]">
+              <MIcon name="arrow_upward" className="!text-[16px]" /> سند صرف
             </button>
           </div>
         )}
@@ -412,9 +413,9 @@ export default function TreasuryPage() {
 
           <ErrorNote msg={err} />
           <button onClick={save} disabled={!canSave}
-                  className={`w-full rounded-xl py-3 text-[14px] font-black text-white transition hover:brightness-110 disabled:opacity-40
+                  className={`flex w-full items-center justify-center gap-1 rounded-xl py-3 text-[14px] font-black text-white transition hover:brightness-110 disabled:opacity-40
                     ${modal === "receipt" ? "bg-emerald" : "bg-ember"}`}>
-            {busy ? "جارِ الحفظ..." : modal === "receipt" ? "✓ حفظ وطباعة سند القبض" : "✓ حفظ وطباعة سند الصرف"}
+            {busy ? "جارِ الحفظ..." : <><MIcon name="check" className="!text-[16px]" /> {modal === "receipt" ? "حفظ وطباعة سند القبض" : "حفظ وطباعة سند الصرف"}</>}
           </button>
         </div>
       </Modal>

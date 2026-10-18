@@ -745,7 +745,7 @@ export default function SalesPage() {
       {prefillMsg && (
         <div className="flex items-center justify-between rounded-lg border border-petrol/40 bg-petrol-soft px-4 py-2.5 text-[12.5px] font-bold text-petrol">
           <span>{prefillMsg}</span>
-          <button onClick={() => setPrefillMsg("")} className="text-petrol/60 hover:text-petrol">✕</button>
+          <button onClick={() => setPrefillMsg("")} className="text-petrol/60 hover:text-petrol"><MIcon name="close" className="!text-[15px]" /></button>
         </div>
       )}
         <Card>
@@ -902,7 +902,7 @@ export default function SalesPage() {
                       try { await api(`/invoices/${lastInvoice.id}/send-whatsapp`, { method: "POST" }); showToast("📲 جارٍ الإرسال واتساب"); }
                       catch { showToast("تعذر الإرسال"); }
                     }}>واتساب</Button>
-            <button onClick={() => setLastInvoice(null)} className="text-emerald/70 hover:text-emerald">✕</button>
+            <button onClick={() => setLastInvoice(null)} className="text-emerald/70 hover:text-emerald"><MIcon name="close" className="!text-[15px]" /></button>
           </div>
         </div>
       )}
@@ -923,7 +923,7 @@ export default function SalesPage() {
                 {carId && queue.find((r) => r.id === carId)?.plate && (
                   <span className="tnum">— {queue.find((r) => r.id === carId)?.plate}</span>
                 )}
-                <button onClick={resetSale} className="mr-1 text-petrol/60 hover:text-petrol" aria-label="إلغاء">✕</button>
+                <button onClick={resetSale} className="mr-1 text-petrol/60 hover:text-petrol" aria-label="إلغاء"><MIcon name="close" className="!text-[15px]" /></button>
               </span>
             ) : (
               <span className="rounded-xl bg-ink-3 px-3.5 py-2 text-[12.5px] font-bold text-text-dim">{posMode === "direct" ? "بيع نقدي" : "اختار سيارة من الطابور 👈"}</span>
@@ -1148,7 +1148,7 @@ export default function SalesPage() {
                    onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between">
                   <h2 className="text-[16px] font-extrabold">إتمام الدفع</h2>
-                  <button onClick={() => setStep("cart")} className="text-text-dim hover:text-text">✕</button>
+                  <button onClick={() => setStep("cart")} className="text-text-dim hover:text-text"><MIcon name="close" className="!text-[16px]" /></button>
                 </div>
 
                 <div className="rounded-xl bg-petrol-deep px-4 py-4 text-center text-white">
@@ -1209,7 +1209,7 @@ export default function SalesPage() {
                               onClick={() => fillRemaining(i)}>الباقي</Button>
                       {payments.length > 1 && (
                         <button onClick={() => removePaymentLine(i)} aria-label="حذف"
-                                className="rounded-md px-1.5 py-1 text-text-dim hover:bg-ember-bg hover:text-ember">✕</button>
+                                className="rounded-md px-1.5 py-1 text-text-dim hover:bg-ember-bg hover:text-ember"><MIcon name="delete" className="!text-[15px]" /></button>
                       )}
                     </div>
                   ))}
@@ -1224,12 +1224,12 @@ export default function SalesPage() {
                 <ErrorNote msg={saleErr} />
                 <button onClick={submitSale}
                         disabled={saleBusy || Math.abs(remaining) > 0.01}
-                        className="w-full rounded-xl bg-emerald py-3.5 text-[15px] font-black text-white transition hover:brightness-110 disabled:opacity-40">
-                  {saleBusy ? "جارِ الإصدار..." : "✓ إتمام الدفع وإصدار الفاتورة"}
+                        className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald py-3.5 text-[15px] font-black text-white transition hover:brightness-110 disabled:opacity-40">
+                  {saleBusy ? "جارِ الإصدار..." : <><MIcon name="payments" className="!text-[18px]" /> إتمام الدفع وإصدار الفاتورة</>}
                 </button>
                 <button onClick={() => setStep("cart")}
-                        className="w-full rounded-lg py-2 text-[12.5px] font-bold text-text-dim hover:text-text">
-                  → رجوع للسلة
+                        className="flex w-full items-center justify-center gap-1 rounded-lg py-2 text-[12.5px] font-bold text-text-dim hover:text-text">
+                  <MIcon name="arrow_forward" className="!text-[14px]" /> رجوع للسلة
                 </button>
               </div>
             </div>
