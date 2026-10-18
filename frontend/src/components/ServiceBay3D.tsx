@@ -1,8 +1,9 @@
 "use client";
 // ═══════════════════════════════════════════════════════════════════════
 // بانوراما ثلاثية الأبعاد حقيقية (WebGL / three.js) لمحطتَي "الانتظار" و"الخدمة"
-// — سيارات/سير خدمة/عمّال مُبنية إجرائيًا بأشكال هندسية بسيطة (لا توجد أصول/ملفات
-//   3D جاهزة في المشروع)، مع محرك حركة خاص خفيف يتبع حالة البيانات الحقيقية:
+// — سيارة حقيقية (نموذج GLTF مُحمَّل فعليًا، برخصة CC-BY-4.0 — راجع
+//   public/models/CREDITS.md)، وسير خدمة/عمّال مُبنيان إجرائيًا بأشكال
+//   هندسية بسيطة، مع محرك حركة خاص خفيف يتبع حالة البيانات الحقيقية:
 //   دخول سيارة للانتظار → تدخل وتنتظر في مكانها، انتقالها للخدمة → تتحرك إلى
 //   سير الخدمة (يتّسع لـ 4 سيارات معًا) ويعمل العمّال عليها، وعند الخروج
 //   تنزل عن السير وتخرج السيارة.
@@ -12,8 +13,16 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 export type BayCar = { id: string; plate?: string };
+
+// نموذج السيارة الحقيقي (public/models/car.glb) — يُحمَّل مرة واحدة ثم
+// يُستنسخ لكل سيارة؛ الطول المستهدف بعد القياس يطابق طول الصندوق الإجرائي
+// القديم (1.9) حتى تبقى كل مسافات المشهد (مواقف/سير/كاميرا) صحيحة بدون لمسها.
+const CAR_MODEL_URL = "/models/car.glb";
+const CAR_LENGTH_TARGET = 1.9;
+const CAR_BODY_MATERIAL_NAME = "Kiri10_bodymat";
 
 const PARK_SLOTS = 4;
 const PARK_X = 4.8;
@@ -292,6 +301,7 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
 
     const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
     let dark = document.documentElement.dataset.theme === "dark";
+    let disposed = false;
 
     const scene = new THREE.Scene();
     // كاميرا أقل حدة وأبعد قليلًا — إطار مريح يحتضن منطقتَي الانتظار
@@ -315,6 +325,54 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
     const envTex = pmrem.fromScene(new RoomEnvironment(), 0.045).texture;
     scene.environment = envTex;
     pmrem.dispose();
+
+    // تحميل نموذج السيارة الحقيقي مرة واحدة فقط (غير مُضاف للمشهد مباشرة —
+    // مجرد قالب تُستنسخ منه كل سيارة). إلى أن يكتمل التحميل، تُستخدم السيارة
+    // الإجرائية (buildCar) كبديل فوري حتى لا تبقى اللوحة فارغة أثناء الانتظار.
+    let carTemplate: THREE.Group | null = null;
+    let carTemplateScale = 1;
+    const gltfLoader = new GLTFLoader();
+    gltfLoader.load(
+      CAR_MODEL_URL,
+      (gltf) => {
+        if (disposed) {
+          gltf.scene.traverse((o: any) => {
+            if (o.geometry) o.geometry.dispose();
+            if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m: any) => m.dispose?.());
+          });
+          return;
+        }
+        const root = gltf.scene;
+        const box = new THREE.Box3().setFromObject(root);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        carTemplateScale = CAR_LENGTH_TARGET / (size.x || 1);
+        root.traverse((o: any) => {
+          if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
+        });
+        carTemplate = root;
+      },
+      undefined,
+      () => { /* فشل التحميل — تبقى السيارات الإجرائية كبديل دائم بصمت */ },
+    );
+
+    function buildRealCar(color: number): THREE.Group | null {
+      if (!carTemplate) return null;
+      const clone = carTemplate.clone(true);
+      clone.scale.setScalar(carTemplateScale);
+      // كل سيارة تأخذ نسخة خاصة بها من مادة الهيكل لتلوينها دون المساس
+      // بالمادة المشتركة التي يعتمد عليها القالب والنسخ الأخرى.
+      clone.traverse((o: any) => {
+        if (o.isMesh && o.material && o.material.name === CAR_BODY_MATERIAL_NAME) {
+          const m = o.material.clone();
+          m.color.setHex(color);
+          o.material = m;
+          o.userData.ownMaterial = m;
+        }
+      });
+      clone.userData.isGltfCar = true;
+      return clone;
+    }
 
     const hemi = new THREE.HemisphereLight(0xffffff, 0x223344, 0.7);
     scene.add(hemi);
@@ -401,9 +459,9 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
     };
 
     function spawnCar(id: string, plate: string, directToLift: boolean): TrackedCar {
-      const group = buildCar(hashColor(id));
+      const group = buildRealCar(hashColor(id)) ?? buildCar(hashColor(id));
       const { sprite, mat, tex } = makeLabelSprite(plate || "—", dark);
-      sprite.position.set(0, 1.55, 0);
+      sprite.position.set(0, 1.15, 0);
       group.add(sprite);
       scene.add(group);
       const slot = directToLift ? -1 : freeParkSlot();
@@ -506,7 +564,13 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
           tc.x += Math.sign(exitX - tc.x) * speed * 1.4 * dt;
           if (Math.abs(tc.x - exitX) < 0.3) {
             scene.remove(g);
-            g.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m: any) => m.dispose?.()); });
+            if (g.userData.isGltfCar) {
+              // الهندسة والمواد الأصلية مشتركة مع القالب ونسخ أخرى — لا تُحذف
+              // هنا، فقط نسخة مادة الهيكل الخاصة بهذه السيارة تحديدًا.
+              g.traverse((o: any) => { o.userData?.ownMaterial?.dispose?.(); });
+            } else {
+              g.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m: any) => m.dispose?.()); });
+            }
             tc.labelTex.dispose(); tc.labelMat.dispose();
             tracked.delete(id);
             return;
@@ -562,6 +626,7 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
     (mount as any)._z8SyncProps = syncFromProps;
 
     return () => {
+      disposed = true;
       cancelAnimationFrame(raf);
       ro.disconnect();
       io.disconnect();
@@ -569,6 +634,11 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
       document.removeEventListener("visibilitychange", onVis);
       tracked.forEach((tc) => { tc.labelTex.dispose(); tc.labelMat.dispose(); });
       scene.traverse((o: any) => {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m: any) => m.dispose?.());
+      });
+      // قالب السيارة المحمَّل غير مُضاف للمشهد، فلن يزوره scene.traverse أعلاه
+      carTemplate?.traverse((o: any) => {
         if (o.geometry) o.geometry.dispose();
         if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m: any) => m.dispose?.());
       });
