@@ -4,7 +4,7 @@ import { deriveAccent, deriveTone } from "@/lib/colorUtils";
 
 export type ArFontKey =
   | "cairo" | "tajawal" | "ibm-plex-arabic" | "almarai" | "noto-kufi-arabic" | "changa"
-  | "el-messiri" | "readex-pro" | "reem-kufi" | "markazi-text" | "lalezar" | "harmattan";
+  | "el-messiri" | "readex-pro" | "reem-kufi" | "markazi-text" | "lalezar" | "harmattan" | "arial";
 export type EnFontKey =
   | "inter" | "roboto" | "poppins" | "montserrat" | "lato" | "open-sans"
   | "nunito" | "work-sans" | "source-sans" | "manrope" | "dm-sans" | "outfit" | "arial";
@@ -73,6 +73,7 @@ export const FONT_STACKS_AR: Record<ArFontKey, string> = {
   "markazi-text": "'Markazi Text', serif",
   "lalezar": "'Lalezar', cursive",
   "harmattan": "'Harmattan', sans-serif",
+  "arial": "Arial, Tahoma, sans-serif", // خط نظام — بلا تحميل شبكة، العادي والبولد مدعومين تلقائياً من النظام
 };
 
 export const FONT_STACKS_EN: Record<EnFontKey, string> = {
@@ -95,7 +96,7 @@ export const FONT_LABELS_AR: Record<ArFontKey, string> = {
   "cairo": "Cairo — افتراضي", "tajawal": "Tajawal", "ibm-plex-arabic": "IBM Plex Sans Arabic",
   "almarai": "Almarai", "noto-kufi-arabic": "Noto Kufi Arabic", "changa": "Changa",
   "el-messiri": "El Messiri", "readex-pro": "Readex Pro", "reem-kufi": "Reem Kufi",
-  "markazi-text": "Markazi Text", "lalezar": "Lalezar", "harmattan": "Harmattan",
+  "markazi-text": "Markazi Text", "lalezar": "Lalezar", "harmattan": "Harmattan", "arial": "Arial",
 };
 
 export const FONT_LABELS_EN: Record<EnFontKey, string> = {

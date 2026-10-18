@@ -265,7 +265,7 @@ _HEX_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 # خطوط عربية — تُستخدم لما واجهة النظام عربي
 _FONT_FAMILIES_AR = {
     "cairo", "tajawal", "ibm-plex-arabic", "almarai", "noto-kufi-arabic", "changa",
-    "el-messiri", "readex-pro", "reem-kufi", "markazi-text", "lalezar", "harmattan",
+    "el-messiri", "readex-pro", "reem-kufi", "markazi-text", "lalezar", "harmattan", "arial",
 }
 # خطوط إنجليزية — تُستخدم لما واجهة النظام English
 _FONT_FAMILIES_EN = {
