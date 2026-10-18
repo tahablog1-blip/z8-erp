@@ -39,10 +39,11 @@ type TrackedCar = {
   labelTex: THREE.CanvasTexture;
   state: CarState;
   slot: number; // parking slot index, -1 if none
-  bay: number; // line slot index (0..LINE_SLOTS-1), -1 if none
+  bay: number; // current index within lineOrder (recomputed live each frame), -1 if none
   x: number; z: number; // logical ground position (ramp height applied separately)
   liftP: number; // 0..1 ramp-mount progress
   bob: number; // idle bob phase
+  doneWaiting: boolean; // الخدمة انتهت فعليًا لكنها لم تصل بعد لمقدمة السير
 };
 
 function hashColor(id: string): number {
@@ -388,16 +389,14 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
     applyTheme(dark);
 
     const tracked = new Map<string, TrackedCar>();
+    // ترتيب السيارات الفعلي على السير: المؤشر 0 = أقرب سيارة للخروج (مقدمة
+    // السير). عند خروج المقدمة يُحذف العنصر الأول فتتزحزح البقية تلقائيًا
+    // لأن موضع كل سيارة يُحسب من مكانها الحالي داخل هذه المصفوفة كل إطار.
+    const lineOrder: string[] = [];
     const freeParkSlot = () => {
       const used = new Set<number>();
       tracked.forEach((c) => { if (c.slot >= 0 && c.state !== "leaving") used.add(c.slot); });
       for (let i = 0; i < PARK_SLOTS; i++) if (!used.has(i)) return i;
-      return -1;
-    };
-    const freeLineSlot = () => {
-      const used = new Set<number>();
-      tracked.forEach((c) => { if (c.bay >= 0 && c.state !== "leaving") used.add(c.bay); });
-      for (let i = 0; i < LINE_SLOTS; i++) if (!used.has(i)) return i;
       return -1;
     };
 
@@ -414,7 +413,8 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
       group.rotation.y = directToLift ? Math.PI : Math.PI;
       const tc: TrackedCar = {
         id, plate, group, label: sprite, labelMat: mat, labelTex: tex,
-        state: "entering", slot, bay: -1, x: startX, z: startZ, liftP: 0, bob: Math.random() * Math.PI * 2,
+        state: "entering", slot, bay: -1, x: startX, z: startZ, liftP: 0,
+        bob: Math.random() * Math.PI * 2, doneWaiting: false,
       };
       tracked.set(id, tc);
       return tc;
@@ -428,14 +428,21 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
       svc.forEach((c) => {
         if (!tracked.has(c.id)) { spawnCar(c.id, c.plate || "", true); return; }
         const tc = tracked.get(c.id)!;
-        if (tc.state === "entering" || tc.state === "parked") {
-          const bay = freeLineSlot();
-          if (bay >= 0) { tc.bay = bay; tc.slot = -1; tc.state = "toLift"; }
+        tc.doneWaiting = false; // ما زالت قيد الخدمة فعليًا حسب البيانات
+        if ((tc.state === "entering" || tc.state === "parked") && lineOrder.length < LINE_SLOTS && !lineOrder.includes(c.id)) {
+          lineOrder.push(c.id); // تدخل من مؤخرة السير (جهة الانتظار)
+          tc.slot = -1;
+          tc.state = "toLift";
         }
       });
       tracked.forEach((tc, id) => {
-        if (!qIds.has(id) && !sIds.has(id) && tc.state !== "leaving") {
-          tc.state = tc.liftP > 0.02 ? "lowering" : "leaving";
+        if (!qIds.has(id) && !sIds.has(id) && tc.state !== "leaving" && tc.state !== "lowering") {
+          if (lineOrder.includes(id)) {
+            // انتهت خدمتها فعليًا لكنها تنتظر دورها في مقدمة السير لتخرج
+            tc.doneWaiting = true;
+          } else {
+            tc.state = tc.liftP > 0.02 ? "lowering" : "leaving";
+          }
         }
       });
     }
@@ -454,6 +461,17 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
       last = now;
       const speed = 3.1;
 
+      // تحقّق: هل السيارة في مقدمة السير جاهزة فعلًا للخروج؟ إن كانت كذلك
+      // تُحذف من lineOrder فورًا فتتزحزح كل السيارات خلفها تلقائيًا (لأن
+      // موضع كل سيارة يُحسب أدناه من فهرسها الحالي داخل lineOrder).
+      if (lineOrder.length) {
+        const front = tracked.get(lineOrder[0]);
+        if (front && front.doneWaiting && (front.state === "working" || front.state === "lifting")) {
+          lineOrder.shift();
+          front.state = "lowering";
+        }
+      }
+
       tracked.forEach((tc, id) => {
         const g = tc.group;
         if (tc.state === "entering") {
@@ -464,19 +482,22 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
           if (Math.abs(tc.x - targetX) < 0.04) { tc.x = targetX; tc.state = "parked"; }
         } else if (tc.state === "parked") {
           tc.bob += dt * 1.4;
-        } else if (tc.state === "toLift") {
-          const [bx, bz] = tc.bay >= 0 ? LINE_SLOT_POS[tc.bay] : [0, 0];
-          tc.x += Math.sign(bx - tc.x) * Math.min(Math.abs(bx - tc.x), speed * dt);
+        } else if (tc.state === "toLift" || tc.state === "lifting" || tc.state === "working") {
+          // أثناء وجودها على السير، موضعها الأفقي يُشتق حيًا من فهرسها داخل
+          // lineOrder — هذا وحده ما يُنتج حركة "تقدّم السير" عند تزحزح الفهرس.
+          const idx = lineOrder.indexOf(id);
+          tc.bay = idx;
+          const bz = idx >= 0 ? LINE_SLOT_Z[idx] : tc.z;
+          tc.x += Math.sign(LINE_X - tc.x) * Math.min(Math.abs(LINE_X - tc.x), speed * dt);
           tc.z += Math.sign(bz - tc.z) * Math.min(Math.abs(bz - tc.z), speed * dt);
-          if (Math.abs(tc.x - bx) < 0.04 && Math.abs(tc.z - bz) < 0.04) {
-            tc.x = bx; tc.z = bz; tc.state = "lifting";
+          if (tc.state === "toLift" && Math.abs(tc.x - LINE_X) < 0.04 && Math.abs(tc.z - bz) < 0.04) {
+            tc.state = "lifting";
           }
-        } else if (tc.state === "lifting") {
-          // صعود قصير على منصة السير (ليس رافعة هيدروليكية) — أسرع بكثير
-          tc.liftP = Math.min(1, tc.liftP + dt / (reduceMotion ? 0.05 : 0.45));
-          if (tc.liftP >= 1) tc.state = "working";
-        } else if (tc.state === "working") {
-          // يبقى على السير — العمّال يعملون
+          if (tc.state === "lifting") {
+            // صعود قصير على منصة السير (ليس رافعة هيدروليكية) — أسرع بكثير
+            tc.liftP = Math.min(1, tc.liftP + dt / (reduceMotion ? 0.05 : 0.45));
+            if (tc.liftP >= 1) tc.state = "working";
+          }
         } else if (tc.state === "lowering") {
           tc.liftP = Math.max(0, tc.liftP - dt / (reduceMotion ? 0.05 : 0.35));
           if (tc.liftP <= 0) tc.state = "leaving";
