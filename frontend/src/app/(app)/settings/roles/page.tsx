@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Button, Card, ErrorNote, Field, Input, Textarea } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, Switch, Textarea } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type Role = {
@@ -169,8 +169,7 @@ export default function RolesSettingsPage() {
                   <div className="grid gap-1 sm:grid-cols-2">
                     {g.items.map((it) => (
                       <label key={it.key} className="flex cursor-pointer items-center gap-2 text-[12px]">
-                        <input type="checkbox" checked={form.permissions.includes(it.key)}
-                               className="h-3.5 w-3.5 accent-petrol" onChange={() => togglePerm(it.key)} />
+                        <Switch size="sm" checked={form.permissions.includes(it.key)} onChange={() => togglePerm(it.key)} />
                         {it.label}
                       </label>
                     ))}

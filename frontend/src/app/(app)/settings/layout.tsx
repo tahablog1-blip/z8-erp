@@ -17,6 +17,7 @@ const GROUPS: SettingsGroup[] = [
       { path: "/settings/company", label: "المنشأة", icon: "apartment", perms: ["settings.company"] },
       { path: "/settings/system", label: "النظام", icon: "dns", perms: [] },
       { path: "/settings/background", label: "الخلفية", icon: "wallpaper", perms: ["settings.company"] },
+      { path: "/settings/design", label: "التصميم", icon: "palette", perms: ["settings.company"] },
     ],
   },
   {

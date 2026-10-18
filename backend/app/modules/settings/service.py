@@ -392,6 +392,38 @@ async def update_background_settings(company_id: str, body) -> dict:
     return await get_background_settings(company_id)
 
 
+# ══════════════════ إعدادات التصميم (الألوان/الخط/شكل الأزرار/القائمة الجانبية) ══════════════════
+# إعداد واحد موحّد للشركة كاملة — يُحسب في الواجهة إلى متغيرات CSS وقت التشغيل
+# (نفس أسلوب bg.* بالظبط: صفر جدول جديد، تخزين في company_settings).
+
+_DESIGN_DEFAULTS = {
+    "primaryColor": "", "successColor": "", "warningColor": "", "errorColor": "",
+    "fontFamily": "cairo", "buttonShape": "rounded", "sidebarDefault": "expanded",
+}
+
+
+async def get_design_settings(company_id: str) -> dict:
+    kv = await _get_kv(company_id, [f"design.{k}" for k in _DESIGN_DEFAULTS])
+    out: dict = {}
+    for k, default in _DESIGN_DEFAULTS.items():
+        raw = kv.get(f"design.{k}", default)
+        out[k] = (raw or None) if k.endswith("Color") else raw
+    return out
+
+
+async def update_design_settings(company_id: str, body) -> dict:
+    await _set_kv(company_id, {
+        "design.primaryColor": body.primaryColor or "",
+        "design.successColor": body.successColor or "",
+        "design.warningColor": body.warningColor or "",
+        "design.errorColor": body.errorColor or "",
+        "design.fontFamily": body.fontFamily,
+        "design.buttonShape": body.buttonShape,
+        "design.sidebarDefault": body.sidebarDefault,
+    })
+    return await get_design_settings(company_id)
+
+
 # ══════════════════ إدارة المستخدمين (منقولة بالحرف من api.py) ══════════════════
 
 def _user_row(r: dict) -> dict:

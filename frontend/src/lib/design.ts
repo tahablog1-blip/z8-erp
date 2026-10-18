@@ -1,0 +1,122 @@
+// lib/design.ts — إعدادات التصميم الموحّدة للشركة (ألوان/خط/شكل أزرار/قائمة جانبية)
+// نفس أسلوب lib/background.ts بالظبط: كاش محلي + حدث تحديث فوري + تحديث من السيرفر عند فتح التطبيق
+import { deriveAccent, deriveTone } from "@/lib/colorUtils";
+
+export type FontKey = "cairo" | "tajawal" | "ibm-plex-arabic" | "almarai" | "noto-kufi-arabic" | "changa";
+export type ButtonShape = "sharp" | "rounded" | "pill";
+
+export type DesignInfo = {
+  primaryColor: string | null;
+  successColor: string | null;
+  warningColor: string | null;
+  errorColor: string | null;
+  fontFamily: FontKey;
+  buttonShape: ButtonShape;
+  sidebarDefault: "expanded" | "collapsed";
+};
+
+const FALLBACK: DesignInfo = {
+  primaryColor: null, successColor: null, warningColor: null, errorColor: null,
+  fontFamily: "cairo", buttonShape: "rounded", sidebarDefault: "expanded",
+};
+
+const CACHE_KEY = "z8_design";
+const EVENT = "z8-design-updated";
+
+export function getDesign(): DesignInfo {
+  if (typeof window === "undefined") return FALLBACK;
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (raw) return { ...FALLBACK, ...JSON.parse(raw) };
+  } catch { /* تجاهل */ }
+  return FALLBACK;
+}
+
+export function cacheDesign(d: Partial<DesignInfo>) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ...getDesign(), ...d }));
+    window.dispatchEvent(new Event(EVENT));
+  } catch { /* */ }
+}
+
+export function onDesignUpdate(cb: () => void): () => void {
+  window.addEventListener(EVENT, cb);
+  window.addEventListener("storage", cb);
+  return () => { window.removeEventListener(EVENT, cb); window.removeEventListener("storage", cb); };
+}
+
+export async function refreshDesign(apiFn: <T>(p: string) => Promise<T>) {
+  try {
+    const r = await apiFn<DesignInfo>("/settings/design");
+    cacheDesign(r);
+  } catch { /* التصميم هيستخدم الكاش/الافتراضي */ }
+}
+
+export const FONT_STACKS: Record<FontKey, string> = {
+  "cairo": "'Cairo', sans-serif",
+  "tajawal": "'Tajawal', sans-serif",
+  "ibm-plex-arabic": "'IBM Plex Sans Arabic', sans-serif",
+  "almarai": "'Almarai', sans-serif",
+  "noto-kufi-arabic": "'Noto Kufi Arabic', sans-serif",
+  "changa": "'Changa', sans-serif",
+};
+
+export const FONT_LABELS: Record<FontKey, string> = {
+  "cairo": "Cairo — افتراضي",
+  "tajawal": "Tajawal",
+  "ibm-plex-arabic": "IBM Plex Sans Arabic",
+  "almarai": "Almarai",
+  "noto-kufi-arabic": "Noto Kufi Arabic",
+  "changa": "Changa",
+};
+
+export const BUTTON_SHAPE_LABELS: Record<ButtonShape, string> = {
+  sharp: "حواف حادة",
+  rounded: "حواف دائرية — افتراضي",
+  pill: "كبسولة (دائرية بالكامل)",
+};
+
+const RADIUS_PRESETS: Record<ButtonShape, { sm: string; base: string; lg: string; xl: string; card: string }> = {
+  sharp:   { sm: "3px", base: "4px", lg: "6px", xl: "8px", card: "10px" },
+  rounded: { sm: "6px", base: "8px", lg: "12px", xl: "16px", card: "16px" },
+  pill:    { sm: "10px", base: "14px", lg: "18px", xl: "22px", card: "22px" },
+};
+
+/** يطبّق إعدادات التصميم كمتغيرات CSS على مستوى الصفحة كلها — نفس لحظة الحفظ، بلا إعادة تحميل */
+export function applyDesignVars(d: DesignInfo, isDark: boolean) {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement.style;
+
+  if (d.primaryColor) {
+    const a = deriveAccent(d.primaryColor, isDark ? "dark" : "light");
+    root.setProperty("--petrol", a.base);
+    root.setProperty("--petrol-deep", a.deep);
+    root.setProperty("--petrol-soft", a.soft);
+  } else {
+    root.removeProperty("--petrol"); root.removeProperty("--petrol-deep"); root.removeProperty("--petrol-soft");
+  }
+
+  const toneMap: [string | null, string, string][] = [
+    [d.successColor, "--emerald", "--emerald-bg"],
+    [d.warningColor, "--brass", "--brass-soft"],
+    [d.errorColor, "--ember", "--ember-bg"],
+  ];
+  for (const [hex, baseVar, bgVar] of toneMap) {
+    if (hex) {
+      const t = deriveTone(hex, isDark ? "dark" : "light");
+      root.setProperty(baseVar, t.base);
+      root.setProperty(bgVar, t.bg);
+    } else {
+      root.removeProperty(baseVar); root.removeProperty(bgVar);
+    }
+  }
+
+  const radii = RADIUS_PRESETS[d.buttonShape] || RADIUS_PRESETS.rounded;
+  root.setProperty("--radius-sm", radii.sm);
+  root.setProperty("--radius", radii.base);
+  root.setProperty("--radius-lg", radii.lg);
+  root.setProperty("--radius-xl", radii.xl);
+  root.setProperty("--radius-card", radii.card);
+
+  document.body.style.fontFamily = FONT_STACKS[d.fontFamily] || "";
+}

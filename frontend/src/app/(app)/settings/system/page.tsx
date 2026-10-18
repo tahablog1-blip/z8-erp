@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Button, Card, ErrorNote, Field, Input, Select } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, Select, Switch } from "@/components/ui";
 import { NAV_MODULES } from "@/modules/registry";
 
 type SystemSettings = {
@@ -149,8 +149,7 @@ export default function SystemSettingsPage() {
             <div className="text-[13px] font-bold text-ember">وضع الصيانة</div>
             <div className="text-[11.5px] text-text-dim">يمنع دخول الموظفين مؤقتاً (رسالة «النظام تحت الصيانة») — حساب المدير يفضل يدخل عادي دايماً عشان يقدر يلغي الوضع</div>
           </div>
-          <input type="checkbox" checked={form.maintenanceMode} className="h-4 w-4 accent-ember"
-                 onChange={(e) => setForm({ ...form, maintenanceMode: e.target.checked })} />
+          <Switch checked={form.maintenanceMode} onChange={(v) => setForm({ ...form, maintenanceMode: v })} tone="ember" />
         </label>
       </Card>
 

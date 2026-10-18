@@ -10,6 +10,7 @@ from .schemas import (
     CompanyOut, CompanyIn, LogoIn, RoleOut, RoleIn, SettingsDashboardOut,
     PrintingSettingsOut, PrintingSettingsIn, SystemSettingsOut, SystemSettingsIn,
     BackgroundOut, BackgroundCreateIn, BackgroundSettingsOut, BackgroundSettingsIn,
+    DesignSettingsOut, DesignSettingsIn,
 )
 
 router = APIRouter()
@@ -235,6 +236,21 @@ async def update_background_settings(body: BackgroundSettingsIn,
                                       user: CurrentUser = Depends(require_permission("settings.company"))):
     row = await service.update_background_settings(user.company_id, body)
     await log_action(user, "edit", "settings", details="تحديث إعدادات الخلفية")
+    return row
+
+
+# ══════════════════ إعدادات التصميم (الألوان/الخط/الأزرار/القائمة) ══════════════════
+
+@router.get("/design", response_model=DesignSettingsOut)
+async def get_design_settings(user: CurrentUser = Depends(get_current_user)):
+    return await service.get_design_settings(user.company_id)
+
+
+@router.put("/design", response_model=DesignSettingsOut)
+async def update_design_settings(body: DesignSettingsIn,
+                                  user: CurrentUser = Depends(require_permission("settings.company"))):
+    row = await service.update_design_settings(user.company_id, body)
+    await log_action(user, "edit", "settings", details="تحديث إعدادات التصميم")
     return row
 
 

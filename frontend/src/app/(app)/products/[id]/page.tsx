@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { MIcon } from "@/components/m-icon";
-import { Badge, Button, Card, ErrorNote, Field, Input } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Switch } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import { Product, money } from "@/modules/products/types";
 
@@ -248,9 +248,9 @@ export default function ProductPage() {
             <Field label="فترة التغيير (كم)"><EditCopyInput inputMode="numeric" value={form.serviceIntervalKm} disabled={dis} onChange={(v) => set("serviceIntervalKm", v)} /></Field>
           </div>
           <div className="flex flex-wrap gap-4 pt-1 text-[12.5px] font-bold">
-            <label className="flex items-center gap-2"><input type="checkbox" disabled={dis} checked={form.isService} onChange={(e) => set("isService", e.target.checked)} /> صنف خدمة (بدون مخزون)</label>
-            <label className="flex items-center gap-2"><input type="checkbox" disabled={dis} checked={form.isOil} onChange={(e) => set("isOil", e.target.checked)} /> زيت (بوابة العميل)</label>
-            <label className="flex items-center gap-2"><input type="checkbox" disabled={dis} checked={form.isOilFilter} onChange={(e) => set("isOilFilter", e.target.checked)} /> فلتر زيت</label>
+            <label className="flex items-center gap-2"><Switch disabled={dis} checked={form.isService} onChange={(v) => set("isService", v)} /> صنف خدمة (بدون مخزون)</label>
+            <label className="flex items-center gap-2"><Switch disabled={dis} checked={form.isOil} onChange={(v) => set("isOil", v)} /> زيت (بوابة العميل)</label>
+            <label className="flex items-center gap-2"><Switch disabled={dis} checked={form.isOilFilter} onChange={(v) => set("isOilFilter", v)} /> فلتر زيت</label>
           </div>
         </Card>
 

@@ -57,4 +57,5 @@ export const NAV_MODULES: NavModule[] = [
   { path: "/settings/printing",   title: "الطباعة",              icon: "settings", section: "الإعدادات", permissions: [], adminOnly: true },
   { path: "/settings/system",     title: "النظام",               icon: "settings", section: "الإعدادات", permissions: [], adminOnly: true },
   { path: "/settings/background", title: "الخلفية",              icon: "settings", section: "الإعدادات", permissions: ["settings.company"] },
+  { path: "/settings/design",     title: "التصميم",              icon: "settings", section: "الإعدادات", permissions: ["settings.company"] },
 ];

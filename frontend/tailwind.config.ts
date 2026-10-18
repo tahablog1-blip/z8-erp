@@ -23,12 +23,12 @@ const config: Config = {
         panel: "0 20px 45px rgba(15,23,42,.14)",
       },
       borderRadius: {
-        sm: "6px",
-        DEFAULT: "8px",
-        md: "8px",
-        lg: "12px",
-        xl: "16px",
-        card: "16px",
+        sm: "var(--radius-sm)",
+        DEFAULT: "var(--radius)",
+        md: "var(--radius)",
+        lg: "var(--radius-lg)",
+        xl: "var(--radius-xl)",
+        card: "var(--radius-card)",
       },
       spacing: {
         "4.5": "1.125rem",

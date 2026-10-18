@@ -38,6 +38,7 @@ import { refreshCompany } from "@/lib/company";
 import { refreshPrinting } from "@/lib/printing";
 import { getBackground, onBackgroundUpdate, refreshBackground, type BackgroundInfo } from "@/lib/background";
 import { BackgroundLayer, panelBgStyle } from "@/components/BackgroundLayer";
+import { getDesign, onDesignUpdate, refreshDesign, applyDesignVars, type DesignInfo } from "@/lib/design";
 import { NAV_MODULES, NAV_SECTIONS, SECTION_ICONS } from "@/modules/registry";
 import { NavIcon } from "@/components/nav-icons";
 import { NAV_TITLE_KEYS, SECTION_TITLE_KEYS, useLang } from "@/lib/i18n";
@@ -59,10 +60,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
   // أي انتقال لصفحة جديدة يقفل الدرج تلقائياً على الموبايل
   useEffect(() => { setMobileNavOpen(false); }, [pathname]);
 
-  // ── انكماش القضيب الجانبي لأيقونات فقط (شاشات سطح المكتب) — الحالة محفوظة ──
+  // ── انكماش القضيب الجانبي لأيقونات فقط (شاشات سطح المكتب) — تفضيل شخصي محفوظ،
+  //    وإلا افتراضي الشركة من إعدادات التصميم (design.sidebarDefault) ──
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
-    try { setCollapsed(localStorage.getItem("z8_sidebar_collapsed") === "1"); } catch { /* */ }
+    try {
+      const saved = localStorage.getItem("z8_sidebar_collapsed");
+      if (saved !== null) setCollapsed(saved === "1");
+    } catch { /* */ }
   }, []);
   function toggleCollapsed() {
     setCollapsed((prev) => {
@@ -72,12 +77,29 @@ export function Shell({ children }: { children: React.ReactNode }) {
     });
   }
 
-  // تحديث بيانات المنشأة وإعدادات الطباعة والخلفية الموحدة مرة عند فتح التطبيق
-  useEffect(() => { refreshCompany(api); refreshPrinting(api); refreshBackground(api); }, []);
+  // تحديث بيانات المنشأة وإعدادات الطباعة والخلفية والتصميم الموحّد مرة عند فتح التطبيق
+  useEffect(() => {
+    refreshCompany(api); refreshPrinting(api); refreshBackground(api);
+    (async () => {
+      await refreshDesign(api);
+      setDesign(getDesign());
+      // لو مفيش تفضيل شخصي محفوظ للقضيب الجانبي — نطبّق افتراضي الشركة بعد وصوله
+      try {
+        if (localStorage.getItem("z8_sidebar_collapsed") === null) {
+          setCollapsed(getDesign().sidebarDefault === "collapsed");
+        }
+      } catch { /* */ }
+    })();
+  }, []);
 
   // الخلفية الموحدة — شفافية لوحة المحتوى الرئيسية تتحدّث فوراً (نفس التبويب) عند الحفظ من الإعدادات
   const [bg, setBg] = useState<BackgroundInfo>(getBackground());
   useEffect(() => onBackgroundUpdate(() => setBg(getBackground())), []);
+
+  // إعدادات التصميم الموحّدة — ألوان/خط/شكل أزرار/قائمة جانبية، تتحدّث فوراً عند الحفظ من الإعدادات
+  const [design, setDesign] = useState<DesignInfo>(getDesign());
+  useEffect(() => onDesignUpdate(() => setDesign(getDesign())), []);
+  useEffect(() => { applyDesignVars(design, dark); }, [design, dark]);
 
   // ── الأقسام المنسدلة: مفتوحة افتراضياً + الحالة محفوظة + قسم الصفحة الحالية يفتح تلقائياً ──
   const [openSecs, setOpenSecs] = useState<Record<string, boolean>>({});

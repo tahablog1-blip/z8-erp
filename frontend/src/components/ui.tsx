@@ -49,6 +49,47 @@ export function IconButton({ className = "", size = "md", label, children, ...pr
   );
 }
 
+/** سويتش بستايل أندرويد — بديل موحّد لكل أزرار التفعيل/الإلغاء (checkbox) في النظام.
+ *  دائرة منزلقة داخل مسار، تتوافق تلقائياً مع اتجاه الصفحة (RTL/LTR) عبر inset-inline-start. */
+export function Switch({ checked, onChange, disabled = false, size = "md", tone = "petrol", label }: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+  size?: "md" | "sm";
+  tone?: "petrol" | "ember" | "emerald";
+  label?: string;
+}) {
+  const dims = size === "sm"
+    ? { track: "h-[18px] w-8", thumb: "h-3.5 w-3.5", on: "calc(100% - 16px)" }
+    : { track: "h-[22px] w-10", thumb: "h-[18px] w-[18px]", on: "calc(100% - 20px)" };
+  const onBg = { petrol: "bg-petrol", ember: "bg-ember", emerald: "bg-emerald" }[tone];
+  return (
+    <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled}
+      onClick={() => !disabled && onChange(!checked)}
+      className={`m3 relative shrink-0 rounded-full border transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-petrol ${dims.track} ${checked ? `${onBg} border-transparent` : "border-line bg-ink-4"}`}>
+      <span aria-hidden
+        className={`absolute top-1/2 -translate-y-1/2 rounded-full bg-white shadow-sm transition-[inset-inline-start] duration-200 ease-out ${dims.thumb}`}
+        style={{ insetInlineStart: checked ? dims.on : "2px" }} />
+    </button>
+  );
+}
+
+/** صف إعداد جاهز: عنوان + وصف اختياري + سويتش — يغطي أغلب حالات «تفعيل/إلغاء» في صفحات الإعدادات */
+export function ToggleRow({ title, hint, checked, onChange, tone, disabled }: {
+  title: string; hint?: string; checked: boolean; onChange: (checked: boolean) => void;
+  tone?: "petrol" | "ember" | "emerald"; disabled?: boolean;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-3">
+      <div>
+        <div className="text-[13px] font-bold">{title}</div>
+        {hint && <div className="text-[11.5px] text-text-dim">{hint}</div>}
+      </div>
+      <Switch checked={checked} onChange={onChange} tone={tone} disabled={disabled} label={title} />
+    </label>
+  );
+}
+
 export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
   return (
     <label className="block">

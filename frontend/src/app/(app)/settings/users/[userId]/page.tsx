@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Button, Card, ErrorNote, Field, Input, Select } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, Select, Switch } from "@/components/ui";
 
 type Branch = { id: string; name: string };
 type UserRow = {
@@ -158,9 +158,8 @@ export default function UserEditorPage() {
 
           {!isNew && (
             <label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-bold">
-              <input type="checkbox" checked={uForm.isActive} className="h-4 w-4 accent-petrol"
-                     onChange={(e) => setUForm({ ...uForm, isActive: e.target.checked })} />
-              الحساب نشط (إلغاء التحديد = تعطيل الدخول)
+              <Switch checked={uForm.isActive} onChange={(v) => setUForm({ ...uForm, isActive: v })} />
+              الحساب نشط (إلغاء التفعيل = تعطيل الدخول)
             </label>
           )}
         </div>
@@ -199,8 +198,7 @@ export default function UserEditorPage() {
                     <div className="grid gap-1 sm:grid-cols-2">
                       {g.items.map((it) => (
                         <label key={it.key} className="flex cursor-pointer items-center gap-2 text-[12px]">
-                          <input type="checkbox" checked={uForm.permissions.includes(it.key)}
-                                 className="h-3.5 w-3.5 accent-petrol" onChange={() => togglePerm(it.key)} />
+                          <Switch size="sm" checked={uForm.permissions.includes(it.key)} onChange={() => togglePerm(it.key)} />
                           {it.label}
                         </label>
                       ))}

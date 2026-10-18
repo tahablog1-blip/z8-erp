@@ -10,7 +10,7 @@ import { DataTable, Column } from "@/components/DataTable";
 import { StockItemsEditor, StockLine } from "@/components/StockItemsEditor";
 import { Product } from "@/modules/products/types";
 import {
-  Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Tabs,
+  Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch, Tabs,
 } from "@/components/ui";
 
 const WAREHOUSE_LOC_ID = "main";
@@ -558,9 +558,7 @@ export default function InventoryPage() {
                     ))}
                   </Select>
                   <label className="flex cursor-pointer items-center gap-1.5 text-[12.5px] font-bold text-text-dim">
-                    <input type="checkbox" checked={onlyLow}
-                           onChange={(e) => setOnlyLow(e.target.checked)}
-                           className="accent-petrol" />
+                    <Switch size="sm" checked={onlyLow} onChange={setOnlyLow} />
                     الناقص فقط
                   </label>
                 </div>

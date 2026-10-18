@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch } from "@/components/ui";
 import { money } from "@/modules/invoices/types";
 import { Customer } from "@/modules/customers/types";
 
@@ -221,7 +221,7 @@ export default function TreasuryPage() {
             <span className="font-bold text-text-dim">إلى</span>
             <Input type="date" className="tnum !py-1.5" value={to} onChange={(e) => setTo(e.target.value)} />
             <label className="flex items-center gap-1.5 text-[12px] font-bold text-text-dim">
-              <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} />
+              <Switch size="sm" checked={showCancelled} onChange={setShowCancelled} />
               إظهار الملغي
             </label>
           </div>

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { DataTable, Column } from "@/components/DataTable";
-import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Tabs, Textarea } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch, Tabs, Textarea } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import {
   Attendance, CONTRACT_LABELS, Employee, IqamaAlert, LEAVE_TYPE_LABELS, LeaveBalance,
@@ -418,7 +418,7 @@ export default function HrPage() {
             <Field label="تاريخ التعيين"><Input type="date" className="tnum" value={empForm.hireDate} onChange={(e) => setEmpForm({ ...empForm, hireDate: e.target.value })} /></Field>
           </div>
           <label className="flex items-center gap-2 text-[12.5px] font-bold text-text-dim">
-            <input type="checkbox" className="accent-petrol" checked={empForm.isSaudi} onChange={(e) => setEmpForm({ ...empForm, isSaudi: e.target.checked })} />
+            <Switch checked={empForm.isSaudi} onChange={(v) => setEmpForm({ ...empForm, isSaudi: v })} />
             سعودي الجنسية (يحدد نسب التأمينات في الرواتب)
           </label>
           <div className="grid gap-2 sm:grid-cols-3">

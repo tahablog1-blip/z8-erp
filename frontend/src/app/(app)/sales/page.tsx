@@ -9,7 +9,7 @@ import { MIcon } from "@/components/m-icon";
 import type { PrintFormat } from "@/lib/print-invoice";
 import { getPrinting, cachePrinting } from "@/lib/printing";
 import { DataTable, Column } from "@/components/DataTable";
-import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import { Product, productLabel } from "@/modules/products/types";
 import { BillingQueueRow } from "@/modules/cars/types";
@@ -832,13 +832,11 @@ export default function SalesPage() {
               </div>
               <label className="flex cursor-pointer items-center justify-between text-[12.5px] font-bold">
                 الوضع الليلي 🌙
-                <input type="checkbox" checked={darkMode} className="h-4 w-4 accent-petrol"
-                       onChange={(e) => toggleDark(e.target.checked)} />
+                <Switch checked={darkMode} onChange={toggleDark} />
               </label>
               <label className="flex cursor-pointer items-center justify-between text-[12.5px] font-bold">
                 الطباعة التلقائية 🖨
-                <input type="checkbox" checked={autoPrintOn} className="h-4 w-4 accent-petrol"
-                       onChange={(e) => toggleAutoPrint(e.target.checked)} />
+                <Switch checked={autoPrintOn} onChange={toggleAutoPrint} />
               </label>
               <div className="flex items-center justify-between text-[12.5px] font-bold text-text-dim">
                 اللغة 🌐

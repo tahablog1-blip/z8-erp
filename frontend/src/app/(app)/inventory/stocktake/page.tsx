@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { Switch } from "@/components/ui";
 
 type Branch = { id: string; name: string };
 
@@ -910,11 +911,7 @@ export default function StocktakePage() {
 
             {importPreview.uncountedRemaining > 0 && (
               <label className="mt-4 flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={zeroRest}
-                  onChange={(e) => setZeroRest(e.target.checked)}
-                />
+                <Switch checked={zeroRest} onChange={setZeroRest} />
                 اعتبر {importPreview.uncountedRemaining} صنف لم يظهر في الملف = 0
                 (وإلا يبقى «لم يُجرد» ولا تتغير أرصدته)
               </label>

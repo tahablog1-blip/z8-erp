@@ -12,6 +12,9 @@
   --ember:#EF4444; --ember-bg:rgba(239,68,68,0.09);
   --line:#E5E7EB;
   --text:#0F172A; --text-dim:#64748B;
+
+  /* شكل الأزرار/البطاقات — قابل للتخصيص من الإعدادات ← التصميم (حاد/دائري/كبسولة) */
+  --radius-sm:6px; --radius:8px; --radius-lg:12px; --radius-xl:16px; --radius-card:16px;
 }
 
 /* ── الوضع الليلي ── */

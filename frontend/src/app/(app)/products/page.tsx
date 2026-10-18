@@ -6,7 +6,7 @@ import { api, getToken } from "@/lib/api";
 import { MIcon } from "@/components/m-icon";
 import { useAuth } from "@/lib/auth";
 import { DataTable, Column } from "@/components/DataTable";
-import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import { Product, productLabel, money } from "@/modules/products/types";
 import ProductCards from "@/components/ProductCards";
@@ -1151,16 +1151,14 @@ export default function ProductsPage() {
                   خدمة تُقدَّم وليست بضاعة تُشترى — تُباع بكمية ثابتة، ولا تظهر في المشتريات أو التحويلات المخزنية
                 </div>
               </div>
-              <input type="checkbox" checked={form.isService} className="h-4 w-4 shrink-0 accent-petrol"
-                onChange={(e) => setForm({ ...form, isService: e.target.checked })} />
+              <Switch checked={form.isService} onChange={(v) => setForm({ ...form, isService: v })} />
             </label>
             <label className="col-span-full flex cursor-pointer items-center justify-between rounded-lg border border-line bg-ink-3 px-3 py-2.5">
               <div>
                 <div className="text-[12.5px] font-bold">صنف زيت 🛢️</div>
                 <div className="text-[11px] text-text-dim">يظهر كخيار في بوابة اختيار الزيت الذاتية للعميل</div>
               </div>
-              <input type="checkbox" checked={form.isOil} className="h-4 w-4 shrink-0 accent-petrol"
-                onChange={(e) => setForm({ ...form, isOil: e.target.checked })} />
+              <Switch checked={form.isOil} onChange={(v) => setForm({ ...form, isOil: v })} />
             </label>
             <div className="col-span-full grid gap-2 sm:grid-cols-2">
               <Field label="صورة المنتج (تظهر للعميل في بوابة الزيت)">
@@ -1216,8 +1214,7 @@ export default function ProductsPage() {
                 <div className="text-[12.5px] font-bold">فلتر زيت 🔧</div>
                 <div className="text-[11px] text-text-dim">يُضاف تلقائياً لو العميل اختار "مع فلتر" في بوابة الزيت</div>
               </div>
-              <input type="checkbox" checked={form.isOilFilter} className="h-4 w-4 shrink-0 accent-petrol"
-                onChange={(e) => setForm({ ...form, isOilFilter: e.target.checked })} />
+              <Switch checked={form.isOilFilter} onChange={(v) => setForm({ ...form, isOilFilter: v })} />
             </label>
           </div>
 

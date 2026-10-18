@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { cachePrinting } from "@/lib/printing";
-import { Button, Card, ErrorNote, Field, Input, Select } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, Select, Switch } from "@/components/ui";
 
 type Printing = {
   autoPrint: boolean; footer: string; footerReturn: string;
@@ -54,8 +54,7 @@ export default function PrintingSettingsPage() {
               <div className="text-[13px] font-bold">الطباعة التلقائية عند إصدار الفاتورة</div>
               <div className="text-[11.5px] text-text-dim">نافذة الطباعة الحرارية تفتح لوحدها فور الإصدار</div>
             </div>
-            <input type="checkbox" checked={form.autoPrint} className="h-4 w-4 accent-petrol"
-                   onChange={(e) => setForm({ ...form, autoPrint: e.target.checked })} />
+            <Switch checked={form.autoPrint} onChange={(v) => setForm({ ...form, autoPrint: v })} />
           </label>
 
           <label className="flex cursor-pointer items-center justify-between rounded-lg border border-line p-3">
@@ -63,8 +62,7 @@ export default function PrintingSettingsPage() {
               <div className="text-[13px] font-bold">معاينة قبل الطباعة</div>
               <div className="text-[11.5px] text-text-dim">نافذة الطباعة تُفتح للمراجعة أولاً — الطباعة تنتظر ضغطة زر «🖨 طباعة» بدل التنفيذ التلقائي</div>
             </div>
-            <input type="checkbox" checked={form.previewBeforePrint} className="h-4 w-4 accent-petrol"
-                   onChange={(e) => setForm({ ...form, previewBeforePrint: e.target.checked })} />
+            <Switch checked={form.previewBeforePrint} onChange={(v) => setForm({ ...form, previewBeforePrint: v })} />
           </label>
 
           <Field label="نص أسفل الفاتورة العادية (التذييل)">
@@ -93,13 +91,11 @@ export default function PrintingSettingsPage() {
             <div className="space-y-2">
               <label className="flex cursor-pointer items-center justify-between">
                 <span className="text-[12.5px] font-bold">إظهار شعار المنشأة</span>
-                <input type="checkbox" checked={form.thermalShowLogo} className="h-4 w-4 accent-petrol"
-                       onChange={(e) => setForm({ ...form, thermalShowLogo: e.target.checked })} />
+                <Switch checked={form.thermalShowLogo} onChange={(v) => setForm({ ...form, thermalShowLogo: v })} />
               </label>
               <label className="flex cursor-pointer items-center justify-between">
                 <span className="text-[12.5px] font-bold">إظهار رمز QR الضريبي</span>
-                <input type="checkbox" checked={form.thermalShowQr} className="h-4 w-4 accent-petrol"
-                       onChange={(e) => setForm({ ...form, thermalShowQr: e.target.checked })} />
+                <Switch checked={form.thermalShowQr} onChange={(v) => setForm({ ...form, thermalShowQr: v })} />
               </label>
             </div>
             <p className="mt-2 text-[11px] text-text-dim">

@@ -259,3 +259,60 @@ class BackgroundSettingsIn(BaseModel):
         if v not in ("cover", "contain", "repeat"):
             raise ValueError("طريقة عرض غير صالحة")
         return v
+
+
+_HEX_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
+_FONT_FAMILIES = {"cairo", "tajawal", "ibm-plex-arabic", "almarai", "noto-kufi-arabic", "changa"}
+_BUTTON_SHAPES = {"sharp", "rounded", "pill"}
+_SIDEBAR_DEFAULTS = {"expanded", "collapsed"}
+
+
+class DesignSettingsOut(BaseModel):
+    primaryColor: str | None = None   # لون أساسي مخصص (hex) — فارغ = اللون الافتراضي
+    successColor: str | None = None
+    warningColor: str | None = None
+    errorColor: str | None = None
+    fontFamily: str = "cairo"
+    buttonShape: str = "rounded"      # sharp | rounded | pill
+    sidebarDefault: str = "expanded"  # expanded | collapsed
+
+
+class DesignSettingsIn(BaseModel):
+    primaryColor: str | None = None
+    successColor: str | None = None
+    warningColor: str | None = None
+    errorColor: str | None = None
+    fontFamily: str = "cairo"
+    buttonShape: str = "rounded"
+    sidebarDefault: str = "expanded"
+
+    @field_validator("primaryColor", "successColor", "warningColor", "errorColor")
+    @classmethod
+    def _hex(cls, v: str | None) -> str | None:
+        if v is None or v == "":
+            return None
+        v = v.strip()
+        if not _HEX_RE.match(v):
+            raise ValueError("لون غير صالح — استخدم صيغة #RRGGBB")
+        return v
+
+    @field_validator("fontFamily")
+    @classmethod
+    def _font(cls, v: str) -> str:
+        if v not in _FONT_FAMILIES:
+            raise ValueError("خط غير مدعوم")
+        return v
+
+    @field_validator("buttonShape")
+    @classmethod
+    def _shape(cls, v: str) -> str:
+        if v not in _BUTTON_SHAPES:
+            raise ValueError("شكل أزرار غير صالح")
+        return v
+
+    @field_validator("sidebarDefault")
+    @classmethod
+    def _sidebar(cls, v: str) -> str:
+        if v not in _SIDEBAR_DEFAULTS:
+            raise ValueError("وضع قائمة غير صالح")
+        return v

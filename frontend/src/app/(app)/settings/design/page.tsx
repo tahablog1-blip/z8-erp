@@ -1,0 +1,154 @@
+"use client";
+// الإعدادات ← التصميم — تحكم موحّد للشركة كاملة: الألوان، الخط، شكل الأزرار، القائمة الجانبية
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { cacheDesign, FONT_LABELS, FONT_STACKS, BUTTON_SHAPE_LABELS, type DesignInfo, type FontKey, type ButtonShape } from "@/lib/design";
+import { Button, Card, ErrorNote, Field, Select } from "@/components/ui";
+
+type ToneKey = "primaryColor" | "successColor" | "warningColor" | "errorColor";
+const TONES: { key: ToneKey; label: string; fallback: string; hint: string }[] = [
+  { key: "primaryColor", label: "اللون الأساسي", fallback: "#1E3A8A", hint: "لون الأزرار الرئيسية والقضيب الجانبي والعناصر النشطة" },
+  { key: "successColor", label: "لون النجاح", fallback: "#22C55E", hint: "رسائل النجاح والحالات الإيجابية" },
+  { key: "warningColor", label: "لون التحذير", fallback: "#F59E0B", hint: "التنبيهات والحالات المتوسطة" },
+  { key: "errorColor", label: "لون الخطأ", fallback: "#EF4444", hint: "الأخطاء والإجراءات الخطرة" },
+];
+
+const FONT_KEYS = Object.keys(FONT_LABELS) as FontKey[];
+const SHAPE_KEYS = Object.keys(BUTTON_SHAPE_LABELS) as ButtonShape[];
+const RADIUS_PREVIEW: Record<ButtonShape, string> = { sharp: "4px", rounded: "10px", pill: "999px" };
+
+export default function DesignSettingsPage() {
+  const { hasPerm } = useAuth();
+  const canManage = hasPerm("settings.company");
+
+  const [settings, setSettings] = useState<DesignInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    if (!canManage) return;
+    api<DesignInfo>("/settings/design")
+      .then(setSettings)
+      .catch((e) => setErr(e.message))
+      .finally(() => setLoading(false));
+  }, [canManage]);
+
+  async function save(next: DesignInfo) {
+    setSettings(next); // تحديث فوري للعرض — بلا انتظار الشبكة (نفس أسلوب صفحة الخلفية)
+    cacheDesign(next);  // ينعكس على كامل الموقع فوراً عبر Shell
+    setSaving(true);
+    setErr("");
+    try {
+      const saved = await api<DesignInfo>("/settings/design", { method: "PUT", body: JSON.stringify(next) });
+      setSettings(saved);
+      cacheDesign(saved);
+    } catch (e: any) {
+      setErr(e.message || "تعذر حفظ إعدادات التصميم");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!canManage) return <Card>لا تملك صلاحية «بيانات الشركة والمظهر».</Card>;
+  if (loading || !settings) return <Card>جارِ التحميل…</Card>;
+
+  return (
+    <div className="space-y-4">
+      <h1 className="text-[19px] font-extrabold">الإعدادات — التصميم</h1>
+      <p className="text-[12.5px] text-text-dim">
+        إعداد موحّد للشركة كاملة — أي تغيير هنا ينعكس فوراً على كل المستخدمين في كل صفحات النظام.
+      </p>
+
+      {/* ── الألوان ── */}
+      <Card>
+        <h2 className="mb-3 text-[14px] font-black">الألوان</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {TONES.map((tone) => {
+            const value = settings[tone.key];
+            return (
+              <div key={tone.key} className="rounded-lg border border-line p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <div>
+                    <div className="text-[12.5px] font-bold">{tone.label}</div>
+                    <div className="text-[11px] text-text-dim">{tone.hint}</div>
+                  </div>
+                  {value && (
+                    <button type="button" onClick={() => save({ ...settings, [tone.key]: null })}
+                            className="shrink-0 text-[11px] font-bold text-text-dim hover:text-ember">
+                      استخدام الافتراضي
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={value || tone.fallback}
+                         onChange={(e) => save({ ...settings, [tone.key]: e.target.value })}
+                         className="h-9 w-12 cursor-pointer rounded-lg border border-line bg-ink-2 p-1" />
+                  <input type="text" value={value || tone.fallback}
+                         onChange={(e) => {
+                           const v = e.target.value;
+                           if (/^#[0-9A-Fa-f]{6}$/.test(v)) save({ ...settings, [tone.key]: v });
+                         }}
+                         className="tnum w-24 rounded-lg border border-line bg-ink-2 px-2 py-1.5 text-[12.5px] uppercase"
+                         placeholder={tone.fallback} />
+                  {!value && <span className="text-[11px] text-text-dim">افتراضي</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* ── الخط ── */}
+      <Card>
+        <h2 className="mb-3 text-[14px] font-black">الخط</h2>
+        <div className="max-w-sm space-y-3">
+          <Field label="خط النظام">
+            <Select value={settings.fontFamily} onChange={(e) => save({ ...settings, fontFamily: e.target.value as FontKey })}>
+              {FONT_KEYS.map((k) => <option key={k} value={k}>{FONT_LABELS[k]}</option>)}
+            </Select>
+          </Field>
+          <div className="rounded-lg border border-line bg-ink-3 p-4 text-center" style={{ fontFamily: FONT_STACKS[settings.fontFamily] }}>
+            <div className="text-[22px] font-extrabold">مصدر الزيوت — فاتورة رقم 1024</div>
+            <div className="mt-1 text-[13px] text-text-dim">Z8 Platform — نموذج معاينة الخط</div>
+          </div>
+        </div>
+      </Card>
+
+      {/* ── شكل الأزرار ── */}
+      <Card>
+        <h2 className="mb-3 text-[14px] font-black">شكل الأزرار والبطاقات</h2>
+        <div className="flex flex-wrap gap-3">
+          {SHAPE_KEYS.map((shape) => (
+            <button key={shape} type="button" onClick={() => save({ ...settings, buttonShape: shape })}
+                    className={`flex flex-col items-center gap-2 rounded-xl border-2 px-5 py-4 transition
+                      ${settings.buttonShape === shape ? "border-petrol bg-petrol-soft/40" : "border-line hover:border-petrol/50"}`}>
+              <span className="grid h-9 w-24 place-items-center bg-petrol text-[11px] font-bold text-white"
+                    style={{ borderRadius: RADIUS_PREVIEW[shape] }}>
+                زر مثال
+              </span>
+              <span className="text-[11.5px] font-bold">{BUTTON_SHAPE_LABELS[shape]}</span>
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {/* ── القائمة الجانبية ── */}
+      <Card>
+        <h2 className="mb-3 text-[14px] font-black">القائمة الجانبية</h2>
+        <Field label="الحالة الافتراضية عند أول دخول" hint="كل مستخدم بعدين يقدر يطوي/يوسّع القائمة بنفسه — واختياره الشخصي يتحفظ ويتفضّل على هذا الإعداد">
+          <Select value={settings.sidebarDefault}
+                  onChange={(e) => save({ ...settings, sidebarDefault: e.target.value as "expanded" | "collapsed" })}
+                  className="max-w-xs">
+            <option value="expanded">موسّعة (تعرض الأسماء)</option>
+            <option value="collapsed">مطوية (أيقونات فقط)</option>
+          </Select>
+        </Field>
+      </Card>
+
+      {saving && <p className="text-[11px] text-text-dim">جارِ الحفظ...</p>}
+      <ErrorNote msg={err} />
+    </div>
+  );
+}
