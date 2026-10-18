@@ -10,23 +10,23 @@ def _row_out(r: dict) -> dict:
 
 async def list_branches(company_id: str) -> list[dict]:
     rows = await fetch(
-        """SELECT id, name, capacity_sir, capacity_hafr, capacity_rafaat, lines, is_frozen, created_at
+        """SELECT id, name, category, capacity_sir, capacity_hafr, capacity_rafaat, lines, is_frozen, created_at
            FROM branches WHERE company_id = $1 AND is_active = TRUE
            ORDER BY name""",
         company_id,
     )
     return [_row_out(r) for r in rows]
 
-async def create_branch(company_id: str, name: str, sir: int, hafr: int, rafaat: int, lines: list[str] | None = None) -> dict:
+async def create_branch(company_id: str, name: str, category: str, sir: int, hafr: int, rafaat: int, lines: list[str] | None = None) -> dict:
     row = await fetchrow(
-        """INSERT INTO branches (company_id, name, capacity_sir, capacity_hafr, capacity_rafaat, lines)
-           VALUES ($1, $2, $3, $4, $5, $6::jsonb)
-           RETURNING id, name, capacity_sir, capacity_hafr, capacity_rafaat, lines, is_frozen, created_at""",
-        company_id, name, (len(lines) if lines else sir), hafr, rafaat, lines or [],
+        """INSERT INTO branches (company_id, name, category, capacity_sir, capacity_hafr, capacity_rafaat, lines)
+           VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+           RETURNING id, name, category, capacity_sir, capacity_hafr, capacity_rafaat, lines, is_frozen, created_at""",
+        company_id, name, category, (len(lines) if lines else sir), hafr, rafaat, lines or [],
     )
     return _row_out(row)
 
-_COL_MAP = {"name": "name", "lines": "lines", "capacitySir": "capacity_sir",
+_COL_MAP = {"name": "name", "category": "category", "lines": "lines", "capacitySir": "capacity_sir",
             "capacityHafr": "capacity_hafr", "capacityRafaat": "capacity_rafaat",
             "is_frozen": "is_frozen"}
 
@@ -45,7 +45,7 @@ async def update_branch(company_id: str, branch_id: str, fields: dict) -> dict:
     row = await fetchrow(
         f"""UPDATE branches SET {', '.join(set_parts)}, updated_at = now()
             WHERE id = $1 AND company_id = $2
-            RETURNING id, name, capacity_sir, capacity_hafr, capacity_rafaat, lines, is_frozen, created_at""",
+            RETURNING id, name, category, capacity_sir, capacity_hafr, capacity_rafaat, lines, is_frozen, created_at""",
         branch_id, company_id, *values,
     )
     if not row:

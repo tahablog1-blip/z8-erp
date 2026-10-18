@@ -17,6 +17,9 @@ class Branch(Base):
     )
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     name: Mapped[str] = mapped_column(String(150), nullable=False)
+    # فئة الفرع: "service" (فرع خدمة — ورشة تغيير زيت كاملة) أو
+    # "retail" (فرع تجزئة — بيع بالقطعة فقط بدون طابور خدمة سيارات)
+    category: Mapped[str] = mapped_column(String(20), nullable=False, server_default=text("'service'"))
     capacity_sir: Mapped[int] = mapped_column(Integer, server_default=text("0"))
     capacity_hafr: Mapped[int] = mapped_column(Integer, server_default=text("0"))
     capacity_rafaat: Mapped[int] = mapped_column(Integer, server_default=text("0"))

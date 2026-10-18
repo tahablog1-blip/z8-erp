@@ -6,16 +6,19 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useLang } from "@/lib/i18n";
 import { DataTable, Column } from "@/components/DataTable";
-import { Button, Card, Field, Input, Modal, ErrorNote } from "@/components/ui";
+import { Button, Card, Field, Input, Select, Badge, Modal, ErrorNote } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 
+type BranchCategory = "service" | "retail";
+
 type Branch = {
-  id: string; name: string;
+  id: string; name: string; category: BranchCategory;
   capacity_sir: number; capacity_hafr: number; capacity_rafaat: number;
   lines: string[]; is_frozen: boolean; created_at: string;
 };
 
-const EMPTY = { name: "", capacitySir: 0, capacityHafr: 0, capacityRafaat: 0, lines: [] as string[] };
+const EMPTY = { name: "", category: "service" as BranchCategory,
+                capacitySir: 0, capacityHafr: 0, capacityRafaat: 0, lines: [] as string[] };
 
 export default function BranchesPage() {
   const { hasPerm } = useAuth();
@@ -41,7 +44,7 @@ export default function BranchesPage() {
     setForm({ ...EMPTY }); setErr(""); setModal({ mode: "create" });
   }
   function openEdit(b: Branch) {
-    setForm({ name: b.name, capacitySir: b.capacity_sir,
+    setForm({ name: b.name, category: b.category || "service", capacitySir: b.capacity_sir,
               capacityHafr: b.capacity_hafr, capacityRafaat: b.capacity_rafaat,
               lines: b.lines || [] });
     setErr(""); setModal({ mode: "edit", id: b.id });
@@ -87,12 +90,16 @@ export default function BranchesPage() {
   const columns: Column<Branch>[] = [
     { key: "name", title: t("branches.name", "اسم الفرع"),
       render: (b) => <span className="font-extrabold">{b.name}</span> },
+    { key: "category", title: t("branches.category", "فئة الفرع"), width: "110px",
+      render: (b) => b.category === "retail"
+        ? <Badge tone="info">{t("branches.categoryRetail", "تجزئة")}</Badge>
+        : <Badge tone="good">{t("branches.categoryService", "خدمة")}</Badge> },
     { key: "capacity_sir",    title: t("branches.lines", "خطوط السير"),  width: "110px",
-      render: (b) => <span className="tnum">{b.capacity_sir}</span> },
+      render: (b) => <span className="tnum">{b.category === "retail" ? "—" : b.capacity_sir}</span> },
     { key: "capacity_hafr",   title: t("branches.capacityHafr", "سعة الحفرة"),  width: "110px",
-      render: (b) => <span className="tnum">{b.capacity_hafr}</span> },
+      render: (b) => <span className="tnum">{b.category === "retail" ? "—" : b.capacity_hafr}</span> },
     { key: "capacity_rafaat", title: t("branches.capacityRafaat", "سعة الرافعات"), width: "110px",
-      render: (b) => <span className="tnum">{b.capacity_rafaat}</span> },
+      render: (b) => <span className="tnum">{b.category === "retail" ? "—" : b.capacity_rafaat}</span> },
     { key: "is_frozen", title: t("branches.status", "الحالة"), width: "110px",
       render: (b) => b.is_frozen
         ? <span className="rounded-full bg-ember-bg px-2.5 py-1 text-[11px] font-bold text-ember">
@@ -189,35 +196,52 @@ export default function BranchesPage() {
             <Input value={form.name} autoFocus
                    onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </Field>
-          <div className="grid grid-cols-3 gap-2">
-            <Field label={t("branches.lines", "خطوط السير")} hint={t("branches.linesHint", "فرع واحد ممكن يكون فيه أكثر من سير — كل خط باسمه")}>
-              <div className="space-y-1.5">
-                {form.lines.map((ln, i) => (
-                  <div key={i} className="flex items-center gap-1.5">
-                    <Input value={ln} placeholder={t("branches.linePlaceholder", `سير ${i + 1}`)}
-                           onChange={(e) => setForm({ ...form,
-                             lines: form.lines.map((x, xi) => xi === i ? e.target.value : x) })} />
-                    <button type="button" aria-label="حذف الخط"
-                            onClick={() => setForm({ ...form, lines: form.lines.filter((_, xi) => xi !== i) })}
-                            className="shrink-0 rounded-md px-2 py-1.5 text-text-dim hover:bg-ember-bg hover:text-ember">✕</button>
-                  </div>
-                ))}
-                <button type="button"
-                        onClick={() => setForm({ ...form, lines: [...form.lines, `سير ${form.lines.length + 1}`] })}
-                        className="w-full rounded-lg border border-dashed border-line py-1.5 text-[12px] font-bold text-text-dim hover:border-petrol hover:text-petrol">
-                 {t("branches.addLine", "+ إضافة خط سير")}
-                </button>
-              </div>
-            </Field>
-            <Field label={t("branches.capacityHafr", "سعة الحفرة")}>
-              <Input type="number" min={0} className="tnum" value={form.capacityHafr}
-                     onChange={(e) => setForm({ ...form, capacityHafr: +e.target.value || 0 })} />
-            </Field>
-            <Field label={t("branches.capacityRafaat", "سعة الرافعات")}>
-              <Input type="number" min={0} className="tnum" value={form.capacityRafaat}
-                     onChange={(e) => setForm({ ...form, capacityRafaat: +e.target.value || 0 })} />
-            </Field>
-          </div>
+          <Field label={t("branches.category", "فئة الفرع")}
+                 hint={form.category === "retail"
+                   ? t("branches.categoryRetailHint", "بيع بالقطعة فقط — بدون طابور خدمة سيارات")
+                   : t("branches.categoryServiceHint", "ورشة تغيير زيت كاملة — سير/حفرة/رافعات وطابور خدمة")}>
+            <Select value={form.category}
+                    onChange={(e) => {
+                      const category = e.target.value as BranchCategory;
+                      setForm(category === "retail"
+                        ? { ...form, category, capacitySir: 0, capacityHafr: 0, capacityRafaat: 0, lines: [] }
+                        : { ...form, category });
+                    }}>
+              <option value="service">{t("branches.categoryService", "خدمة")}</option>
+              <option value="retail">{t("branches.categoryRetail", "تجزئة")}</option>
+            </Select>
+          </Field>
+          {form.category === "service" && (
+            <div className="grid grid-cols-3 gap-2">
+              <Field label={t("branches.lines", "خطوط السير")} hint={t("branches.linesHint", "فرع واحد ممكن يكون فيه أكثر من سير — كل خط باسمه")}>
+                <div className="space-y-1.5">
+                  {form.lines.map((ln, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <Input value={ln} placeholder={t("branches.linePlaceholder", `سير ${i + 1}`)}
+                             onChange={(e) => setForm({ ...form,
+                               lines: form.lines.map((x, xi) => xi === i ? e.target.value : x) })} />
+                      <button type="button" aria-label="حذف الخط"
+                              onClick={() => setForm({ ...form, lines: form.lines.filter((_, xi) => xi !== i) })}
+                              className="shrink-0 rounded-md px-2 py-1.5 text-text-dim hover:bg-ember-bg hover:text-ember">✕</button>
+                    </div>
+                  ))}
+                  <button type="button"
+                          onClick={() => setForm({ ...form, lines: [...form.lines, `سير ${form.lines.length + 1}`] })}
+                          className="w-full rounded-lg border border-dashed border-line py-1.5 text-[12px] font-bold text-text-dim hover:border-petrol hover:text-petrol">
+                   {t("branches.addLine", "+ إضافة خط سير")}
+                  </button>
+                </div>
+              </Field>
+              <Field label={t("branches.capacityHafr", "سعة الحفرة")}>
+                <Input type="number" min={0} className="tnum" value={form.capacityHafr}
+                       onChange={(e) => setForm({ ...form, capacityHafr: +e.target.value || 0 })} />
+              </Field>
+              <Field label={t("branches.capacityRafaat", "سعة الرافعات")}>
+                <Input type="number" min={0} className="tnum" value={form.capacityRafaat}
+                       onChange={(e) => setForm({ ...form, capacityRafaat: +e.target.value || 0 })} />
+              </Field>
+            </div>
+          )}
           <ErrorNote msg={err} />
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" onClick={() => setModal(null)}>

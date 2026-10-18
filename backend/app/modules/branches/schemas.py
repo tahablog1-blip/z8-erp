@@ -1,10 +1,14 @@
 # modules/branches/schemas.py — عقود الإدخال والإخراج (Pydantic)
 # أسماء حقول الإدخال camelCase زي عقد النظام القديم بالحرف (capacitySir...)
+from typing import Literal
 from pydantic import BaseModel, Field
 from datetime import datetime
 
+BranchCategory = Literal["service", "retail"]
+
 class BranchCreate(BaseModel):
     name: str = Field(min_length=2, max_length=150)
+    category: BranchCategory = "service"
     capacitySir: int = Field(default=0, ge=0)
     capacityHafr: int = Field(default=0, ge=0)
     capacityRafaat: int = Field(default=0, ge=0)
@@ -13,6 +17,7 @@ class BranchCreate(BaseModel):
 
 class BranchUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=150)
+    category: BranchCategory | None = None
     capacitySir: int | None = Field(default=None, ge=0)
     capacityHafr: int | None = Field(default=None, ge=0)
     capacityRafaat: int | None = Field(default=None, ge=0)
@@ -22,6 +27,7 @@ class BranchUpdate(BaseModel):
 class BranchOut(BaseModel):
     id: str
     name: str
+    category: BranchCategory
     capacity_sir: int
     capacity_hafr: int
     capacity_rafaat: int
