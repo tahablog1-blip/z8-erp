@@ -15,12 +15,13 @@ export type BayCar = { id: string; plate?: string };
 
 const PARK_SLOTS = 4;
 const LIFT_BAYS = 2;
-const PARK_X = 4.6;
-const LIFT_X = -4.4;
-const EXIT_X = 10.5;
+const PARK_X = 4.8;
+const EXIT_X = 11;
 const SLOT_Z = [-2.4, -0.8, 0.8, 2.4];
-const BAY_Z = [-1.4, 1.4];
-const LIFT_HEIGHT = 1.35;
+// كل رافعة مُعرّفة بموضعها [X, Z] — مفصولتان أفقيًا (X) لا بالعمق فقط،
+// حتى لا تتراكبا بصريًا من زاوية الكاميرا (هذا كان سبب ظهورهما متداخلتين).
+const BAY_POS: [number, number][] = [[-3.6, -0.15], [-7.2, 0.4]];
+const LIFT_HEIGHT = 1.1;
 
 type CarState = "entering" | "parked" | "toLift" | "lifting" | "working" | "lowering" | "leaving";
 
@@ -54,11 +55,27 @@ function buildCar(color: number): THREE.Group {
 
   const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.42, 0.95), bodyMat);
   body.position.y = 0.36;
+  body.castShadow = true; body.receiveShadow = true;
   g.add(body);
+
+  // سقف منحدر بطابقين بدل صندوق واحد — يكسر الشكل الكتلي ويقرّب السيارة من الواقعية
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.18, 0.78), bodyMat);
+  roof.position.set(-0.14, 0.9, 0);
+  roof.castShadow = true;
+  g.add(roof);
 
   const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.38, 0.86), glassMat);
   cabin.position.set(-0.1, 0.72, 0);
+  cabin.castShadow = true;
   g.add(cabin);
+
+  const bumperMat = new THREE.MeshStandardMaterial({ color: 0x20242b, roughness: 0.7 });
+  const bumperF = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.16, 1.0), bumperMat);
+  bumperF.position.set(0.98, 0.22, 0);
+  g.add(bumperF);
+  const bumperR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.16, 1.0), bumperMat);
+  bumperR.position.set(-0.98, 0.22, 0);
+  g.add(bumperR);
 
   const wheelGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.2, 14);
   const wheelPositions: [number, number][] = [[0.68, 0.47], [0.68, -0.47], [-0.68, 0.47], [-0.68, -0.47]];
@@ -66,6 +83,7 @@ function buildCar(color: number): THREE.Group {
     const wheel = new THREE.Mesh(wheelGeo, wheelMat);
     wheel.rotation.x = Math.PI / 2;
     wheel.position.set(wx, 0.22, wz);
+    wheel.castShadow = true;
     g.add(wheel);
   }
 
@@ -84,14 +102,17 @@ function buildWorker(): THREE.Group {
 
   const legs = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.62, 0.26), overallMat);
   legs.position.y = 0.31;
+  legs.castShadow = true;
   g.add(legs);
 
   const torso = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.28), overallMat);
   torso.position.y = 0.87;
+  torso.castShadow = true;
   g.add(torso);
 
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), skinMat);
   head.position.y = 1.2;
+  head.castShadow = true;
   g.add(head);
 
   const armGeo = new THREE.BoxGeometry(0.13, 0.46, 0.13);
@@ -117,19 +138,28 @@ function buildLift(x: number, z: number): THREE.Group {
 
   const basePad = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.08, 1.3), padMat);
   basePad.position.y = 0.04;
+  basePad.receiveShadow = true;
   g.add(basePad);
 
+  const hazardMat = new THREE.MeshStandardMaterial({ color: 0xf2b800, roughness: 0.6 });
   for (const side of [-1, 1]) {
-    const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.3, 0.16), pillarMat);
-    pillar.position.set(side * 1.02, 1.15, -0.55);
+    const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.5, 0.16), pillarMat);
+    pillar.position.set(side * 1.02, 1.25, -0.55);
+    pillar.castShadow = true;
     g.add(pillar);
-    const pillar2 = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.3, 0.16), pillarMat);
-    pillar2.position.set(side * 1.02, 1.15, 0.55);
+    const pillar2 = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.5, 0.16), pillarMat);
+    pillar2.position.set(side * 1.02, 1.25, 0.55);
+    pillar2.castShadow = true;
     g.add(pillar2);
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.07, 1.26), hazardMat);
+    foot.position.set(side * 1.02, 0.1, 0);
+    foot.castShadow = true;
+    g.add(foot);
   }
 
   const beam = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.14, 0.16), pillarMat);
-  beam.position.set(0, 2.28, -0.55);
+  beam.position.set(0, 2.48, -0.55);
+  beam.castShadow = true;
   g.add(beam);
   const beam2 = beam.clone();
   beam2.position.z = 0.55;
@@ -180,27 +210,49 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
     let dark = document.documentElement.dataset.theme === "dark";
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
-    camera.position.set(0.5, 6.4, 10.2);
-    camera.lookAt(0, 0.4, 0);
+    // كاميرا أقل حدة وأبعد قليلًا — إطار مريح يحتضن منطقتَي الانتظار
+    // والرافعات معًا دون تراكب أو اقتصاص عند حوافّ اللوحة.
+    const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
+    camera.position.set(-0.4, 5.6, 13.2);
+    camera.lookAt(-0.9, 0.35, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
     mount.appendChild(renderer.domElement);
 
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x223344, 0.65);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x223344, 0.7);
     scene.add(hemi);
-    const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+    const sun = new THREE.DirectionalLight(0xffffff, 1.3);
     sun.position.set(6, 9, 4);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.camera.left = -11; sun.shadow.camera.right = 8;
+    sun.shadow.camera.top = 6; sun.shadow.camera.bottom = -6;
+    sun.shadow.camera.near = 1; sun.shadow.camera.far = 25;
+    sun.shadow.bias = -0.0015;
     scene.add(sun);
-    const fill = new THREE.DirectionalLight(0xffffff, 0.35);
+    const fill = new THREE.DirectionalLight(0xffffff, 0.3);
     fill.position.set(-5, 4, -3);
     scene.add(fill);
 
     const groundMat = new THREE.MeshStandardMaterial({ roughness: 0.95 });
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(26, 12), groundMat);
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 13), groundMat);
     ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
     scene.add(ground);
+
+    // بلاطة خرسانية أفتح تحت منطقة الرافعات — تميّزها بصريًا عن أرضية الانتظار
+    const padMat = new THREE.MeshStandardMaterial({ roughness: 0.9 });
+    const pad = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 4.6), padMat);
+    pad.rotation.x = -Math.PI / 2;
+    pad.position.set(-5.4, 0.006, 0.1);
+    pad.receiveShadow = true;
+    scene.add(pad);
 
     const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 });
     const slotLines = new THREE.Group();
@@ -219,18 +271,20 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
     const lifts: THREE.Group[] = [];
     const platforms: THREE.Mesh[] = [];
     const workers: THREE.Group[] = [];
-    const platMat = new THREE.MeshStandardMaterial({ color: 0x5b6472, roughness: 0.5, metalness: 0.5 });
+    const platMat = new THREE.MeshStandardMaterial({ color: 0x5b6472, roughness: 0.45, metalness: 0.55 });
     for (let i = 0; i < LIFT_BAYS; i++) {
-      const lift = buildLift(LIFT_X, BAY_Z[i]);
+      const [bx, bz] = BAY_POS[i];
+      const lift = buildLift(bx, bz);
       scene.add(lift);
       lifts.push(lift);
       const plat = new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.1, 1.05), platMat);
-      plat.position.set(LIFT_X, 0.08, BAY_Z[i]);
+      plat.position.set(bx, 0.08, bz);
+      plat.castShadow = true; plat.receiveShadow = true;
       scene.add(plat);
       platforms.push(plat);
       const worker = buildWorker();
-      worker.position.set(LIFT_X + (i === 0 ? -1.55 : 1.55), 0, BAY_Z[i] + 0.95);
-      worker.rotation.y = i === 0 ? 0.5 : -0.5;
+      worker.position.set(bx + 1.55, 0, bz - 0.85);
+      worker.rotation.y = 2.5;
       scene.add(worker);
       workers.push(worker);
     }
@@ -239,7 +293,8 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
       dark = isDark;
       renderer.setClearColor(isDark ? 0x0b1220 : 0xeaf1fb, 1);
       groundMat.color.set(isDark ? 0x16233a : 0xdfe7f2);
-      scene.fog = new THREE.Fog(isDark ? 0x0b1220 : 0xeaf1fb, 9, 22);
+      padMat.color.set(isDark ? 0x2a3a56 : 0xcdd7e6);
+      scene.fog = new THREE.Fog(isDark ? 0x0b1220 : 0xeaf1fb, 10, 24);
     }
     applyTheme(dark);
 
@@ -265,7 +320,7 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
       scene.add(group);
       const slot = directToLift ? -1 : freeParkSlot();
       const startX = directToLift ? -EXIT_X : EXIT_X;
-      const startZ = directToLift ? BAY_Z[0] : (slot >= 0 ? SLOT_Z[slot] : 0);
+      const startZ = directToLift ? BAY_POS[0][1] : (slot >= 0 ? SLOT_Z[slot] : 0);
       group.position.set(startX, 0, startZ);
       group.rotation.y = directToLift ? Math.PI : Math.PI;
       const tc: TrackedCar = {
@@ -321,11 +376,11 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
         } else if (tc.state === "parked") {
           tc.bob += dt * 1.4;
         } else if (tc.state === "toLift") {
-          const bayZ = tc.bay >= 0 ? BAY_Z[tc.bay] : 0;
-          tc.x += Math.sign(LIFT_X - tc.x) * Math.min(Math.abs(LIFT_X - tc.x), speed * dt);
-          tc.z += Math.sign(bayZ - tc.z) * Math.min(Math.abs(bayZ - tc.z), speed * dt);
-          if (Math.abs(tc.x - LIFT_X) < 0.04 && Math.abs(tc.z - bayZ) < 0.04) {
-            tc.x = LIFT_X; tc.z = bayZ; tc.state = "lifting";
+          const [bx, bz] = tc.bay >= 0 ? BAY_POS[tc.bay] : [0, 0];
+          tc.x += Math.sign(bx - tc.x) * Math.min(Math.abs(bx - tc.x), speed * dt);
+          tc.z += Math.sign(bz - tc.z) * Math.min(Math.abs(bz - tc.z), speed * dt);
+          if (Math.abs(tc.x - bx) < 0.04 && Math.abs(tc.z - bz) < 0.04) {
+            tc.x = bx; tc.z = bz; tc.state = "lifting";
           }
         } else if (tc.state === "lifting") {
           tc.liftP = Math.min(1, tc.liftP + dt / (reduceMotion ? 0.05 : 1.1));
