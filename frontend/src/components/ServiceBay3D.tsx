@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
 export type BayCar = { id: string; plate?: string };
 
@@ -53,9 +54,16 @@ function hashColor(id: string): number {
 
 function buildCar(color: number): THREE.Group {
   const g = new THREE.Group();
-  const bodyMat = new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.15 });
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0x22303f, roughness: 0.3, metalness: 0.4 });
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x181b20, roughness: 0.9 });
+  // طلاء سيارة حقيقي: طبقة clearcoat لامعة فوق اللون الأساسي بدل سطح مطفي مسطّح
+  const bodyMat = new THREE.MeshPhysicalMaterial({
+    color, roughness: 0.32, metalness: 0.2, clearcoat: 0.75, clearcoatRoughness: 0.12,
+  });
+  const glassMat = new THREE.MeshPhysicalMaterial({
+    color: 0x151c26, roughness: 0.1, metalness: 0.3, clearcoat: 0.4, envMapIntensity: 1.2,
+  });
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x15171c, roughness: 0.85 });
+  const rimMat = new THREE.MeshStandardMaterial({ color: 0xb9bfc9, roughness: 0.3, metalness: 0.85 });
+  const mirrorMat = bodyMat;
 
   const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.42, 0.95), bodyMat);
   body.position.y = 0.36;
@@ -68,10 +76,20 @@ function buildCar(color: number): THREE.Group {
   roof.castShadow = true;
   g.add(roof);
 
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.38, 0.86), glassMat);
-  cabin.position.set(-0.1, 0.72, 0);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.3, 0.84), glassMat);
+  cabin.position.set(-0.12, 0.72, 0);
   cabin.castShadow = true;
   g.add(cabin);
+
+  // زجاج أمامي/خلفي مائل — يعطي خط سقف انسيابيًا بدل الصندوق المستقيم
+  const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.05, 0.78), glassMat);
+  windshield.position.set(0.42, 0.68, 0);
+  windshield.rotation.z = -0.62;
+  g.add(windshield);
+  const rearWindow = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.78), glassMat);
+  rearWindow.position.set(-0.56, 0.68, 0);
+  rearWindow.rotation.z = 0.55;
+  g.add(rearWindow);
 
   const bumperMat = new THREE.MeshStandardMaterial({ color: 0x20242b, roughness: 0.7 });
   const bumperF = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.16, 1.0), bumperMat);
@@ -81,7 +99,8 @@ function buildCar(color: number): THREE.Group {
   bumperR.position.set(-0.98, 0.22, 0);
   g.add(bumperR);
 
-  const wheelGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.2, 14);
+  const wheelGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.2, 18);
+  const rimGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.205, 18);
   const wheelPositions: [number, number][] = [[0.68, 0.47], [0.68, -0.47], [-0.68, 0.47], [-0.68, -0.47]];
   for (const [wx, wz] of wheelPositions) {
     const wheel = new THREE.Mesh(wheelGeo, wheelMat);
@@ -89,12 +108,25 @@ function buildCar(color: number): THREE.Group {
     wheel.position.set(wx, 0.22, wz);
     wheel.castShadow = true;
     g.add(wheel);
+    // قرص جنط فاتح بلون معدني — يكسر كتلة الإطار الأسود الصرفة
+    const rim = new THREE.Mesh(rimGeo, rimMat);
+    rim.rotation.x = Math.PI / 2;
+    rim.position.set(wx, 0.22, wz);
+    g.add(rim);
   }
 
   const lightMat = new THREE.MeshStandardMaterial({ color: 0xffe9a8, emissive: 0x4a3a00, emissiveIntensity: 0.4 });
   const headlight = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.65), lightMat);
   headlight.position.set(0.96, 0.4, 0);
   g.add(headlight);
+
+  // مرايا جانبية — تفصيلة صغيرة لكنها من أوضح الفروق بين "صندوق" و"سيارة"
+  for (const side of [-1, 1]) {
+    const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 0.16), mirrorMat);
+    mirror.position.set(0.42, 0.68, side * 0.52);
+    mirror.castShadow = true;
+    g.add(mirror);
+  }
 
   return g;
 }
@@ -198,6 +230,40 @@ function makeLabelSprite(text: string, dark: boolean): { sprite: THREE.Sprite; m
   return { sprite, mat, tex };
 }
 
+// نسيج تشويش بسيط (grayscale) يُستخدم كخريطة خشونة/انبعاج للأرضية — يكسر
+// الملمس المسطّح "الكرتوني" للمستوى الواحد اللون بدون تعقيد مكلف.
+function makeNoiseTexture(size = 256): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  const img = ctx.createImageData(size, size);
+  for (let i = 0; i < size * size; i++) {
+    const v = 150 + Math.floor((Math.random() - 0.5) * 70);
+    img.data[i * 4] = v; img.data[i * 4 + 1] = v; img.data[i * 4 + 2] = v; img.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(10, 5);
+  return tex;
+}
+
+// تدرّج سماء بسيط (أفتح أعلى → أغمق عند الأفق) بدل لون خلفية مسطّح واحد —
+// يعطي إحساسًا بعمق المشهد بدل الطفو في فراغ.
+function makeSkyTexture(top: string, bottom: string): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 8; canvas.height = 256;
+  const ctx = canvas.getContext("2d")!;
+  const g = ctx.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0, top);
+  g.addColorStop(1, bottom);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 8, 256);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 function drawLabel(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, text: string, dark: boolean) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = dark ? "rgba(17,28,46,0.92)" : "rgba(255,255,255,0.94)";
@@ -242,6 +308,13 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
     renderer.toneMappingExposure = 1.05;
     mount.appendChild(renderer.domElement);
 
+    // إضاءة بيئية (IBL) من غرفة اصطناعية مولَّدة — هي ما يمنح الطلاء والمعدن
+    // انعكاسات حقيقية بدل السطح المطفي المسطّح الذي يبدو "كرتونيًا".
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envTex = pmrem.fromScene(new RoomEnvironment(), 0.045).texture;
+    scene.environment = envTex;
+    pmrem.dispose();
+
     const hemi = new THREE.HemisphereLight(0xffffff, 0x223344, 0.7);
     scene.add(hemi);
     const sun = new THREE.DirectionalLight(0xffffff, 1.3);
@@ -257,14 +330,15 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
     fill.position.set(-5, 4, -3);
     scene.add(fill);
 
-    const groundMat = new THREE.MeshStandardMaterial({ roughness: 0.95 });
+    const groundNoise = makeNoiseTexture();
+    const groundMat = new THREE.MeshStandardMaterial({ roughness: 0.95, roughnessMap: groundNoise, bumpMap: groundNoise, bumpScale: 0.012 });
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 13), groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
 
     // بلاطة خرسانية أفتح تحت سير الخدمة — تميّزه بصريًا عن أرضية الانتظار
-    const padMat = new THREE.MeshStandardMaterial({ roughness: 0.9 });
+    const padMat = new THREE.MeshStandardMaterial({ roughness: 0.9, roughnessMap: groundNoise, bumpMap: groundNoise, bumpScale: 0.008 });
     const pad = new THREE.Mesh(new THREE.PlaneGeometry(3.0, LINE_HALF_LEN * 2 + 2.6), padMat);
     pad.rotation.x = -Math.PI / 2;
     pad.position.set(LINE_X, 0.006, 0);
@@ -299,12 +373,17 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
       workers.push(worker);
     }
 
+    let skyTex: THREE.CanvasTexture | null = null;
     function applyTheme(isDark: boolean) {
       dark = isDark;
-      renderer.setClearColor(isDark ? 0x0b1220 : 0xeaf1fb, 1);
       groundMat.color.set(isDark ? 0x16233a : 0xdfe7f2);
       padMat.color.set(isDark ? 0x2a3a56 : 0xcdd7e6);
       scene.fog = new THREE.Fog(isDark ? 0x0b1220 : 0xeaf1fb, 10, 24);
+      const prevSky = skyTex;
+      skyTex = makeSkyTexture(isDark ? "#16233f" : "#eef4fc", isDark ? "#0a1120" : "#cfdcee");
+      scene.background = skyTex;
+      renderer.setClearColor(isDark ? 0x0b1220 : 0xeaf1fb, 1);
+      prevSky?.dispose();
     }
     applyTheme(dark);
 
@@ -472,6 +551,9 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
         if (o.geometry) o.geometry.dispose();
         if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m: any) => m.dispose?.());
       });
+      envTex.dispose();
+      groundNoise.dispose();
+      skyTex?.dispose();
       renderer.dispose();
       if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
     };
