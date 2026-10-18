@@ -640,6 +640,12 @@ async def lifespan(app: FastAPI):
                 "service_notes.view","service_notes.create"]')
            ) AS v(name, icon, description, permissions)
            ON CONFLICT (company_id, name) DO NOTHING""",
+        # ══ مركز الإعدادات — 14 إعداد جديد: الطباعة + النظام ══
+        # company_settings (key-value) موجود بالفعل من قبل — بيُستخدم كمخزن عام
+        # لكل مفاتيح print.* و sys.* الجديدة، فمفيش داعي لجدول جديد.
+        # العمودين دول فقط جديدين — لقفل الحساب المؤقت بعد محاولات دخول فاشلة (إعداد 11):
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_count INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ",
     ):
         try:
             await execute(stmt)

@@ -32,6 +32,7 @@ export default function UserEditorPage() {
   const [loaded, setLoaded] = useState(isNew);
   const [notFound, setNotFound] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [minPwLen, setMinPwLen] = useState(8); // من الإعدادات ← النظام (إعداد 10) — بديل الرقم 8 المثبّت
   const [uForm, setUForm] = useState({
     email: "", password: "", fullName: "", role: "employee",
     branchId: "" as string | null, permissions: [] as string[], roleId: null as string | null,
@@ -49,6 +50,7 @@ export default function UserEditorPage() {
     }).catch(() => {});
     api<{ groups: PermGroup[] }>("/auth/permissions-catalog").then((r) => setPermGroups(r.groups)).catch(() => {});
     api<Role[]>("/settings/roles").then(setRoles).catch(() => {});
+    api<{ minPasswordLength: number }>("/settings/system").then((r) => setMinPwLen(r.minPasswordLength || 8)).catch(() => {});
     if (!isNew) {
       api<UserRow[]>("/settings/users").then((list) => {
         const u = list.find((x) => x.id === userId);
@@ -142,7 +144,7 @@ export default function UserEditorPage() {
               </Select>
             </Field>
             {isNew ? (
-              <Field label="كلمة المرور (8+ أحرف)">
+              <Field label={`كلمة المرور (${minPwLen}+ أحرف)`}>
                 <PasswordInput dir="ltr" type="password" value={uForm.password}
                        onChange={(e) => setUForm({ ...uForm, password: e.target.value })} />
               </Field>
@@ -219,7 +221,7 @@ export default function UserEditorPage() {
         <Button variant="ghost" onClick={() => router.push("/settings/users")}>إلغاء</Button>
         <Button onClick={saveUser}
                 disabled={uBusy || !uForm.fullName.trim() ||
-                  (isNew && (!uForm.email.trim() || uForm.password.length < 8))}>
+                  (isNew && (!uForm.email.trim() || uForm.password.length < minPwLen))}>
           {uBusy ? "جارِ الحفظ..." : "حفظ"}
         </Button>
       </div>

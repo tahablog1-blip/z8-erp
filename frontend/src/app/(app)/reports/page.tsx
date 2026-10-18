@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Badge, Card, ErrorNote, Field, Input, Select, Tabs } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Select, Tabs } from "@/components/ui";
 import { SalesSummary, VatReturn, money } from "@/modules/accounting/types";
 import { printReport, tableHTML, kpisHTML } from "@/lib/print";
 
@@ -62,6 +62,20 @@ export default function ReportsPage() {
   const [from, setFrom] = useState(today.slice(0, 8) + "01");
   const [to, setTo] = useState(today);
   const [groupBy, setGroupBy] = useState<"day" | "month">("day");
+
+  // بداية السنة المالية — إعداد النظام ← fiscalYearStartMonth (إعداد 13)
+  const [fiscalMonth, setFiscalMonth] = useState(1);
+  useEffect(() => {
+    api<{ fiscalYearStartMonth: number }>("/settings/system")
+      .then((r) => setFiscalMonth(r.fiscalYearStartMonth || 1)).catch(() => {});
+  }, []);
+  function applyFiscalYear() {
+    const now = new Date();
+    let startYear = now.getFullYear();
+    if (now.getMonth() + 1 < fiscalMonth) startYear -= 1; // لسه قبل بداية السنة المالية الحالية تقويمياً
+    setFrom(`${startYear}-${String(fiscalMonth).padStart(2, "0")}-01`);
+    setTo(today);
+  }
 
   async function loadVat() {
     try { setVat(await api<VatReturn>(`/reports/vat-return?from=${from}&to=${to}`)); setPageErr(""); }
@@ -279,6 +293,7 @@ export default function ReportsPage() {
           <div className="flex flex-wrap items-end gap-2">
             <Field label="من"><Input type="date" className="tnum" value={from} onChange={(e) => setFrom(e.target.value)} /></Field>
             <Field label="إلى"><Input type="date" className="tnum" value={to} onChange={(e) => setTo(e.target.value)} /></Field>
+            <Button variant="outline" className="!text-[11.5px]" onClick={applyFiscalYear}>📅 السنة المالية الحالية</Button>
             {tab === "sales" && (
               <Field label="التجميع">
                 <Select value={groupBy} onChange={(e) => setGroupBy(e.target.value as any)}>

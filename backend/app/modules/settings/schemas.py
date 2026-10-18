@@ -135,3 +135,89 @@ class SettingsDashboardOut(BaseModel):
     usersActive: int
     rolesCount: int
     setup: list[SetupStatus]
+
+
+# ══════════════════ إعدادات الطباعة (7 إعدادات جديدة) ══════════════════
+
+class PrintingSettingsOut(BaseModel):
+    autoPrint: bool = True
+    footer: str = "شكراً لتعاملكم معنا"
+    footerReturn: str = "نعتذر عن أي إزعاج، نتمنى لكم تجربة أفضل في المرة القادمة"
+    thermalFontSize: str = "normal"      # normal | large
+    thermalShowLogo: bool = True
+    thermalShowQr: bool = True           # الحرارية فقط — QR فاتورة A4 الضريبي لا يُعطَّل أبداً
+    copies: int = 1
+    previewBeforePrint: bool = False
+
+
+class PrintingSettingsIn(BaseModel):
+    autoPrint: bool = True
+    footer: str = Field(default="شكراً لتعاملكم معنا", max_length=200)
+    footerReturn: str = Field(default="نعتذر عن أي إزعاج، نتمنى لكم تجربة أفضل في المرة القادمة", max_length=200)
+    thermalFontSize: str = "normal"
+    thermalShowLogo: bool = True
+    thermalShowQr: bool = True
+    copies: int = Field(default=1, ge=1, le=5)
+    previewBeforePrint: bool = False
+
+    @field_validator("thermalFontSize")
+    @classmethod
+    def _font(cls, v: str) -> str:
+        if v not in ("normal", "large"):
+            raise ValueError("حجم خط غير صالح")
+        return v
+
+    @field_validator("footer", "footerReturn")
+    @classmethod
+    def _footer(cls, v: str) -> str:
+        return v.strip() or "—"
+
+
+# ══════════════════ إعدادات النظام (7 إعدادات جديدة) ══════════════════
+
+class SystemSettingsOut(BaseModel):
+    landingAdmin: str | None = None
+    landingEmployee: str | None = None
+    sessionHours: int = 0            # 0 = الافتراضي الأصلي للنظام (JWT_EXPIRES_DAYS)
+    minPasswordLength: int = 8
+    maxLoginAttempts: int = 0        # 0 = القفل التلقائي معطّل
+    lockoutMinutes: int = 15
+    timeFormat: str = "24"           # 24 | 12
+    fiscalYearStartMonth: int = 1    # 1..12
+    maintenanceMode: bool = False    # لا يحجب حساب admin أبداً
+
+
+class SystemSettingsIn(BaseModel):
+    landingAdmin: str | None = None
+    landingEmployee: str | None = None
+    sessionHours: int = Field(default=0, ge=0, le=720)
+    minPasswordLength: int = Field(default=8, ge=6, le=32)
+    maxLoginAttempts: int = Field(default=0, ge=0, le=20)
+    lockoutMinutes: int = Field(default=15, ge=1, le=1440)
+    timeFormat: str = "24"
+    fiscalYearStartMonth: int = Field(default=1, ge=1, le=12)
+    maintenanceMode: bool = False
+
+    @field_validator("landingAdmin", "landingEmployee")
+    @classmethod
+    def _landing(cls, v: str | None) -> str | None:
+        v = (v or "").strip()
+        if not v:
+            return None
+        if not v.startswith("/") or len(v) > 100:
+            raise ValueError("مسار صفحة غير صالح")
+        return v
+
+    @field_validator("timeFormat")
+    @classmethod
+    def _tf(cls, v: str) -> str:
+        if v not in ("24", "12"):
+            raise ValueError("صيغة وقت غير صالحة")
+        return v
+
+    @field_validator("maxLoginAttempts")
+    @classmethod
+    def _attempts(cls, v: int) -> int:
+        if v != 0 and v < 3:
+            raise ValueError("عدد المحاولات المسموح به: 0 (تعطيل القفل) أو 3 فأكثر")
+        return v

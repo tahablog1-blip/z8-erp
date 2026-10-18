@@ -8,6 +8,7 @@ from ...core.audit import log_action
 from . import service
 from .schemas import (
     CompanyOut, CompanyIn, LogoIn, RoleOut, RoleIn, SettingsDashboardOut,
+    PrintingSettingsOut, PrintingSettingsIn, SystemSettingsOut, SystemSettingsIn,
 )
 
 router = APIRouter()
@@ -144,6 +145,49 @@ async def update_user(user_id: str, body: UserUpdateIn,
         user.company_id, user.user_id, user_id, body.fullName, body.role,
         body.branchId, body.permissions, body.isActive, body.newPassword, body.roleId)
     await log_action(user, "edit", "settings", details=f"تعديل موظف: {row['full_name']}")
+    return row
+
+
+# ══════════════════ إعدادات الطباعة ══════════════════
+
+@router.get("/printing", response_model=PrintingSettingsOut)
+async def get_printing_settings(user: CurrentUser = Depends(get_current_user)):
+    return await service.get_printing_settings(user.company_id)
+
+
+@router.put("/printing", response_model=PrintingSettingsOut)
+async def update_printing_settings(body: PrintingSettingsIn,
+                                   user: CurrentUser = Depends(require_permission("settings.company"))):
+    row = await service.update_printing_settings(user.company_id, body)
+    await log_action(user, "edit", "settings", details="تحديث إعدادات الطباعة")
+    return row
+
+
+class QuickAutoPrintIn(BaseModel):
+    autoPrint: bool
+
+
+@router.put("/printing/quick-toggle")
+async def quick_toggle_auto_print(body: QuickAutoPrintIn,
+                                  user: CurrentUser = Depends(get_current_user)):
+    """تبديل سريع من القائمة المنبثقة ⚙ في نقطة البيع — بصلاحية الدخول العادية
+    فقط (بلا settings.company)، مطابقةً للسلوك القديم لمفتاح z8_print_auto
+    المحلي اللي كان أي موظف يقدر يبدّله بنفسه."""
+    return await service.set_auto_print(user.company_id, body.autoPrint)
+
+
+# ══════════════════ إعدادات النظام ══════════════════
+
+@router.get("/system", response_model=SystemSettingsOut)
+async def get_system_settings(user: CurrentUser = Depends(get_current_user)):
+    return await service.get_system_settings(user.company_id)
+
+
+@router.put("/system", response_model=SystemSettingsOut)
+async def update_system_settings(body: SystemSettingsIn,
+                                 user: CurrentUser = Depends(require_permission("settings.company"))):
+    row = await service.update_system_settings(user.company_id, body)
+    await log_action(user, "edit", "settings", details="تحديث إعدادات النظام")
     return row
 
 

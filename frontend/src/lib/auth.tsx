@@ -14,7 +14,7 @@ export type User = {
 type AuthCtx = {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ user: User; landingPath: string | null }>;
   logout: () => void;
   hasPerm: (...keys: string[]) => boolean;
 };
@@ -35,12 +35,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function login(email: string, password: string) {
-    const d = await api<{ token: string; user: User }>("/auth/login", {
+    // ملاحظة: كانت login() القديمة بلا return صريح (بترجع undefined دايماً) —
+    // وده كان بيكسر وجهة ما بعد الدخول المخصّصة لصفحة login (landingPath(u) كان
+    // يستقبل undefined دايماً فيرجّع "/dashboard" بصرف النظر عن الدور الحقيقي).
+    // بقى بيرجّع المستخدم + وجهة الدخول المحسوبة من السيرفر (إعداد 8).
+    const d = await api<{ token: string; user: User; landingPath: string | null }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
     setToken(d.token);
     setUser(d.user);
+    return { user: d.user, landingPath: d.landingPath ?? null };
   }
 
   function logout() { clearToken(); setUser(null); location.href = "/login"; }

@@ -10,15 +10,25 @@ import { NAV_MODULES } from "@/modules/registry";
 
 type ConnState = "checking" | "ok" | "down";
 
-/** وجهة ما بعد الدخول: المدير → لوحة القيادة، والموظف → أول شاشة مسموحة له.
- *  لو بيانات المستخدم مش راجعة من login (احتياط) → السلوك القديم بلا كسر. */
-function landingPath(u: any): string {
+/** الاكتشاف التلقائي الاحتياطي: المدير → لوحة القيادة، والموظف → أول شاشة مسموحة له. */
+function autoLandingPath(u: any): string {
   if (!u || u.role === "admin") return "/dashboard";
   const perms: string[] = Array.isArray(u.permissions) ? u.permissions : [];
   const first = NAV_MODULES.find(
     (m) => !m.adminOnly && (m.permissions.length === 0 || m.permissions.some((p) => perms.includes(p)))
   );
   return first?.path || "/dashboard";
+}
+
+/** هل المستخدم يملك صلاحية الوصول لمسار معيّن؟ — تأمين الوجهة المخصّصة (إعداد 8)
+ *  قبل استخدامها، حتى لو اختارت الإدارة مساراً أصبح لاحقاً غير متاح لهذا الدور. */
+function canAccess(u: any, path: string): boolean {
+  if (!u) return false;
+  if (u.role === "admin") return true;
+  const mod = NAV_MODULES.find((m) => m.path === path);
+  if (!mod || mod.adminOnly) return false;
+  const perms: string[] = Array.isArray(u.permissions) ? u.permissions : [];
+  return mod.permissions.length === 0 || mod.permissions.some((p) => perms.includes(p));
 }
 
 export default function LoginPage() {
@@ -51,8 +61,9 @@ export default function LoginPage() {
     e.preventDefault();
     setErr(""); setBusy(true);
     try {
-      const u = await login(email, password);
-      router.replace(landingPath(u));
+      const { user: u, landingPath } = await login(email, password);
+      const dest = landingPath && canAccess(u, landingPath) ? landingPath : autoLandingPath(u);
+      router.replace(dest);
     } catch (e: any) {
       // فشل fetch نفسه (مش رد من السيرفر) = مشكلة اتصال مش بيانات
       const msg = String(e?.message || "");

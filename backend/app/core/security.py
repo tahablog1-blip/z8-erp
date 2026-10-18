@@ -15,12 +15,15 @@ def verify_password(plain: str, password_hash: str) -> bool:
 def hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt(rounds=10)).decode("utf-8")
 
-def create_token(user_id: str) -> str:
+def create_token(user_id: str, expire_hours: int | None = None) -> str:
+    """expire_hours: مدة الجلسة القابلة للتخصيص من الإعدادات ← النظام (إعداد 9) —
+    None أو 0 = السلوك الافتراضي الأصلي (JWT_EXPIRES_DAYS الثابت) بلا أي تغيير."""
     now = int(time.time())
+    ttl = expire_hours * 3600 if expire_hours else settings.JWT_EXPIRES_DAYS * 86400
     payload = {
         "userId": str(user_id),                       # نفس مفتاح النظام القديم بالحرف
         "iat": now,
-        "exp": now + settings.JWT_EXPIRES_DAYS * 86400,
+        "exp": now + ttl,
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
 

@@ -4,6 +4,7 @@
 // الاتنين بيطبعوا تقرير التشييك الكامل مجمّعاً بمحطات خط الخدمة
 import { InvoiceDetail, PAYMENT_LABELS, money } from "@/modules/invoices/types";
 import { getCompany } from "./company";
+import { getPrinting, type PrintingInfo } from "./printing";
 import { STAGES, CK_LABEL, stageOf, type CkStatus } from "./service-line";
 
 export type PrintFormat = "thermal" | "a4";
@@ -11,18 +12,13 @@ export type PrintFormat = "thermal" | "a4";
 const esc = (s: unknown) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-// const fmtDT = (s: string) =>
-//   new Date(s).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), {
-//     year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
-//   });
-
-
-
-const fmtDT = (s: string) => {
+// صيغة الوقت 12/24 ساعة — إعداد النظام «sys.timeFormat» (إعداد 12)
+const fmtDT = (s: string, timeFormat: "24" | "12" = "24") => {
   if (!s) return "—";
 
   const date = new Date(s);
   if (Number.isNaN(date.getTime())) return "—";
+  const is24 = timeFormat !== "12";
 
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Riyadh",
@@ -31,22 +27,29 @@ const fmtDT = (s: string) => {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-    hourCycle: "h23",
+    hourCycle: is24 ? "h23" : "h12",
   }).formatToParts(date);
 
   const get = (type: string) =>
     parts.find((part) => part.type === type)?.value ?? "";
 
-  return `${get("day")}/${get("month")}/${get("year")} ${get("hour")}:${get("minute")}`;
+  const base = `${get("day")}/${get("month")}/${get("year")} ${get("hour")}:${get("minute")}`;
+  if (is24) return base;
+  const dp = get("dayPeriod").toLowerCase();
+  return `${base} ${dp.includes("p") ? "م" : "ص"}`;
 };
 
+// تذييل الفاتورة — نص مختلف للمرتجعات (إعداد 6)، مصدره DB بدل localStorage (إعداد 1)
+const footerFor = (inv: InvoiceDetail, PR: PrintingInfo) =>
+  inv.is_returned ? PR.footerReturn : PR.footer;
 
-
-
-const footerText = () => {
-  try { return localStorage.getItem("z8_print_footer") || "شكراً لتعاملكم معنا"; }
-  catch { return "شكراً لتعاملكم معنا"; }
-};
+// زر طباعة يدوي يظهر فقط في وضع «معاينة قبل الطباعة» (إعداد 7) — مخفي عن الورق نفسه
+const previewButton = (show: boolean) => !show ? "" : `
+  <button onclick="window.print()" class="no-print"
+    style="position:fixed;top:8px;inset-inline-start:8px;z-index:9;background:#0C5E66;color:#fff;
+           border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-family:inherit;
+           font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)">🖨 طباعة</button>
+  <style>@media print { .no-print { display:none !important; } }</style>`;
 
 // ── تقرير التشييك مجمّعاً بالمحطات (مشترك بين الصيغتين) ──
 function checklistHTML(inv: InvoiceDetail, compact: boolean): string {
@@ -119,11 +122,14 @@ function carHTML(inv: InvoiceDetail, compact: boolean): string {
     </tbody></table>`;
 }
 
-const QR_SCRIPT = (tlv: string) => `
+// qrs: مصفوفة QR واحدة لكل نسخة مطبوعة (إعداد 5 — عدد النسخ، كل نسخة بعنصرها الخاص)
+// autoPrint: false في وضع «معاينة قبل الطباعة» (إعداد 7) — الطباعة تنتظر ضغطة الزر بدل التلقائية
+const PRINT_SCRIPT = (qrs: { id: string; tlv: string }[], autoPrint: boolean) => `
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
     (function () {
-      var tlv = ${JSON.stringify(tlv || "")};
+      var qrs = ${JSON.stringify(qrs)};
+      var autoPrint = ${autoPrint ? "true" : "false"};
       function waitImages() {
         // ── انتظار تحميل كل الصور فعلياً (الشعار) قبل الطباعة — بدل تأخير عشوائي
         //    ثابت قد يفتح الطباعة والصورة لسه ما وصلتش = طباعة ناقصة أو مشوشة ──
@@ -141,19 +147,21 @@ const QR_SCRIPT = (tlv: string) => `
         });
       }
       function go() {
-        try {
-          if (tlv && window.QRCode) {
-            new QRCode(document.getElementById("qrcode"), {
-              text: tlv, width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M,
-            });
-          }
-        } catch (e) {}
+        qrs.forEach(function (q) {
+          try {
+            if (q.tlv && window.QRCode) {
+              new QRCode(document.getElementById(q.id), {
+                text: q.tlv, width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M,
+              });
+            }
+          } catch (e) {}
+        });
         // ── انتظار خط Cairo فعلياً (بلا مهلة عشوائية) — وإلا الطباعة تنفذ
         //    بالخط الاحتياطي الرفيع قبل ما الخط السميك يوصل من الشبكة ──
         var fontReady = (document.fonts && document.fonts.ready)
           ? document.fonts.ready : Promise.resolve();
         Promise.all([waitImages(), fontReady]).then(function () {
-          setTimeout(function () { window.print(); }, 150);
+          if (autoPrint) setTimeout(function () { window.print(); }, 150);
         });
       }
       if (document.readyState === "complete") go();
@@ -163,8 +171,8 @@ const QR_SCRIPT = (tlv: string) => `
 
 // ══════════════════ الصيغة الحرارية 80مم ══════════════════
 
-function thermalHTML(inv: InvoiceDetail): string {
-  const CO = getCompany();
+// محتوى نسخة واحدة من الإيصال — تتكرر «copies» مرة في نفس مستند الطباعة (إعداد 5)
+function thermalCopyHTML(inv: InvoiceDetail, CO: ReturnType<typeof getCompany>, PR: PrintingInfo, idx: number): string {
   const title = inv.is_returned ? "فاتورة مرتجعة"
     : inv.invoice_type === "standard" ? "فاتورة ضريبية" : "فاتورة ضريبية مبسطة";
 
@@ -178,46 +186,10 @@ function thermalHTML(inv: InvoiceDetail): string {
     `<div class="row"><span>${PAYMENT_LABELS[p.method] ?? esc(p.method)}</span><b class="tnum">${money(p.amount)}</b></div>`
   ).join("");
 
-  return `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
-<title>${esc(inv.invoice_no)}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700&display=swap" rel="stylesheet">
-<style>
-  /* ── تثبيت حجم الصفحة صراحة = 80مم بالظبط — بدون هذا السطر المتصفح "يخمّن"
-     حجم ورق الطابعة ويعمل تحجيم (Scale) تلقائي كسري للمحتوى ليطابقه،
-     وأي تحجيم كسري أثناء الطباعة هو السبب الأول للتبكسل — مش الخط ولا الوزن ── */
-  @page { size:80mm auto; margin:0; }
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-  html, body { background:#fff; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
-  body {
-    /* Cairo وزن حقيقي متوسط (600) — خط عربي بضربات واضحة أصلاً،
-       بخلاف Tahoma/Arial اللي بتاخد "Bold صناعي" بيطلع باهت على الطباعة الحرارية */
-    font-family:"Cairo","Tahoma",sans-serif;
-    width:80mm; padding:4mm 3mm; color:#000; font-size:13px; font-weight:600;
-    text-rendering:optimizeLegibility;
-  }
-  .tnum { font-variant-numeric:tabular-nums; direction:ltr; unicode-bidi:embed; }
-  .c { text-align:center; } .r { text-align:right; } .b { font-weight:700; }
-  .head { text-align:center; border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:6px; }
-  .head img { image-rendering:auto; }
-  .head h1 { font-size:15px; font-weight:700; }
-  .head .sub { font-size:10.5px; font-weight:600; margin-top:2px; }
-  .title { text-align:center; font-size:13px; font-weight:700; border:1.5px solid #000; border-radius:4px; padding:4px; margin:6px 0; }
-  .row { display:flex; justify-content:space-between; padding:2px 0; font-weight:500; }
-  .box { border:1.5px dashed #000; border-radius:4px; padding:5px 6px; margin:6px 0; }
-  table { width:100%; border-collapse:collapse; margin:6px 0; }
-  th { border-top:1.5px solid #000; border-bottom:1.5px solid #000; padding:4px 2px; font-size:10.5px; font-weight:700; }
-  td { padding:4px 2px; border-bottom:1px dotted #555; font-weight:500; }
-  .tot { border-top:2px solid #000; margin-top:4px; padding-top:4px; }
-  .tot .grand { font-size:13px; font-weight:700; border-top:1.5px solid #000; margin-top:3px; padding-top:3px; }
-  .dash { border-top:1.5px dashed #000; margin:6px 0; }
-  .qr { text-align:center; margin:8px 0 4px; } .qr img, .qr canvas { margin:0 auto; image-rendering:pixelated; }
-  .foot { text-align:center; font-size:10px; font-weight:500; border-top:1.5px dashed #000; margin-top:6px; padding-top:5px; }
-  @media print { body { width:auto; } }
-</style></head><body>
+  const qrId = `qrcode-${idx}`;
+  return `
   <div class="head">
-    <img src="${location.origin}${CO.logoUrl || "/logo-thermal.png"}" alt="" style="width:52px;height:52px;object-fit:contain;display:block;margin:0 auto 5px" />
+    ${PR.thermalShowLogo ? `<img src="${location.origin}${CO.logoUrl || "/logo-thermal.png"}" alt="" style="width:52px;height:52px;object-fit:contain;display:block;margin:0 auto 5px" />` : ""}
     <h1>${esc(CO.name)}</h1>
     <div class="sub">الرقم الضريبي: <span class="tnum">${esc(CO.vat)}</span></div>
     <div class="sub">س.ت: <span class="tnum">${esc(CO.cr)}</span> — ${esc(inv.branch_name || "")}</div>
@@ -246,7 +218,7 @@ function thermalHTML(inv: InvoiceDetail): string {
   ${inv.car.odometer_current ? `<div class="row"><span>عداد الكيلومترات</span><b class="tnum">${inv.car.odometer_current}</b></div>` : ""}
   ${(() => { const nx = nextServiceEstimate(inv); return nx ? `<div class="row"><span>الممشى التقريبي القادم</span><b class="tnum">${nx} (تقريبي)</b></div>` : ""; })()}
   ` : ""}
-  <div class="row"><span>التاريخ</span><b class="tnum">${fmtDT(inv.issued_at)}</b></div>
+  <div class="row"><span>التاريخ</span><b class="tnum">${fmtDT(inv.issued_at, PR.timeFormat)}</b></div>
   <table>
     <thead><tr><th class="r">الصنف</th><th class="c">كمية</th><th class="c">سعر</th><th class="c">إجمالي</th></tr></thead>
     <tbody>${itemsRows}</tbody>
@@ -258,16 +230,70 @@ function thermalHTML(inv: InvoiceDetail): string {
   </div>
   <div class="box">${payRows}${inv.credit_total > 0 ? `<div class="row"><span>آجل في ذمة العميل</span><b class="tnum">${money(inv.credit_total)}</b></div>` : ""}</div>
   ${checklistHTML(inv, true)}
-  <div class="qr"><div id="qrcode"></div></div>
-  <div class="foot">${esc(footerText())}<br>${esc(getCompany().address)}</div>
-  ${QR_SCRIPT(inv.qr_tlv || "")}
+  ${PR.thermalShowQr ? `<div class="qr"><div id="${qrId}"></div></div>` : ""}
+  <div class="foot">${esc(footerFor(inv, PR))}<br>${esc(CO.address)}</div>`;
+}
+
+function thermalHTML(inv: InvoiceDetail): string {
+  const CO = getCompany();
+  const PR = getPrinting();
+  const large = PR.thermalFontSize === "large";
+  const copies = Math.min(5, Math.max(1, PR.copies || 1));
+
+  const body = Array.from({ length: copies }, (_, i) => thermalCopyHTML(inv, CO, PR, i))
+    .join('<div class="dash" style="margin:10px 0"></div>');
+  const qrScripts = PR.thermalShowQr
+    ? Array.from({ length: copies }, (_, i) => ({ id: `qrcode-${i}`, tlv: inv.qr_tlv || "" }))
+    : [];
+
+  return `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+<title>${esc(inv.invoice_no)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ── تثبيت حجم الصفحة صراحة = 80مم بالظبط — بدون هذا السطر المتصفح "يخمّن"
+     حجم ورق الطابعة ويعمل تحجيم (Scale) تلقائي كسري للمحتوى ليطابقه،
+     وأي تحجيم كسري أثناء الطباعة هو السبب الأول للتبكسل — مش الخط ولا الوزن ── */
+  @page { size:80mm auto; margin:0; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  html, body { background:#fff; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+  body {
+    /* Cairo وزن حقيقي متوسط (600) — خط عربي بضربات واضحة أصلاً،
+       بخلاف Tahoma/Arial اللي بتاخد "Bold صناعي" بيطلع باهت على الطباعة الحرارية */
+    font-family:"Cairo","Tahoma",sans-serif;
+    width:80mm; padding:4mm 3mm; color:#000; font-size:${large ? 15 : 13}px; font-weight:600;
+    text-rendering:optimizeLegibility;
+  }
+  .tnum { font-variant-numeric:tabular-nums; direction:ltr; unicode-bidi:embed; }
+  .c { text-align:center; } .r { text-align:right; } .b { font-weight:700; }
+  .head { text-align:center; border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:6px; }
+  .head img { image-rendering:auto; }
+  .head h1 { font-size:${large ? 17 : 15}px; font-weight:700; }
+  .head .sub { font-size:${large ? 12 : 10.5}px; font-weight:600; margin-top:2px; }
+  .title { text-align:center; font-size:${large ? 15 : 13}px; font-weight:700; border:1.5px solid #000; border-radius:4px; padding:4px; margin:6px 0; }
+  .row { display:flex; justify-content:space-between; padding:2px 0; font-weight:500; }
+  .box { border:1.5px dashed #000; border-radius:4px; padding:5px 6px; margin:6px 0; }
+  table { width:100%; border-collapse:collapse; margin:6px 0; }
+  th { border-top:1.5px solid #000; border-bottom:1.5px solid #000; padding:4px 2px; font-size:${large ? 12 : 10.5}px; font-weight:700; }
+  td { padding:4px 2px; border-bottom:1px dotted #555; font-weight:500; }
+  .tot { border-top:2px solid #000; margin-top:4px; padding-top:4px; }
+  .tot .grand { font-size:${large ? 15 : 13}px; font-weight:700; border-top:1.5px solid #000; margin-top:3px; padding-top:3px; }
+  .dash { border-top:1.5px dashed #000; margin:6px 0; }
+  .qr { text-align:center; margin:8px 0 4px; } .qr img, .qr canvas { margin:0 auto; image-rendering:pixelated; }
+  .foot { text-align:center; font-size:${large ? 11.5 : 10}px; font-weight:500; border-top:1.5px dashed #000; margin-top:6px; padding-top:5px; }
+  @media print { body { width:auto; } }
+</style></head><body>
+  ${previewButton(PR.previewBeforePrint)}
+  ${body}
+  ${PRINT_SCRIPT(qrScripts, !PR.previewBeforePrint)}
 </body></html>`;
 }
 
 // ══════════════════ صيغة A4 الرسمية ══════════════════
 
-function a4HTML(inv: InvoiceDetail): string {
-  const CO = getCompany();
+// محتوى نسخة واحدة من فاتورة A4 — تتكرر «copies» مرة، كل نسخة بصفحة مستقلة (page-break)
+function a4CopyHTML(inv: InvoiceDetail, CO: ReturnType<typeof getCompany>, PR: PrintingInfo, idx: number, isLast: boolean): string {
   const title = inv.is_returned ? "فاتورة مرتجعة"
     : inv.invoice_type === "standard" ? "فاتورة ضريبية" : "فاتورة ضريبية مبسطة";
 
@@ -288,32 +314,9 @@ function a4HTML(inv: InvoiceDetail): string {
     `<span style="display:inline-block;border:1px solid #c9d4d6;border-radius:14px;padding:3px 10px;margin-left:6px;font-size:11px">
        ${PAYMENT_LABELS[p.method] ?? esc(p.method)}: <b class="tnum">${money(p.amount)}</b></span>`).join("");
 
-  return `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
-<title>${esc(inv.invoice_no)}</title>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  @page { size:A4; margin:12mm; }
-  body { font-family:"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif; color:#111; font-size:12px; }
-  .tnum { font-variant-numeric:tabular-nums; direction:ltr; unicode-bidi:embed; }
-  .c { text-align:center; } .r { text-align:right; } .b { font-weight:700; }
-  .head { display:flex; justify-content:space-between; border-bottom:3px solid #0C5E66; padding-bottom:10px; }
-  .head h1 { font-size:19px; color:#0C5E66; }
-  .head .sub { font-size:10.5px; color:#445; margin-top:2px; }
-  .badge { border:2px solid #0C5E66; color:#0C5E66; border-radius:8px; padding:6px 14px; font-size:14px; font-weight:800; align-self:center; }
-  .meta { display:grid; grid-template-columns:1fr 1fr; gap:4px 24px; margin:10px 0; font-size:11.5px; }
-  .meta .row { display:flex; justify-content:space-between; border-bottom:1px dotted #ccd; padding:3px 0; }
-  table { width:100%; border-collapse:collapse; margin:8px 0; }
-  th { background:#0C5E66; color:#fff; border:1px solid #0C5E66; padding:5px 3px; font-size:9.5px; text-align:center; line-height:1.3; }
-  td { border:1px solid #c9d4d6; padding:4px 5px; font-size:10.5px; }
-  h2.sec { font-size:12.5px; margin:12px 0 4px; border-right:4px solid #0C5E66; padding-right:8px; }
-  .totals { width:280px; margin-right:auto; margin-left:0; }
-  .totals td { font-size:12px; }
-  .totals .grand td { background:#0C5E66; color:#fff; font-weight:800; font-size:13px; }
-  .qr-foot { display:flex; justify-content:space-between; align-items:flex-end; margin-top:14px; }
-  .foot { text-align:center; font-size:10px; color:#556; border-top:1px solid #ccc; margin-top:16px; padding-top:6px; }
-</style></head>
-
-<body style="margin:20px">
+  const qrId = `qrcode-${idx}`;
+  return `
+<div style="margin:20px${isLast ? "" : ";page-break-after:always"}">
   <div class="head">
     <img src="${location.origin}${CO.logoUrl || "/logo-navy.png"}" alt="" style="width:44px;height:44px;object-fit:contain;display:block;margin:0 auto 4px" />
     <div>
@@ -326,7 +329,7 @@ function a4HTML(inv: InvoiceDetail): string {
 
   <div class="meta">
     <div class="row"><span>رقم الفاتورة</span><b class="tnum">${esc(inv.invoice_no)}</b></div>
-    <div class="row"><span>تاريخ الإصدار</span><b class="tnum">${fmtDT(inv.issued_at)}</b></div>
+    <div class="row"><span>تاريخ الإصدار</span><b class="tnum">${fmtDT(inv.issued_at, PR.timeFormat)}</b></div>
     <div class="row"><span>الفرع</span><b>${esc(inv.branch_name || "—")}</b></div>
     <div class="row"><span>الكاشير</span><b>${esc(inv.cashier_name || "—")}</b></div>
     <div class="row"><span>العميل</span><b>${esc(inv.customer_name || "بيع نقدي")}</b></div>
@@ -397,11 +400,51 @@ function a4HTML(inv: InvoiceDetail): string {
     <div style="font-size:10.5px;color:#445">
       ختم وتوقيع المنشأة: ______________________
     </div>
-    <div id="qrcode"></div>
+    <div id="${qrId}"></div>
   </div>
 
-  <div class="foot">${esc(footerText())} — ${esc(CO.name)}</div>
-  ${QR_SCRIPT(inv.qr_tlv || "")}
+  <div class="foot">${esc(footerFor(inv, PR))} — ${esc(CO.name)}</div>
+</div>`;
+}
+
+function a4HTML(inv: InvoiceDetail): string {
+  const CO = getCompany();
+  const PR = getPrinting();
+  const copies = Math.min(5, Math.max(1, PR.copies || 1));
+
+  const body = Array.from({ length: copies }, (_, i) => a4CopyHTML(inv, CO, PR, i, i === copies - 1)).join("");
+  // QR فاتورة A4 الضريبي إلزامي دائماً — إعداد thermalShowQr خاص بالحرارية فقط (إعداد 4)
+  const qrScripts = Array.from({ length: copies }, (_, i) => ({ id: `qrcode-${i}`, tlv: inv.qr_tlv || "" }));
+
+  return `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+<title>${esc(inv.invoice_no)}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  @page { size:A4; margin:12mm; }
+  body { font-family:"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif; color:#111; font-size:12px; }
+  .tnum { font-variant-numeric:tabular-nums; direction:ltr; unicode-bidi:embed; }
+  .c { text-align:center; } .r { text-align:right; } .b { font-weight:700; }
+  .head { display:flex; justify-content:space-between; border-bottom:3px solid #0C5E66; padding-bottom:10px; }
+  .head h1 { font-size:19px; color:#0C5E66; }
+  .head .sub { font-size:10.5px; color:#445; margin-top:2px; }
+  .badge { border:2px solid #0C5E66; color:#0C5E66; border-radius:8px; padding:6px 14px; font-size:14px; font-weight:800; align-self:center; }
+  .meta { display:grid; grid-template-columns:1fr 1fr; gap:4px 24px; margin:10px 0; font-size:11.5px; }
+  .meta .row { display:flex; justify-content:space-between; border-bottom:1px dotted #ccd; padding:3px 0; }
+  table { width:100%; border-collapse:collapse; margin:8px 0; }
+  th { background:#0C5E66; color:#fff; border:1px solid #0C5E66; padding:5px 3px; font-size:9.5px; text-align:center; line-height:1.3; }
+  td { border:1px solid #c9d4d6; padding:4px 5px; font-size:10.5px; }
+  h2.sec { font-size:12.5px; margin:12px 0 4px; border-right:4px solid #0C5E66; padding-right:8px; }
+  .totals { width:280px; margin-right:auto; margin-left:0; }
+  .totals td { font-size:12px; }
+  .totals .grand td { background:#0C5E66; color:#fff; font-weight:800; font-size:13px; }
+  .qr-foot { display:flex; justify-content:space-between; align-items:flex-end; margin-top:14px; }
+  .foot { text-align:center; font-size:10px; color:#556; border-top:1px solid #ccc; margin-top:16px; padding-top:6px; }
+</style></head>
+
+<body>
+  ${previewButton(PR.previewBeforePrint)}
+  ${body}
+  ${PRINT_SCRIPT(qrScripts, !PR.previewBeforePrint)}
 </body>
 
 </html>`;

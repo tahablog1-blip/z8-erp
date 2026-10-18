@@ -174,6 +174,128 @@ async def dashboard_status(company_id: str) -> dict:
     }
 
 
+# ══════════════════ مخزن إعدادات عام (key-value) ══════════════════
+# إعادة استخدام company_settings الموجود من قبل (كان مخصّصاً لمفتاح ai_supervisor
+# وحيد وغير مُستخدَم فعلياً في أي مكان — تأكدنا بالـ grep) كمخزن عام لكل مفاتيح
+# print.* و sys.* الجديدة. صفر جدول جديد، صفر خطوة psql يدوية.
+
+async def _get_kv(company_id: str, keys: list[str]) -> dict[str, str]:
+    if not keys:
+        return {}
+    rows = await fetch(
+        "SELECT key, value FROM company_settings WHERE company_id=$1 AND key = ANY($2::text[])",
+        company_id, keys)
+    return {r["key"]: r["value"] for r in rows}
+
+
+async def _set_kv(company_id: str, kv: dict[str, str]) -> None:
+    for k, v in kv.items():
+        await execute(
+            """INSERT INTO company_settings (company_id, key, value) VALUES ($1,$2,$3)
+               ON CONFLICT (company_id, key) DO UPDATE SET value = EXCLUDED.value""",
+            company_id, k, v)
+
+
+# ══════════════════ إعدادات الطباعة ══════════════════
+
+_PRINT_DEFAULTS = {
+    "autoPrint": "1",
+    "footer": "شكراً لتعاملكم معنا",
+    "footerReturn": "نعتذر عن أي إزعاج، نتمنى لكم تجربة أفضل في المرة القادمة",
+    "thermalFontSize": "normal",
+    "thermalShowLogo": "1",
+    "thermalShowQr": "1",
+    "copies": "1",
+    "previewBeforePrint": "0",
+}
+_PRINT_BOOL = {"autoPrint", "thermalShowLogo", "thermalShowQr", "previewBeforePrint"}
+_PRINT_INT = {"copies"}
+
+
+async def get_printing_settings(company_id: str) -> dict:
+    kv = await _get_kv(company_id, [f"print.{k}" for k in _PRINT_DEFAULTS])
+    out: dict = {}
+    for k, default in _PRINT_DEFAULTS.items():
+        raw = kv.get(f"print.{k}", default)
+        if k in _PRINT_BOOL:
+            out[k] = raw == "1"
+        elif k in _PRINT_INT:
+            out[k] = int(raw)
+        else:
+            out[k] = raw
+    return out
+
+
+async def update_printing_settings(company_id: str, body) -> dict:
+    kv = {
+        "print.autoPrint": "1" if body.autoPrint else "0",
+        "print.footer": body.footer,
+        "print.footerReturn": body.footerReturn,
+        "print.thermalFontSize": body.thermalFontSize,
+        "print.thermalShowLogo": "1" if body.thermalShowLogo else "0",
+        "print.thermalShowQr": "1" if body.thermalShowQr else "0",
+        "print.copies": str(body.copies),
+        "print.previewBeforePrint": "1" if body.previewBeforePrint else "0",
+    }
+    await _set_kv(company_id, kv)
+    return await get_printing_settings(company_id)
+
+
+async def set_auto_print(company_id: str, enabled: bool) -> dict:
+    """تبديل سريع لمفتاح واحد فقط — تستخدمه القائمة السريعة ⚙ في نقطة البيع،
+    بصلاحية الدخول العادية فقط (بلا settings.company) لأنه تشغيلي يومي
+    مطابق للسلوك القديم (أي موظف كان يقدر يبدّله محلياً)."""
+    await _set_kv(company_id, {"print.autoPrint": "1" if enabled else "0"})
+    return {"autoPrint": enabled}
+
+
+# ══════════════════ إعدادات النظام ══════════════════
+
+_SYS_DEFAULTS = {
+    "landingAdmin": "",
+    "landingEmployee": "",
+    "sessionHours": "0",
+    "minPasswordLength": "8",
+    "maxLoginAttempts": "0",
+    "lockoutMinutes": "15",
+    "timeFormat": "24",
+    "fiscalYearStartMonth": "1",
+    "maintenanceMode": "0",
+}
+_SYS_BOOL = {"maintenanceMode"}
+_SYS_INT = {"sessionHours", "minPasswordLength", "maxLoginAttempts", "lockoutMinutes", "fiscalYearStartMonth"}
+
+
+async def get_system_settings(company_id: str) -> dict:
+    kv = await _get_kv(company_id, [f"sys.{k}" for k in _SYS_DEFAULTS])
+    out: dict = {}
+    for k, default in _SYS_DEFAULTS.items():
+        raw = kv.get(f"sys.{k}", default)
+        if k in _SYS_BOOL:
+            out[k] = raw == "1"
+        elif k in _SYS_INT:
+            out[k] = int(raw)
+        else:
+            out[k] = raw or None
+    return out
+
+
+async def update_system_settings(company_id: str, body) -> dict:
+    kv = {
+        "sys.landingAdmin": body.landingAdmin or "",
+        "sys.landingEmployee": body.landingEmployee or "",
+        "sys.sessionHours": str(body.sessionHours),
+        "sys.minPasswordLength": str(body.minPasswordLength),
+        "sys.maxLoginAttempts": str(body.maxLoginAttempts),
+        "sys.lockoutMinutes": str(body.lockoutMinutes),
+        "sys.timeFormat": body.timeFormat,
+        "sys.fiscalYearStartMonth": str(body.fiscalYearStartMonth),
+        "sys.maintenanceMode": "1" if body.maintenanceMode else "0",
+    }
+    await _set_kv(company_id, kv)
+    return await get_system_settings(company_id)
+
+
 # ══════════════════ إدارة المستخدمين (منقولة بالحرف من api.py) ══════════════════
 
 def _user_row(r: dict) -> dict:
@@ -199,8 +321,9 @@ async def list_users(company_id: str) -> list[dict]:
 async def create_user(company_id: str, email: str, password: str, full_name: str, role: str,
                       branch_id: str | None, permissions: list[str], role_id: str | None = None) -> dict:
     email = email.lower().strip()
-    if "@" not in email or len(password) < 8:
-        raise HTTPException(400, "بريد صالح وكلمة مرور 8 أحرف على الأقل")
+    min_len = (await get_system_settings(company_id))["minPasswordLength"]
+    if "@" not in email or len(password) < min_len:
+        raise HTTPException(400, f"بريد صالح وكلمة مرور {min_len} أحرف على الأقل")
     if role not in ("admin", "employee"):
         raise HTTPException(400, "الدور غير صالح")
     dup = await fetchrow("SELECT id FROM users WHERE email=$1", email)
@@ -224,8 +347,10 @@ async def update_user(company_id: str, current_user_id: str, user_id: str, full_
         raise HTTPException(400, "الدور غير صالح")
     if user_id == current_user_id and not is_active:
         raise HTTPException(400, "لا يمكنك تعطيل حسابك الشخصي")
-    if new_password is not None and len(new_password) < 8:
-        raise HTTPException(400, "كلمة المرور الجديدة 8 أحرف على الأقل")
+    if new_password is not None:
+        min_len = (await get_system_settings(company_id))["minPasswordLength"]
+        if len(new_password) < min_len:
+            raise HTTPException(400, f"كلمة المرور الجديدة {min_len} أحرف على الأقل")
 
     perms = await _role_permissions(company_id, role_id) if role_id else _clean_perms(permissions)
     row = await fetchrow(

@@ -1,12 +1,14 @@
 # modules/auth/api.py — تسجيل الدخول والهوية
 # عقد الرد مطابق حرفياً للنظام القديم: {token, user:{id, email, fullName, ...}}
 # عشان أي واجهة قديمة أو جديدة تشتغل على أي باك اند من الاتنين.
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr
 from ...core.db import fetchrow, execute
 from ...core.security import verify_password, create_token
 from ...core.deps import get_current_user, require_permission, CurrentUser
 from ...core.permissions import PERMISSIONS, ALL_KEYS
+from ..settings import service as settings_service
 
 router = APIRouter()
 
@@ -33,7 +35,7 @@ async def login(body: LoginBody):
         raise HTTPException(400, "البريد أو كلمة المرور غير صالحة الصيغة")
     row = await fetchrow(
         """SELECT id, company_id, branch_id, email, password_hash, full_name,
-                  role, permissions, is_active
+                  role, permissions, is_active, failed_login_count, locked_until
            FROM users WHERE email = $1""",
         body.email.lower().strip(),
     )
@@ -41,11 +43,39 @@ async def login(body: LoginBody):
         raise HTTPException(401, "البريد الإلكتروني أو كلمة المرور غير صحيحة")
     if not row["is_active"]:
         raise HTTPException(403, "هذا الحساب معطّل، تواصل مع الإدارة")
+
+    company_id = str(row["company_id"])
+    is_admin = row["role"] == "admin"
+    # قراءة واحدة لإعدادات النظام — وضع الصيانة / القفل المؤقت / مدة الجلسة (إعدادات 9، 11، 14)
+    sys = await settings_service.get_system_settings(company_id)
+
+    # وضع الصيانة — لا يحجب حساب admin أبداً
+    if not is_admin and sys["maintenanceMode"]:
+        raise HTTPException(503, "النظام تحت الصيانة حالياً — حاول مرة أخرى بعد قليل")
+
+    # قفل مؤقت بعد محاولات دخول فاشلة متكررة — لا يُطبَّق على admin أبداً
+    if not is_admin and row["locked_until"] and row["locked_until"] > datetime.now(timezone.utc):
+        raise HTTPException(423, "الحساب مقفل مؤقتاً بسبب محاولات دخول فاشلة متكررة — حاول بعد قليل")
+
     if not verify_password(body.password, row["password_hash"]):
+        if not is_admin and sys["maxLoginAttempts"] > 0:
+            new_count = (row["failed_login_count"] or 0) + 1
+            if new_count >= sys["maxLoginAttempts"]:
+                await execute(
+                    "UPDATE users SET failed_login_count=0, locked_until = now() + ($1 || ' minutes')::interval WHERE id=$2",
+                    str(sys["lockoutMinutes"]), row["id"])
+            else:
+                await execute("UPDATE users SET failed_login_count=$1 WHERE id=$2", new_count, row["id"])
         raise HTTPException(401, "البريد الإلكتروني أو كلمة المرور غير صحيحة")
 
-    await execute("UPDATE users SET last_login_at = now() WHERE id = $1", row["id"])
-    return {"token": create_token(row["id"]), "user": _user_payload(row)}
+    await execute(
+        "UPDATE users SET last_login_at = now(), failed_login_count=0, locked_until=NULL WHERE id = $1",
+        row["id"])
+    token = create_token(row["id"], sys["sessionHours"] or None)
+    # وجهة ما بعد الدخول المخصّصة (إعداد 8) — فاضية/None لو الإدارة ما ضبطتش شيء،
+    # والواجهة عندها سلوك اكتشاف تلقائي احتياطي لو المسار ده غير متاح لصلاحيات المستخدم
+    landing_path = (sys["landingAdmin"] if is_admin else sys["landingEmployee"]) or None
+    return {"token": token, "user": _user_payload(row), "landingPath": landing_path}
 
 @router.get("/me")
 async def me(user: CurrentUser = Depends(get_current_user)):

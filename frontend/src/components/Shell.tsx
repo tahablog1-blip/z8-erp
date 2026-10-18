@@ -35,6 +35,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { refreshCompany } from "@/lib/company";
+import { refreshPrinting } from "@/lib/printing";
 import { NAV_MODULES, NAV_SECTIONS, SECTION_ICONS } from "@/modules/registry";
 import { NavIcon } from "@/components/nav-icons";
 import { NAV_TITLE_KEYS, SECTION_TITLE_KEYS, useLang } from "@/lib/i18n";
@@ -69,8 +70,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
     });
   }
 
-  // تحديث بيانات المنشأة (لترويسات الطباعة) مرة عند فتح التطبيق
-  useEffect(() => { refreshCompany(api); }, []);
+  // تحديث بيانات المنشأة وإعدادات الطباعة (لترويسات وقوالب الطباعة) مرة عند فتح التطبيق
+  useEffect(() => { refreshCompany(api); refreshPrinting(api); }, []);
 
   // ── الأقسام المنسدلة: مفتوحة افتراضياً + الحالة محفوظة + قسم الصفحة الحالية يفتح تلقائياً ──
   const [openSecs, setOpenSecs] = useState<Record<string, boolean>>({});

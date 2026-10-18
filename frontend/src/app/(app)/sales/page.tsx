@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { MIcon } from "@/components/m-icon";
 import type { PrintFormat } from "@/lib/print-invoice";
+import { getPrinting, cachePrinting } from "@/lib/printing";
 import { DataTable, Column } from "@/components/DataTable";
 import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
@@ -270,19 +271,21 @@ export default function SalesPage() {
   const [darkMode, setDarkMode] = useState(false);
   const [autoPrintOn, setAutoPrintOn] = useState(true);
   useEffect(() => {
-    try {
-      setDarkMode(localStorage.getItem("z8_theme") === "dark");
-      setAutoPrintOn(localStorage.getItem("z8_print_auto") !== "off");
-    } catch { /* */ }
+    try { setDarkMode(localStorage.getItem("z8_theme") === "dark"); } catch { /* */ }
+    setAutoPrintOn(getPrinting().autoPrint);
   }, []);
   function toggleDark(v: boolean) {
     setDarkMode(v);
     localStorage.setItem("z8_theme", v ? "dark" : "light");
     document.documentElement.dataset.theme = v ? "dark" : "";
   }
-  function toggleAutoPrint(v: boolean) {
+  // تبديل سريع — DB-backed الآن (إعداد 1) بدل localStorage مباشرة؛ نقطة نهاية ضيّقة
+  // بصلاحية الدخول العادية فقط، مطابقةً للسلوك القديم (أي موظف كان يقدر يبدّله محلياً)
+  async function toggleAutoPrint(v: boolean) {
     setAutoPrintOn(v);
-    localStorage.setItem("z8_print_auto", v ? "on" : "off");
+    cachePrinting({ autoPrint: v });
+    try { await api("/settings/printing/quick-toggle", { method: "PUT", body: JSON.stringify({ autoPrint: v }) }); }
+    catch { /* تجاهل فشل الحفظ هنا — القيمة المحلية استمرت والواجهة لسه متسقة */ }
   }
 
   // ── تصنيفات الأصناف كمربعات فلترة ──
@@ -653,7 +656,7 @@ export default function SalesPage() {
       resetSale();
       setStep("cart");
       // طباعة تلقائية فور الإصدار (تتقفل من الإعدادات ← الطباعة)
-      if (localStorage.getItem("z8_print_auto") !== "off") printById(invoice.id, "thermal");
+      if (getPrinting().autoPrint) printById(invoice.id, "thermal");
       await load();
     } catch (e: any) { setSaleErr(e.message); }
     finally { setSaleBusy(false); }
