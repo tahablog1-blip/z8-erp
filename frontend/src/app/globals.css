@@ -128,3 +128,11 @@
 
 /* ProductCards يستخدم الآن الـ Design Tokens مباشرة (bg-ink-2/border-line/text-text-dim)
    فهو متوافق مع الوضع الليلي تلقائياً بدون أي استثناءات هنا. */
+
+/* ── حركة الأزرار (الإعدادات ← التصميم) — Button/IconButton فقط عبر .z8-anim-btn ──
+   عمداً غير مطبّقة على أي عنصر قائمة/تنقّل (روابط القضيب الجانبي، التابات، إلخ) —
+   تفعيلها/تعطيلها من data-btn-anim على <html> ما بيأثرش على القوائم إطلاقاً.
+   prefers-reduced-motion مُغطّاة بالفعل بالقاعدة العامة أعلى الملف. */
+.z8-anim-btn { transition: transform 150ms cubic-bezier(.2,.7,.3,1), box-shadow 150ms ease; }
+:root:not([data-btn-anim="off"]) .z8-anim-btn:hover:not(:disabled) { transform: translateY(-1px) scale(1.02); }
+:root:not([data-btn-anim="off"]) .z8-anim-btn:active:not(:disabled) { transform: translateY(0) scale(0.96); }

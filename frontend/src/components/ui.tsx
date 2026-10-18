@@ -11,7 +11,7 @@ export function Button({ variant = "primary", size = "md", className = "", loadi
     size?: "lg" | "md" | "sm" | "xs";
     loading?: boolean;
   }) {
-  const base = "m3 inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg font-semibold transition-colors duration-150 disabled:opacity-45 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-petrol";
+  const base = "m3 z8-anim-btn inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg font-semibold transition-colors duration-150 disabled:opacity-45 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-petrol";
   const sizes = {
     lg: "px-5 py-2.5 text-[14px]",
     md: "px-4 py-2 text-[13px]",
@@ -42,7 +42,7 @@ export function IconButton({ className = "", size = "md", label, children, ...pr
   const dim = size === "sm" ? "h-8 w-8" : "h-9 w-9";
   return (
     <button aria-label={label} title={label}
-            className={`m3 grid ${dim} shrink-0 place-items-center rounded-lg border border-line bg-ink-2 text-text-dim transition-colors duration-150 hover:border-petrol hover:text-petrol disabled:opacity-45 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-petrol ${className}`}
+            className={`m3 z8-anim-btn grid ${dim} shrink-0 place-items-center rounded-lg border border-line bg-ink-2 text-text-dim transition-colors duration-150 hover:border-petrol hover:text-petrol disabled:opacity-45 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-petrol ${className}`}
             {...props}>
       {children}
     </button>

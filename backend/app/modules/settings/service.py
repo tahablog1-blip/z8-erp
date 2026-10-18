@@ -398,8 +398,10 @@ async def update_background_settings(company_id: str, body) -> dict:
 
 _DESIGN_DEFAULTS = {
     "primaryColor": "", "successColor": "", "warningColor": "", "errorColor": "",
-    "fontFamily": "cairo", "buttonShape": "rounded", "sidebarDefault": "expanded",
+    "fontFamilyAr": "cairo", "fontFamilyEn": "inter",
+    "buttonShape": "rounded", "buttonAnimation": "1", "sidebarDefault": "expanded",
 }
+_DESIGN_BOOL = {"buttonAnimation"}
 
 
 async def get_design_settings(company_id: str) -> dict:
@@ -407,7 +409,12 @@ async def get_design_settings(company_id: str) -> dict:
     out: dict = {}
     for k, default in _DESIGN_DEFAULTS.items():
         raw = kv.get(f"design.{k}", default)
-        out[k] = (raw or None) if k.endswith("Color") else raw
+        if k.endswith("Color"):
+            out[k] = raw or None
+        elif k in _DESIGN_BOOL:
+            out[k] = raw == "1"
+        else:
+            out[k] = raw
     return out
 
 
@@ -417,8 +424,10 @@ async def update_design_settings(company_id: str, body) -> dict:
         "design.successColor": body.successColor or "",
         "design.warningColor": body.warningColor or "",
         "design.errorColor": body.errorColor or "",
-        "design.fontFamily": body.fontFamily,
+        "design.fontFamilyAr": body.fontFamilyAr,
+        "design.fontFamilyEn": body.fontFamilyEn,
         "design.buttonShape": body.buttonShape,
+        "design.buttonAnimation": "1" if body.buttonAnimation else "0",
         "design.sidebarDefault": body.sidebarDefault,
     })
     return await get_design_settings(company_id)

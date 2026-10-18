@@ -262,7 +262,16 @@ class BackgroundSettingsIn(BaseModel):
 
 
 _HEX_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
-_FONT_FAMILIES = {"cairo", "tajawal", "ibm-plex-arabic", "almarai", "noto-kufi-arabic", "changa"}
+# خطوط عربية — تُستخدم لما واجهة النظام عربي
+_FONT_FAMILIES_AR = {
+    "cairo", "tajawal", "ibm-plex-arabic", "almarai", "noto-kufi-arabic", "changa",
+    "el-messiri", "readex-pro", "reem-kufi", "markazi-text", "lalezar", "harmattan",
+}
+# خطوط إنجليزية — تُستخدم لما واجهة النظام English
+_FONT_FAMILIES_EN = {
+    "inter", "roboto", "poppins", "montserrat", "lato", "open-sans",
+    "nunito", "work-sans", "source-sans", "manrope", "dm-sans", "outfit",
+}
 _BUTTON_SHAPES = {"sharp", "rounded", "pill"}
 _SIDEBAR_DEFAULTS = {"expanded", "collapsed"}
 
@@ -272,8 +281,10 @@ class DesignSettingsOut(BaseModel):
     successColor: str | None = None
     warningColor: str | None = None
     errorColor: str | None = None
-    fontFamily: str = "cairo"
+    fontFamilyAr: str = "cairo"       # يُستخدم تلقائياً لما لغة الواجهة عربي
+    fontFamilyEn: str = "inter"       # يُستخدم تلقائياً لما لغة الواجهة English
     buttonShape: str = "rounded"      # sharp | rounded | pill
+    buttonAnimation: bool = True      # حركة عند التحويم/الضغط — الأزرار فقط (مش القوائم)
     sidebarDefault: str = "expanded"  # expanded | collapsed
 
 
@@ -282,8 +293,10 @@ class DesignSettingsIn(BaseModel):
     successColor: str | None = None
     warningColor: str | None = None
     errorColor: str | None = None
-    fontFamily: str = "cairo"
+    fontFamilyAr: str = "cairo"
+    fontFamilyEn: str = "inter"
     buttonShape: str = "rounded"
+    buttonAnimation: bool = True
     sidebarDefault: str = "expanded"
 
     @field_validator("primaryColor", "successColor", "warningColor", "errorColor")
@@ -296,11 +309,18 @@ class DesignSettingsIn(BaseModel):
             raise ValueError("لون غير صالح — استخدم صيغة #RRGGBB")
         return v
 
-    @field_validator("fontFamily")
+    @field_validator("fontFamilyAr")
     @classmethod
-    def _font(cls, v: str) -> str:
-        if v not in _FONT_FAMILIES:
-            raise ValueError("خط غير مدعوم")
+    def _font_ar(cls, v: str) -> str:
+        if v not in _FONT_FAMILIES_AR:
+            raise ValueError("خط عربي غير مدعوم")
+        return v
+
+    @field_validator("fontFamilyEn")
+    @classmethod
+    def _font_en(cls, v: str) -> str:
+        if v not in _FONT_FAMILIES_EN:
+            raise ValueError("خط إنجليزي غير مدعوم")
         return v
 
     @field_validator("buttonShape")

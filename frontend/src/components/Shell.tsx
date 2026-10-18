@@ -99,7 +99,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   // إعدادات التصميم الموحّدة — ألوان/خط/شكل أزرار/قائمة جانبية، تتحدّث فوراً عند الحفظ من الإعدادات
   const [design, setDesign] = useState<DesignInfo>(getDesign());
   useEffect(() => onDesignUpdate(() => setDesign(getDesign())), []);
-  useEffect(() => { applyDesignVars(design, dark); }, [design, dark]);
+  useEffect(() => { applyDesignVars(design, dark, lang); }, [design, dark, lang]);
 
   // ── الأقسام المنسدلة: مفتوحة افتراضياً + الحالة محفوظة + قسم الصفحة الحالية يفتح تلقائياً ──
   const [openSecs, setOpenSecs] = useState<Record<string, boolean>>({});

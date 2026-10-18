@@ -3,8 +3,11 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { cacheDesign, FONT_LABELS, FONT_STACKS, BUTTON_SHAPE_LABELS, type DesignInfo, type FontKey, type ButtonShape } from "@/lib/design";
-import { Button, Card, ErrorNote, Field, Select } from "@/components/ui";
+import {
+  cacheDesign, FONT_LABELS_AR, FONT_LABELS_EN, FONT_STACKS_AR, FONT_STACKS_EN, BUTTON_SHAPE_LABELS,
+  type DesignInfo, type ArFontKey, type EnFontKey, type ButtonShape,
+} from "@/lib/design";
+import { Button, Card, ErrorNote, Field, Select, Switch } from "@/components/ui";
 
 type ToneKey = "primaryColor" | "successColor" | "warningColor" | "errorColor";
 const TONES: { key: ToneKey; label: string; fallback: string; hint: string }[] = [
@@ -14,7 +17,8 @@ const TONES: { key: ToneKey; label: string; fallback: string; hint: string }[] =
   { key: "errorColor", label: "لون الخطأ", fallback: "#EF4444", hint: "الأخطاء والإجراءات الخطرة" },
 ];
 
-const FONT_KEYS = Object.keys(FONT_LABELS) as FontKey[];
+const FONT_KEYS_AR = Object.keys(FONT_LABELS_AR) as ArFontKey[];
+const FONT_KEYS_EN = Object.keys(FONT_LABELS_EN) as EnFontKey[];
 const SHAPE_KEYS = Object.keys(BUTTON_SHAPE_LABELS) as ButtonShape[];
 const RADIUS_PREVIEW: Record<ButtonShape, string> = { sharp: "4px", rounded: "10px", pill: "999px" };
 
@@ -100,18 +104,34 @@ export default function DesignSettingsPage() {
         </div>
       </Card>
 
-      {/* ── الخط ── */}
+      {/* ── الخط — عربي وإنجليزي منفصلين، كل واحد يظهر تلقائياً مع لغة الواجهة المطابقة ── */}
       <Card>
         <h2 className="mb-3 text-[14px] font-black">الخط</h2>
-        <div className="max-w-sm space-y-3">
-          <Field label="خط النظام">
-            <Select value={settings.fontFamily} onChange={(e) => save({ ...settings, fontFamily: e.target.value as FontKey })}>
-              {FONT_KEYS.map((k) => <option key={k} value={k}>{FONT_LABELS[k]}</option>)}
-            </Select>
-          </Field>
-          <div className="rounded-lg border border-line bg-ink-3 p-4 text-center" style={{ fontFamily: FONT_STACKS[settings.fontFamily] }}>
-            <div className="text-[22px] font-extrabold">مصدر الزيوت — فاتورة رقم 1024</div>
-            <div className="mt-1 text-[13px] text-text-dim">Z8 Platform — نموذج معاينة الخط</div>
+        <p className="mb-3 text-[11.5px] text-text-dim">
+          الخط العربي يظهر تلقائياً لما واجهة النظام تكون عربي، والخط الإنجليزي لما تكون English — حسب زر ع/EN في الأعلى.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Field label="الخط العربي">
+              <Select value={settings.fontFamilyAr} onChange={(e) => save({ ...settings, fontFamilyAr: e.target.value as ArFontKey })}>
+                {FONT_KEYS_AR.map((k) => <option key={k} value={k}>{FONT_LABELS_AR[k]}</option>)}
+              </Select>
+            </Field>
+            <div className="mt-2 rounded-lg border border-line bg-ink-3 p-4 text-center" style={{ fontFamily: FONT_STACKS_AR[settings.fontFamilyAr] }}>
+              <div className="text-[20px] font-extrabold">مصدر الزيوت — فاتورة رقم 1024</div>
+              <div className="mt-1 text-[12.5px] text-text-dim">نموذج معاينة الخط العربي</div>
+            </div>
+          </div>
+          <div>
+            <Field label="الخط الإنجليزي">
+              <Select value={settings.fontFamilyEn} onChange={(e) => save({ ...settings, fontFamilyEn: e.target.value as EnFontKey })}>
+                {FONT_KEYS_EN.map((k) => <option key={k} value={k}>{FONT_LABELS_EN[k]}</option>)}
+              </Select>
+            </Field>
+            <div className="mt-2 rounded-lg border border-line bg-ink-3 p-4 text-center" style={{ fontFamily: FONT_STACKS_EN[settings.fontFamilyEn] }}>
+              <div className="text-[20px] font-extrabold">Masdar Al-Zuyout — Invoice #1024</div>
+              <div className="mt-1 text-[12.5px] text-text-dim">English font preview</div>
+            </div>
           </div>
         </div>
       </Card>
@@ -131,6 +151,22 @@ export default function DesignSettingsPage() {
               <span className="text-[11.5px] font-bold">{BUTTON_SHAPE_LABELS[shape]}</span>
             </button>
           ))}
+        </div>
+      </Card>
+
+      {/* ── حركة الأزرار — زر Button/IconButton فقط، بلا أي تأثير على القوائم أو حجمها أو مكانها ── */}
+      <Card>
+        <h2 className="mb-3 text-[14px] font-black">حركة الأزرار</h2>
+        <label className="flex max-w-xl cursor-pointer items-center justify-between gap-3 rounded-lg border border-line p-3">
+          <div>
+            <div className="text-[13px] font-bold">تفعيل حركة الأزرار (تكبير خفيف عند التحويم والضغط)</div>
+            <div className="text-[11.5px] text-text-dim">تخص الأزرار فقط — القوائم الجانبية والتابات بلا تغيير في الحجم أو الحركة أو المكان</div>
+          </div>
+          <Switch checked={settings.buttonAnimation} onChange={(v) => save({ ...settings, buttonAnimation: v })} />
+        </label>
+        <div className="mt-3 flex gap-2">
+          <Button>زر للتجربة</Button>
+          <Button variant="outline">حرّك الفأرة فوقه</Button>
         </div>
       </Card>
 
