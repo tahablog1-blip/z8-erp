@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, getToken } from "@/lib/api";
 import { Button, Card } from "@/components/ui";
+import { MIcon } from "@/components/m-icon";
 
 type Msg = {
   id: string; sender_type: "employee" | "customer" | "system";
@@ -245,9 +246,9 @@ export default function ChatRoomPage() {
       {/* الإدخال */}
       {!recOn ? (
         <div className="flex gap-2">
-          <button onClick={startRec} disabled={busy} title="تسجيل رسالة صوتية"
-                  className="grid h-[44px] w-[44px] shrink-0 place-items-center rounded-full border border-line text-[19px] transition hover:border-petrol active:scale-95 disabled:opacity-40">
-            🎤
+          <button onClick={startRec} disabled={busy} title="تسجيل رسالة صوتية" aria-label="تسجيل رسالة صوتية"
+                  className="grid h-[44px] w-[44px] shrink-0 place-items-center rounded-full border border-line transition hover:border-petrol active:scale-95 disabled:opacity-40">
+            <MIcon name="mic" className="!text-[19px]" />
           </button>
           <input value={text} onChange={(e) => setText(e.target.value)}
                  onKeyDown={(e) => { if (e.key === "Enter") sendText(); }}

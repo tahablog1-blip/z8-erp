@@ -274,6 +274,7 @@ _FONT_FAMILIES_EN = {
 }
 _BUTTON_SHAPES = {"sharp", "rounded", "pill"}
 _SIDEBAR_DEFAULTS = {"expanded", "collapsed"}
+_FONT_SCALES = {"sm", "md", "lg", "xl"}
 
 
 class DesignSettingsOut(BaseModel):
@@ -283,8 +284,9 @@ class DesignSettingsOut(BaseModel):
     errorColor: str | None = None
     fontFamilyAr: str = "cairo"       # يُستخدم تلقائياً لما لغة الواجهة عربي
     fontFamilyEn: str = "inter"       # يُستخدم تلقائياً لما لغة الواجهة English
+    fontScale: str = "md"             # حجم الخط الموحّد للنظام كله — sm|md|lg|xl
     buttonShape: str = "rounded"      # sharp | rounded | pill
-    buttonAnimation: bool = True      # حركة عند التحويم/الضغط — الأزرار فقط (مش القوائم)
+    buttonAnimation: bool = True      # حركة عند التحويم/الضغط — موحّدة لكل الأزرار بالنظام (مش القوائم)
     sidebarDefault: str = "expanded"  # expanded | collapsed
 
 
@@ -295,6 +297,7 @@ class DesignSettingsIn(BaseModel):
     errorColor: str | None = None
     fontFamilyAr: str = "cairo"
     fontFamilyEn: str = "inter"
+    fontScale: str = "md"
     buttonShape: str = "rounded"
     buttonAnimation: bool = True
     sidebarDefault: str = "expanded"
@@ -321,6 +324,13 @@ class DesignSettingsIn(BaseModel):
     def _font_en(cls, v: str) -> str:
         if v not in _FONT_FAMILIES_EN:
             raise ValueError("خط إنجليزي غير مدعوم")
+        return v
+
+    @field_validator("fontScale")
+    @classmethod
+    def _font_scale(cls, v: str) -> str:
+        if v not in _FONT_SCALES:
+            raise ValueError("حجم خط غير صالح")
         return v
 
     @field_validator("buttonShape")

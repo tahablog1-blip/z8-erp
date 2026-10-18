@@ -271,7 +271,7 @@ export default function TreasuryPage() {
                     <td className="px-3 py-2 tnum text-[11.5px] text-text-dim">{v.voucher_date || dtFmt(v.created_at)}</td>
                     <td className="px-2 py-2">
                       <div className="flex gap-1">
-                        <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => printVoucher(v)}>🖨 السند</Button>
+                        <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => printVoucher(v)}>السند</Button>
                         {canCreate && !cancelled && (
                           <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => cancelVoucher(v)}>إلغاء</Button>
                         )}

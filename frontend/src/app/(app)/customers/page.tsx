@@ -444,7 +444,7 @@ export default function CustomersPage() {
                           {money(statement.balance)} ر.س
                         </span>
                         <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={printStatement}>
-                          🖨 طباعة الكشف
+                          طباعة الكشف
                         </Button>
                       </div>
                     </div>

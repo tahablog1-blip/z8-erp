@@ -102,7 +102,7 @@ export default function PurchasesPage() {
       render: (i) => (
         <div className="flex gap-1">
           <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => openInvoice(i)}>عرض</Button>
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => printTaxInvoice(i)}>🖨 ضريبية</Button>
+          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => printTaxInvoice(i)}>ضريبية</Button>
         </div>
       ),
     },
@@ -171,7 +171,7 @@ export default function PurchasesPage() {
           <div class="grand"><span>الإجمالي شامل الضريبة</span><b>${fmt(detail.total)} ر.س</b></div>
         </div>
         <div class="foot">${comp.name || ""} — منصة Z8 · ${detail.payment_terms === "credit" ? `آجلة — الاستحقاق: ${detail.due_date ? new Date(detail.due_date as any).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn")) : ""}` : "نقدية"}</div>
-        <div class="noprint"><button onclick="window.print()">🖨 طباعة</button></div>
+        <div class="noprint"><button onclick="window.print()">طباعة</button></div>
         </body></html>`);
       w.document.close();
     } catch (e: any) { setPageErr(e.message); }

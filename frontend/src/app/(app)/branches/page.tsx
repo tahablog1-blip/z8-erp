@@ -164,7 +164,7 @@ export default function BranchesPage() {
         </div>
         <div class="url">${url}</div>
       </div>
-      <div class="noprint"><button onclick="window.print()">🖨 طباعة</button></div>
+      <div class="noprint"><button onclick="window.print()">طباعة</button></div>
       <script>new QRCode(document.getElementById("qr"), { text: "${url}", width: 210, height: 210, correctLevel: QRCode.CorrectLevel.M });<\/script>
       </body></html>`);
     w.document.close();
@@ -229,7 +229,7 @@ export default function BranchesPage() {
                   ))}
                   <button type="button"
                           onClick={() => setForm({ ...form, lines: [...form.lines, `سير ${form.lines.length + 1}`] })}
-                          className="w-full rounded-lg border border-dashed border-line py-1.5 text-[12px] font-bold text-text-dim hover:border-petrol hover:text-petrol">
+                          className="z8-anim-btn w-full rounded-lg border border-dashed border-line py-1.5 text-[12px] font-bold text-text-dim hover:border-petrol hover:text-petrol">
                    {t("branches.addLine", "+ إضافة خط سير")}
                   </button>
                 </div>

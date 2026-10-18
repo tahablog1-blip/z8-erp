@@ -822,7 +822,7 @@ export default function SalesPage() {
                 <div className="flex gap-1.5">
                   <Button variant="ghost" className="flex-1 justify-center !py-1.5 !text-[11.5px]"
                           onClick={() => { printShiftReport(shift); setGearOpen(false); }}>
-                    🖨 تقرير الوردية
+                    تقرير الوردية
                   </Button>
                   <Button variant="danger" className="flex-1 justify-center !py-1.5 !text-[11.5px]"
                           onClick={() => { setCountedCash(""); setCloseNotes(""); setShiftErr(""); setCloseModal(true); setGearOpen(false); }}>
@@ -896,12 +896,12 @@ export default function SalesPage() {
           <div className="flex items-center gap-2">
             <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => printById(lastInvoice.id)}>إعادة طباعة</Button>
             <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
-                    onClick={() => window.open(`/api/invoices/${lastInvoice.id}/pdf`, "_blank")}>📄 PDF</Button>
+                    onClick={() => window.open(`/api/invoices/${lastInvoice.id}/pdf`, "_blank")}>PDF</Button>
             <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
                     onClick={async () => {
                       try { await api(`/invoices/${lastInvoice.id}/send-whatsapp`, { method: "POST" }); showToast("📲 جارٍ الإرسال واتساب"); }
                       catch { showToast("تعذر الإرسال"); }
-                    }}>📲 واتساب</Button>
+                    }}>واتساب</Button>
             <button onClick={() => setLastInvoice(null)} className="text-emerald/70 hover:text-emerald">✕</button>
           </div>
         </div>
@@ -915,7 +915,7 @@ export default function SalesPage() {
             <button onClick={() => { setPickOpen(true); api<BillingQueueRow[]>("/cars/billing-queue").then(setQueue).catch(() => {}); setPickQuery(""); setNewCust(null); setPickErr(""); }}
                     className="flex items-center gap-2 rounded-xl bg-petrol px-4 py-2 text-[13px] font-bold text-white shadow-card transition hover:brightness-110">
               <MIcon name="person_add" className="!text-[19px] text-white" />
-              {carId || customerId ? "تغيير العميل" : posMode === "service" ? "🚗 اختيار سيارة من الطابور" : "إضافة عميل"}
+              {carId || customerId ? "تغيير العميل" : posMode === "service" ? "اختيار سيارة من الطابور" : "إضافة عميل"}
             </button>
             {(carId || customerId) ? (
               <span className="flex items-center gap-2 rounded-xl border border-petrol bg-petrol-soft px-3.5 py-2 text-[12.5px] font-bold text-petrol">
@@ -1132,7 +1132,7 @@ export default function SalesPage() {
                 </button>
                 <Button variant="ghost" className="w-full justify-center !text-[11.5px]" disabled={cart.length === 0}
                         onClick={() => { setHoldNote(""); setHoldModal(true); }}>
-                  ⏸ تعليق الفاتورة
+                  تعليق الفاتورة
                 </Button>
               </div>
               {/* حافة الإيصال المسننة */}
@@ -1271,7 +1271,7 @@ export default function SalesPage() {
                             <span className="mr-2 text-text-dim">{row.customer_name || "—"}</span>
                             {row.prepared_items && row.prepared_items.length > 0 && (
                               <span className="mr-2 rounded-full bg-emerald-bg px-2 py-0.5 text-[10px] font-black text-emerald">
-                                🧾 فاتورة جاهزة
+                                فاتورة جاهزة
                               </span>
                             )}</span>
                           <span className="tnum text-[10.5px] text-text-dim">#{row.queue_no}</span>
@@ -1513,8 +1513,8 @@ export default function SalesPage() {
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="tnum font-bold">{money(i.total_inc)}</span>
-                <Button variant="ghost" className="!px-2 !py-1 !text-[11px]" onClick={() => printById(i.id, "thermal")}>🖨 حراري</Button>
-                <Button variant="ghost" className="!px-2 !py-1 !text-[11px]" onClick={() => printById(i.id, "a4")}>🖨 A4</Button>
+                <Button variant="ghost" className="!px-2 !py-1 !text-[11px]" onClick={() => printById(i.id, "thermal")}>حراري</Button>
+                <Button variant="ghost" className="!px-2 !py-1 !text-[11px]" onClick={() => printById(i.id, "a4")}>A4</Button>
               </div>
             </div>
           ))}

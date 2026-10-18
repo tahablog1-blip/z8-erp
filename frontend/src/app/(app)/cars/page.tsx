@@ -78,7 +78,7 @@ function ComboSelect({ value, options, placeholder, onChange }: {
         <Input value={value} placeholder={placeholder || "اكتب..."} autoFocus
                onChange={(e) => onChange(e.target.value)} />
         <button type="button" onClick={() => { setOther(false); onChange(""); }}
-                className="shrink-0 rounded-lg border border-line px-2 text-[11px] font-bold text-text-dim hover:text-text"
+                className="z8-anim-btn shrink-0 rounded-lg border border-line px-2 text-[11px] font-bold text-text-dim hover:text-text"
                 title="الرجوع للقائمة">☰</button>
       </div>
     );
@@ -192,7 +192,7 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
 
   const BackBtn = ({ to, label }: { to: typeof step; label: string }) => (
     <button onClick={() => setStep(to)}
-            className="mx-auto flex items-center gap-1 rounded-lg px-3 py-1.5 text-[12px] font-black text-text-dim transition hover:bg-ink-3 hover:text-text">
+            className="z8-anim-btn mx-auto flex items-center gap-1 rounded-lg px-3 py-1.5 text-[12px] font-black text-text-dim transition hover:bg-ink-3 hover:text-text">
       <MIcon name="arrow_forward" className="!text-[16px]" /> {label}
     </button>
   );
@@ -1947,7 +1947,7 @@ export default function CarsPage() {
         )}
         {(q || statusFilter !== "active" || branchFilter) && (
           <button onClick={() => { setQ(""); setStatusFilter("active"); setBranchFilter(""); }}
-                  className="flex items-center gap-1 rounded-xl px-3 py-2 text-[12px] font-bold text-text-dim transition hover:bg-ink-3 hover:text-text">
+                  className="z8-anim-btn flex items-center gap-1 rounded-xl px-3 py-2 text-[12px] font-bold text-text-dim transition hover:bg-ink-3 hover:text-text">
             <MIcon name="filter_alt_off" className="!text-[16px]" /> مسح الفلاتر
           </button>
         )}
@@ -2012,9 +2012,9 @@ export default function CarsPage() {
             <span className="tnum text-[11.5px] font-bold text-text-dim">{filteredRows.length} سيارة — صفحة {page} من {pages}</span>
             <div className="flex gap-1">
               <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}
-                      className="grid h-8 w-8 place-items-center rounded-lg border bg-ink-2 text-text-dim transition enabled:hover:border-petrol disabled:opacity-40" style={{ borderColor: UI.border }}>›</button>
+                      className="z8-anim-btn grid h-8 w-8 place-items-center rounded-lg border bg-ink-2 text-text-dim transition enabled:hover:border-petrol disabled:opacity-40" style={{ borderColor: UI.border }}>›</button>
               <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)}
-                      className="grid h-8 w-8 place-items-center rounded-lg border bg-ink-2 text-text-dim transition enabled:hover:border-petrol disabled:opacity-40" style={{ borderColor: UI.border }}>‹</button>
+                      className="z8-anim-btn grid h-8 w-8 place-items-center rounded-lg border bg-ink-2 text-text-dim transition enabled:hover:border-petrol disabled:opacity-40" style={{ borderColor: UI.border }}>‹</button>
             </div>
           </div>
         )}
@@ -2306,7 +2306,7 @@ export default function CarsPage() {
           <button onClick={aiAnalyzeChecklist} disabled={aiCamBusy}
                   className="mi-hover flex w-full items-center justify-center gap-1.5 rounded-xl border border-petrol/40 py-2.5 text-[12.5px] font-black text-petrol transition hover:bg-petrol-soft active:scale-[.98] disabled:opacity-50">
             <MIcon name="videocam" className="!text-[18px]" />
-            {aiCamBusy ? "الكاميرا بتحلل المشهد..." : "🤖 تحليل بالكاميرا — تعليم تلقائي"}
+            {aiCamBusy ? "الكاميرا بتحلل المشهد..." : "تحليل بالكاميرا — تعليم تلقائي"}
           </button>
           <ErrorNote msg={ckErr} />
           <div className="flex justify-end gap-2 pt-1">
@@ -2402,11 +2402,11 @@ export default function CarsPage() {
               </span>
               <span className="flex shrink-0 gap-1.5">
                 <button onClick={() => dismissAlert(a.id, true)}
-                        className="rounded-lg border border-ember/40 px-2 py-1 text-[10.5px] font-bold text-ember hover:bg-ember/10">
+                        className="z8-anim-btn rounded-lg border border-ember/40 px-2 py-1 text-[10.5px] font-bold text-ember hover:bg-ember/10">
                   بلاغ خاطئ
                 </button>
                 <button onClick={() => dismissAlert(a.id)}
-                        className="rounded-lg bg-ember px-2.5 py-1 text-[11px] font-black text-white hover:brightness-110">
+                        className="z8-anim-btn rounded-lg bg-ember px-2.5 py-1 text-[11px] font-black text-white hover:brightness-110">
                   تم التعامل
                 </button>
               </span>
@@ -2423,7 +2423,7 @@ export default function CarsPage() {
                      onChange={(e) => { const f = e.target.files?.[0]; if (f) onGatePhoto(f); e.target.value = ""; }} />
               <button onClick={() => gateFileRef.current?.click()} disabled={gateBusy}
                       className="w-full rounded-xl bg-petrol py-4 text-[15px] font-black text-white transition hover:brightness-110 disabled:opacity-50">
-                {gateBusy ? "جارِ القراءة والمطابقة..." : "📷 التقاط صورة اللوحة"}
+                {gateBusy ? "جارِ القراءة والمطابقة..." : "التقاط صورة اللوحة"}
               </button>
               {gateMsg && <p className="text-center text-[12.5px] font-bold text-ember">{gateMsg}</p>}
             </>
@@ -2467,7 +2467,7 @@ export default function CarsPage() {
               )}
               <Button variant="ghost" className="w-full justify-center"
                       onClick={() => { setGateResult(null); setGateMsg(""); }}>
-                📷 سيارة تانية
+                سيارة تانية
               </Button>
             </div>
           )}
@@ -2489,7 +2489,7 @@ export default function CarsPage() {
               </Button>
               <Button variant="ghost" className="w-full justify-center"
                       onClick={() => { setGateResult(null); setGateMsg(""); }}>
-                📷 إعادة التصوير
+                إعادة التصوير
               </Button>
             </div>
           )}
@@ -2536,7 +2536,7 @@ export default function CarsPage() {
                   <h3 className="text-center text-[15px] font-black">مصدر كاميرا البوابة</h3>
                   <button onClick={() => startLive("device")}
                           className="w-full rounded-xl bg-petrol py-3.5 text-[14px] font-black text-white hover:brightness-110">
-                    📱 كاميرا هذا الجهاز
+                    كاميرا هذا الجهاز
                   </button>
                   {gateCams.length > 0 && (
                     <div className="space-y-1.5 rounded-xl border border-emerald/40 bg-emerald-bg p-3">
@@ -2676,7 +2676,7 @@ export default function CarsPage() {
             </div>
           )}
           <Button className="w-full justify-center" onClick={printBookingQr} disabled={!qrBranch}>
-            🖨 طباعة ملصق الباركود
+            طباعة ملصق الباركود
           </Button>
           <p className="text-[10.5px] leading-relaxed text-text-dim">
             💡 اطبعه والصقه على مدخل الفرع وطاولة الاستقبال — ولو عايز العملاء يحجزوا من بيوتهم،

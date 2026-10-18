@@ -139,12 +139,12 @@ export default function ServiceNotesPage() {
             <button onClick={() => setView("customers")}
               className={`rounded-full px-3.5 py-1.5 text-[12px] font-black transition
                 ${view === "customers" ? "bg-petrol text-white" : "text-text-dim hover:text-text"}`}>
-              👥 العملاء
+              العملاء
             </button>
             <button onClick={() => setView("table")}
               className={`rounded-full px-3.5 py-1.5 text-[12px] font-black transition
                 ${view === "table" ? "bg-petrol text-white" : "text-text-dim hover:text-text"}`}>
-              📋 جدول الملاحظات
+              جدول الملاحظات
             </button>
           </div>
           <Button variant="ghost" onClick={load}>تحديث</Button>
@@ -255,7 +255,7 @@ export default function ServiceNotesPage() {
                   {/* زر الدردشة — الرسائل محفوظة دائماً */}
                   <button onClick={() => router.push(`/service-notes/chats/${t.work_order_id}`)}
                     className="relative flex shrink-0 items-center gap-1.5 rounded-full bg-emerald px-4 py-2 text-[12.5px] font-black text-white transition hover:brightness-110 active:scale-95">
-                    💬 دردشة
+                    دردشة
                     {unread > 0 && (
                       <span className="grid h-5 min-w-5 place-items-center rounded-full bg-white px-1 text-[10.5px] font-black text-emerald">
                         {unread}

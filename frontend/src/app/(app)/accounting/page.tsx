@@ -173,7 +173,7 @@ export default function AccountingPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-[19px] font-extrabold">الحسابات</h1>
         <Button variant="ghost" className="!px-3 !py-1.5 !text-[12px]" onClick={printCurrent}>
-          🖨 طباعة التبويب الحالي
+          طباعة التبويب الحالي
         </Button>
       </div>
       <ErrorNote msg={pageErr} />

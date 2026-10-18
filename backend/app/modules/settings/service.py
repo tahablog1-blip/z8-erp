@@ -398,7 +398,7 @@ async def update_background_settings(company_id: str, body) -> dict:
 
 _DESIGN_DEFAULTS = {
     "primaryColor": "", "successColor": "", "warningColor": "", "errorColor": "",
-    "fontFamilyAr": "cairo", "fontFamilyEn": "inter",
+    "fontFamilyAr": "cairo", "fontFamilyEn": "inter", "fontScale": "md",
     "buttonShape": "rounded", "buttonAnimation": "1", "sidebarDefault": "expanded",
 }
 _DESIGN_BOOL = {"buttonAnimation"}
@@ -426,6 +426,7 @@ async def update_design_settings(company_id: str, body) -> dict:
         "design.errorColor": body.errorColor or "",
         "design.fontFamilyAr": body.fontFamilyAr,
         "design.fontFamilyEn": body.fontFamilyEn,
+        "design.fontScale": body.fontScale,
         "design.buttonShape": body.buttonShape,
         "design.buttonAnimation": "1" if body.buttonAnimation else "0",
         "design.sidebarDefault": body.sidebarDefault,

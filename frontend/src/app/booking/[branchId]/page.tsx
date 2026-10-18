@@ -757,7 +757,7 @@ function OilCard({ carId }: { carId: string }) {
       <button onClick={toggle}
         className="flex w-full items-center justify-between text-right">
         <span className="flex items-center gap-1.5 text-[13.5px] font-black" style={{ color: NAVY }}>
-          🛢 زيت سيارتك
+          زيت سيارتك
         </span>
         <span className="text-[13px] font-black" style={{ color: DIM }}>{open ? "▴" : "▾"}</span>
       </button>
@@ -967,7 +967,7 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
                   <span className="flex w-full items-start gap-3">
                     {o.image
                       ? <img src={o.image} alt="" className="h-12 w-12 shrink-0 rounded-lg object-contain" style={{ background: "#F6F8FA" }} />
-                      : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg text-[22px]" style={{ background: "#F6F8FA" }}>🛢</span>}
+                      : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg" style={{ background: "#F6F8FA" }}><MIcon name="oil_barrel" className="!text-[22px]" /></span>}
                     <span className="min-w-0 flex-1">
                       {/* بلا truncate: الاسم يظهر كاملاً حتى لو طال، يلف على سطرين+ */}
                       <span className="block text-[13px] font-black leading-snug" style={{ color: NAVY }}>{o.name}</span>
@@ -1130,7 +1130,7 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
                       className="flex flex-col gap-2 rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
                       style={{ borderColor: active ? GREEN : LINE, background: active ? "rgba(22,163,74,.06)" : "#fff" }}>
                       <span className="flex w-full items-start gap-3">
-                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-[18px]" style={{ background: "#F6F8FA" }}>⭕</span>
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg" style={{ background: "#F6F8FA" }}><MIcon name="filter_alt" className="!text-[18px]" /></span>
                         <span className="min-w-0 flex-1">
                           <span className="block text-[13px] font-black leading-snug" style={{ color: NAVY }}>{f.name}</span>
                           {f.spec && <span className="tnum text-[10.5px] font-bold" style={{ color: DIM }}>{f.spec}</span>}
@@ -1248,7 +1248,7 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
                 <button onClick={() => openCat("الخدمات")}
                   className="flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition active:scale-[.97]"
                   style={{ borderColor: LINE, background: "#fff" }}>
-                  <span className="grid h-11 w-11 place-items-center rounded-full text-[20px]" style={{ background: "#EEF3F9" }}>🛠</span>
+                  <span className="grid h-11 w-11 place-items-center rounded-full" style={{ background: "#EEF3F9" }}><MIcon name="build" className="!text-[20px]" /></span>
                   <span className="line-clamp-1 text-[11.5px] font-black" style={{ color: NAVY }}>الخدمات</span>
                   <span className="tnum text-[9.5px] font-bold" style={{ color: DIM }}>{services.length} خدمة</span>
                 </button>

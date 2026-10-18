@@ -1010,7 +1010,7 @@ export default function ProductsPage() {
                     disabled={importBusy}
                     onClick={() => importRef.current?.click()}
                   >
-                    {importBusy ? "جارٍ القراءة…" : "📥 استيراد Excel"}
+                    {importBusy ? "جارٍ القراءة…" : "استيراد Excel"}
                   </Button>
 
                   {hasPerm("products.delete") && (
@@ -1027,7 +1027,7 @@ export default function ProductsPage() {
                       setCleanErr("");
                     }}
                   >
-                    🧽 تنظيف الأسماء AI
+                    تنظيف الأسماء AI
                   </Button>
 
                   <Button
@@ -1038,7 +1038,7 @@ export default function ProductsPage() {
                       loadRules();
                     }}
                   >
-                    💼 أسعار الخدمة
+                    أسعار الخدمة
                   </Button>
 
                   <Button
@@ -1048,14 +1048,14 @@ export default function ProductsPage() {
                       setBrandErr("");
                     }}
                   >
-                    🏷️ شركات الزيوت
+                    شركات الزيوت
                   </Button>
 
                   <Button
                     variant="ghost"
                     onClick={() => setTypesOpen(true)}
                   >
-                    🧪 تصنيف نوع الزيت
+                    تصنيف نوع الزيت
                   </Button>
 
                   <Button
@@ -1065,7 +1065,7 @@ export default function ProductsPage() {
                       loadCarFilters();
                     }}
                   >
-                    🔩 فلاتر السيارات
+                    فلاتر السيارات
                   </Button>
 
                   <Button
@@ -1076,7 +1076,7 @@ export default function ProductsPage() {
                       setClsErr("");
                     }}
                   >
-                    🪄 تصنيف ذكي
+                    تصنيف ذكي
                   </Button>
 
                   <Button onClick={openCreate}>+ صنف جديد</Button>
@@ -1244,7 +1244,7 @@ export default function ProductsPage() {
                 ستشاهد المعاينة أولاً ولن يحدث أي تغيير قبل الضغط على تطبيق.
               </p>
               <Button className="w-full justify-center" disabled={clsBusy} onClick={() => runClassify(false)}>
-                {clsBusy ? "جارِ الفحص..." : "🔍 معاينة التصنيف (بدون تغيير)"}
+                {clsBusy ? "جارِ الفحص..." : "معاينة التصنيف (بدون تغيير)"}
               </Button>
             </>
           )}
@@ -1582,7 +1582,7 @@ export default function ProductsPage() {
             </p>
             <Button variant="ghost" className="!shrink-0 !py-1.5 !text-[11px]"
               disabled={autoClsBusy} onClick={runAutoClassify}>
-              {autoClsBusy ? "جارِ التصنيف..." : "⚡ تصنيف تلقائي من الفئة"}
+              {autoClsBusy ? "جارِ التصنيف..." : "تصنيف تلقائي من الفئة"}
             </Button>
           </div>
           {autoClsMsg && (
@@ -1696,7 +1696,7 @@ export default function ProductsPage() {
           </p>
           {!cleanRes && (
             <Button className="w-full justify-center" disabled={cleanBusy} onClick={() => runClean(false)}>
-              {cleanBusy ? "الذكاء بيشتغل... (نص دقيقة تقريباً)" : "🔍 معاينة الدفعة الأولى"}
+              {cleanBusy ? "الذكاء بيشتغل... (نص دقيقة تقريباً)" : "معاينة الدفعة الأولى"}
             </Button>
           )}
           <ErrorNote msg={cleanErr} />
@@ -1792,7 +1792,7 @@ export default function ProductsPage() {
                 disabled={importBusy || preview.columns.price_vat?.startsWith("❌")}
                 onClick={confirmImport}>
                 {preview.columns.price_vat?.startsWith("❌")
-                  ? "⛔ الاعتماد متوقف — عمود السعر غير متعرف عليه"
+                  ? "الاعتماد متوقف — عمود السعر غير متعرف عليه"
                   : importBusy ? "جارٍ الاعتماد…" : `✓ اعتماد استيراد ${preview.totalRows} صنف`}
               </Button>
               <Button variant="ghost" onClick={() => { setPreview(null); setPendingFile(null); }}>إلغاء</Button>

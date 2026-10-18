@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { api, getToken } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Badge, Button, Card, Input } from "@/components/ui";
+import { MIcon } from "@/components/m-icon";
 
 type Attachment = { id: string; file_url: string; file_type: string; created_at: string };
 type Msg = {
@@ -229,7 +230,7 @@ export default function NoteDetailsPage() {
           </Badge>
         </h1>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={openNotify}>💬 إبلاغ العميل</Button>
+          <Button onClick={openNotify}>إبلاغ العميل</Button>
           {note.status === "new" && (
             <Button variant="ghost" disabled={busy} onClick={() => changeStatus("in_progress")}>بدء المتابعة</Button>
           )}
@@ -313,9 +314,9 @@ export default function NoteDetailsPage() {
           </div>
           {!recOn ? (
             <div className="mt-2 flex gap-2">
-              <button onClick={startRec} disabled={busy} title="تسجيل رسالة صوتية"
-                className="grid h-[40px] w-[40px] shrink-0 place-items-center rounded-xl border border-line text-[19px] transition active:scale-[.95] disabled:opacity-40">
-                🎤
+              <button onClick={startRec} disabled={busy} title="تسجيل رسالة صوتية" aria-label="تسجيل رسالة صوتية"
+                className="grid h-[40px] w-[40px] shrink-0 place-items-center rounded-xl border border-line transition active:scale-[.95] disabled:opacity-40">
+                <MIcon name="mic" className="!text-[19px]" />
               </button>
               <Input placeholder="اكتب رسالة للعميل…" value={chatText}
                 onChange={(e) => setChatText(e.target.value)}

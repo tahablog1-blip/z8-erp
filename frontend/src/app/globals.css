@@ -129,10 +129,23 @@
 /* ProductCards يستخدم الآن الـ Design Tokens مباشرة (bg-ink-2/border-line/text-text-dim)
    فهو متوافق مع الوضع الليلي تلقائياً بدون أي استثناءات هنا. */
 
-/* ── حركة الأزرار (الإعدادات ← التصميم) — Button/IconButton فقط عبر .z8-anim-btn ──
-   عمداً غير مطبّقة على أي عنصر قائمة/تنقّل (روابط القضيب الجانبي، التابات، إلخ) —
-   تفعيلها/تعطيلها من data-btn-anim على <html> ما بيأثرش على القوائم إطلاقاً.
+/* ── حركة الأزرار (الإعدادات ← التصميم) — موحّدة الآن على مستوى النظام كله ──
+   التفعيل: Button/IconButton عبر .z8-anim-btn (حركة خفيفة قياسية).
+   التعطيل: القاعدة اللي بعد كده بالأسفل توقف حركة أي <button> في الموقع كله دفعة واحدة،
+   حتى الأزرار اللي عندها حركة خاصة مكتوبة محلياً (hover:-translate-y-* إلخ) — توحيد فعلي.
+   عمداً غير مطبّقة على أي عنصر قائمة/تنقّل (روابط القضيب الجانبي، التابات role="tab"،
+   السويتش role="switch") — تفعيلها/تعطيلها ما بيأثرش على القوائم أو حجمها أو مكانها إطلاقاً.
    prefers-reduced-motion مُغطّاة بالفعل بالقاعدة العامة أعلى الملف. */
 .z8-anim-btn { transition: transform 150ms cubic-bezier(.2,.7,.3,1), box-shadow 150ms ease; }
 :root:not([data-btn-anim="off"]) .z8-anim-btn:hover:not(:disabled) { transform: translateY(-1px) scale(1.02); }
 :root:not([data-btn-anim="off"]) .z8-anim-btn:active:not(:disabled) { transform: translateY(0) scale(0.96); }
+
+/* ── توحيد مفتاح «حركة الأزرار»: لما يكون معطَّلاً، تتوقف حركة التحويم/الضغط لكل <button> في
+   النظام دفعة واحدة — حتى الأزرار التي عندها حركة خاصة مكتوبة بـ Tailwind (hover:-translate-y-*،
+   active:scale-*...) لا فقط Button/IconButton — بـ!important عشان يكسب على أي تخصيص محلي.
+   القوائم/التابات (role="tab") والسويتش (role="switch") مُستبعدة دايماً مهما كان الإعداد. */
+:root[data-btn-anim="off"] button:not([role="tab"]):not([role="switch"]):hover,
+:root[data-btn-anim="off"] button:not([role="tab"]):not([role="switch"]):active,
+:root[data-btn-anim="off"] button:not([role="tab"]):not([role="switch"]):focus {
+  transform: none !important;
+}

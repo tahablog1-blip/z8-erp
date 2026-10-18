@@ -340,7 +340,7 @@ export default function CamerasSettingsPage() {
           {/* ══ تشغيل وفحص كل الكاميرات بضغطة — بدون فتح كل كاميرا ══ */}
           <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-ink-2 p-3">
             <Button onClick={checkAll} disabled={healthBusy || cameras.length === 0}>
-              {healthBusy ? "جارِ فحص الكاميرات…" : "🩺 تشغيل وفحص كل الكاميرات"}
+              {healthBusy ? "جارِ فحص الكاميرات…" : "تشغيل وفحص كل الكاميرات"}
             </Button>
             {healthAt && (
               <span className="text-[12px] font-bold">
@@ -375,7 +375,7 @@ export default function CamerasSettingsPage() {
                   <div className="flex shrink-0 gap-1.5">
                     <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
                             disabled={snapFor === c.id} onClick={() => testSnapshot(c)}>
-                      {snapFor === c.id ? "جارِ الالتقاط..." : "📷 اختبار لقطة"}
+                      {snapFor === c.id ? "جارِ الالتقاط..." : "اختبار لقطة"}
                     </Button>
                     <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => removeCamera(c)}>حذف</Button>
                   </div>

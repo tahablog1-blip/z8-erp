@@ -265,7 +265,7 @@ export default function PreparePage() {
                   <button onClick={() => setOilOpen((v) => !v)}
                           className={`rounded-full px-3.5 py-1.5 text-[12px] font-black transition
                             ${oil?.oilQty != null ? "bg-emerald text-white" : "border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol"}`}>
-                    {oil?.oilQty != null ? `🛢 ${oil.oilQty} لتر${oil.oilType ? ` · ${oil.oilType}` : ""}` : "🛢 حدد كمية الزيت"}
+                    {oil?.oilQty != null ? `${oil.oilQty} لتر${oil.oilType ? ` · ${oil.oilType}` : ""}` : "حدد كمية الزيت"}
                   </button>
                   <Badge tone={(STATUS_META[active.work_status || "queued"] || STATUS_META.queued).tone}>
                     {(STATUS_META[active.work_status || "queued"] || STATUS_META.queued).label}
@@ -411,7 +411,7 @@ export default function PreparePage() {
                   <Button variant="danger" onClick={cancelOrder}>🗑 إلغاء أمر العمل</Button>
                   <Button variant="ghost" onClick={() => setNoteOpen(true)}>+ إضافة ملاحظة</Button>
                   <Button variant="ghost" disabled={draftBusy || cart.length === 0} onClick={saveDraft}>
-                    {draftBusy ? "جارٍ الحفظ…" : "💾 حفظ مسودة"}
+                    {draftBusy ? "جارٍ الحفظ…" : "حفظ مسودة"}
                   </Button>
                   <Input
                     className="h-9 w-28 text-center tnum"

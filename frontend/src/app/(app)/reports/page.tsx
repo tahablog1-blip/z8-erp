@@ -236,7 +236,7 @@ export default function ReportsPage() {
             <button onClick={() => setCmpMonth(thisMonth)}
                     className={`m3 rounded-full px-3 py-1.5 text-[11.5px] font-bold transition
                       ${cmpMonth ? "bg-petrol text-white" : "border border-line bg-ink-2 text-text-dim hover:border-petrol"}`}>
-              📅 الشهر التقويمي
+              الشهر التقويمي
             </button>
             {cmpMonth && (
               <span className="flex items-center gap-1 rounded-full border border-line bg-ink-2 px-1.5 py-1">
@@ -293,7 +293,7 @@ export default function ReportsPage() {
           <div className="flex flex-wrap items-end gap-2">
             <Field label="من"><Input type="date" className="tnum" value={from} onChange={(e) => setFrom(e.target.value)} /></Field>
             <Field label="إلى"><Input type="date" className="tnum" value={to} onChange={(e) => setTo(e.target.value)} /></Field>
-            <Button variant="outline" className="!text-[11.5px]" onClick={applyFiscalYear}>📅 السنة المالية الحالية</Button>
+            <Button variant="outline" className="!text-[11.5px]" onClick={applyFiscalYear}>السنة المالية الحالية</Button>
             {tab === "sales" && (
               <Field label="التجميع">
                 <Select value={groupBy} onChange={(e) => setGroupBy(e.target.value as any)}>
@@ -317,7 +317,7 @@ export default function ReportsPage() {
             <button onClick={printCurrent}
                     disabled={tab === "vat" ? !vat : tab === "sales" ? !sales : !techs}
                     className="rounded-lg border border-line bg-ink-2 px-4 py-2 text-[13px] font-bold text-text hover:border-petrol hover:text-petrol disabled:opacity-50">
-              🖨 طباعة التقرير
+              طباعة التقرير
             </button>
           </div>
 

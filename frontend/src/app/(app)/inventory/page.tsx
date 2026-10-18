@@ -744,7 +744,7 @@ export default function InventoryPage() {
         {voucher && (
           <div className="space-y-3">
             <div className="flex justify-end">
-              <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={printVoucher}>🖨 طباعة السند</Button>
+              <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={printVoucher}>طباعة السند</Button>
             </div>
             <div className="grid gap-2 rounded-lg bg-ink-3 p-3 text-[12.5px] sm:grid-cols-4">
               <div><span className="text-text-dim">النوع:</span>{" "}

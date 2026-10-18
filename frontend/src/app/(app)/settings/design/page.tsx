@@ -5,7 +5,8 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
   cacheDesign, FONT_LABELS_AR, FONT_LABELS_EN, FONT_STACKS_AR, FONT_STACKS_EN, BUTTON_SHAPE_LABELS,
-  type DesignInfo, type ArFontKey, type EnFontKey, type ButtonShape,
+  FONT_SCALE_LABELS, FONT_SCALE_PERCENT,
+  type DesignInfo, type ArFontKey, type EnFontKey, type ButtonShape, type FontScale,
 } from "@/lib/design";
 import { Button, Card, ErrorNote, Field, Select, Switch } from "@/components/ui";
 
@@ -19,6 +20,7 @@ const TONES: { key: ToneKey; label: string; fallback: string; hint: string }[] =
 
 const FONT_KEYS_AR = Object.keys(FONT_LABELS_AR) as ArFontKey[];
 const FONT_KEYS_EN = Object.keys(FONT_LABELS_EN) as EnFontKey[];
+const SCALE_KEYS = Object.keys(FONT_SCALE_LABELS) as FontScale[];
 const SHAPE_KEYS = Object.keys(BUTTON_SHAPE_LABELS) as ButtonShape[];
 const RADIUS_PREVIEW: Record<ButtonShape, string> = { sharp: "4px", rounded: "10px", pill: "999px" };
 
@@ -133,6 +135,26 @@ export default function DesignSettingsPage() {
               <div className="mt-1 text-[12.5px] text-text-dim">English font preview</div>
             </div>
           </div>
+        </div>
+      </Card>
+
+      {/* ── حجم الخط — موحّد لكل صفحات النظام: نص + أزرار + أيقونات معاً بنفس النسبة ── */}
+      <Card>
+        <h2 className="mb-3 text-[14px] font-black">حجم الخط</h2>
+        <p className="mb-3 text-[11.5px] text-text-dim">
+          يكبّر أو يصغّر كل عناصر الواجهة معاً (النص والأزرار والأيقونات) بنسبة واحدة — ينعكس فوراً على كل صفحات النظام بعد تسجيل الدخول.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          {SCALE_KEYS.map((scale) => (
+            <button key={scale} type="button" onClick={() => save({ ...settings, fontScale: scale })}
+                    className={`z8-anim-btn flex flex-col items-center gap-2 rounded-xl border-2 px-5 py-4 transition
+                      ${settings.fontScale === scale ? "border-petrol bg-petrol-soft/40" : "border-line hover:border-petrol/50"}`}>
+              <span className="font-extrabold text-petrol" style={{ fontSize: `${(FONT_SCALE_PERCENT[scale] / 100) * 15}px` }}>
+                Aa أب
+              </span>
+              <span className="text-[11.5px] font-bold">{FONT_SCALE_LABELS[scale]}</span>
+            </button>
+          ))}
         </div>
       </Card>
 

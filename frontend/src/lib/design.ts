@@ -9,6 +9,7 @@ export type EnFontKey =
   | "inter" | "roboto" | "poppins" | "montserrat" | "lato" | "open-sans"
   | "nunito" | "work-sans" | "source-sans" | "manrope" | "dm-sans" | "outfit" | "arial";
 export type ButtonShape = "sharp" | "rounded" | "pill";
+export type FontScale = "sm" | "md" | "lg" | "xl";
 
 export type DesignInfo = {
   primaryColor: string | null;
@@ -17,6 +18,7 @@ export type DesignInfo = {
   errorColor: string | null;
   fontFamilyAr: ArFontKey;
   fontFamilyEn: EnFontKey;
+  fontScale: FontScale;
   buttonShape: ButtonShape;
   buttonAnimation: boolean;
   sidebarDefault: "expanded" | "collapsed";
@@ -24,7 +26,7 @@ export type DesignInfo = {
 
 const FALLBACK: DesignInfo = {
   primaryColor: null, successColor: null, warningColor: null, errorColor: null,
-  fontFamilyAr: "cairo", fontFamilyEn: "inter",
+  fontFamilyAr: "cairo", fontFamilyEn: "inter", fontScale: "md",
   buttonShape: "rounded", buttonAnimation: true, sidebarDefault: "expanded",
 };
 
@@ -112,6 +114,20 @@ export const BUTTON_SHAPE_LABELS: Record<ButtonShape, string> = {
   pill: "كبسولة (دائرية بالكامل)",
 };
 
+/** حجم الخط الموحّد لكل صفحات النظام — يُطبَّق بتقنية zoom على مستوى <body>، فيكبّر/يصغّر كل شيء
+ *  (نص، أزرار، أيقونات، تباعد) معاً وبنفس النسبة، بلا أي استثناء، لأنه يعمل على مستوى العرض
+ *  نفسه لا على خصائص CSS فردية — فهو مضمون التوحيد على كل عناصر الواجهة دفعة واحدة. */
+export const FONT_SCALE_LABELS: Record<FontScale, string> = {
+  sm: "صغير (90%)",
+  md: "متوسط — افتراضي (100%)",
+  lg: "كبير (110%)",
+  xl: "كبير جداً (125%)",
+};
+
+export const FONT_SCALE_PERCENT: Record<FontScale, number> = {
+  sm: 90, md: 100, lg: 110, xl: 125,
+};
+
 const RADIUS_PRESETS: Record<ButtonShape, { sm: string; base: string; lg: string; xl: string; card: string }> = {
   sharp:   { sm: "3px", base: "4px", lg: "6px", xl: "8px", card: "10px" },
   rounded: { sm: "6px", base: "8px", lg: "12px", xl: "16px", card: "16px" },
@@ -160,6 +176,10 @@ export function applyDesignVars(d: DesignInfo, isDark: boolean, lang: "ar" | "en
     ? (FONT_STACKS_EN[d.fontFamilyEn] || "")
     : (FONT_STACKS_AR[d.fontFamilyAr] || "");
 
-  // حركة الأزرار — Button/IconButton فقط عبر class="z8-anim-btn" (القوائم غير متأثرة إطلاقاً)
+  // حجم الخط — zoom على <body> يكبّر/يصغّر كل شيء داخله معاً (نص + أزرار + أيقونات) بنسبة واحدة،
+  // فهو يطبّق فوراً وبالتساوي على كل صفحات النظام بعد تسجيل الدخول دون أي استثناء لأي عنصر.
+  document.body.style.zoom = `${FONT_SCALE_PERCENT[d.fontScale] ?? 100}%`;
+
+  // حركة الأزرار — موحّدة لكل أزرار النظام الفعلية عبر data-btn-anim (القوائم/التابات غير متأثرة إطلاقاً)
   document.documentElement.setAttribute("data-btn-anim", d.buttonAnimation ? "on" : "off");
 }
