@@ -112,9 +112,11 @@ export default function BranchesPage() {
       key: "actions", title: "", width: "300px",
       render: (b: Branch) => (
         <div className="flex justify-end gap-1.5">
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => printBookingQR(b)}>
-            {t("branches.bookingQR", "QR الحجز")}
-          </Button>
+          {b.category !== "retail" && (
+            <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => printBookingQR(b)}>
+              {t("branches.bookingQR", "QR الحجز")}
+            </Button>
+          )}
           <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => openEdit(b)}>
             {t("branches.edit", "تعديل")}
           </Button>
