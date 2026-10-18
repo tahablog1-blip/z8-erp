@@ -296,6 +296,102 @@ async def update_system_settings(company_id: str, body) -> dict:
     return await get_system_settings(company_id)
 
 
+# ══════════════════ الخلفية الموحدة للنظام (معرض متعدد) ══════════════════
+
+def _bg_image_url(company_id: str, bg_id: str) -> str:
+    return f"/api/settings/backgrounds/{company_id}/{bg_id}/image"
+
+
+async def list_backgrounds(company_id: str) -> list[dict]:
+    rows = await fetch(
+        "SELECT id, name, created_at FROM backgrounds WHERE company_id=$1 ORDER BY created_at DESC",
+        company_id)
+    out = []
+    for r in rows:
+        bg_id = str(r["id"])
+        out.append({"id": bg_id, "name": r["name"], "created_at": r["created_at"],
+                    "image_url": _bg_image_url(company_id, bg_id)})
+    return out
+
+
+async def create_background(company_id: str, name: str, image_b64: str) -> dict:
+    clean = (image_b64 or "").strip()
+    if not clean:
+        raise HTTPException(400, "الصورة مطلوبة")
+    if len(clean) > 4_000_000:  # ~3 ميجابايت بعد فك التشفير — يكفي لصورة خلفية بجودة عالية
+        raise HTTPException(400, "حجم الصورة كبير جداً — استخدم صورة أصغر (أقل من 3 ميجابايت)")
+    count = await fetchrow("SELECT COUNT(*) AS n FROM backgrounds WHERE company_id=$1", company_id)
+    if count and count["n"] >= 20:
+        raise HTTPException(400, "الحد الأقصى 20 خلفية محفوظة — احذف خلفية قديمة أولاً")
+    row = await fetchrow(
+        """INSERT INTO backgrounds (company_id, name, image_base64) VALUES ($1,$2,$3)
+           RETURNING id, name, created_at""",
+        company_id, (name or "خلفية").strip()[:100] or "خلفية", clean)
+    bg_id = str(row["id"])
+    return {"id": bg_id, "name": row["name"], "created_at": row["created_at"],
+            "image_url": _bg_image_url(company_id, bg_id)}
+
+
+async def delete_background(company_id: str, bg_id: str) -> None:
+    row = await fetchrow("SELECT id FROM backgrounds WHERE id=$1 AND company_id=$2", bg_id, company_id)
+    if not row:
+        raise HTTPException(404, "الخلفية غير موجودة")
+    await execute("DELETE FROM backgrounds WHERE id=$1 AND company_id=$2", bg_id, company_id)
+    # لو كانت هي الفعّالة — نرجع تلقائياً لحالة «بلا خلفية» بدل ما يفضل مؤشر معطوب
+    kv = await _get_kv(company_id, ["bg.activeId"])
+    if kv.get("bg.activeId") == bg_id:
+        await _set_kv(company_id, {"bg.activeId": ""})
+
+
+async def get_background_bytes(company_id: str, bg_id: str) -> dict | None:
+    row = await fetchrow(
+        "SELECT image_base64 FROM backgrounds WHERE id=$1 AND company_id=$2", bg_id, company_id)
+    raw = (row or {}).get("image_base64") or ""
+    if not raw:
+        return None
+    mime, b64 = "image/jpeg", raw
+    if raw.startswith("data:"):
+        head, _, b64 = raw.partition(",")
+        mime = head[5:].split(";")[0] or "image/jpeg"
+    try:
+        return {"bytes": _b64.b64decode(b64), "mime": mime}
+    except Exception:
+        return None
+
+
+_BG_DEFAULTS = {"activeId": "", "opacity": "100", "overlayDarkness": "0", "blur": "0", "fit": "cover"}
+_BG_INT = {"opacity", "overlayDarkness", "blur"}
+
+
+async def get_background_settings(company_id: str) -> dict:
+    kv = await _get_kv(company_id, [f"bg.{k}" for k in _BG_DEFAULTS])
+    active_id = kv.get("bg.activeId", "") or None
+    out: dict = {
+        "activeId": active_id,
+        "activeImageUrl": _bg_image_url(company_id, active_id) if active_id else None,
+    }
+    for k in ("opacity", "overlayDarkness", "blur"):
+        out[k] = int(kv.get(f"bg.{k}", _BG_DEFAULTS[k]))
+    out["fit"] = kv.get("bg.fit", _BG_DEFAULTS["fit"])
+    return out
+
+
+async def update_background_settings(company_id: str, body) -> dict:
+    if body.activeId:
+        row = await fetchrow(
+            "SELECT id FROM backgrounds WHERE id=$1 AND company_id=$2", body.activeId, company_id)
+        if not row:
+            raise HTTPException(404, "الخلفية المحددة غير موجودة")
+    await _set_kv(company_id, {
+        "bg.activeId": body.activeId or "",
+        "bg.opacity": str(body.opacity),
+        "bg.overlayDarkness": str(body.overlayDarkness),
+        "bg.blur": str(body.blur),
+        "bg.fit": body.fit,
+    })
+    return await get_background_settings(company_id)
+
+
 # ══════════════════ إدارة المستخدمين (منقولة بالحرف من api.py) ══════════════════
 
 def _user_row(r: dict) -> dict:

@@ -221,3 +221,41 @@ class SystemSettingsIn(BaseModel):
         if v != 0 and v < 3:
             raise ValueError("عدد المحاولات المسموح به: 0 (تعطيل القفل) أو 3 فأكثر")
         return v
+
+
+# ══════════════════ الخلفية الموحدة للنظام (معرض متعدد) ══════════════════
+
+class BackgroundOut(BaseModel):
+    id: str
+    name: str
+    image_url: str
+    created_at: object | None = None
+
+
+class BackgroundCreateIn(BaseModel):
+    name: str = Field(default="خلفية", max_length=100)
+    imageBase64: str
+
+
+class BackgroundSettingsOut(BaseModel):
+    activeId: str | None = None
+    activeImageUrl: str | None = None
+    opacity: int = 100          # شفافية لوحة المحتوى الرئيسية — 100 = بلا أي تغيير بصري (الوضع الافتراضي الآمن)
+    overlayDarkness: int = 0    # تعتيم فوق الصورة نفسها
+    blur: int = 0                # تمويه الصورة نفسها (px)
+    fit: str = "cover"          # cover | contain | repeat
+
+
+class BackgroundSettingsIn(BaseModel):
+    activeId: str | None = None
+    opacity: int = Field(default=100, ge=0, le=100)
+    overlayDarkness: int = Field(default=0, ge=0, le=100)
+    blur: int = Field(default=0, ge=0, le=20)
+    fit: str = "cover"
+
+    @field_validator("fit")
+    @classmethod
+    def _fit(cls, v: str) -> str:
+        if v not in ("cover", "contain", "repeat"):
+            raise ValueError("طريقة عرض غير صالحة")
+        return v

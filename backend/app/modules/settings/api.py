@@ -9,6 +9,7 @@ from . import service
 from .schemas import (
     CompanyOut, CompanyIn, LogoIn, RoleOut, RoleIn, SettingsDashboardOut,
     PrintingSettingsOut, PrintingSettingsIn, SystemSettingsOut, SystemSettingsIn,
+    BackgroundOut, BackgroundCreateIn, BackgroundSettingsOut, BackgroundSettingsIn,
 )
 
 router = APIRouter()
@@ -188,6 +189,52 @@ async def update_system_settings(body: SystemSettingsIn,
                                  user: CurrentUser = Depends(require_permission("settings.company"))):
     row = await service.update_system_settings(user.company_id, body)
     await log_action(user, "edit", "settings", details="تحديث إعدادات النظام")
+    return row
+
+
+# ══════════════════ الخلفية الموحدة للنظام (معرض متعدد) ══════════════════
+
+@router.get("/backgrounds", response_model=list[BackgroundOut])
+async def list_backgrounds(user: CurrentUser = Depends(get_current_user)):
+    return await service.list_backgrounds(user.company_id)
+
+
+@router.post("/backgrounds", response_model=BackgroundOut, status_code=201)
+async def create_background(body: BackgroundCreateIn,
+                            user: CurrentUser = Depends(require_permission("settings.company"))):
+    row = await service.create_background(user.company_id, body.name, body.imageBase64)
+    await log_action(user, "edit", "settings", details=f"إضافة خلفية: {body.name}")
+    return row
+
+
+@router.delete("/backgrounds/{bg_id}", status_code=204)
+async def delete_background(bg_id: str, user: CurrentUser = Depends(require_permission("settings.company"))):
+    await service.delete_background(user.company_id, bg_id)
+    await log_action(user, "delete", "settings", details="حذف خلفية")
+
+
+@router.get("/backgrounds/{company_id}/{bg_id}/image")
+async def get_background_image(company_id: str, bg_id: str):
+    """بلا توثيق عمداً — الخلفية بتُطبَّق كـ CSS background-image على عنصر ثابت
+    خلف كل صفحات التطبيق، والمتصفح بيطلبها مباشرة بلا أي هيدر توثيق، بنفس
+    منطق شعار المنشأة العام (public/company/logo)."""
+    img = await service.get_background_bytes(company_id, bg_id)
+    if not img:
+        raise HTTPException(404, "الصورة غير موجودة")
+    return _Response(content=img["bytes"], media_type=img["mime"],
+                     headers={"Cache-Control": "public, max-age=86400"})
+
+
+@router.get("/background-settings", response_model=BackgroundSettingsOut)
+async def get_background_settings(user: CurrentUser = Depends(get_current_user)):
+    return await service.get_background_settings(user.company_id)
+
+
+@router.put("/background-settings", response_model=BackgroundSettingsOut)
+async def update_background_settings(body: BackgroundSettingsIn,
+                                      user: CurrentUser = Depends(require_permission("settings.company"))):
+    row = await service.update_background_settings(user.company_id, body)
+    await log_action(user, "edit", "settings", details="تحديث إعدادات الخلفية")
     return row
 
 

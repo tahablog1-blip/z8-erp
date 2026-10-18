@@ -36,6 +36,8 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { refreshCompany } from "@/lib/company";
 import { refreshPrinting } from "@/lib/printing";
+import { getBackground, onBackgroundUpdate, refreshBackground, type BackgroundInfo } from "@/lib/background";
+import { BackgroundLayer, panelBgStyle } from "@/components/BackgroundLayer";
 import { NAV_MODULES, NAV_SECTIONS, SECTION_ICONS } from "@/modules/registry";
 import { NavIcon } from "@/components/nav-icons";
 import { NAV_TITLE_KEYS, SECTION_TITLE_KEYS, useLang } from "@/lib/i18n";
@@ -70,8 +72,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
     });
   }
 
-  // تحديث بيانات المنشأة وإعدادات الطباعة (لترويسات وقوالب الطباعة) مرة عند فتح التطبيق
-  useEffect(() => { refreshCompany(api); refreshPrinting(api); }, []);
+  // تحديث بيانات المنشأة وإعدادات الطباعة والخلفية الموحدة مرة عند فتح التطبيق
+  useEffect(() => { refreshCompany(api); refreshPrinting(api); refreshBackground(api); }, []);
+
+  // الخلفية الموحدة — شفافية لوحة المحتوى الرئيسية تتحدّث فوراً (نفس التبويب) عند الحفظ من الإعدادات
+  const [bg, setBg] = useState<BackgroundInfo>(getBackground());
+  useEffect(() => onBackgroundUpdate(() => setBg(getBackground())), []);
 
   // ── الأقسام المنسدلة: مفتوحة افتراضياً + الحالة محفوظة + قسم الصفحة الحالية يفتح تلقائياً ──
   const [openSecs, setOpenSecs] = useState<Record<string, boolean>>({});
@@ -150,7 +156,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
     : "";
 
   return (
-    <div className="flex min-h-screen bg-ink text-text">
+    <div className={`flex min-h-screen text-text ${bg.activeImageUrl ? "" : "bg-ink"}`}>
+      <BackgroundLayer />
       <DialogHost />
       <ToastHost />
       <RippleSeed />
@@ -273,7 +280,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
       {/* ── مساحة العمل ── */}
       <div className="flex min-w-0 flex-1 flex-col h-screen p-3 md:p-4">
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-ink2 elev-1">
+        <div className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line elev-1 ${panelBgStyle(bg) ? "" : "bg-ink2"}`}
+             style={panelBgStyle(bg)}>
           <header className="flex h-14 shrink-0 items-center gap-2.5 border-b border-line px-5">
             {/* زر القائمة — الشاشات الضيقة بس (موبايل/تابلت عمودي) */}
             <button onClick={() => setMobileNavOpen(true)} aria-label="القائمة"

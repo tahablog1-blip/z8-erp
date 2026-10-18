@@ -646,6 +646,18 @@ async def lifespan(app: FastAPI):
         # العمودين دول فقط جديدين — لقفل الحساب المؤقت بعد محاولات دخول فاشلة (إعداد 11):
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_count INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ",
+        # ══ خلفية موحدة للنظام — معرض خلفيات متعدد + إعدادات شفافية/تمويه/تعتيم/عرض ══
+        # إعدادات الشفافية والتمويه والتعتيم وطريقة العرض بتُخزَّن كـ bg.* في
+        # company_settings (نفس مخزن print.*/sys.* الموجود) — الجدول ده فقط
+        # للصور نفسها (معرض متعدد + حذف فردي، ما ينفعش يكون key-value بسيط).
+        """CREATE TABLE IF NOT EXISTS backgrounds (
+             id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id   UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+             name         TEXT NOT NULL,
+             image_base64 TEXT NOT NULL,
+             created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+           )""",
+        "CREATE INDEX IF NOT EXISTS idx_backgrounds_company ON backgrounds (company_id)",
     ):
         try:
             await execute(stmt)
