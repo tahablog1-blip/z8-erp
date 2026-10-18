@@ -7,6 +7,7 @@ export type CompanyInfo = {
   cr: string;
   phone: string;
   address: string;
+  logoUrl: string; // فاضي = استخدم الشعار الثابت الافتراضي في قالب الطباعة
 };
 
 const FALLBACK: CompanyInfo = {
@@ -15,6 +16,7 @@ const FALLBACK: CompanyInfo = {
   cr: "1010581613",
   phone: "",
   address: "المملكة العربية السعودية",
+  logoUrl: "",
 };
 
 const CACHE_KEY = "z8_company";
@@ -35,11 +37,15 @@ export function cacheCompany(c: Partial<CompanyInfo>) {
 // تُستدعى مرة عند فتح التطبيق (من الـ Shell) لتحديث الكاش من السيرفر
 export async function refreshCompany(apiFn: <T>(p: string) => Promise<T>) {
   try {
-    const r = await apiFn<{ name: string; vat_number: string | null; cr_number: string | null; address: string | null; phone: string | null }>("/settings/company");
+    const r = await apiFn<{
+      name: string; vat_number: string | null; cr_number: string | null;
+      address: string | null; phone: string | null; logo_url: string | null;
+    }>("/settings/company");
     cacheCompany({
       name: r.name || FALLBACK.name,
       vat: r.vat_number || "", cr: r.cr_number || "",
       address: r.address || "", phone: r.phone || "",
+      logoUrl: r.logo_url || "",
     });
   } catch { /* الطباعة هتستخدم الكاش/الافتراضي */ }
 }

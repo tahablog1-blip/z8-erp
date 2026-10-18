@@ -1,35 +1,56 @@
 "use client";
-// الإعدادات ← المنشأة — صفحة كاملة: بيانات الشركة + إشعارات واتساب
-import { useEffect, useState } from "react";
+// الإعدادات ← المنشأة — صفحة كاملة: بيانات الشركة (كاملة) + الشعار + إشعارات واتساب
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { cacheCompany } from "@/lib/company";
 import { Button, Card, ErrorNote, Field, Input } from "@/components/ui";
+import { MIcon } from "@/components/m-icon";
 
 type Company = {
-  name: string; vat_number: string | null; cr_number: string | null;
-  address: string | null; phone: string | null;
+  name: string; name_en: string | null; trade_name: string | null;
+  vat_number: string | null; cr_number: string | null;
+  unified_number: string | null; establishment_number: string | null;
+  phone: string | null; mobile: string | null; email: string | null; website: string | null;
+  address: string | null; building_no: string | null; street: string | null;
+  district: string | null; city: string | null; postal_code: string | null; additional_no: string | null;
+  country: string; currency: string; default_lang: string;
+  has_logo: boolean; logo_url: string | null;
+};
+
+const EMPTY: Company = {
+  name: "", name_en: null, trade_name: null, vat_number: null, cr_number: null,
+  unified_number: null, establishment_number: null, phone: null, mobile: null,
+  email: null, website: null, address: null, building_no: null, street: null,
+  district: null, city: null, postal_code: null, additional_no: null,
+  country: "SA", currency: "SAR", default_lang: "ar", has_logo: false, logo_url: null,
 };
 
 export default function CompanySettingsPage() {
-  const { hasPerm } = useAuth();
+  const { hasPerm, user } = useAuth();
   const canCompany = hasPerm("settings.company");
 
-  const [form, setForm] = useState<Company>({ name: "", vat_number: "", cr_number: "", address: "", phone: "" });
+  const [form, setForm] = useState<Company>(EMPTY);
   const [coBusy, setCoBusy] = useState(false);
   const [coErr, setCoErr] = useState("");
   const [coOk, setCoOk] = useState("");
+
+  // ── 🖼 الشعار ──
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [logoBusy, setLogoBusy] = useState(false);
+  const [logoErr, setLogoErr] = useState("");
+  const [logoVer, setLogoVer] = useState(0);
 
   // ── 📲 إعداد واتساب (UltraMsg) ──
   const [waInstance, setWaInstance] = useState("");
   const [waToken, setWaToken] = useState("");
   const [waMsg, setWaMsg] = useState("");
 
+  function set<K extends keyof Company>(k: K, v: Company[K]) { setForm((f) => ({ ...f, [k]: v })); }
+
   useEffect(() => {
     if (!canCompany) return;
-    api<Company>("/settings/company")
-      .then((c) => setForm({ ...c, vat_number: c.vat_number || "", cr_number: c.cr_number || "", address: c.address || "", phone: c.phone || "" }))
-      .catch((e) => setCoErr(e.message));
+    api<Company>("/settings/company").then(setForm).catch((e) => setCoErr(e.message));
     api<{ waInstance: string; waToken: string }>("/auth/wa-settings")
       .then((r) => { setWaInstance(r.waInstance); setWaToken(r.waToken); }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -39,13 +60,50 @@ export default function CompanySettingsPage() {
     setCoErr(""); setCoOk(""); setCoBusy(true);
     try {
       const saved = await api<Company>("/settings/company", { method: "PUT", body: JSON.stringify(form) });
+      setForm(saved);
       cacheCompany({
         name: saved.name, vat: saved.vat_number || "", cr: saved.cr_number || "",
         address: saved.address || "", phone: saved.phone || "",
+        logoUrl: saved.logo_url || "",
       });
       setCoOk("تم الحفظ — كل المطبوعات هتستخدم البيانات الجديدة فوراً");
     } catch (e: any) { setCoErr(e.message); }
     finally { setCoBusy(false); }
+  }
+
+  function pickLogo() { fileRef.current?.click(); }
+
+  async function onLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setLogoErr("الملف المختار مش صورة"); return; }
+    if (file.size > 1_500_000) { setLogoErr("حجم الصورة أكبر من 1.5 ميجابايت — اختر صورة أصغر"); return; }
+    setLogoErr(""); setLogoBusy(true);
+    try {
+      const b64 = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result));
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+      await api("/settings/company/logo", { method: "PUT", body: JSON.stringify({ logoBase64: b64 }) });
+      setForm((f) => ({ ...f, has_logo: true }));
+      setLogoVer((v) => v + 1);
+      if (user?.companyId) cacheCompany({ logoUrl: `/api/settings/company/logo/${user.companyId}?v=${Date.now()}` });
+    } catch (err: any) { setLogoErr(err.message || "تعذر رفع الشعار"); }
+    finally { setLogoBusy(false); }
+  }
+
+  async function removeLogo() {
+    setLogoBusy(true); setLogoErr("");
+    try {
+      await api("/settings/company/logo", { method: "PUT", body: JSON.stringify({ logoBase64: null }) });
+      setForm((f) => ({ ...f, has_logo: false }));
+      setLogoVer((v) => v + 1);
+      cacheCompany({ logoUrl: "" });
+    } catch (err: any) { setLogoErr(err.message || "تعذر حذف الشعار"); }
+    finally { setLogoBusy(false); }
   }
 
   async function saveWa() {
@@ -57,36 +115,115 @@ export default function CompanySettingsPage() {
 
   if (!canCompany) return <Card>لا تملك صلاحية «بيانات الشركة والمظهر».</Card>;
 
+  const logoUrl = user?.companyId ? `/api/settings/company/logo/${user.companyId}?v=${logoVer}` : "";
+
   return (
     <div className="space-y-4">
       <h1 className="text-[19px] font-extrabold">الإعدادات — المنشأة</h1>
 
       <Card>
-        <h2 className="mb-2 text-[14px] font-black">🏢 بيانات المنشأة</h2>
-        <p className="mb-3 text-[12px] text-text-dim">البيانات دي بتظهر في ترويسة كل الفواتير والتقارير المطبوعة.</p>
-        <div className="max-w-2xl space-y-3">
-          <Field label="اسم المنشأة">
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          </Field>
+        <h2 className="mb-2 text-[14px] font-black">🖼 الشعار</h2>
+        <p className="mb-3 text-[12px] text-text-dim">يظهر في ترويسة الفواتير المطبوعة (حراري وA4) بدل الشعار الافتراضي.</p>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-ink-3">
+            {form.has_logo
+              ? <img src={logoUrl} alt="شعار المنشأة" className="h-full w-full object-contain" />
+              : <MIcon name="apartment" className="!text-[28px] text-text-dim" />}
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={pickLogo} disabled={logoBusy}>
+                {logoBusy ? "جارِ المعالجة..." : form.has_logo ? "تغيير الشعار" : "رفع شعار"}
+              </Button>
+              {form.has_logo && (
+                <Button variant="ghost" onClick={removeLogo} disabled={logoBusy}>إزالة</Button>
+              )}
+            </div>
+            <p className="text-[11px] text-text-dim">PNG أو JPG — أقل من 1.5 ميجابايت</p>
+            <ErrorNote msg={logoErr} />
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onLogoFile} />
+        </div>
+      </Card>
+
+      <Card>
+        <h2 className="mb-2 text-[14px] font-black">🏢 بيانات أساسية</h2>
+        <div className="max-w-3xl space-y-3">
           <div className="grid gap-2 sm:grid-cols-2">
-            <Field label="الرقم الضريبي (VAT)">
-              <Input className="tnum" value={form.vat_number || ""} onChange={(e) => setForm({ ...form, vat_number: e.target.value })} />
+            <Field label="اسم المنشأة (عربي)">
+              <Input value={form.name} onChange={(e) => set("name", e.target.value)} />
+            </Field>
+            <Field label="اسم المنشأة (إنجليزي)">
+              <Input dir="ltr" value={form.name_en || ""} onChange={(e) => set("name_en", e.target.value)} />
+            </Field>
+          </div>
+          <Field label="الاسم التجاري">
+            <Input value={form.trade_name || ""} onChange={(e) => set("trade_name", e.target.value)} />
+          </Field>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Field label="الرقم الضريبي (VAT)" hint="15 رقماً يبدأ بـ3">
+              <Input className="tnum" dir="ltr" value={form.vat_number || ""} onChange={(e) => set("vat_number", e.target.value)} />
             </Field>
             <Field label="السجل التجاري (CR)">
-              <Input className="tnum" value={form.cr_number || ""} onChange={(e) => setForm({ ...form, cr_number: e.target.value })} />
+              <Input className="tnum" dir="ltr" value={form.cr_number || ""} onChange={(e) => set("cr_number", e.target.value)} />
+            </Field>
+            <Field label="الرقم الموحّد">
+              <Input className="tnum" dir="ltr" value={form.unified_number || ""} onChange={(e) => set("unified_number", e.target.value)} />
             </Field>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Field label="الهاتف (يظهر بالفاتورة)">
-              <Input className="tnum" value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-            </Field>
-            <Field label="العنوان">
-              <Input value={form.address || ""} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-            </Field>
-          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <h2 className="mb-2 text-[14px] font-black">📞 التواصل</h2>
+        <div className="grid max-w-3xl gap-2 sm:grid-cols-2">
+          <Field label="الهاتف (يظهر بالفاتورة)">
+            <Input className="tnum" dir="ltr" value={form.phone || ""} onChange={(e) => set("phone", e.target.value)} />
+          </Field>
+          <Field label="الجوال" hint="05xxxxxxxx">
+            <Input className="tnum" dir="ltr" value={form.mobile || ""} onChange={(e) => set("mobile", e.target.value)} />
+          </Field>
+          <Field label="البريد الإلكتروني">
+            <Input dir="ltr" type="email" value={form.email || ""} onChange={(e) => set("email", e.target.value)} />
+          </Field>
+          <Field label="الموقع الإلكتروني">
+            <Input dir="ltr" value={form.website || ""} onChange={(e) => set("website", e.target.value)} />
+          </Field>
+        </div>
+      </Card>
+
+      <Card>
+        <h2 className="mb-2 text-[14px] font-black">📍 العنوان</h2>
+        <div className="grid max-w-3xl gap-2 sm:grid-cols-2">
+          <Field label="العنوان المختصر (يظهر بالفاتورة)">
+            <Input value={form.address || ""} onChange={(e) => set("address", e.target.value)} />
+          </Field>
+          <Field label="المدينة">
+            <Input value={form.city || ""} onChange={(e) => set("city", e.target.value)} />
+          </Field>
+          <Field label="الحي">
+            <Input value={form.district || ""} onChange={(e) => set("district", e.target.value)} />
+          </Field>
+          <Field label="الشارع">
+            <Input value={form.street || ""} onChange={(e) => set("street", e.target.value)} />
+          </Field>
+          <Field label="رقم المبنى">
+            <Input className="tnum" value={form.building_no || ""} onChange={(e) => set("building_no", e.target.value)} />
+          </Field>
+          <Field label="الرمز البريدي">
+            <Input className="tnum" dir="ltr" value={form.postal_code || ""} onChange={(e) => set("postal_code", e.target.value)} />
+          </Field>
+          <Field label="الرقم الإضافي">
+            <Input className="tnum" dir="ltr" value={form.additional_no || ""} onChange={(e) => set("additional_no", e.target.value)} />
+          </Field>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex max-w-3xl items-center justify-between gap-3">
           <ErrorNote msg={coErr} />
           {coOk && <p className="text-[12.5px] font-bold text-emerald">{coOk}</p>}
-          <div className="flex justify-end">
+          <div className="mr-auto flex justify-end">
             <Button onClick={saveCompany} disabled={coBusy || !form.name.trim()}>
               {coBusy ? "جارِ الحفظ..." : "حفظ البيانات"}
             </Button>

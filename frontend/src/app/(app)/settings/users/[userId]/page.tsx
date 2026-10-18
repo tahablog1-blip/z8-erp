@@ -12,71 +12,11 @@ type Branch = { id: string; name: string };
 type UserRow = {
   id: string; email: string; full_name: string; role: string;
   branch_id: string | null; branch_name: string | null;
-  permissions: string[]; is_active: boolean; last_login_at: string | null;
+  permissions: string[]; role_id: string | null; is_active: boolean; last_login_at: string | null;
 };
 type PermGroup = { group: string; items: { key: string; label: string }[] };
-
-// ══════════ قوالب الأدوار الجاهزة (مخطط ERP) — تملأ الصلاحيات بضغطة وتظل قابلة للتخصيص ══════════
-const ROLE_PRESETS: { key: string; label: string; icon: string; desc: string; perms: string[] }[] = [
-  {
-    key: "manager", label: "المدير", icon: "👔",
-    desc: "الفروع والتقارير والموظفين والتشغيل الكامل",
-    perms: [
-      "cars.create", "cars.confirm_entry", "cars.confirm_exit", "cars.edit", "cars.delete", "cars.notify",
-      "invoices.prepare", "invoices.create_service", "invoices.view_pending", "invoices.view_today", "invoices.view_all",
-      "invoices.edit_items", "invoices.return",
-      "customers.create", "customers.edit", "customers.view_statement", "customers.record_payment",
-      "products.view_stock",
-      "reports.sales", "reports.cashiers",
-      "treasury.create_receipt", "treasury.create_payment", "treasury.view",
-      "shifts.manage_own", "shifts.view_branch",
-      "hr.view", "hr.manage", "hr.attendance", "hr.leave_approve", "hr.violations",
-      "branches.manage",
-      "service_notes.view", "service_notes.create", "service_notes.manage",
-    ],
-  },
-  {
-    key: "accountant", label: "المحاسب", icon: "🧮",
-    desc: "الحسابات والفواتير والتحصيل والإقرارات",
-    perms: [
-      "accounting.view_reports", "accounting.view_vat",
-      "treasury.create_receipt", "treasury.create_payment", "treasury.view", "treasury.cancel",
-      "reports.sales", "reports.cashiers",
-      "invoices.view_all", "invoices.view_today", "invoices.return",
-      "customers.view_statement", "customers.record_payment",
-      "purchasing.invoices", "purchasing.suppliers",
-      "shifts.view_branch",
-    ],
-  },
-  {
-    key: "cashier", label: "الكاشير", icon: "💳",
-    desc: "نقطة البيع والفواتير والتحصيل فقط",
-    perms: [
-      "shifts.manage_own",
-      "invoices.create_service", "invoices.view_today", "invoices.view_pending",
-      "customers.create",
-      "cars.confirm_exit",
-      "service_notes.view",
-    ],
-  },
-  {
-    key: "storekeeper", label: "أمين المستودع", icon: "📦",
-    desc: "المخزون والاستلام والصرف والجرد والموردون",
-    perms: [
-      "products.create", "products.edit", "products.view_stock", "products.import",
-      "purchasing.suppliers", "purchasing.quotations", "purchasing.orders", "purchasing.invoices",
-    ],
-  },
-  {
-    key: "service_line", label: "موظف خط الخدمة", icon: "🔧",
-    desc: "تسجيل السيارات والمحطات والتشييكات وملاحظات الخدمة",
-    perms: [
-      "cars.create", "cars.confirm_entry", "cars.confirm_exit", "cars.edit",
-      "invoices.prepare",
-      "service_notes.view", "service_notes.create",
-    ],
-  },
-];
+// الأدوار قوالب حقيقية من القاعدة (الإعدادات ← الأدوار والصلاحيات) — مش مُثبّتة في الكود
+type Role = { id: string; name: string; icon: string; description: string | null; permissions: string[] };
 
 export default function UserEditorPage() {
   const router = useRouter();
@@ -91,9 +31,11 @@ export default function UserEditorPage() {
   const [permGroups, setPermGroups] = useState<PermGroup[]>([]);
   const [loaded, setLoaded] = useState(isNew);
   const [notFound, setNotFound] = useState(false);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [uForm, setUForm] = useState({
     email: "", password: "", fullName: "", role: "employee",
-    branchId: "" as string | null, permissions: [] as string[], isActive: true, newPassword: "",
+    branchId: "" as string | null, permissions: [] as string[], roleId: null as string | null,
+    isActive: true, newPassword: "",
   });
   const [uErr, setUErr] = useState("");
   const [uBusy, setUBusy] = useState(false);
@@ -106,6 +48,7 @@ export default function UserEditorPage() {
       if (isNew) setUForm((f) => ({ ...f, branchId: f.branchId || b[0]?.id || null }));
     }).catch(() => {});
     api<{ groups: PermGroup[] }>("/auth/permissions-catalog").then((r) => setPermGroups(r.groups)).catch(() => {});
+    api<Role[]>("/settings/roles").then(setRoles).catch(() => {});
     if (!isNew) {
       api<UserRow[]>("/settings/users").then((list) => {
         const u = list.find((x) => x.id === userId);
@@ -113,7 +56,7 @@ export default function UserEditorPage() {
         setSavedName(u.full_name);
         setUForm({
           email: u.email, password: "", fullName: u.full_name, role: u.role,
-          branchId: u.branch_id, permissions: [...u.permissions],
+          branchId: u.branch_id, permissions: [...u.permissions], roleId: u.role_id,
           isActive: u.is_active, newPassword: "",
         });
         setLoaded(true);
@@ -122,9 +65,15 @@ export default function UserEditorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
+  function applyRole(r: Role) {
+    setUForm((f) => ({ ...f, roleId: r.id, permissions: [...r.permissions] }));
+  }
+
   function togglePerm(key: string) {
     setUForm((f) => ({
       ...f,
+      // أي تعديل يدوي على خانة فردية معناه الصلاحيات بقت مخصّصة — مبقتش مطابقة لقالب دور بعينه
+      roleId: null,
       permissions: f.permissions.includes(key) ? f.permissions.filter((k) => k !== key) : [...f.permissions, key],
     }));
   }
@@ -138,6 +87,7 @@ export default function UserEditorPage() {
           body: JSON.stringify({
             email: uForm.email, password: uForm.password, fullName: uForm.fullName,
             role: uForm.role, branchId: uForm.branchId, permissions: uForm.permissions,
+            roleId: uForm.roleId,
           }),
         });
       } else {
@@ -146,7 +96,7 @@ export default function UserEditorPage() {
           body: JSON.stringify({
             fullName: uForm.fullName, role: uForm.role, branchId: uForm.branchId,
             permissions: uForm.permissions, isActive: uForm.isActive,
-            newPassword: uForm.newPassword.trim() || null,
+            newPassword: uForm.newPassword.trim() || null, roleId: uForm.roleId,
           }),
         });
       }
@@ -218,21 +168,20 @@ export default function UserEditorPage() {
         <Card>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <p className="text-[12px] font-extrabold text-text-dim">قوالب جاهزة — اضغط قالب ليملأ الصلاحيات ثم عدّل ما تشاء:</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[12px] font-extrabold text-text-dim">أدوار جاهزة — اضغط دور ليملأ الصلاحيات ثم عدّل ما تشاء:</p>
+                <a href="/settings/roles" className="text-[11px] font-bold text-petrol hover:underline">إدارة الأدوار ←</a>
+              </div>
               <div className="flex flex-wrap gap-1.5">
-                {ROLE_PRESETS.map((r) => {
-                  const active = r.perms.length === uForm.permissions.length &&
-                    r.perms.every((k) => uForm.permissions.includes(k));
-                  return (
-                    <button key={r.key} type="button" title={r.desc}
-                            onClick={() => setUForm({ ...uForm, permissions: [...r.perms] })}
-                            className={`rounded-lg px-3 py-1.5 text-[11.5px] font-bold transition
-                              ${active ? "bg-petrol text-white" : "border border-line bg-ink-2 hover:border-petrol"}`}>
-                      {r.icon} {r.label}
-                    </button>
-                  );
-                })}
-                <button type="button" onClick={() => setUForm({ ...uForm, permissions: [] })}
+                {roles.map((r) => (
+                  <button key={r.id} type="button" title={r.description || undefined}
+                          onClick={() => applyRole(r)}
+                          className={`rounded-lg px-3 py-1.5 text-[11.5px] font-bold transition
+                            ${uForm.roleId === r.id ? "bg-petrol text-white" : "border border-line bg-ink-2 hover:border-petrol"}`}>
+                    {r.icon} {r.name}
+                  </button>
+                ))}
+                <button type="button" onClick={() => setUForm({ ...uForm, roleId: null, permissions: [] })}
                         className="rounded-lg border border-line bg-ink-2 px-3 py-1.5 text-[11.5px] font-bold text-text-dim hover:border-ember hover:text-ember">
                   ✕ مسح الكل
                 </button>

@@ -217,7 +217,7 @@ function thermalHTML(inv: InvoiceDetail): string {
   @media print { body { width:auto; } }
 </style></head><body>
   <div class="head">
-    <img src="${location.origin}/logo-thermal.png" alt="" style="width:52px;height:52px;object-fit:contain;display:block;margin:0 auto 5px" />
+    <img src="${location.origin}${CO.logoUrl || "/logo-thermal.png"}" alt="" style="width:52px;height:52px;object-fit:contain;display:block;margin:0 auto 5px" />
     <h1>${esc(CO.name)}</h1>
     <div class="sub">الرقم الضريبي: <span class="tnum">${esc(CO.vat)}</span></div>
     <div class="sub">س.ت: <span class="tnum">${esc(CO.cr)}</span> — ${esc(inv.branch_name || "")}</div>
@@ -315,7 +315,7 @@ function a4HTML(inv: InvoiceDetail): string {
 
 <body style="margin:20px">
   <div class="head">
-    <img src="${location.origin}/logo-navy.png" alt="" style="width:44px;height:44px;object-fit:contain;display:block;margin:0 auto 4px" />
+    <img src="${location.origin}${CO.logoUrl || "/logo-navy.png"}" alt="" style="width:44px;height:44px;object-fit:contain;display:block;margin:0 auto 4px" />
     <div>
       <h1>${esc(CO.name)}</h1>
       <div class="sub">الرقم الضريبي: <span class="tnum">${esc(CO.vat)}</span> — السجل التجاري: <span class="tnum">${esc(CO.cr)}</span></div>

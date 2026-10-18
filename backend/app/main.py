@@ -566,6 +566,80 @@ async def lifespan(app: FastAPI):
            )""",
         """CREATE INDEX IF NOT EXISTS idx_stocktake_items_session
              ON stocktake_items (session_id)""",
+        # ══ مركز الإعدادات — المرحلة 1: بيانات منشأة كاملة + شعار + أدوار حقيقية ══
+        # (idempotent زي كل اللي فوق — بتتطبق تلقائياً مع كل إقلاع للباك-إند،
+        #  بدون أي خطوة psql يدوية. عمود permissions الفعلي اللي core/deps.py
+        #  بيقرأه للتحقق من الصلاحيات ما بيتلمسش هنا خالص.)
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS name_en TEXT",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS trade_name TEXT",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS unified_number TEXT",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS establishment_number TEXT",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS mobile TEXT",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS email TEXT",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS website TEXT",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS building_no TEXT",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS street TEXT",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS district TEXT",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS city TEXT",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS postal_code TEXT",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS additional_no TEXT",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS country TEXT NOT NULL DEFAULT 'SA'",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'SAR'",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS default_lang TEXT NOT NULL DEFAULT 'ar'",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS logo_base64 TEXT",
+        """CREATE TABLE IF NOT EXISTS roles (
+             id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id  UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+             name        TEXT NOT NULL,
+             icon        TEXT NOT NULL DEFAULT '🧩',
+             description TEXT,
+             permissions JSONB NOT NULL DEFAULT '[]'::jsonb,
+             is_system   BOOLEAN NOT NULL DEFAULT FALSE,
+             created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+             updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+             UNIQUE (company_id, name)
+           )""",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id UUID REFERENCES roles(id) ON DELETE SET NULL",
+        # Seed: نفس الخمس قوالب صلاحيات المُثبّتة سابقاً في صفحة تعديل الموظف — بالحرف
+        """INSERT INTO roles (company_id, name, icon, description, permissions, is_system)
+           SELECT c.id, v.name, v.icon, v.description, v.permissions::jsonb, TRUE
+           FROM companies c
+           CROSS JOIN (VALUES
+             ('المدير', '👔', 'الفروع والتقارير والموظفين والتشغيل الكامل',
+              '["cars.create","cars.confirm_entry","cars.confirm_exit","cars.edit","cars.delete","cars.notify",
+                "invoices.prepare","invoices.create_service","invoices.view_pending","invoices.view_today","invoices.view_all",
+                "invoices.edit_items","invoices.return",
+                "customers.create","customers.edit","customers.view_statement","customers.record_payment",
+                "products.view_stock",
+                "reports.sales","reports.cashiers",
+                "treasury.create_receipt","treasury.create_payment","treasury.view",
+                "shifts.manage_own","shifts.view_branch",
+                "hr.view","hr.manage","hr.attendance","hr.leave_approve","hr.violations",
+                "branches.manage",
+                "service_notes.view","service_notes.create","service_notes.manage"]'),
+             ('المحاسب', '🧮', 'الحسابات والفواتير والتحصيل والإقرارات',
+              '["accounting.view_reports","accounting.view_vat",
+                "treasury.create_receipt","treasury.create_payment","treasury.view","treasury.cancel",
+                "reports.sales","reports.cashiers",
+                "invoices.view_all","invoices.view_today","invoices.return",
+                "customers.view_statement","customers.record_payment",
+                "purchasing.invoices","purchasing.suppliers",
+                "shifts.view_branch"]'),
+             ('الكاشير', '💳', 'نقطة البيع والفواتير والتحصيل فقط',
+              '["shifts.manage_own",
+                "invoices.create_service","invoices.view_today","invoices.view_pending",
+                "customers.create",
+                "cars.confirm_exit",
+                "service_notes.view"]'),
+             ('أمين المستودع', '📦', 'المخزون والاستلام والصرف والجرد والموردون',
+              '["products.create","products.edit","products.view_stock","products.import",
+                "purchasing.suppliers","purchasing.quotations","purchasing.orders","purchasing.invoices"]'),
+             ('موظف خط الخدمة', '🔧', 'تسجيل السيارات والمحطات والتشييكات وملاحظات الخدمة',
+              '["cars.create","cars.confirm_entry","cars.confirm_exit","cars.edit",
+                "invoices.prepare",
+                "service_notes.view","service_notes.create"]')
+           ) AS v(name, icon, description, permissions)
+           ON CONFLICT (company_id, name) DO NOTHING""",
     ):
         try:
             await execute(stmt)

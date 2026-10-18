@@ -52,6 +52,7 @@ export const NAV_MODULES: NavModule[] = [
   // ── الإعدادات — كل قسم صفحة كاملة مستقلة ──
   { path: "/settings/company",  title: "المنشأة",                icon: "settings", section: "الإعدادات", permissions: ["settings.company"] },
   { path: "/settings/users",    title: "المستخدمون والصلاحيات",  icon: "settings", section: "الإعدادات", permissions: ["settings.users"] },
+  { path: "/settings/roles",    title: "الأدوار والصلاحيات",      icon: "settings", section: "الإعدادات", permissions: ["settings.users"] },
   { path: "/settings/cameras",  title: "كاميرات المحطات",        icon: "settings", section: "الإعدادات", permissions: ["settings.company"] },
   { path: "/settings/printing", title: "الطباعة",                icon: "settings", section: "الإعدادات", permissions: [], adminOnly: true },
   { path: "/settings/system",   title: "النظام",                 icon: "settings", section: "الإعدادات", permissions: [], adminOnly: true },
