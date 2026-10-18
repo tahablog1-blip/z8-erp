@@ -249,6 +249,142 @@ function buildServiceLine(centerX: number, halfLen: number, height: number): THR
   return g;
 }
 
+// ─── معدات الورشة (كلها إجرائية — ديكور ثابت يكسر فراغ الأرضية ويعطي
+// إحساس "ورشة حقيقية" بدل خط خدمة معزول في فضاء فارغ) ───────────────────
+
+function buildToolChest(): THREE.Group {
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshPhysicalMaterial({ color: 0xc81e2b, roughness: 0.35, metalness: 0.4, clearcoat: 0.5, clearcoatRoughness: 0.25 });
+  const topMat = new THREE.MeshStandardMaterial({ color: 0x2a2d33, roughness: 0.5, metalness: 0.6 });
+  const handleMat = new THREE.MeshStandardMaterial({ color: 0x9aa0a8, roughness: 0.4, metalness: 0.8 });
+
+  const lower = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.52, 0.42), bodyMat);
+  lower.position.y = 0.26;
+  lower.castShadow = true; lower.receiveShadow = true;
+  g.add(lower);
+
+  const upper = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.34, 0.38), bodyMat);
+  upper.position.y = 0.52 + 0.17;
+  upper.castShadow = true;
+  g.add(upper);
+
+  const top = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.03, 0.4), topMat);
+  top.position.y = 0.52 + 0.34 + 0.015;
+  g.add(top);
+
+  // شرائح الأدراج وأيديها — تفاصيل صغيرة تكسر كتلة الصندوق الأحمر الصرفة
+  const drawerYs = [0.1, 0.26, 0.42];
+  for (const dy of drawerYs) {
+    const seam = new THREE.Mesh(new THREE.BoxGeometry(0.73, 0.012, 0.421), topMat);
+    seam.position.y = dy;
+    g.add(seam);
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.025, 0.03), handleMat);
+    handle.position.set(0, dy, 0.225);
+    g.add(handle);
+  }
+  const upperHandle = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.025, 0.03), handleMat);
+  upperHandle.position.set(0, 0.52 + 0.17, 0.205);
+  g.add(upperHandle);
+
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1d, roughness: 0.9 });
+  const wheelGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.05, 10);
+  for (const wx of [-0.3, 0.3]) for (const wz of [-0.16, 0.16]) {
+    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.set(wx, 0.05, wz);
+    g.add(wheel);
+  }
+
+  return g;
+}
+
+function buildTireStack(count = 4): THREE.Group {
+  const g = new THREE.Group();
+  const tireMat = new THREE.MeshStandardMaterial({ color: 0x15161a, roughness: 0.95 });
+  const r = 0.32, tube = 0.12;
+  for (let i = 0; i < count; i++) {
+    const tire = new THREE.Mesh(new THREE.TorusGeometry(r, tube, 10, 24), tireMat);
+    tire.rotation.x = Math.PI / 2;
+    tire.position.y = tube + i * tube * 1.55;
+    tire.castShadow = true; tire.receiveShadow = true;
+    g.add(tire);
+  }
+  return g;
+}
+
+function buildOilDrum(color: number): THREE.Group {
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.55 });
+  const bandMat = new THREE.MeshStandardMaterial({ color: 0x20242b, roughness: 0.5, metalness: 0.5 });
+
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.82, 20), bodyMat);
+  body.position.y = 0.41;
+  body.castShadow = true; body.receiveShadow = true;
+  g.add(body);
+
+  const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.285, 0.285, 0.035, 20), bandMat);
+  lid.position.y = 0.82 + 0.017;
+  g.add(lid);
+
+  for (const by of [0.2, 0.62]) {
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.275, 0.275, 0.05, 20), bandMat);
+    band.position.y = by;
+    g.add(band);
+  }
+
+  return g;
+}
+
+function buildTrafficCone(): THREE.Group {
+  const g = new THREE.Group();
+  const coneMat = new THREE.MeshStandardMaterial({ color: 0xe8600f, roughness: 0.6 });
+  const stripeMat = new THREE.MeshStandardMaterial({ color: 0xf5f5f0, roughness: 0.5 });
+
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.03, 0.26), coneMat);
+  base.position.y = 0.015;
+  base.castShadow = true;
+  g.add(base);
+
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.4, 14), coneMat);
+  cone.position.y = 0.03 + 0.2;
+  cone.castShadow = true;
+  g.add(cone);
+
+  const stripe = new THREE.Mesh(new THREE.ConeGeometry(0.095, 0.08, 14, 1, true), stripeMat);
+  stripe.position.y = 0.03 + 0.26;
+  g.add(stripe);
+
+  return g;
+}
+
+function buildHangingLight(): THREE.Group {
+  const g = new THREE.Group();
+  const cableMat = new THREE.MeshStandardMaterial({ color: 0x2a2d33, roughness: 0.6, metalness: 0.5 });
+  const shadeMat = new THREE.MeshStandardMaterial({ color: 0x33373f, roughness: 0.4, metalness: 0.6 });
+  const bulbMat = new THREE.MeshStandardMaterial({ color: 0xfff3d2, emissive: 0xffdf9e, emissiveIntensity: 1.4 });
+
+  const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.9, 6), cableMat);
+  cable.position.y = 0.45;
+  g.add(cable);
+
+  const shade = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.14, 16, 1, true), shadeMat);
+  shade.rotation.x = Math.PI;
+  shade.position.y = -0.03;
+  shade.castShadow = true;
+  g.add(shade);
+
+  const bulb = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.02, 16), bulbMat);
+  bulb.position.y = -0.1;
+  g.add(bulb);
+
+  const glow = new THREE.PointLight(0xffdf9e, 0.6, 3.2, 2);
+  glow.position.y = -0.12;
+  glow.castShadow = false;
+  g.add(glow);
+
+  return g;
+}
+
 function makeLabelSprite(text: string, dark: boolean): { sprite: THREE.Sprite; mat: THREE.SpriteMaterial; tex: THREE.CanvasTexture } {
   const canvas = document.createElement("canvas");
   canvas.width = 256; canvas.height = 72;
@@ -545,6 +681,38 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
       slot.group.rotation.y = Math.PI / 2;
       scene.add(slot.group);
       workerSlots.push(slot);
+    }
+
+    // معدات الورشة — عند طرفَي سير الخدمة، خارج مسار السيارات تمامًا، حتى
+    // يبان المشهد كورشة حقيقية فيها أدوات ومعدات لا خط خدمة معزول في فراغ.
+    const toolChest = buildToolChest();
+    toolChest.position.set(LINE_X - 0.25, 0, LINE_HALF_LEN + 1.35);
+    toolChest.rotation.y = 0.5;
+    scene.add(toolChest);
+
+    const drum1 = buildOilDrum(0x1d5fb4);
+    drum1.position.set(LINE_X + 0.95, 0, LINE_HALF_LEN + 1.15);
+    scene.add(drum1);
+    const drum2 = buildOilDrum(0xe0a815);
+    drum2.position.set(LINE_X + 1.55, 0, LINE_HALF_LEN + 1.55);
+    scene.add(drum2);
+
+    const tireStack = buildTireStack(4);
+    tireStack.position.set(LINE_X - 0.2, 0, -LINE_HALF_LEN - 1.4);
+    scene.add(tireStack);
+
+    for (const [cx, cz] of [[LINE_X + 1.3, -LINE_HALF_LEN - 1.0], [LINE_X + 1.75, -LINE_HALF_LEN - 1.55]] as [number, number][]) {
+      const cone = buildTrafficCone();
+      cone.position.set(cx, 0, cz);
+      scene.add(cone);
+    }
+
+    // إضاءة سقفية معلّقة فوق السير — أعلى بكثير من أي سيارة أو عامل، تضيف
+    // طابع "ورشة صناعية" وتوهّج دافئ خفيف فوق منطقة العمل.
+    for (const lz of [-1.6, 1.6]) {
+      const lamp = buildHangingLight();
+      lamp.position.set(LINE_X, 3.0, lz);
+      scene.add(lamp);
     }
 
     let skyTex: THREE.CanvasTexture | null = null;
