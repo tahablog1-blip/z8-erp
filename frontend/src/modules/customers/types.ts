@@ -29,6 +29,7 @@ export type Vehicle = {
   model_year: string | null;
   car_category: string | null;
   cylinders: string | null;
+  engine_size: string | null;
   color: string | null;
   chassis_number: string | null;
   notes: string | null;

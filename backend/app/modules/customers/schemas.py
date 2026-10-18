@@ -69,6 +69,7 @@ class VehicleCreate(BaseModel):
     modelYear: str | None = None
     carCategory: str | None = None
     cylinders: str | None = None
+    engineSize: str | None = None
     color: str | None = None
     chassisNumber: str | None = None
     notes: str | None = None
@@ -85,6 +86,7 @@ class VehicleOut(BaseModel):
     model_year: str | None = None
     car_category: str | None = None
     cylinders: str | None = None
+    engine_size: str | None = None
     color: str | None = None
     chassis_number: str | None = None
     notes: str | None = None

@@ -1146,8 +1146,8 @@ async def _upsert_garage(company_id: str, customer_id: str, plate: str, car: dic
     await execute(
         """INSERT INTO customer_cars
              (company_id, customer_id, plate, brand, name, model_year,
-              fuel_type, car_category, cylinders, color, chassis_number, service_type)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+              fuel_type, car_category, cylinders, engine_size, color, chassis_number, service_type)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
            ON CONFLICT (customer_id, z8_plate_key(plate)) DO UPDATE SET
              brand=COALESCE(customer_cars.brand, EXCLUDED.brand),
              name=COALESCE(customer_cars.name, EXCLUDED.name),
@@ -1155,11 +1155,13 @@ async def _upsert_garage(company_id: str, customer_id: str, plate: str, car: dic
              fuel_type=COALESCE(customer_cars.fuel_type, EXCLUDED.fuel_type),
              car_category=COALESCE(customer_cars.car_category, EXCLUDED.car_category),
              cylinders=COALESCE(customer_cars.cylinders, EXCLUDED.cylinders),
+             engine_size=COALESCE(customer_cars.engine_size, EXCLUDED.engine_size),
              color=COALESCE(customer_cars.color, EXCLUDED.color),
              chassis_number=COALESCE(customer_cars.chassis_number, EXCLUDED.chassis_number),
              service_type=EXCLUDED.service_type""",
         company_id, customer_id, plate, car.get("brand"), car.get("carName"),
         car.get("modelYear"), car.get("fuelType"), car.get("carCategory"), car.get("cylinders"),
+        (car.get("engineSize") or "").strip() or None,
         car.get("color"), car.get("chassisNumber"), service_type)
 
 
@@ -1197,7 +1199,7 @@ async def public_lookup(branch_id: str, phone: str, plate: str | None = None) ->
     if not cust:
         return {"found": False}
     cars_rows = await fetch(
-        """SELECT id, plate, brand, name, model_year, car_category, cylinders,
+        """SELECT id, plate, brand, name, model_year, car_category, cylinders, engine_size,
                   color, chassis_number, service_type
            FROM customer_cars WHERE customer_id=$1 ORDER BY created_at DESC""", cust["id"])
     # سيارات من تاريخ الزيارات مش متسجلة في الكراج؟ نكملها تلقائياً
@@ -1210,7 +1212,7 @@ async def public_lookup(branch_id: str, phone: str, plate: str | None = None) ->
             await _upsert_garage(br["company_id"], str(cust["id"]), h["plate"],
                                  {"brand": h["brand"], "carName": h["name"], "modelYear": h["model_year"], "fuelType": h["fuel_type"]}, "basic")
         cars_rows = await fetch(
-            """SELECT id, plate, brand, name, model_year, fuel_type, car_category, cylinders,
+            """SELECT id, plate, brand, name, model_year, fuel_type, car_category, cylinders, engine_size,
                       color, chassis_number, service_type
                FROM customer_cars WHERE customer_id=$1 ORDER BY created_at DESC""", cust["id"])
     return {
@@ -1314,6 +1316,9 @@ def _ar_normalize(s: str) -> str:
 # الفلاتر) عشان فروق إملائية بسيطة (مسافة زيادة، "ى" مقابل "ي") ما تمنعش
 # مطابقة صحيحة كانت ستنجح لولا هذا الفرق التافه.
 _SQL_NORM = "regexp_replace(replace(replace(trim({col}), 'ى', 'ي'), 'أ', 'ا'), '\\s+', ' ', 'g')"
+# تطبيع حجم الماكينة للمطابقة: يسقط أي شيء غير رقم/نقطة (حرف L، "لتر"، مسافات)
+# عشان "2.5" و"2.5L" و"2.5 لتر" تتطابق كلها — التخزين يفضل بالصيغة اللي كتبها المستخدم
+_SQL_NORM_ENGINE = "regexp_replace(lower(trim({col})), '[^0-9.]', '', 'g')"
 
 
 # ══════════ ربط السيارة بفلتر الزيت الصحيح (ماركة/موديل/نطاق سنة → صنف حقيقي) ══════════
@@ -1322,7 +1327,8 @@ _SQL_NORM = "regexp_replace(replace(replace(trim({col}), 'ى', 'ي'), 'أ', 'ا'
 
 async def list_car_oil_filters(company_id: str) -> list[dict]:
     rows = await fetch(
-        """SELECT f.id, f.brand, f.model, f.year_from, f.year_to, f.filter_product_id, f.filter_kind, f.cylinders,
+        """SELECT f.id, f.brand, f.model, f.year_from, f.year_to, f.filter_product_id, f.filter_kind,
+                  f.cylinders, f.engine_size,
                   p.name AS filter_name, p.spec AS filter_spec, p.barcode AS filter_barcode
            FROM car_oil_filters f
            JOIN products p ON p.id = f.filter_product_id
@@ -1339,8 +1345,9 @@ async def list_car_oil_filters(company_id: str) -> list[dict]:
 async def create_car_oil_filter(company_id: str, brand: str, model: str,
                                 year_from: int, year_to: int, filter_product_id: str,
                                 user_id: str | None, filter_kind: str = "oil",
-                                cylinders: int | None = None) -> dict:
+                                cylinders: int | None = None, engine_size: str | None = None) -> dict:
     brand = (brand or "").strip(); model = (model or "").strip()
+    engine_size = (engine_size or "").strip() or None
     if not brand or not model:
         raise HTTPException(400, "الماركة والموديل مطلوبان")
     if filter_kind not in ("oil", "air", "ac"):
@@ -1353,9 +1360,9 @@ async def create_car_oil_filter(company_id: str, brand: str, model: str,
         raise HTTPException(404, "الصنف المختار غير موجود")
     row = await fetchrow(
         """INSERT INTO car_oil_filters
-             (company_id, brand, model, year_from, year_to, filter_product_id, created_by, filter_kind, cylinders)
-           VALUES ($1,$2,$3,$4,$5,$6::uuid,$7::uuid,$8,$9) RETURNING id""",
-        company_id, brand, model, year_from, year_to, filter_product_id, user_id, filter_kind, cylinders)
+             (company_id, brand, model, year_from, year_to, filter_product_id, created_by, filter_kind, cylinders, engine_size)
+           VALUES ($1,$2,$3,$4,$5,$6::uuid,$7::uuid,$8,$9,$10) RETURNING id""",
+        company_id, brand, model, year_from, year_to, filter_product_id, user_id, filter_kind, cylinders, engine_size)
     return {"id": str(row["id"])}
 
 
@@ -1366,18 +1373,21 @@ async def delete_car_oil_filter(company_id: str, row_id: str) -> dict:
 
 
 async def match_oil_filter(company_id: str, brand: str, model: str, year: str | int | None,
-                           filter_kind: str = "oil", cylinders: str | int | None = None) -> dict | None:
+                           filter_kind: str = "oil", cylinders: str | int | None = None,
+                           engine_size: str | None = None) -> dict | None:
     """أقرب ربط مطابق للسيارة (لنوع فلتر ونطاق سنة محددين) — بترتيب أولوية:
-    ١) تطابق السلندرات بالضبط (لو الموديل له أكثر من محرك، مثال حقيقي: فورتشنر
-       4 سلندر وفورتشنر 6 سلندر لهما فلتر مختلف بنفس نطاق السنة).
-    ٢) الربط بلا سلندرات محددة (NULL = ينطبق على أي محرك لهذا الموديل).
+    ١) تطابق السلندرات وحجم الماكينة بالضبط (لو الموديل له أكثر من محرك، مثال
+       حقيقي: فورتشنر 4 سلندر وفورتشنر 6 سلندر لهما فلتر مختلف بنفس نطاق السنة).
+    ٢) الربط بلا سلندرات/حجم ماكينة محددين (NULL = ينطبق على أي محرك لهذا الموديل).
     بلا سنة معروفة تُطابَق أوسع نطاق مسجّل لنفس الماركة/الموديل كملاذ أخير.
 
-    ملاحظة مهمة: لو سلندرات العميل غير معروفة (مثال: حجز من سيارة محفوظة بلا
-    بيانات محرك)، لا نفرض شرط السلندرات إطلاقاً — إذ إن `f.cylinders = NULL`
-    في SQL يُستبعد تلقائياً حتى لو كان الربط الوحيد المسجّل، فيفشل العثور على
-    فلتر مسجّل فعلاً لمجرد نقص بيانات جانبية. الأفضل عرض أقرب تخمين متاح على
-    ألا نعرض شيئاً؛ والفلتر يبقى قابلاً للتغيير يدوياً من القائمة في كل الأحوال."""
+    ملاحظة مهمة: لو بيانات محرك العميل (سلندرات/حجم ماكينة) غير معروفة (مثال:
+    حجز من سيارة محفوظة بلا بيانات محرك)، لا نفرض شرطها إطلاقاً — إذ إن
+    `f.cylinders = NULL` في SQL يُستبعد تلقائياً حتى لو كان الربط الوحيد المسجّل،
+    فيفشل العثور على فلتر مسجّل فعلاً لمجرد نقص بيانات جانبية. الأفضل عرض أقرب
+    تخمين متاح على ألا نعرض شيئاً؛ والفلتر يبقى قابلاً للتغيير يدوياً من القائمة
+    في كل الأحوال. حجم الماكينة يُطابَق بعد تطبيع (إسقاط أي شيء غير رقم/نقطة)
+    عشان "2.5"/"2.5L"/"2.5 لتر" تتطابق كلها."""
     brand = (brand or "").strip(); model = (model or "").strip()
     if not brand or not model:
         return None
@@ -1389,47 +1399,56 @@ async def match_oil_filter(company_id: str, brand: str, model: str, year: str | 
         cyl = int(str(cylinders)) if cylinders not in (None, "") else None
     except ValueError:
         cyl = None
-
-    # شرط السلندرات وترتيبها يُبنيان ديناميكياً: يُفرضان فقط لو السلندرات معروفة،
-    # وإلا يُتجاهلان بالكامل (بدل مقارنة خاطئة بـ NULL تُسقط كل النتائج خطأً).
-    cyl_filter_sql = "AND (f.cylinders IS NULL OR f.cylinders = ${n})" if cyl is not None else ""
-    cyl_order_sql = "(f.cylinders = ${n}) DESC NULLS LAST, " if cyl is not None else ""
+    eng = (engine_size or "").strip() or None
 
     norm_brand_col = _SQL_NORM.format(col="f.brand")
     norm_model_col = _SQL_NORM.format(col="f.model")
     norm_brand_in = _SQL_NORM.format(col="$2::text")
     norm_model_in = _SQL_NORM.format(col="$3::text")
+    norm_eng_col = _SQL_NORM_ENGINE.format(col="f.engine_size")
 
-    if y is not None:
-        params = [company_id, brand, model, y, filter_kind] + ([cyl] if cyl is not None else [])
-        cyl_idx = 6
-        row = await fetchrow(
+    async def _query(year_known: bool) -> dict | None:
+        # ── شروط وترتيب السلندرات/حجم الماكينة تُبنى ديناميكياً بفهرسة باراميترات
+        #    تُحسب أثناء البناء — تفادياً لحساب أوفسيتات يدوية عرضة للخطأ مع كل
+        #    حقل اختياري إضافي. تُفرض فقط لو القيمة معروفة. ──
+        params: list = [company_id, brand, model]
+        where_extra: list[str] = []
+        order_terms: list[str] = []
+        if year_known:
+            params.append(y)
+            where_extra.append(f"${len(params)} BETWEEN f.year_from AND f.year_to")
+        params.append(filter_kind)
+        kind_idx = len(params)
+        if cyl is not None:
+            params.append(cyl)
+            idx = len(params)
+            where_extra.append(f"(f.cylinders IS NULL OR f.cylinders = ${idx})")
+            order_terms.append(f"(f.cylinders = ${idx}) DESC NULLS LAST")
+        if eng is not None:
+            params.append(eng)
+            idx = len(params)
+            where_extra.append(f"(f.engine_size IS NULL OR {norm_eng_col} = {_SQL_NORM_ENGINE.format(col=f'${idx}::text')})")
+            order_terms.append(f"({norm_eng_col} = {_SQL_NORM_ENGINE.format(col=f'${idx}::text')}) DESC NULLS LAST")
+        where_sql = " AND ".join([
+            "f.company_id=$1", f"{norm_brand_col} = {norm_brand_in}", f"{norm_model_col} = {norm_model_in}",
+            f"f.filter_kind=${kind_idx}", *where_extra,
+        ])
+        order_sql = ", ".join(order_terms + [("(f.year_to - f.year_from) ASC" if year_known else "f.year_to DESC")])
+        return await fetchrow(
             f"""SELECT p.id, p.name, p.spec, p.price_vat,
                       (p.image_base64 IS NOT NULL AND p.image_base64 <> '') AS has_image
                FROM car_oil_filters f JOIN products p ON p.id = f.filter_product_id
-               WHERE f.company_id=$1 AND {norm_brand_col} = {norm_brand_in}
-                     AND {norm_model_col} = {norm_model_in} AND f.filter_kind=$5
-                     AND $4 BETWEEN f.year_from AND f.year_to
-                     {cyl_filter_sql.format(n=cyl_idx)}
-               ORDER BY {cyl_order_sql.format(n=cyl_idx)}(f.year_to - f.year_from) ASC
+               WHERE {where_sql}
+               ORDER BY {order_sql}
                LIMIT 1""",
             *params)
+
+    if y is not None:
+        row = await _query(True)
         if row:
             return dict(row)
     # بلا سنة معروفة أو ما طابقت نطاقاً محدداً — آخر ربط مسجّل لنفس الماركة/الموديل
-    # (بنفس أولوية تفضيل تطابق السلندرات لو معروفة)
-    params2 = [company_id, brand, model, filter_kind] + ([cyl] if cyl is not None else [])
-    cyl_idx2 = 5
-    row = await fetchrow(
-        f"""SELECT p.id, p.name, p.spec, p.price_vat,
-                  (p.image_base64 IS NOT NULL AND p.image_base64 <> '') AS has_image
-           FROM car_oil_filters f JOIN products p ON p.id = f.filter_product_id
-           WHERE f.company_id=$1 AND {norm_brand_col} = {norm_brand_in}
-                 AND {norm_model_col} = {norm_model_in} AND f.filter_kind=$4
-                 {cyl_filter_sql.format(n=cyl_idx2)}
-           ORDER BY {cyl_order_sql.format(n=cyl_idx2)}f.year_to DESC
-           LIMIT 1""",
-        *params2)
+    row = await _query(False)
     return dict(row) if row else None
 
 
@@ -1461,7 +1480,7 @@ async def public_create_booking(branch_id: str, d: dict) -> dict:
         car = {"plateNumbers": m.group(1) if m else re.sub(r"[^0-9]", "", saved["plate"] or ""),
                "plateLetters": m.group(2) if m else re.sub(r"[^A-Z]", "", (saved["plate"] or "").upper()),
                "brand": saved["brand"], "carName": saved["name"], "modelYear": saved["model_year"], "fuelType": saved["fuel_type"],
-               "carCategory": saved["car_category"], "cylinders": saved["cylinders"],
+               "carCategory": saved["car_category"], "cylinders": saved["cylinders"], "engineSize": saved["engine_size"],
                "color": saved["color"], "chassisNumber": saved["chassis_number"],
                "odometer": d.get("odometer") or (car.get("odometer") if car else None)}
         service_type = d.get("serviceType") or saved["service_type"] or "basic"
@@ -1524,13 +1543,14 @@ async def public_create_booking(branch_id: str, d: dict) -> dict:
     row = await fetchrow(
         """INSERT INTO cars
              (company_id, branch_id, plate, plate_type, brand, name, model_year, fuel_type,
-              car_category, cylinders, color, chassis_number,
+              car_category, cylinders, engine_size, color, chassis_number,
               customer_name, customer_phone, customer_id,
               odometer_current, service_type, registrar_name)
-           VALUES ($1,$2,$3,'saudi',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'حجز أونلاين QR')
+           VALUES ($1,$2,$3,'saudi',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'حجز أونلاين QR')
            RETURNING id""",
         company_id, branch_id, plate, car.get("brand"), car.get("carName"), car.get("modelYear"), car.get("fuelType"),
-        car.get("carCategory"), car.get("cylinders"), car.get("color"), car.get("chassisNumber"),
+        car.get("carCategory"), car.get("cylinders"), (car.get("engineSize") or "").strip() or None,
+        car.get("color"), car.get("chassisNumber"),
         name, phone, cust["id"], odo, service_type)
     if d.get("items"):
         await _save_booking_items(str(row["id"]), d)

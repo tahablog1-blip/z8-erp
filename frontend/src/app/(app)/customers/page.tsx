@@ -19,8 +19,15 @@ const EMPTY_CUSTOMER = {
 
 const EMPTY_VEHICLE = {
   plate: "", plateType: "saudi" as "saudi" | "other", brand: "", makeModel: "",
-  modelYear: "", carCategory: "", cylinders: "", color: "", chassisNumber: "", notes: "", fuelType: "",
+  modelYear: "", carCategory: "", cylinders: "", engineSize: "", color: "", chassisNumber: "", notes: "", fuelType: "",
 };
+
+// مقترحات حجم الماكينة (لتر) — قائمة شائعة قابلة للكتابة الحرة (مش قائمة مغلقة)،
+// نفس فكرة مقترحات الفئة (GLX/SE/...) — الأحجام النادرة تُكتب يدوياً بلا قيد.
+const ENGINE_SIZE_SUGGESTIONS = [
+  "1.2", "1.3", "1.4", "1.5", "1.6", "1.8", "2.0", "2.2", "2.4", "2.5",
+  "2.7", "3.0", "3.3", "3.5", "3.6", "4.0", "4.6", "5.0", "5.3", "5.7", "6.2",
+];
 
 const dateFmt = (s: string) =>
   new Date(s).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { year: "numeric", month: "2-digit", day: "2-digit" });
@@ -413,6 +420,13 @@ export default function CustomersPage() {
                       <Field label="سنة الصنع">
                         <Input value={vehicleForm.modelYear} className="tnum"
                                onChange={(e) => setVehicleForm({ ...vehicleForm, modelYear: e.target.value })} />
+                      </Field>
+                      <Field label="حجم الماكينة (لتر)">
+                        <Input list="engine-size-suggestions" value={vehicleForm.engineSize} className="tnum" placeholder="مثال: 2.5"
+                               onChange={(e) => setVehicleForm({ ...vehicleForm, engineSize: e.target.value })} />
+                        <datalist id="engine-size-suggestions">
+                          {ENGINE_SIZE_SUGGESTIONS.map((s) => <option key={s} value={s} />)}
+                        </datalist>
                       </Field>
                       <Field label="اللون">
                         <Input value={vehicleForm.color}

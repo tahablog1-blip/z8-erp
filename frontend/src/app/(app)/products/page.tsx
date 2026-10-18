@@ -468,6 +468,7 @@ export default function ProductsPage() {
   const [cfFrom, setCfFrom] = useState("");
   const [cfTo, setCfTo] = useState("");
   const [cfCylinders, setCfCylinders] = useState(""); // فاضي = أي محرك (الحالة الشائعة)
+  const [cfEngineSize, setCfEngineSize] = useState(""); // فاضي = أي حجم ماكينة
   const [cfProductId, setCfProductId] = useState("");
   const [cfBusy, setCfBusy] = useState(false);
   const [cfErr, setCfErr] = useState("");
@@ -525,9 +526,10 @@ export default function ProductsPage() {
           brand: cfBrand.trim(), model: cfModel.trim(),
           yearFrom: Number(cfFrom), yearTo: Number(cfTo), filterProductId: cfProductId,
           filterKind: cfKind, cylinders: cfCylinders ? Number(cfCylinders) : null,
+          engineSize: cfEngineSize.trim() || null,
         }),
       });
-      setCfBrand(""); setCfModel(""); setCfFrom(""); setCfTo(""); setCfProductId(""); setCfCylinders("");
+      setCfBrand(""); setCfModel(""); setCfFrom(""); setCfTo(""); setCfProductId(""); setCfCylinders(""); setCfEngineSize("");
       await loadCarFilters();
     } catch (e: any) { setCfErr(e.message); }
     finally { setCfBusy(false); }
@@ -1563,17 +1565,24 @@ export default function ProductsPage() {
               زحمة شبكة الماركة/الموديل/السنة، والسلندرات جنبه لأنه اختياري بسيط.
               البحث هنا حي في كل الأصناف (اسم أو باركود) — بلا اشتراط تصنيف
               مسبق، عشان محدش يتعطل بانتظار خطوة تصنيف قد تكون غير مكتملة. */}
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_140px]">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_140px_140px]">
             <ProductSearchSelect value={cfProductId} onChange={setCfProductId} products={rows}
               placeholder={`ابحث عن ${FILTER_KINDS[cfKind]} بالاسم أو الباركود...`} />
             <Select value={cfCylinders} onChange={(e) => setCfCylinders(e.target.value)}>
               <option value="">أي محرك</option>
               {["3", "4", "5", "6", "8", "10", "12"].map((c) => <option key={c} value={c}>{c} سلندر</option>)}
             </Select>
+            <Input list="cf-engine-size-suggestions" value={cfEngineSize} inputMode="decimal" dir="ltr"
+              placeholder="أي حجم (لتر)" className="tnum text-right"
+              onChange={(e) => setCfEngineSize(e.target.value)} />
+            <datalist id="cf-engine-size-suggestions">
+              {["1.2", "1.3", "1.4", "1.5", "1.6", "1.8", "2.0", "2.2", "2.4", "2.5", "2.7", "3.0", "3.3", "3.5", "3.6", "4.0", "4.6", "5.0", "5.3", "5.7", "6.2"]
+                .map((o) => <option key={o} value={o} />)}
+            </datalist>
           </div>
           <p className="text-[10.5px] text-text-dim">
-            اترك "أي محرك" إلا لو نفس الموديل والسنة عنده أكثر من خيار محرك بفلاتر مختلفة
-            (مثال: فورتشنر 4 أو 6 سلندر) — حينها أضف رابطاً منفصلاً لكل سلندر.
+            اترك "أي محرك" و"أي حجم" إلا لو نفس الموديل والسنة عنده أكثر من خيار محرك بفلاتر مختلفة
+            (مثال: فورتشنر 4 أو 6 سلندر، أو كامري 2.0 أو 2.5 لتر) — حينها أضف رابطاً منفصلاً لكل خيار.
           </p>
           {/* تصنيف نوع الفلتر (زيت/هواء/مكيف) على الأصناف مفيد لتقارير الجدول
               الرئيسي وفلترته، لكن البحث فوق يعمل مباشرة في كل الأصناف بلا
@@ -1605,7 +1614,7 @@ export default function ProductsPage() {
                   {FILTER_KINDS[f.filter_kind] || f.filter_kind}
                 </span>
                 <span className="flex-1">
-                  <b>{f.brand}</b> {f.model} <span className="text-text-dim">({f.year_from}–{f.year_to}{f.cylinders ? ` · ${f.cylinders} سلندر` : ""})</span>
+                  <b>{f.brand}</b> {f.model} <span className="text-text-dim">({f.year_from}–{f.year_to}{f.cylinders ? ` · ${f.cylinders} سلندر` : ""}{f.engine_size ? ` · ${f.engine_size} لتر` : ""})</span>
                   {" ← "}
                   <span className="font-bold">{f.filter_name}{f.filter_spec ? ` ${f.filter_spec}` : ""}</span>
                 </span>

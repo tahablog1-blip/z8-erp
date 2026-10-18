@@ -220,11 +220,16 @@ async def add_vehicle(company_id: str, customer_id: str, d: dict) -> dict:
         row = await fetchrow(
             """INSERT INTO customer_vehicles
                  (company_id, customer_id, plate, plate_type, brand, make_model, model_year,
-                  car_category, cylinders, color, chassis_number, notes)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *""",
+                  car_category, cylinders, engine_size, color, chassis_number, notes)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *""",
+            # ⚠ ملاحظة إصلاح: كان فيه d.get("fuelType") إضافي هنا قبل cylinders —
+            # عمود fuel_type مش موجود أصلاً في customer_vehicles (ولا في VehicleOut)،
+            # فكان عدد الـ arguments (13) أكتر من عدد الـ $n في الاستعلام (12) وكان
+            # هذا الإدراج يفشل بخطأ من asyncpg في كل مرة. اتشال هنا.
             company_id, customer_id, d["plate"], d.get("plateType", "saudi"),
-            d.get("brand"), d.get("makeModel"), d.get("modelYear"), d.get("carCategory"), d.get("fuelType"),
-            d.get("cylinders"), d.get("color"), d.get("chassisNumber"), d.get("notes"),
+            d.get("brand"), d.get("makeModel"), d.get("modelYear"), d.get("carCategory"),
+            d.get("cylinders"), (d.get("engineSize") or "").strip() or None,
+            d.get("color"), d.get("chassisNumber"), d.get("notes"),
         )
     except asyncpg.UniqueViolationError:
         raise HTTPException(409, "رقم اللوحة ده مسجّل بالفعل لعميل آخر")

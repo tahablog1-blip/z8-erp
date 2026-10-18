@@ -29,9 +29,14 @@ type SType = "basic" | "warranty" | "company";
 type FormValues = {
   name: string; phone: string;
   plateNumbers: string; plateLetters: string; brand: string; carName: string; modelYear: string; odometer: string;
-  carCategory: string; cylinders: string; color: string; chassisNumber: string; fuelType: string;
+  carCategory: string; cylinders: string; engineSize: string; color: string; chassisNumber: string; fuelType: string;
   vat: string; cr: string; buildingNo: string; street: string; district: string; city: string; postalCode: string; additionalNo: string;
 };
+
+const ENGINE_SIZE_SUGGESTIONS = [
+  "1.2", "1.3", "1.4", "1.5", "1.6", "1.8", "2.0", "2.2", "2.4", "2.5",
+  "2.7", "3.0", "3.3", "3.5", "3.6", "4.0", "4.6", "5.0", "5.3", "5.7", "6.2",
+];
 
 const NAVY = "#0F2D52", GREEN = "#16A34A", DIM = "#51617A", LINE = "#E2E8F0";
 const TYPE_META: Record<SType, { title: string; desc: string; icon: string }> = {
@@ -43,7 +48,7 @@ const TYPE_META: Record<SType, { title: string; desc: string; icon: string }> = 
 const EMPTY_FORM: FormValues = {
   name: "", phone: "",
   plateNumbers: "", plateLetters: "", brand: "", carName: "", modelYear: "", odometer: "",
-  carCategory: "", cylinders: "", color: "", chassisNumber: "", fuelType: "",
+  carCategory: "", cylinders: "", engineSize: "", color: "", chassisNumber: "", fuelType: "",
   vat: "", cr: "", buildingNo: "", street: "", district: "", city: "", postalCode: "", additionalNo: "",
 };
 
@@ -333,6 +338,17 @@ function RegisterForm({ sType, initial, busy, err, branchId, onBack, onSubmit }:
               ))}
             </select>
           </div>
+
+          {/* حجم الماكينة بجانب السلندرات: اختياري، ويحسّن مطابقة الفلتر لما الموديل
+              عنده أكتر من محرك بنفس عدد السلندرات (مثال: 2.0 و2.5). مقترحات + كتابة حرة. */}
+          <label className="block text-right">
+            <span className="mb-1 block text-[11.5px] font-black" style={{ color: NAVY }}>حجم الماكينة (لتر) — اختياري</span>
+            <input list="engine-size-suggestions" value={f.engineSize} onChange={set("engineSize")}
+              inputMode="decimal" dir="ltr" placeholder="2.5" style={{ borderColor: LINE }} className={`${inputCls} tnum text-right`} />
+            <datalist id="engine-size-suggestions">
+              {ENGINE_SIZE_SUGGESTIONS.map((o) => <option key={o} value={o} />)}
+            </datalist>
+          </label>
 
         </div>
       </Section>
@@ -1005,9 +1021,9 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
 }
 
 /* ═══════════ خطوة فلتر الزيت ═══════════ */
-function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carCylinders, carFuelType, onNext, onBack }: {
+function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carCylinders, carEngineSize, carFuelType, onNext, onBack }: {
   branchId: string; sel: Selection; setSel: (s: Selection) => void;
-  carBrand: string; carModel: string; carYear: string; carCylinders: string; carFuelType?: string;
+  carBrand: string; carModel: string; carYear: string; carCylinders: string; carEngineSize?: string; carFuelType?: string;
   onNext: () => void; onBack: () => void;
 }) {
   const [filters, setFilters] = useState<OilProduct[] | null>(null);
@@ -1022,7 +1038,8 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
   const [matchedFilter, setMatchedFilter] = useState<OilProduct | null>(null);
   useEffect(() => {
     if (!carBrand || !carModel) { setMatchedFilter(null); return; }
-    const cylQuery = carCylinders ? `&cylinders=${encodeURIComponent(carCylinders)}` : "";
+    const cylQuery = (carCylinders ? `&cylinders=${encodeURIComponent(carCylinders)}` : "")
+      + (carEngineSize ? `&engineSize=${encodeURIComponent(carEngineSize)}` : "");
     call<OilProduct | null>(
       `car-oil-filter-match/${branchId}?brand=${encodeURIComponent(carBrand)}&model=${encodeURIComponent(carModel)}&year=${encodeURIComponent(carYear || "")}${cylQuery}`
     ).then((f) => {
@@ -1033,7 +1050,7 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
       if (f && !sel.filter) setSel({ ...sel, filter: f });
     }).catch(() => setMatchedFilter(null));
     // eslint-disable-next-line
-  }, [branchId, carBrand, carModel, carYear, carCylinders]);
+  }, [branchId, carBrand, carModel, carYear, carCylinders, carEngineSize]);
 
   const ql = q.trim();
   const shown = (filters || []).filter((f) => !ql || f.name.includes(ql) || (f.brand || "").includes(ql));
@@ -1639,6 +1656,7 @@ export default function PublicBookingPage() {
           brand: f.brand.trim() || null, carName: f.carName.trim() || null,
           modelYear: f.modelYear.trim() || null, odometer: f.odometer, fuelType: f.fuelType.trim() || null,
           carCategory: f.carCategory.trim() || null, cylinders: f.cylinders.trim() || null,
+          engineSize: f.engineSize.trim() || null,
           color: f.color.trim() || null, chassisNumber: f.chassisNumber.trim() || null
         },
         company: sType === "company" ? {
@@ -1745,6 +1763,7 @@ export default function PublicBookingPage() {
             carModel={pending.mode === "saved" ? (pending.car.name || "") : pending.form.carName}
             carYear={pending.mode === "saved" ? (pending.car.model_year || "") : pending.form.modelYear}
             carCylinders={pending.mode === "saved" ? "" : pending.form.cylinders}
+            carEngineSize={pending.mode === "saved" ? "" : pending.form.engineSize}
             carFuelType={pending.mode === "saved" ? (pending.car.fuel_type || "") : pending.form.fuelType}
             onNext={() => { setErr(""); setView("extras"); }}
             onBack={() => { setErr(""); setView("oil"); }} />

@@ -571,9 +571,10 @@ class PublicCarIn(_BM):
     modelYear: str | None = None
     carCategory: str | None = None
     cylinders: str | None = None
+    engineSize: str | None = None
     color: str | None = None
     chassisNumber: str | None = None
-    odometer: str | int | None = None 
+    odometer: str | int | None = None
     fuelType: str | int | None = None
 
 
@@ -651,7 +652,8 @@ class CarOilFilterIn(_BM):
     yearTo: int
     filterProductId: str
     filterKind: str = "oil"  # oil | air | ac
-    cylinders: int | None = None  # فارغ = ينطبق على أي محرك لهذا الموديل
+    cylinders: int | None = None    # فارغ = ينطبق على أي محرك لهذا الموديل
+    engineSize: str | None = None   # فاضي = ينطبق على أي حجم ماكينة لهذا الموديل
 
 
 @router.get("/oil-filters")
@@ -664,7 +666,7 @@ async def create_car_oil_filter(body: CarOilFilterIn,
                                 user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
     return await service.create_car_oil_filter(
         user.company_id, body.brand, body.model, body.yearFrom, body.yearTo,
-        body.filterProductId, user.user_id, body.filterKind, body.cylinders)
+        body.filterProductId, user.user_id, body.filterKind, body.cylinders, body.engineSize)
 
 
 # ── تطبيع بسيط للنص العربي: يوحّد الألف المقصورة/الياء والمسافات الزائدة —
@@ -733,15 +735,16 @@ async def delete_car_oil_filter(row_id: str,
 async def public_oil_filter_match(branch_id: str, brand: str = Query(...), model: str = Query(...),
                                   year: str | None = Query(default=None),
                                   kind: str = Query(default="oil"),
-                                  cylinders: str | None = Query(default=None)):
+                                  cylinders: str | None = Query(default=None),
+                                  engineSize: str | None = Query(default=None)):
     """يُستخدم من صفحة الحجز: يرجع الفلتر الصحيح لنفس السيارة إن وُجد ربط له
-    (يفضّل تطابق السلندرات بالضبط لو الموديل له أكثر من محرك)"""
+    (يفضّل تطابق السلندرات/حجم الماكينة بالضبط لو الموديل له أكثر من محرك)"""
     _pub_guard(branch_id)
     from ...core.db import fetchrow as _fr
     br = await _fr("SELECT company_id FROM branches WHERE id=$1::uuid", branch_id)
     if not br:
         raise HTTPException(404, "الفرع غير موجود")
-    match = await service.match_oil_filter(br["company_id"], brand, model, year, kind, cylinders)
+    match = await service.match_oil_filter(br["company_id"], brand, model, year, kind, cylinders, engineSize)
     if not match:
         return None
     return {
