@@ -123,21 +123,5 @@
 .elev-2 { box-shadow: 0 2px 6px rgba(15,23,42,.12), 0 1px 2px rgba(15,23,42,.08); }
 .elev-3 { box-shadow: 0 6px 16px rgba(15,23,42,.16), 0 2px 4px rgba(15,23,42,.10); }
 
-/* ===== ProductCards — الوضع الليلي ===== */
-[data-theme="dark"] .pc-card {
-  background: #0070d3;
-  border-color: #031528;
-  color: #0b1f4d;
-}
-[data-theme="dark"] .pc-card:hover { border-color: #0c2135; }
-[data-theme="dark"] .pc-card .pc-thumb { background: #142b43; }
-[data-theme="dark"] .pc-card .pc-dim { color: #1e3a6e; }
-[data-theme="dark"] .pc-card .pc-low { color: #b91c1c; }
-
-[data-theme="dark"] .pc-btn {
-  background: #0d7ae7;
-  border-color: #315d88;
-  color: #0b1f4d;
-}
-[data-theme="dark"] .pc-btn:hover:not(:disabled) { background: #1e3e5b; }
-[data-theme="dark"] .pc-pg { color: #d6ecff; }
+/* ProductCards يستخدم الآن الـ Design Tokens مباشرة (bg-ink-2/border-line/text-text-dim)
+   فهو متوافق مع الوضع الليلي تلقائياً بدون أي استثناءات هنا. */

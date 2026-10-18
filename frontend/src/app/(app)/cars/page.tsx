@@ -198,7 +198,7 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
     p.image_base64
       ? <img src={`data:image/jpeg;base64,${p.image_base64}`} alt={p.name}
              className={`${big ? "h-24" : "h-14"} w-auto rounded-lg object-contain`} />
-      : <span className="text-[#64748B]"><MIcon name="opacity" className={big ? "!text-[44px]" : "!text-[30px]"} /></span>
+      : <span className="text-text-dim"><MIcon name="opacity" className={big ? "!text-[44px]" : "!text-[30px]"} /></span>
   );
 
   return (
@@ -312,7 +312,7 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
                       className="flex flex-col items-center gap-2 rounded-2xl border-2 border-line bg-ink-2 p-4 shadow-card transition hover:border-petrol hover:-translate-y-0.5 active:scale-[.96]">
                 {b.logo_base64
                   ? <img src={`data:image/png;base64,${b.logo_base64}`} alt={b.name} className="h-14 w-auto object-contain" />
-                  : <MIcon name="verified" className="!text-[32px] text-[#64748B]" />}
+                  : <MIcon name="verified" className="!text-[32px] text-text-dim" />}
                 <span className="text-[13px] font-black">{b.name}</span>
               </button>
             ))}
@@ -334,7 +334,7 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
             <div className="kiosk-pop mx-auto w-full max-w-lg space-y-3">
               {/* بطاقة المقترح — خلفية مميزة بالكامل */}
               <div className="rounded-3xl p-[2px] shadow-panel"
-                   style={{ background: "linear-gradient(135deg, #16A34A, #0F2D52)" }}>
+                   style={{ background: "linear-gradient(135deg, var(--emerald), var(--petrol-deep))" }}>
                 <div className="flex flex-col items-center gap-2.5 rounded-[22px] bg-emerald-bg px-5 py-6">
                   <span className="flex items-center gap-1.5 rounded-full bg-emerald px-3.5 py-1 text-[12px] font-black text-white">
                     <MIcon name="auto_awesome" className="!text-[16px] text-white" /> مقترحنا لسيارتك
@@ -402,7 +402,7 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
                           className="flex flex-col items-center gap-1.5 rounded-2xl border-2 border-line bg-ink-2 p-3 shadow-card transition hover:border-emerald hover:-translate-y-0.5 active:scale-[.96]">
                     {f.image_base64
                       ? <img src={`data:image/jpeg;base64,${f.image_base64}`} alt={f.name} className="h-12 w-auto rounded-lg object-contain" />
-                      : <MIcon name="filter_alt" className="!text-[28px] text-[#64748B]" />}
+                      : <MIcon name="filter_alt" className="!text-[28px] text-text-dim" />}
                     <span className="line-clamp-2 text-[11px] font-black leading-snug">{f.name}</span>
                     <span className="tnum text-[12px] font-black text-emerald">+{f.price_vat.toFixed(2)} ر.س</span>
                   </button>
@@ -488,10 +488,10 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
   );
 }
 
-// ═══════════════ نظام التصميم — لوحة Linear/Stripe المعتمدة ═══════════════
+// ═══════════════ نظام التصميم — يتبع الآن Design Tokens الموحّدة (متغيرات CSS) ═══════════════
 const UI = {
-  primary: "#1E3A8A", success: "#22C55E", warning: "#F59E0B", danger: "#EF4444",
-  bg: "#F8FAFC", card: "#FFFFFF", border: "#E5E7EB",
+  primary: "var(--petrol)", success: "var(--emerald)", warning: "var(--brass)", danger: "var(--ember)",
+  bg: "var(--ink)", card: "var(--ink2)", border: "var(--line)",
 };
 
 /** حبة حالة ملوّنة بأيقونة — بديل شارات النص */
@@ -500,10 +500,10 @@ function StatusPill({ tone, icon, children, pulse }: {
   children: React.ReactNode; pulse?: boolean;
 }) {
   const map = {
-    warning: { bg: "#FEF3C7", fg: "#B45309" },
-    primary: { bg: "#DBEAFE", fg: "#1E3A8A" },
-    success: { bg: "#DCFCE7", fg: "#15803D" },
-    neutral: { bg: "#F1F5F9", fg: "#64748B" },
+    warning: { bg: "var(--brass-soft)", fg: "var(--brass)" },
+    primary: { bg: "var(--petrol-soft)", fg: "var(--petrol)" },
+    success: { bg: "var(--emerald-bg)", fg: "var(--emerald)" },
+    neutral: { bg: "var(--ink3)", fg: "var(--text-dim)" },
   }[tone];
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-bold transition-colors duration-200"
@@ -525,12 +525,12 @@ function IconBtn({ icon, label, onClick, tone = "ghost" }: {
   const cls = {
     ghost:   "text-text-dim hover:bg-ink-3 hover:text-text",
     primary: "text-white shadow-sm hover:brightness-110",
-    danger:  "text-text-dim hover:bg-red-50 hover:text-red-600",
+    danger:  "text-text-dim hover:bg-ember-bg hover:text-ember",
   }[tone];
   return (
     <span className="group/ib relative inline-flex">
       <button onClick={onClick} aria-label={label}
-              className={`grid h-9 w-9 place-items-center rounded-xl transition-all duration-200 ease-in-out active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A8A] ${cls}`}
+              className={`grid h-9 w-9 place-items-center rounded-xl transition-all duration-200 ease-in-out active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-petrol ${cls}`}
               style={tone === "primary" ? { background: UI.primary } : undefined}>
         <MIcon name={icon} className="!text-[19px]" />
       </button>
@@ -548,8 +548,7 @@ function StatCard({ icon, value, title, hint, color, tint, onClick }: {
 }) {
   return (
     <button onClick={onClick} disabled={!onClick}
-            className="group flex items-center gap-4 rounded-2xl border bg-white p-6 text-right shadow-sm transition-all duration-200 ease-in-out enabled:hover:-translate-y-0.5 enabled:hover:shadow-md"
-            style={{ borderColor: UI.border }}>
+            className="group flex items-center gap-4 rounded-2xl border border-line bg-ink-2 p-6 text-right shadow-card transition-all duration-200 ease-in-out enabled:hover:-translate-y-0.5 enabled:hover:shadow-md">
       <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl transition-transform duration-200 group-hover:scale-105"
             style={{ background: tint, color }}>
         <MIcon name={icon} className="!text-[24px]" />
@@ -1746,7 +1745,7 @@ export default function CarsPage() {
     <div className="min-h-screen space-y-5 pb-24" style={{ background: UI.bg }}>
 
       {/* ═══════ الهيدر اللاصق: العنوان + بوابات الدخول ═══════ */}
-      <div className="relative z-20 -mx-4 border-b bg-[#F8FAFC]/85 px-4 py-3"
+      <div className="relative z-20 -mx-4 border-b bg-ink/85 px-4 py-3"
            style={{ borderColor: UI.border }}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -1755,31 +1754,31 @@ export default function CarsPage() {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => { setQrOpen(true); setQrBranch(branches[0]?.id || ""); }}
-                    className="flex items-center gap-1.5 rounded-xl border bg-white px-3.5 py-2 text-[12.5px] font-bold text-text shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1E3A8A]"
+                    className="flex items-center gap-1.5 rounded-xl border bg-ink-2 px-3.5 py-2 text-[12.5px] font-bold text-text shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol"
                     style={{ borderColor: UI.border }}>
               <MIcon name="qr_code_2" className="!text-[17px]" /> باركود الحجز
             </button>
             {/* 🎛 البوابة الذكية — لوحة بمفتاح مستقل لكل كاميرا */}
             <div className="relative">
               <button onClick={() => setGateSwPanel((v) => !v)}
-                      className="flex items-center gap-2 rounded-xl border bg-white px-3.5 py-2 shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md"
+                      className="flex items-center gap-2 rounded-xl border bg-ink-2 px-3.5 py-2 shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md"
                       style={{ borderColor: UI.border }}>
                 <span className={`inline-block h-2.5 w-2.5 rounded-full ${gateSwOn && gateSwRunning ? "animate-pulse" : ""}`}
-                      style={{ background: gateSwOn === null ? "#CBD5E1" : gateSwOn ? UI.success : "#DC2626" }} />
+                      style={{ background: gateSwOn === null ? "var(--ink4)" : gateSwOn ? UI.success : "var(--ember)" }} />
                 <span className="text-[12.5px] font-bold text-text">البوابة الذكية</span>
                 <MIcon name={gateSwPanel ? "expand_less" : "expand_more"} className="!text-[17px]" />
               </button>
 
               {gateSwPanel && (
-                <div className="absolute left-0 top-full z-30 mt-2 w-80 rounded-2xl border bg-white p-3 shadow-xl"
+                <div className="absolute left-0 top-full z-30 mt-2 w-80 rounded-2xl border bg-ink-2 p-3 shadow-xl"
                      style={{ borderColor: UI.border }}>
                   {/* المفتاح الرئيسي */}
                   <div className="flex items-center justify-between rounded-xl px-3 py-2.5"
-                       style={{ background: "#F6F8FA" }}>
+                       style={{ background: "var(--ink3)" }}>
                     <span className="text-[12.5px] font-black text-text">المراقب التلقائي (الكل)</span>
                     <button onClick={toggleGateSw} disabled={gateSwOn === null || gateSwBusy}
                             className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50"
-                            style={{ background: gateSwOn ? UI.success : "#CBD5E1" }}>
+                            style={{ background: gateSwOn ? UI.success : "var(--ink4)" }}>
                       <span className="absolute h-5 w-5 rounded-full bg-white shadow transition-all"
                             style={{ right: gateSwOn ? "2px" : "22px" }} />
                     </button>
@@ -1795,14 +1794,14 @@ export default function CarsPage() {
                            style={{ borderColor: UI.border }}>
                         <span className="flex min-w-0 items-center gap-2">
                           <span className="inline-block h-2 w-2 shrink-0 rounded-full"
-                                style={{ background: !c.is_active ? "#CBD5E1" : c.ok === null ? "#F59E0B" : c.ok ? UI.success : "#DC2626" }}
+                                style={{ background: !c.is_active ? "var(--ink4)" : c.ok === null ? "var(--brass)" : c.ok ? UI.success : "var(--ember)" }}
                                 title={!c.is_active ? "موقوفة" : c.ok === null ? "بانتظار أول التقاط" : c.ok ? "تلتقط بنجاح" : "لا تستجيب"} />
                           <span className="truncate text-[12px] font-bold text-text">{c.name}</span>
                           {c.last && <span className="tnum shrink-0 text-[10px] text-text-dim">{c.last}</span>}
                         </span>
                         <button onClick={() => toggleCam(c.id, !c.is_active)}
                                 className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
-                                style={{ background: c.is_active ? UI.success : "#CBD5E1" }}>
+                                style={{ background: c.is_active ? UI.success : "var(--ink4)" }}>
                           <span className="absolute h-5 w-5 rounded-full bg-white shadow transition-all"
                                 style={{ right: c.is_active ? "2px" : "22px" }} />
                         </button>
@@ -1829,24 +1828,24 @@ export default function CarsPage() {
       {/* ═══════ بطاقات الإحصائيات ═══════ */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard icon="schedule" value={queued.length} title="في الانتظار"
-                  color="#B45309" tint="#FEF3C7" onClick={() => setStatusFilter("queued")} />
+                  color="var(--brass)" tint="var(--brass-soft)" onClick={() => setStatusFilter("queued")} />
         <StatCard icon="build" value={inService.length} title="في الخدمة"
-                  color={UI.primary} tint="#DBEAFE" onClick={() => setStatusFilter("in_service")} />
+                  color={UI.primary} tint="var(--petrol-soft)" onClick={() => setStatusFilter("in_service")} />
         <StatCard icon="task_alt" value={doneToday.length} title="اكتملت اليوم"
-                  color="#15803D" tint="#DCFCE7" onClick={() => setStatusFilter("done_today")} />
+                  color="var(--emerald)" tint="var(--emerald-bg)" onClick={() => setStatusFilter("done_today")} />
         <StatCard icon="timer" value={avgWaitMin === null ? "—" : `${avgWaitMin} د`} title="متوسط الانتظار"
                   hint={queued.length ? "للسيارات الواقفة الآن" : "الطابور فارغ"}
-                  color="#7C3AED" tint="#EDE9FE" />
+                  color="var(--petrol)" tint="var(--petrol-soft)" />
       </div>
 
       {/* ═══════ لوحتا المحطات الحية (انتظار / خدمة) ═══════ */}
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="overflow-hidden rounded-2xl border bg-white shadow-sm" style={{ borderColor: UI.border }}>
+        <div className="overflow-hidden rounded-2xl border bg-ink-2 shadow-sm" style={{ borderColor: UI.border }}>
           <div className="flex items-center justify-between border-b px-5 py-3" style={{ borderColor: UI.border }}>
             <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-text">
-              <MIcon name="schedule" className="!text-[17px] text-amber-600" /> في الانتظار
+              <MIcon name="schedule" className="!text-[17px] text-brass" /> في الانتظار
             </h2>
-            <span className="tnum rounded-full bg-amber-100 px-2.5 py-0.5 text-[12px] font-black text-brass">{queued.length}</span>
+            <span className="tnum rounded-full bg-brass-soft px-2.5 py-0.5 text-[12px] font-black text-brass">{queued.length}</span>
           </div>
           <div className="max-h-56 divide-y overflow-y-auto" style={{ borderColor: UI.border }}>
             {queued.length === 0 ? (
@@ -1861,7 +1860,7 @@ export default function CarsPage() {
                   <span className="mr-2 text-text-dim">{c.customer_name}</span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="tnum text-[11px] font-bold text-amber-600">{elapsed(c.created_at, now)}</span>
+                  <span className="tnum text-[11px] font-bold text-brass">{elapsed(c.created_at, now)}</span>
                   {canEnter && <IconBtn tone="primary" icon="login" label="دخول" onClick={() => confirmEntry(c)} />}
                 </div>
               </div>
@@ -1869,12 +1868,12 @@ export default function CarsPage() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border bg-white shadow-sm" style={{ borderColor: UI.border }}>
+        <div className="overflow-hidden rounded-2xl border bg-ink-2 shadow-sm" style={{ borderColor: UI.border }}>
           <div className="flex items-center justify-between border-b px-5 py-3" style={{ borderColor: UI.border }}>
             <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-text">
               <span style={{ color: UI.primary }}><MIcon name="build" className="!text-[17px]" /></span> في الخدمة
             </h2>
-            <span className="tnum rounded-full px-2.5 py-0.5 text-[12px] font-black" style={{ background: "#DBEAFE", color: UI.primary }}>{inService.length}</span>
+            <span className="tnum rounded-full px-2.5 py-0.5 text-[12px] font-black" style={{ background: "var(--petrol-soft)", color: UI.primary }}>{inService.length}</span>
           </div>
           <div className="max-h-56 divide-y overflow-y-auto" style={{ borderColor: UI.border }}>
             {inService.length === 0 ? (
@@ -1912,16 +1911,16 @@ export default function CarsPage() {
       </div>
 
       {/* ═══════ شريط الأدوات: بحث + فلاتر + تصدير ═══════ */}
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border bg-white p-3 shadow-sm" style={{ borderColor: UI.border }}>
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border bg-ink-2 p-3 shadow-sm" style={{ borderColor: UI.border }}>
         <div className="relative min-w-[220px] flex-1">
           <MIcon name="search" className="absolute right-3 top-1/2 -translate-y-1/2 !text-[18px] text-text-dim" />
           <input value={q} onChange={(e) => setQ(e.target.value)}
                  placeholder="بحث باللوحة أو العميل أو الجوال…"
-                 className="w-full rounded-xl border bg-ink-3 py-2 pl-3 pr-10 text-[13px] font-medium outline-none transition-all duration-200 focus:border-[#1E3A8A] focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/15"
+                 className="w-full rounded-xl border bg-ink-3 py-2 pl-3 pr-10 text-[13px] font-medium outline-none transition-all duration-200 focus:border-petrol focus:bg-ink-2 focus:ring-2 focus:ring-petrol/15"
                  style={{ borderColor: UI.border }} />
         </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-                className="rounded-xl border bg-white px-3 py-2 text-[12.5px] font-bold text-text outline-none transition focus:border-[#1E3A8A]"
+                className="rounded-xl border bg-ink-2 px-3 py-2 text-[12.5px] font-bold text-text outline-none transition focus:border-petrol"
                 style={{ borderColor: UI.border }}>
           <option value="active">النشطة (لم تغادر بعد)</option>
           <option value="queued">في الانتظار</option>
@@ -1931,7 +1930,7 @@ export default function CarsPage() {
         </select>
         {branches.length > 1 && (
           <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)}
-                  className="rounded-xl border bg-white px-3 py-2 text-[12.5px] font-bold text-text outline-none transition focus:border-[#1E3A8A]"
+                  className="rounded-xl border bg-ink-2 px-3 py-2 text-[12.5px] font-bold text-text outline-none transition focus:border-petrol"
                   style={{ borderColor: UI.border }}>
             <option value="">كل الفروع</option>
             {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -1944,14 +1943,14 @@ export default function CarsPage() {
           </button>
         )}
         <button onClick={exportCsv}
-                className="flex items-center gap-1.5 rounded-xl border bg-white px-3.5 py-2 text-[12.5px] font-bold text-text shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md"
+                className="flex items-center gap-1.5 rounded-xl border bg-ink-2 px-3.5 py-2 text-[12.5px] font-bold text-text shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md"
                 style={{ borderColor: UI.border }}>
           <MIcon name="download" className="!text-[16px]" /> تصدير
         </button>
       </div>
 
       {/* ═══════ الجدول الرئيسي — سطح مكتب ═══════ */}
-      <div className="hidden overflow-hidden rounded-2xl border bg-white shadow-sm md:block" style={{ borderColor: UI.border }}>
+      <div className="hidden overflow-hidden rounded-2xl border bg-ink-2 shadow-sm md:block" style={{ borderColor: UI.border }}>
         <div className="max-h-[60vh] overflow-auto">
           <table className="w-full text-[12.5px]">
             <thead className="sticky top-0 z-10 bg-ink-3 text-[11.5px] font-black text-text-dim">
@@ -1984,7 +1983,7 @@ export default function CarsPage() {
                   </div>
                 </td></tr>
               ) : pageRows.map((c) => (
-                <tr key={c.id} className="border-b transition-colors duration-150 odd:bg-ink-3/40 hover:bg-blue-50/40"
+                <tr key={c.id} className="border-b transition-colors duration-150 odd:bg-ink-3/40 hover:bg-petrol-soft/40"
                     style={{ borderColor: UI.border }}>
                   <td className="tnum px-4 py-3 font-extrabold text-text">{c.plate || "—"}</td>
                   <td className="px-3 py-3 font-bold text-text">{c.customer_name || "—"}</td>
@@ -2004,9 +2003,9 @@ export default function CarsPage() {
             <span className="tnum text-[11.5px] font-bold text-text-dim">{filteredRows.length} سيارة — صفحة {page} من {pages}</span>
             <div className="flex gap-1">
               <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}
-                      className="grid h-8 w-8 place-items-center rounded-lg border bg-white text-text-dim transition enabled:hover:border-[#1E3A8A] disabled:opacity-40" style={{ borderColor: UI.border }}>›</button>
+                      className="grid h-8 w-8 place-items-center rounded-lg border bg-ink-2 text-text-dim transition enabled:hover:border-petrol disabled:opacity-40" style={{ borderColor: UI.border }}>›</button>
               <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)}
-                      className="grid h-8 w-8 place-items-center rounded-lg border bg-white text-text-dim transition enabled:hover:border-[#1E3A8A] disabled:opacity-40" style={{ borderColor: UI.border }}>‹</button>
+                      className="grid h-8 w-8 place-items-center rounded-lg border bg-ink-2 text-text-dim transition enabled:hover:border-petrol disabled:opacity-40" style={{ borderColor: UI.border }}>‹</button>
             </div>
           </div>
         )}
@@ -2015,7 +2014,7 @@ export default function CarsPage() {
       {/* ═══════ عرض الموبايل: بطاقات بدل الجدول ═══════ */}
       <div className="space-y-2.5 md:hidden">
         {pageRows.map((c) => (
-          <div key={c.id} className="rounded-2xl border bg-white p-4 shadow-sm" style={{ borderColor: UI.border }}>
+          <div key={c.id} className="rounded-2xl border bg-ink-2 p-4 shadow-sm" style={{ borderColor: UI.border }}>
             <div className="flex items-start justify-between gap-2">
               <div>
                 <div className="tnum text-[15px] font-black text-text">{c.plate || "بدون لوحة"}</div>
@@ -2035,7 +2034,7 @@ export default function CarsPage() {
       {/* ═══════ الزر العائم: تسجيل سيارة ═══════ */}
       {canCreate && (
         <button onClick={openCreate} aria-label="تسجيل سيارة جديدة" title="تسجيل سيارة جديدة"
-                className="fixed bottom-6 left-6 z-40 grid h-14 w-14 place-items-center rounded-full text-white shadow-lg transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-xl active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A8A]"
+                className="fixed bottom-6 left-6 z-40 grid h-14 w-14 place-items-center rounded-full text-white shadow-lg transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-xl active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-petrol"
                 style={{ background: UI.primary }}>
           <MIcon name="add" className="!text-[28px] text-white" />
         </button>
@@ -2327,15 +2326,15 @@ export default function CarsPage() {
             {/* الأدوار الأربعة المحفوظة لحظة اعتماد أمر العمل */}
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: "فني التعبئة", name: team.filler, bg: "#E0F2FE", fg: "#0369A1" },
-                { label: "فك وتركيب 1", name: team.fitter1, bg: "#DBEAFE", fg: "#1E3A8A" },
-                { label: "فك وتركيب 2", name: team.fitter2, bg: "#DBEAFE", fg: "#1E3A8A" },
-                { label: "التشييك", name: team.checker, bg: "#DCFCE7", fg: "#15803D" },
+                { label: "فني التعبئة", name: team.filler, bg: "var(--petrol-soft)", fg: "var(--petrol)" },
+                { label: "فك وتركيب 1", name: team.fitter1, bg: "var(--petrol-soft)", fg: "var(--petrol)" },
+                { label: "فك وتركيب 2", name: team.fitter2, bg: "var(--petrol-soft)", fg: "var(--petrol)" },
+                { label: "التشييك", name: team.checker, bg: "var(--emerald-bg)", fg: "var(--emerald)" },
               ].map((r) => (
                 <div key={r.label} className="rounded-xl p-3" style={{ background: r.bg }}>
                   <div className="text-[10.5px] font-black" style={{ color: r.fg }}>{r.label}</div>
                   <div className="mt-0.5 truncate text-[13px] font-extrabold"
-                       style={{ color: r.name ? "#0F172A" : "#94A3B8" }}>
+                       style={{ color: r.name ? "var(--text)" : "var(--text-dim)" }}>
                     {r.name || "لم يُسجَّل"}
                   </div>
                 </div>
