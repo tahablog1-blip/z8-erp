@@ -423,7 +423,7 @@ export default function StocktakePage() {
   if (!canCreate) {
     return (
       <main dir="rtl" className="mx-auto max-w-5xl p-6">
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm font-bold text-amber-900">
+        <div className="rounded-2xl border border-amber-200 bg-brass-soft p-5 text-sm font-bold text-brass">
           ليس لديك صلاحية إدارة الجرد الفعلي. راجع مدير النظام لمنحك صلاحية inventory.stocktake.
         </div>
       </main>
@@ -434,8 +434,8 @@ export default function StocktakePage() {
     <main dir="rtl" className="mx-auto max-w-[1500px] space-y-5 p-4 md:p-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">الجرد الفعلي</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-2xl font-black text-text">الجرد الفعلي</h1>
+          <p className="mt-1 text-sm text-text-dim">
             تسجيل الكميات ومراجعة الفروق قبل تسوية المخزون.
           </p>
         </div>
@@ -495,7 +495,7 @@ export default function StocktakePage() {
               )}
             </div>
           ) : (
-            <p className="mb-3 text-sm text-slate-600">
+            <p className="mb-3 text-sm text-text-dim">
               موقع الجرد: {locationName("branch", user?.branchId || "")}
             </p>
           )}
@@ -512,7 +512,7 @@ export default function StocktakePage() {
             />
           </label>
 
-          <p className="my-3 text-xs leading-6 text-slate-500">
+          <p className="my-3 text-xs leading-6 text-text-dim">
             إنشاء الجلسة يأخذ لقطة للأرصدة الحالية ويجهّز الأصناف للعدّ.
             لن يتم تعديل المخزون حتى الاعتماد.
           </p>
@@ -531,7 +531,7 @@ export default function StocktakePage() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
           <h2 className="font-extrabold">جلسات الجرد</h2>
           <button
-            className={`${buttonClass} border border-slate-300 text-slate-700`}
+            className={`${buttonClass} border border-slate-300 text-text`}
             onClick={() => {
               setLoading(true);
               setError("");
@@ -546,13 +546,13 @@ export default function StocktakePage() {
         </div>
 
         {loading ? (
-          <p className="p-6 text-sm text-slate-500">جارٍ تحميل الجلسات...</p>
+          <p className="p-6 text-sm text-text-dim">جارٍ تحميل الجلسات...</p>
         ) : sessions.length === 0 ? (
-          <p className="p-6 text-sm text-slate-500">لا توجد جلسات جرد حتى الآن.</p>
+          <p className="p-6 text-sm text-text-dim">لا توجد جلسات جرد حتى الآن.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[750px] text-right text-sm">
-              <thead className="bg-slate-50 text-xs text-slate-500">
+              <thead className="bg-ink-3 text-xs text-text-dim">
                 <tr>
                   <th className="p-3">الموقع</th>
                   <th className="p-3">تاريخ الإنشاء</th>
@@ -576,7 +576,7 @@ export default function StocktakePage() {
                       {s.countedItems} / {s.totalItems}
                     </td>
                     <td className="p-3">
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold">
+                      <span className="rounded-full bg-ink-3 px-3 py-1 text-xs font-bold">
                         {STATUS[s.status] || s.status}
                       </span>
                     </td>
@@ -613,7 +613,7 @@ export default function StocktakePage() {
                   />
                 </label>
                 <a
-                  className={`${buttonClass} bg-slate-100 text-slate-700`}
+                  className={`${buttonClass} bg-ink-3 text-text`}
                   href="data:text/csv;charset=utf-8,%EF%BB%BFbarcode%0A"
                   download="stocktake-template.csv"
                 >
@@ -663,7 +663,7 @@ export default function StocktakePage() {
             )}
 
             {detail.status === "cancelled" && (
-              <p className="self-center text-sm text-slate-500">هذه الجلسة ملغاة.</p>
+              <p className="self-center text-sm text-text-dim">هذه الجلسة ملغاة.</p>
             )}
           </div>
 
@@ -672,15 +672,15 @@ export default function StocktakePage() {
               <h2 className="text-xl font-black">
                 تفاصيل الجرد — {locationName(detail.locType, detail.locId)}
               </h2>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-text-dim">
                 رقم الجلسة: {detail.id}
               </p>
               {detail.note && (
-                <p className="mt-1 text-sm text-slate-600">{detail.note}</p>
+                <p className="mt-1 text-sm text-text-dim">{detail.note}</p>
               )}
             </div>
             <button
-              className={`${buttonClass} border border-slate-300 text-slate-700`}
+              className={`${buttonClass} border border-slate-300 text-text`}
               onClick={() => setDetail(null)}
             >
               إغلاق التفاصيل
@@ -688,20 +688,20 @@ export default function StocktakePage() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <div className="rounded-xl bg-slate-50 p-3">
-              <p className="text-xs text-slate-500">عدد الأصناف</p>
+            <div className="rounded-xl bg-ink-3 p-3">
+              <p className="text-xs text-text-dim">عدد الأصناف</p>
               <p className="mt-1 text-xl font-black">{detail.totalItems}</p>
             </div>
-            <div className="rounded-xl bg-slate-50 p-3">
-              <p className="text-xs text-slate-500">تم عدّه</p>
+            <div className="rounded-xl bg-ink-3 p-3">
+              <p className="text-xs text-text-dim">تم عدّه</p>
               <p className="mt-1 text-xl font-black">{counted}</p>
             </div>
-            <div className="rounded-xl bg-slate-50 p-3">
-              <p className="text-xs text-slate-500">متبقٍ للعدّ</p>
+            <div className="rounded-xl bg-ink-3 p-3">
+              <p className="text-xs text-text-dim">متبقٍ للعدّ</p>
               <p className="mt-1 text-xl font-black">{detail.totalItems - counted}</p>
             </div>
-            <div className="rounded-xl bg-slate-50 p-3">
-              <p className="text-xs text-slate-500">صافي الفروق المسجلة</p>
+            <div className="rounded-xl bg-ink-3 p-3">
+              <p className="text-xs text-text-dim">صافي الفروق المسجلة</p>
               <p className="mt-1 text-xl font-black" dir="ltr">{totalDifference}</p>
             </div>
           </div>
@@ -722,7 +722,7 @@ export default function StocktakePage() {
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[850px] text-right text-sm">
-              <thead className="bg-slate-50 text-xs text-slate-500">
+              <thead className="bg-ink-3 text-xs text-text-dim">
                 <tr>
                   <th className="p-3">الصنف</th>
                   <th className="p-3">الباركود</th>
@@ -737,7 +737,7 @@ export default function StocktakePage() {
                   <tr key={item.productId} className="border-t border-slate-100 align-top">
                     <td className="max-w-[300px] p-3">
                       <p className="font-bold">{item.name}</p>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-text-dim">
                         {[item.category, item.spec, item.unit].filter(Boolean).join(" • ") || "—"}
                       </p>
                       {detail.status === "in_progress" && (
@@ -751,7 +751,7 @@ export default function StocktakePage() {
                         />
                       )}
                       {detail.status !== "in_progress" && item.note && (
-                        <p className="mt-1 text-xs text-slate-500">{item.note}</p>
+                        <p className="mt-1 text-xs text-text-dim">{item.note}</p>
                       )}
                     </td>
                     <td className="p-3 text-xs" dir="ltr">{item.barcode || "—"}</td>
@@ -778,7 +778,7 @@ export default function StocktakePage() {
                       {item.difference == null ? "—" : (
                         <span className={
                           item.difference < 0 ? "text-red-700" :
-                          item.difference > 0 ? "text-emerald-700" : "text-slate-600"
+                          item.difference > 0 ? "text-emerald-700" : "text-text-dim"
                         }>
                           {item.difference > 0 ? `+${item.difference}` : item.difference}
                         </span>
@@ -801,7 +801,7 @@ export default function StocktakePage() {
             </table>
 
             {visibleItems.length === 0 && (
-              <p className="p-6 text-center text-sm text-slate-500">
+              <p className="p-6 text-center text-sm text-text-dim">
                 لا توجد أصناف مطابقة للبحث.
               </p>
             )}
@@ -811,19 +811,19 @@ export default function StocktakePage() {
             <div className="rounded-2xl border border-slate-200 p-4">
               <div className="grid gap-3 sm:grid-cols-3">
                 <div>
-                  <p className="text-xs text-slate-500">قيمة العجز (بالتكلفة)</p>
+                  <p className="text-xs text-text-dim">قيمة العجز (بالتكلفة)</p>
                   <p className="mt-1 text-xl font-black text-red-600">
                     {fmtMoney(detail.shortageValue)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">قيمة الزيادة (بالتكلفة)</p>
+                  <p className="text-xs text-text-dim">قيمة الزيادة (بالتكلفة)</p>
                   <p className="mt-1 text-xl font-black text-emerald-700">
                     {fmtMoney(detail.surplusValue)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">الصافي</p>
+                  <p className="text-xs text-text-dim">الصافي</p>
                   <p
                     className={`mt-1 text-xl font-black ${
                       detail.surplusValue - detail.shortageValue < 0
@@ -835,11 +835,11 @@ export default function StocktakePage() {
                   </p>
                 </div>
               </div>
-              <p className="mt-3 text-xs text-slate-500">
+              <p className="mt-3 text-xs text-text-dim">
                 محسوبة بآخر سعر شراء وقت بدء الجلسة، ولا تتأثر بتغيّر الأسعار بعدها.
               </p>
               {detail.zeroCostDiffItems > 0 && (
-                <p className="mt-2 rounded-lg bg-amber-50 p-2 text-sm text-amber-800">
+                <p className="mt-2 rounded-lg bg-brass-soft p-2 text-sm text-amber-800">
                   تنبيه: {detail.zeroCostDiffItems} صنف به فرق وتكلفته صفر، فلم تُحسب
                   قيمة فرقه. أدخل تكلفته من المشتريات.
                 </p>
@@ -852,20 +852,20 @@ export default function StocktakePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-2xl bg-white p-5 shadow-xl">
             <h3 className="mb-1 text-lg font-bold">معاينة الجرد من الملف</h3>
-            <p className="mb-3 text-sm text-slate-600">
+            <p className="mb-3 text-sm text-text-dim">
               {importPreview.totalPieces} قطعة · {importPreview.matched.length} صنف مطابق ·{" "}
               {importPreview.unmatched.length} باركود غير معروف
             </p>
 
             {importPreview.matched.some((m) => m.previousCounted != null) && (
-              <p className="mb-3 rounded-lg bg-amber-50 p-2 text-sm text-amber-800">
+              <p className="mb-3 rounded-lg bg-brass-soft p-2 text-sm text-amber-800">
                 سيتم استبدال الكميات المعدودة سابقاً للأصناف المطابقة.
               </p>
             )}
 
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b text-slate-500">
+                <tr className="border-b text-text-dim">
                   <th className="p-2 text-right">الصنف</th>
                   <th className="p-2 text-right">الباركود</th>
                   <th className="p-2 text-right">المعدود</th>
@@ -886,7 +886,7 @@ export default function StocktakePage() {
                           ? "text-red-600"
                           : m.difference > 0
                             ? "text-emerald-700"
-                            : "text-slate-500"
+                            : "text-text-dim"
                       }`}
                     >
                       {m.difference > 0 ? `+${m.difference}` : m.difference}
@@ -929,7 +929,7 @@ export default function StocktakePage() {
                 حفظ الكميات
               </button>
               <button
-                className={`${buttonClass} bg-slate-100 text-slate-700`}
+                className={`${buttonClass} bg-ink-3 text-text`}
                 onClick={() => {
                   setImportPreview(null);
                   setImportFile(null);

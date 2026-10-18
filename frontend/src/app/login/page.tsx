@@ -86,13 +86,13 @@ export default function LoginPage() {
               className="space-y-4 rounded-card border border-line bg-ink-2 p-6 shadow-panel">
           {/* مؤشر حالة الاتصال بالخادم */}
           <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-bold ${
-            conn === "ok"   ? "bg-emerald-500/10 text-emerald-600"
-            : conn === "down" ? "bg-red-500/10 text-red-500"
-            : "bg-amber-500/10 text-amber-600"}`}>
+            conn === "ok"   ? "bg-emerald-bg text-emerald"
+            : conn === "down" ? "bg-ember-bg text-ember"
+            : "bg-brass-soft text-brass"}`}>
             <span className={`h-2 w-2 rounded-full ${
-              conn === "ok" ? "bg-emerald-500"
-              : conn === "down" ? "bg-red-500 animate-pulse"
-              : "bg-amber-500 animate-pulse"}`} />
+              conn === "ok" ? "bg-emerald"
+              : conn === "down" ? "bg-ember animate-pulse"
+              : "bg-brass animate-pulse"}`} />
             {conn === "ok" && "متصل بالخادم"}
             {conn === "checking" && "جارِ فحص الاتصال بالخادم..."}
             {conn === "down" && "الخادم غير متاح — شغّل START-Z8.bat ثم انتظر ثواني"}

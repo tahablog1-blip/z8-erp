@@ -1,7 +1,7 @@
 "use client";
 // شاشة العملاء — سجل العملاء (أفراد/شركات) + أسطول سياراتهم + كشف الحساب
 import { useEffect, useState } from "react";
-import { Phone, MessageCircle, Search, X, RotateCcw } from "lucide-react";
+import { MIcon } from "@/components/m-icon";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { printReport, tableHTML, kpisHTML } from "@/lib/print";
@@ -19,15 +19,8 @@ const EMPTY_CUSTOMER = {
 
 const EMPTY_VEHICLE = {
   plate: "", plateType: "saudi" as "saudi" | "other", brand: "", makeModel: "",
-  modelYear: "", carCategory: "", cylinders: "", engineSize: "", color: "", chassisNumber: "", notes: "", fuelType: "",
+  modelYear: "", carCategory: "", cylinders: "", color: "", chassisNumber: "", notes: "", fuelType: "",
 };
-
-// مقترحات حجم الماكينة (لتر) — قائمة شائعة قابلة للكتابة الحرة (مش قائمة مغلقة)،
-// نفس فكرة مقترحات الفئة (GLX/SE/...) — الأحجام النادرة تُكتب يدوياً بلا قيد.
-const ENGINE_SIZE_SUGGESTIONS = [
-  "1.2", "1.3", "1.4", "1.5", "1.6", "1.8", "2.0", "2.2", "2.4", "2.5",
-  "2.7", "3.0", "3.3", "3.5", "3.6", "4.0", "4.6", "5.0", "5.3", "5.7", "6.2",
-];
 
 const dateFmt = (s: string) =>
   new Date(s).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { year: "numeric", month: "2-digit", day: "2-digit" });
@@ -421,13 +414,6 @@ export default function CustomersPage() {
                         <Input value={vehicleForm.modelYear} className="tnum"
                                onChange={(e) => setVehicleForm({ ...vehicleForm, modelYear: e.target.value })} />
                       </Field>
-                      <Field label="حجم الماكينة (لتر)">
-                        <Input list="engine-size-suggestions" value={vehicleForm.engineSize} className="tnum" placeholder="مثال: 2.5"
-                               onChange={(e) => setVehicleForm({ ...vehicleForm, engineSize: e.target.value })} />
-                        <datalist id="engine-size-suggestions">
-                          {ENGINE_SIZE_SUGGESTIONS.map((s) => <option key={s} value={s} />)}
-                        </datalist>
-                      </Field>
                       <Field label="اللون">
                         <Input value={vehicleForm.color}
                                onChange={(e) => setVehicleForm({ ...vehicleForm, color: e.target.value })} />
@@ -567,14 +553,14 @@ function CustomerCardsV2({ rows, loading, onOpen, onCreate }: {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[240px] flex-1">
-          <Search className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-dim" aria-hidden="true" />
+          <MIcon name="search" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 !text-[20px] text-text-dim" />
           <input value={q} onChange={(e) => setQ(e.target.value)} aria-label="بحث في العملاء"
                  placeholder="ابحث باسم العميل أو الجوال أو الرقم الضريبي..."
                  className="w-full rounded-xl border border-line bg-ink-2 py-3 pr-10 pl-10 text-[15px] text-text placeholder:text-text-dim/60 focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15" />
           {q && (
             <button onClick={() => { setQ(""); setDq(""); }} aria-label="مسح البحث"
                     className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-text-dim hover:bg-ink-3">
-              <X className="h-4 w-4" aria-hidden="true" />
+              <MIcon name="close" className="!text-[16px]" />
             </button>
           )}
         </div>
@@ -587,7 +573,7 @@ function CustomerCardsV2({ rows, loading, onOpen, onCreate }: {
         ))}
         {active && (
           <Button size="sm" variant="tool" onClick={reset}>
-            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> إعادة تعيين الفلاتر
+            <MIcon name="restart_alt" className="!text-[14px]" /> إعادة تعيين الفلاتر
           </Button>
         )}
         <span className="tnum mr-auto text-[14px] text-text-dim">{shown.length} من {rows.length}</span>
@@ -640,13 +626,13 @@ function CustomerCardsV2({ rows, loading, onOpen, onCreate }: {
           {link && (
             <a href={link} target="_blank" rel="noreferrer" aria-label={`واتساب ${c.name}`}
                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol">
-              <MessageCircle className="h-[18px] w-[18px]" aria-hidden="true" />
+              <MIcon name="chat" className="!text-[18px]" />
             </a>
           )}
           {c.phone && (
             <a href={`tel:${c.phone}`} aria-label={`اتصال بـ ${c.name}`}
                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol">
-              <Phone className="h-[18px] w-[18px]" aria-hidden="true" />
+              <MIcon name="call" className="!text-[18px]" />
             </a>
           )}
         </div>

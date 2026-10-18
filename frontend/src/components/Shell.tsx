@@ -4,6 +4,9 @@
 // زي الأنظمة الكبيرة، بيرسّي هوية المنصة وبيفصل الملاحة عن مساحة العمل بوضوح.
 import { usePathname, useRouter } from "next/navigation";
 import { DialogHost } from "@/components/dialog";
+import { ToastHost } from "@/components/toast";
+import { Tooltip, Breadcrumb } from "@/components/ui";
+import { MIcon } from "@/components/m-icon";
 import { useEffect as useRippleEffect } from "react";
 
 /** زارع تموّج اللمس Material — مستمع واحد يخدم كل عناصر .m3 في النظام */
@@ -48,9 +51,23 @@ export function Shell({ children }: { children: React.ReactNode }) {
     localStorage.setItem("z8_theme", next ? "dark" : "light");
   }
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   // أي انتقال لصفحة جديدة يقفل الدرج تلقائياً على الموبايل
   useEffect(() => { setMobileNavOpen(false); }, [pathname]);
+
+  // ── انكماش القضيب الجانبي لأيقونات فقط (شاشات سطح المكتب) — الحالة محفوظة ──
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    try { setCollapsed(localStorage.getItem("z8_sidebar_collapsed") === "1"); } catch { /* */ }
+  }, []);
+  function toggleCollapsed() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try { localStorage.setItem("z8_sidebar_collapsed", next ? "1" : "0"); } catch { /* */ }
+      return next;
+    });
+  }
 
   // تحديث بيانات المنشأة (لترويسات الطباعة) مرة عند فتح التطبيق
   useEffect(() => { refreshCompany(api); }, []);
@@ -125,10 +142,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
     .map((m) => m.path)
     .filter((p) => pathname === p || pathname.startsWith(p + "/"))
     .sort((a, b) => b.length - a.length)[0];
+  const activeModule = NAV_MODULES.find((m) => m.path === activePath);
+  const pageTitle = activeModule ? t(NAV_TITLE_KEYS[activeModule.title] || "", activeModule.title) : "";
+  const sectionTitle = activeModule && activeModule.section !== "الرئيسية"
+    ? t(SECTION_TITLE_KEYS[activeModule.section] || "", activeModule.section)
+    : "";
 
   return (
     <div className="flex min-h-screen bg-ink text-text">
       <DialogHost />
+      <ToastHost />
       <RippleSeed />
       {/* ── القضيب الجانبي — التوقيع البصري ── */}
       {/* خلفية معتمة خلف الدرج — الشاشات الضيقة بس، بتقفله لو ضغط عليها */}
@@ -136,20 +159,21 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileNavOpen(false)} />
       )}
       <aside className={`sticky top-0 z-50 flex h-screen max-h-screen w-72 shrink-0 flex-col overflow-hidden bg-petrol-deep text-white
-                        transition-transform duration-300 md:w-60 md:translate-x-0
+                        transition-[transform,width] duration-300 md:translate-x-0
+                        ${collapsed ? "md:w-[72px]" : "md:w-60"}
                         ${mobileNavOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
-        <div className="flex items-center gap-3 px-5 py-5">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 p-1.5">
+        <div className={`flex items-center gap-3 px-5 py-5 ${collapsed ? "md:justify-center md:px-0" : ""}`}>
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 p-1.5">
             <img src="/logo-white.png" alt="مصدر الزيوت" className="h-full w-full object-contain" />
           </div>
-          <div className="leading-tight flex-1">
+          <div className={`leading-tight flex-1 ${collapsed ? "md:hidden" : ""}`}>
             <div className="text-[13.5px] font-extrabold">مصدر الزيوت</div>
             <div className="text-[10.5px] text-white/60">منصة الإدارة</div>
           </div>
           {/* إغلاق الدرج — الشاشات الضيقة بس */}
-          <button onClick={() => setMobileNavOpen(false)}
+          <button onClick={() => setMobileNavOpen(false)} aria-label="إغلاق القائمة"
             className="grid h-8 w-8 place-items-center rounded-lg text-white/70 hover:bg-white/10 md:hidden">
-            ✕
+            <MIcon name="close" />
           </button>
         </div>
 
@@ -157,46 +181,91 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {NAV_SECTIONS.map((sec) => {
             const items = visible.filter((mm) => mm.section === sec);
             if (items.length === 0) return null;
+            const sectionLabel = t(SECTION_TITLE_KEYS[sec] || "", sec);
+            const sectionOpen = collapsed ? true : (sec === "الرئيسية" || openSecs[sec]);
             return (
               <div key={sec}>
                 {/* رأس القسم — حواف حادة، نفس لون القضيب */}
-                {sec !== "الرئيسية" && (
+                {sec !== "الرئيسية" && !collapsed && (
                   <button onClick={() => toggleSec(sec)}
                     className={`flex h-10 w-full items-center gap-2.5 px-3 text-[12.5px] font-extrabold transition
                             ${openSecs[sec] ? "bg-white/10 text-white" : "text-white/60 hover:bg-white/5 hover:text-white"}`}>
                     <NavIcon name={SECTION_ICONS[sec] || "sec_ops"} />
-                    <span className="flex-1 text-right">{t(SECTION_TITLE_KEYS[sec] || "", sec)}</span>
+                    <span className="flex-1 text-right">{sectionLabel}</span>
                     <span className={`text-[9px] opacity-60 transition-transform duration-200 ${openSecs[sec] ? "" : "-rotate-90"}`}>▼</span>
                   </button>
                 )}
+                {sec !== "الرئيسية" && collapsed && (
+                  <div className="mx-3 my-2 h-px bg-white/10" role="separator" aria-label={sectionLabel} />
+                )}
                 {/* القائمة المنسدلة — مستطيل واحد بنفس عرض رأس القسم بالظبط، حواف حادة، درجة رمادي فاتح */}
                 <div className={`overflow-hidden transition-all duration-200
-                       ${sec === "الرئيسية" || openSecs[sec] ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}
-                       ${sec !== "الرئيسية" ? "bg-white/[0.06]" : ""}`}>
+                       ${sectionOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}
+                       ${sec !== "الرئيسية" && !collapsed ? "bg-white/[0.06]" : ""}`}>
                   {items.map((m) => {
                     const active = m.path === activePath;
-                    return (
-                      <Link key={m.path} href={m.path} onClick={() => setMobileNavOpen(false)}
-                        className={`mx-2 flex h-10 items-center gap-2.5 px-3.5 text-[13px] font-bold transition-all duration-200
-                              ${sec !== "الرئيسية" ? "pr-6" : ""}
+                    const label = t(NAV_TITLE_KEYS[m.title] || "", m.title);
+                    const linkEl = (
+                      <Link href={m.path} onClick={() => setMobileNavOpen(false)}
+                        className={`relative mx-2 flex h-10 items-center gap-2.5 px-3.5 text-[13px] font-bold transition-all duration-200
+                              ${sec !== "الرئيسية" ? "pr-6" : ""} ${collapsed ? "md:mx-auto md:w-10 md:justify-center md:px-0 md:pr-0" : ""}
                               ${active ? "m3 rounded-lg bg-blue-500 font-black text-white" : "m3 rounded-lg text-white/70 hover:bg-white/10 hover:text-white"}`}>
                         <NavIcon name={m.icon} />
-                        <span className="flex-1">{t(NAV_TITLE_KEYS[m.title] || "", m.title)}</span>
+                        <span className={collapsed ? "flex-1 md:hidden" : "flex-1"}>{label}</span>
                         {m.path === "/service-notes" && unread > 0 && (
-                          <span className="grid h-5 min-w-5 place-items-center rounded-full bg-emerald px-1.5 text-[10.5px] font-black text-white">
+                          <span className={`grid h-5 min-w-5 place-items-center rounded-full bg-emerald px-1.5 text-[10.5px] font-black text-white ${collapsed ? "md:absolute md:-left-1 md:-top-1 md:h-4 md:min-w-4 md:text-[9px]" : ""}`}>
                             {unread > 99 ? "99+" : unread}
                           </span>
                         )}
                       </Link>
                     );
+                    return (
+                      <div key={m.path} className={collapsed ? "md:hidden" : undefined}>
+                        {linkEl}
+                      </div>
+                    );
                   })}
+                  {/* نسخة سطح المكتب المطوي — أيقونات فقط مع تلميح عند التحويم */}
+                  {collapsed && (
+                    <div className="hidden md:block">
+                      {items.map((m) => {
+                        const active = m.path === activePath;
+                        const label = t(NAV_TITLE_KEYS[m.title] || "", m.title);
+                        return (
+                          <div key={m.path} className="relative">
+                            <Tooltip label={label}>
+                              <Link href={m.path}
+                                className={`mx-auto flex h-10 w-10 items-center justify-center text-[13px] font-bold transition-all duration-200
+                                      ${active ? "m3 rounded-lg bg-blue-500 font-black text-white" : "m3 rounded-lg text-white/70 hover:bg-white/10 hover:text-white"}`}>
+                                <NavIcon name={m.icon} />
+                              </Link>
+                            </Tooltip>
+                            {m.path === "/service-notes" && unread > 0 && (
+                              <span className="pointer-events-none absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-emerald px-1 text-[9px] font-black text-white">
+                                {unread > 99 ? "99+" : unread}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             );
           })}
         </nav>
 
-        <div className="border-t border-white/10 px-3 py-3 text-[10.5px] text-white/45">
+        <div className={`border-t border-white/10 px-3 py-2 ${collapsed ? "md:px-0" : ""}`}>
+          <Tooltip label={collapsed ? "توسيع القائمة" : "طيّ القائمة"} side="end">
+            <button onClick={toggleCollapsed}
+              className={`m3 hidden h-9 items-center gap-2 rounded-lg text-[12px] font-bold text-white/60 transition hover:bg-white/10 hover:text-white md:flex ${collapsed ? "md:w-10 md:justify-center md:mx-auto" : "w-full px-3"}`}>
+              <MIcon name={collapsed ? "right_panel_open" : "left_panel_close"} />
+              {!collapsed && <span>طيّ القائمة</span>}
+            </button>
+          </Tooltip>
+        </div>
+        <div className={`border-t border-white/10 px-3 py-3 text-[10.5px] text-white/45 ${collapsed ? "hidden md:hidden" : ""}`}>
           Z8 Platform · المرحلة 5
         </div>
       </aside>
@@ -207,24 +276,42 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <header className="flex h-14 shrink-0 items-center gap-2.5 border-b border-line px-5">
             {/* زر القائمة — الشاشات الضيقة بس (موبايل/تابلت عمودي) */}
             <button onClick={() => setMobileNavOpen(true)} aria-label="القائمة"
-              className="grid h-9 w-9 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol md:hidden">
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol md:hidden">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                 strokeLinecap="round" className="h-[18px] w-[18px]">
                 <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             </button>
-            <div className="flex-1" />
+
+            {/* عنوان الصفحة + فتات الخبز */}
+            <div className="min-w-0 flex-1">
+              {sectionTitle && <Breadcrumb items={[{ label: sectionTitle }, { label: pageTitle }]} />}
+              <div className="truncate text-page-title text-text">{pageTitle}</div>
+            </div>
+
+            {/* الإشعارات */}
+            <Tooltip label="المحادثات" side="bottom">
+              <button onClick={() => router.push("/service-notes")} aria-label="الإشعارات"
+                className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol">
+                <MIcon name="notifications" className="!text-[19px]" />
+                {unread > 0 && (
+                  <span className="absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-ember px-1 text-[9px] font-black text-white">
+                    {unread > 99 ? "99+" : unread}
+                  </span>
+                )}
+              </button>
+            </Tooltip>
 
             {/* ع / EN — يظهر لكل الموظفين في كل الأقسام */}
             <button onClick={() => setLang(lang === "ar" ? "en" : "ar")}
               title={lang === "ar" ? "Switch to English" : "التبديل للعربية"}
-              className="grid h-9 min-w-9 place-items-center rounded-lg border border-line px-2 text-[12px] font-black text-text-dim transition hover:border-petrol hover:text-petrol">
+              className="grid h-9 min-w-9 shrink-0 place-items-center rounded-lg border border-line px-2 text-[12px] font-black text-text-dim transition hover:border-petrol hover:text-petrol">
               {lang === "ar" ? "EN" : "ع"}
             </button>
 
             {/* الوضع الليلي */}
             <button onClick={toggleTheme} title={dark ? t("top.light") : t("top.dark")}
-              className="grid h-9 w-9 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol">
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
                 strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]">
                 {dark
@@ -233,18 +320,18 @@ export function Shell({ children }: { children: React.ReactNode }) {
               </svg>
             </button>
 
-            <div className="mx-1 h-6 w-px bg-line" />
+            <div className="mx-1 h-6 w-px shrink-0 bg-line" />
 
-            <div className="text-[12.5px] text-text-dim">
+            <div className="hidden text-[12.5px] text-text-dim sm:block">
               <span className="font-bold text-text">{user?.fullName}</span>
               <span className="mx-1.5">·</span>
               {user?.role === "admin" ? (lang === "ar" ? "مدير النظام" : "Administrator") : (lang === "ar" ? "موظف" : "Employee")}
             </div>
-            <div className="grid h-9 w-9 place-items-center rounded-full bg-petrol text-[13px] font-black text-white">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-petrol text-[13px] font-black text-white">
               {user?.fullName?.trim().charAt(0) || "؟"}
             </div>
             <button onClick={logout}
-              className="rounded-lg border border-line px-3 py-1.5 text-[12px] font-bold text-text-dim hover:border-ember hover:text-ember">
+              className="shrink-0 rounded-lg border border-line px-3 py-1.5 text-[12px] font-bold text-text-dim hover:border-ember hover:text-ember">
               {t("top.logout")}
             </button>
           </header>

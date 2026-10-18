@@ -80,7 +80,7 @@ function QuickRegisterModal({ scan, onClose, onSaved }: { scan: any; onClose: ()
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-lg rounded-2xl bg-ink-2 p-4" onClick={(e) => e.stopPropagation()}>
         <h3 className="mb-1 text-[15px] font-black">تسجيل سيارة جديدة</h3>
         <p className="mb-3 text-[12px] text-text-dim">
           {scan.sightings > 1 ? `رُصدت اللوحة ${scan.sightings} مرات — أفضل قراءة للحروف تلقائياً، عدّلها لو غير صحيحة` : "أكمل البيانات ليدخل الطابور فوراً"}
@@ -264,7 +264,7 @@ export default function CamerasSettingsPage() {
             {/* المفتاح الرئيسي */}
             <button onClick={toggleMaster} disabled={gwOn === null}
                     className="relative inline-flex h-7 w-13 shrink-0 items-center rounded-full transition-colors disabled:opacity-50"
-                    style={{ background: gwOn ? "#16A34A" : "#CBD5E1", width: 52 }}>
+                    style={{ background: gwOn ? "var(--emerald)" : "var(--ink4)", width: 52 }}>
               <span className="absolute h-6 w-6 rounded-full bg-white shadow transition-all"
                     style={{ right: gwOn ? 2 : 24 }} />
             </button>
@@ -276,13 +276,13 @@ export default function CamerasSettingsPage() {
               <div key={c.id} className="flex items-center justify-between rounded-xl border border-line bg-ink-2 px-3.5 py-2.5">
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ background: !c.is_active ? "#CBD5E1" : c.ok === null ? "#F59E0B" : c.ok ? "#16A34A" : "#DC2626" }} />
+                        style={{ background: !c.is_active ? "var(--ink4)" : c.ok === null ? "var(--brass)" : c.ok ? "var(--emerald)" : "var(--ember)" }} />
                   <span className="truncate text-[12.5px] font-bold">{c.name}</span>
                   {c.last && <span className="tnum shrink-0 text-[10px] text-text-dim">{c.last}</span>}
                 </span>
                 <button onClick={() => toggleGwCam(c.id, !c.is_active)}
                         className="relative inline-flex h-6 shrink-0 items-center rounded-full transition-colors"
-                        style={{ background: c.is_active ? "#16A34A" : "#CBD5E1", width: 44 }}>
+                        style={{ background: c.is_active ? "var(--emerald)" : "var(--ink4)", width: 44 }}>
                   <span className="absolute h-5 w-5 rounded-full bg-white shadow transition-all"
                         style={{ right: c.is_active ? 2 : 22 }} />
                 </button>

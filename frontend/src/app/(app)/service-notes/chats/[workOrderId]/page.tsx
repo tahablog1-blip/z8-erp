@@ -210,9 +210,9 @@ export default function ChatRoomPage() {
                   </div>
                 )}
                 {noteCard ? (
-                  <div className="mx-auto max-w-[85%] rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5">
-                    <p className="whitespace-pre-wrap text-[12px] font-bold text-amber-900">{m.message}</p>
-                    <p className="mt-0.5 text-[9.5px] text-amber-700">{fmtTime(m.created_at)} · داخلية — لا يراها العميل</p>
+                  <div className="mx-auto max-w-[85%] rounded-xl border border-amber-200 bg-brass-soft px-3.5 py-2.5">
+                    <p className="whitespace-pre-wrap text-[12px] font-bold text-brass">{m.message}</p>
+                    <p className="mt-0.5 text-[9.5px] text-brass">{fmtTime(m.created_at)} · داخلية — لا يراها العميل</p>
                   </div>
                 ) : (
                   <div className={`flex ${mine ? "justify-start" : "justify-end"}`}>

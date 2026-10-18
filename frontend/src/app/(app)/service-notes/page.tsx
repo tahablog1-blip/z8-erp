@@ -1,5 +1,5 @@
 "use client";
-import { FileText, Sparkles, RefreshCw, CheckCircle2, XCircle, Wrench, Gavel } from "lucide-react";
+import { MIcon } from "@/components/m-icon";
 // ═══ مركز ملاحظات الخدمة — قسم واحد منظم حول العميل:
 //     كل عميل (سيارة) = بطاقة فيها ملاحظاته + زر دردشة بشارة غير المقروء.
 //     المحادثات محفوظة بالكامل في قاعدة البيانات — لا تُحذف أبداً.
@@ -154,63 +154,34 @@ export default function ServiceNotesPage() {
       {/* ═══ بطاقات الإحصائيات ═══ */}
       {counts && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
-  <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden relative transition hover:shadow-md">
-    <div className="h-1.5 bg-slate-700 w-full"></div>
-    <div className="p-4 text-center">
-      <div className="flex justify-center items-center mb-1 text-slate-700"><FileText className="w-5 h-5 ml-1" /></div>
-      <div className="text-2xl font-bold text-slate-800">{stats.total}</div>
-      <div className="text-xs text-slate-500 mt-1">إجمالي الملاحظات</div>
-    </div>
-  </div>
-  <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden relative transition hover:shadow-md">
-    <div className="h-1.5 bg-purple-600 w-full"></div>
-    <div className="p-4 text-center">
-      <div className="flex justify-center items-center mb-1 text-purple-600"><Sparkles className="w-5 h-5 ml-1" /></div>
-      <div className="text-2xl font-bold text-purple-600">{stats.new}</div>
-      <div className="text-xs text-slate-500 mt-1">جديدة</div>
-    </div>
-  </div>
-  <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden relative transition hover:shadow-md">
-    <div className="h-1.5 bg-amber-500 w-full"></div>
-    <div className="p-4 text-center">
-      <div className="flex justify-center items-center mb-1 text-amber-500"><RefreshCw className="w-5 h-5 ml-1" /></div>
-      <div className="text-2xl font-bold text-amber-600">{stats.followUp ?? 0}</div>
-      <div className="text-xs text-slate-500 mt-1">تحتاج متابعة</div>
-    </div>
-  </div>
-  <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden relative transition hover:shadow-md">
-    <div className="h-1.5 bg-emerald-600 w-full"></div>
-    <div className="p-4 text-center">
-      <div className="flex justify-center items-center mb-1 text-emerald-600"><CheckCircle2 className="w-5 h-5 ml-1" /></div>
-      <div className="text-2xl font-bold text-emerald-600">{stats.closed}</div>
-      <div className="text-xs text-slate-500 mt-1">مغلقة</div>
-    </div>
-  </div>
-  <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden relative transition hover:shadow-md">
-    <div className="h-1.5 bg-rose-600 w-full"></div>
-    <div className="p-4 text-center">
-      <div className="flex justify-center items-center mb-1 text-rose-600"><XCircle className="w-5 h-5 ml-1" /></div>
-      <div className="text-2xl font-bold text-rose-600">{stats.outOfStock ?? 0}</div>
-      <div className="text-xs text-slate-500 mt-1">منتجات غير متوفرة</div>
-    </div>
-  </div>
-  <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden relative transition hover:shadow-md">
-    <div className="h-1.5 bg-blue-600 w-full"></div>
-    <div className="p-4 text-center">
-      <div className="flex justify-center items-center mb-1 text-blue-600"><Wrench className="w-5 h-5 ml-1" /></div>
-      <div className="text-2xl font-bold text-blue-600">{stats.technical}</div>
-      <div className="text-xs text-slate-500 mt-1">ملاحظات فنية</div>
-    </div>
-  </div>
-  <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden relative transition hover:shadow-md">
-    <div className="h-1.5 bg-amber-600 w-full"></div>
-    <div className="p-4 text-center">
-      <div className="flex justify-center items-center mb-1 text-amber-600"><Gavel className="w-5 h-5 ml-1" /></div>
-      <div className="text-2xl font-bold text-amber-700">{stats.managementDecision ?? 0}</div>
-      <div className="text-xs text-slate-500 mt-1">تحتاج قرار الإدارة</div>
-    </div>
-  </div>
-</div>
+          {([
+            { icon: "description", value: stats.total, label: "إجمالي الملاحظات", tone: "neutral" },
+            { icon: "auto_awesome", value: stats.new, label: "جديدة", tone: "info" },
+            { icon: "autorenew", value: stats.followUp ?? 0, label: "تحتاج متابعة", tone: "warn" },
+            { icon: "check_circle", value: stats.closed, label: "مغلقة", tone: "good" },
+            { icon: "cancel", value: stats.outOfStock ?? 0, label: "منتجات غير متوفرة", tone: "bad" },
+            { icon: "build", value: stats.technical, label: "ملاحظات فنية", tone: "info" },
+            { icon: "gavel", value: stats.managementDecision ?? 0, label: "تحتاج قرار الإدارة", tone: "warn" },
+          ] as const).map((k, idx) => {
+            const toneStyles = {
+              neutral: { bar: "bg-text-dim/50", icon: "text-text-dim", value: "text-text" },
+              info:    { bar: "bg-petrol", icon: "text-petrol", value: "text-petrol" },
+              warn:    { bar: "bg-brass", icon: "text-brass", value: "text-brass" },
+              good:    { bar: "bg-emerald", icon: "text-emerald", value: "text-emerald" },
+              bad:     { bar: "bg-ember", icon: "text-ember", value: "text-ember" },
+            }[k.tone];
+            return (
+              <div key={idx} className="relative overflow-hidden rounded-card border border-line bg-ink-2 shadow-card transition-shadow duration-200 hover:shadow-md">
+                <div className={`h-1.5 w-full ${toneStyles.bar}`} />
+                <div className="p-4 text-center">
+                  <div className={`mb-1 flex items-center justify-center ${toneStyles.icon}`}><MIcon name={k.icon} className="!text-[20px]" /></div>
+                  <div className={`tnum text-2xl font-bold ${toneStyles.value}`}>{k.value}</div>
+                  <div className="mt-1 text-xs text-text-dim">{k.label}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {/* ═══ البحث (+ فلاتر الجدول) ═══ */}

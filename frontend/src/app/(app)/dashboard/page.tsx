@@ -380,7 +380,7 @@ export default function DashboardPage() {
           ].map((t, i) => (
             <div key={i} className="flex min-w-fit items-center gap-2.5 border-l border-white/10 px-4 last:border-l-0">
               <span className="text-[10px] font-bold text-white/50">{t.l}</span>
-              <span className={`tnum text-[14px] font-black ${t.warn ? "text-amber-400" : "text-white"}`}>{t.v}</span>
+              <span className={`tnum text-[14px] font-black ${t.warn ? "text-brass" : "text-white"}`}>{t.v}</span>
               {t.d}
             </div>
           ))}

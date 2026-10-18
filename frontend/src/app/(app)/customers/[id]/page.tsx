@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, getToken } from "@/lib/api";
-import { Eye, Download, MessageCircle, User, Phone, ArrowRight, IdCard, Receipt, Car, FileText, BarChart3 } from "lucide-react";
+import { MIcon } from "@/components/m-icon";
 import { Badge, Button, Card, ErrorNote } from "@/components/ui";
 import { Customer, Vehicle, Statement, money } from "@/modules/customers/types";
 
@@ -149,7 +149,7 @@ export default function CustomerDetailPage() {
         <div className="flex flex-wrap items-center justify-between gap-4 p-5">
           <div className="flex items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-petrol-soft text-petrol">
-              <User className="h-8 w-8" aria-hidden="true" />
+              <MIcon name="person" className="!text-[28px]" />
             </div>
             <div>
               <h1 className="text-[22px] font-bold leading-snug">{customer.name}</h1>
@@ -169,18 +169,18 @@ export default function CustomerDetailPage() {
                 </div>
               </div>
               <Button variant="ghost" onClick={() => router.push("/customers")}>
-                <ArrowRight className="h-4 w-4" aria-hidden="true" /> العملاء
+                <MIcon name="arrow_forward" className="!text-[16px]" /> العملاء
               </Button>
             </div>
             {customer.phone && (
               <div className="flex gap-2">
                 <a href={waLink(customer.phone)} target="_blank" rel="noreferrer"
                    className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-3.5 py-2 text-[13px] font-semibold text-petrol hover:border-petrol">
-                  <MessageCircle className="h-4 w-4" aria-hidden="true" /> واتساب
+                  <MIcon name="chat" className="!text-[16px]" /> واتساب
                 </a>
                 <a href={`tel:${customer.phone}`}
                    className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-3.5 py-2 text-[13px] font-semibold text-petrol hover:border-petrol">
-                  <Phone className="h-4 w-4" aria-hidden="true" /> اتصال
+                  <MIcon name="call" className="!text-[16px]" /> اتصال
                 </a>
               </div>
             )}
@@ -190,11 +190,11 @@ export default function CustomerDetailPage() {
 
       <div className="flex flex-wrap gap-2" role="tablist">
         {tabs.map(([k, l]) => {
-          const Icon = { info: IdCard, invoices: Receipt, vehicles: Car, statement: FileText, stats: BarChart3 }[k];
+          const iconName = { info: "badge", invoices: "receipt_long", vehicles: "directions_car", statement: "description", stats: "bar_chart" }[k];
           return (
             <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
                     className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[14px] font-bold transition ${tab === k ? "bg-petrol-soft text-petrol" : "text-text-dim hover:bg-ink-3"}`}>
-              <Icon className="h-4 w-4" aria-hidden="true" /> {l}
+              <MIcon name={iconName} className="!text-[16px]" /> {l}
             </button>
           );
         })}
@@ -258,17 +258,17 @@ export default function CustomerDetailPage() {
                               <button onClick={() => openPdf(i)} disabled={busyKey === "view:" + i.id}
                                       aria-label={`عرض الفاتورة ${i.invoice_no} PDF`} title="عرض PDF"
                                       className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol disabled:opacity-45">
-                                <Eye className="h-4 w-4" aria-hidden="true" />
+                                <MIcon name="visibility" className="!text-[16px]" />
                               </button>
                               <button onClick={() => downloadPdf(i)} disabled={busyKey === "dl:" + i.id}
                                       aria-label={`تحميل الفاتورة ${i.invoice_no} PDF`} title="تحميل PDF"
                                       className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol disabled:opacity-45">
-                                <Download className="h-4 w-4" aria-hidden="true" />
+                                <MIcon name="download" className="!text-[16px]" />
                               </button>
                               <button onClick={() => sendWa(i)} disabled={busyKey === "wa:" + i.id}
                                       aria-label={`إرسال الفاتورة ${i.invoice_no} واتساب`} title="إرسال واتساب"
                                       className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol disabled:opacity-45">
-                                <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                                <MIcon name="chat" className="!text-[16px]" />
                               </button>
                             </div>
                           </td>

@@ -523,9 +523,9 @@ function IconBtn({ icon, label, onClick, tone = "ghost" }: {
   icon: string; label: string; onClick: () => void; tone?: "ghost" | "primary" | "danger";
 }) {
   const cls = {
-    ghost:   "text-slate-500 hover:bg-slate-100 hover:text-slate-800",
+    ghost:   "text-text-dim hover:bg-ink-3 hover:text-text",
     primary: "text-white shadow-sm hover:brightness-110",
-    danger:  "text-slate-400 hover:bg-red-50 hover:text-red-600",
+    danger:  "text-text-dim hover:bg-red-50 hover:text-red-600",
   }[tone];
   return (
     <span className="group/ib relative inline-flex">
@@ -556,8 +556,8 @@ function StatCard({ icon, value, title, hint, color, tint, onClick }: {
       </span>
       <span className="min-w-0">
         <span className="tnum block text-[24px] font-black leading-none" style={{ color }}>{value}</span>
-        <span className="mt-1 block text-[12px] font-bold text-slate-500">{title}</span>
-        {hint && <span className="tnum mt-0.5 block text-[10.5px] text-slate-400">{hint}</span>}
+        <span className="mt-1 block text-[12px] font-bold text-text-dim">{title}</span>
+        {hint && <span className="tnum mt-0.5 block text-[10.5px] text-text-dim">{hint}</span>}
       </span>
     </button>
   );
@@ -1721,9 +1721,9 @@ export default function CarsPage() {
   /** مدة الانتظار كعمود مستقل */
   function renderWait(c: Car) {
     const s = carStatus(c);
-    if (s === "done") return <span className="tnum text-[12px] text-slate-400">—</span>;
+    if (s === "done") return <span className="tnum text-[12px] text-text-dim">—</span>;
     const from = s === "in_service" ? c.entered_at : c.created_at;
-    return <span className="tnum text-[12.5px] font-bold text-slate-600">{elapsed(from, now)}</span>;
+    return <span className="tnum text-[12.5px] font-bold text-text-dim">{elapsed(from, now)}</span>;
   }
 
   /** أزرار الإجراءات — أيقونات بتلميحات، الأساسي مميز باللون */
@@ -1750,12 +1750,12 @@ export default function CarsPage() {
            style={{ borderColor: UI.border }}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-[22px] font-black text-slate-900">خط الخدمة</h1>
-            <p className="text-[11.5px] font-medium text-slate-500">إدارة طابور السيارات — من الحجز للخروج</p>
+            <h1 className="text-[22px] font-black text-text">خط الخدمة</h1>
+            <p className="text-[11.5px] font-medium text-text-dim">إدارة طابور السيارات — من الحجز للخروج</p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => { setQrOpen(true); setQrBranch(branches[0]?.id || ""); }}
-                    className="flex items-center gap-1.5 rounded-xl border bg-white px-3.5 py-2 text-[12.5px] font-bold text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1E3A8A]"
+                    className="flex items-center gap-1.5 rounded-xl border bg-white px-3.5 py-2 text-[12.5px] font-bold text-text shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1E3A8A]"
                     style={{ borderColor: UI.border }}>
               <MIcon name="qr_code_2" className="!text-[17px]" /> باركود الحجز
             </button>
@@ -1766,7 +1766,7 @@ export default function CarsPage() {
                       style={{ borderColor: UI.border }}>
                 <span className={`inline-block h-2.5 w-2.5 rounded-full ${gateSwOn && gateSwRunning ? "animate-pulse" : ""}`}
                       style={{ background: gateSwOn === null ? "#CBD5E1" : gateSwOn ? UI.success : "#DC2626" }} />
-                <span className="text-[12.5px] font-bold text-slate-700">البوابة الذكية</span>
+                <span className="text-[12.5px] font-bold text-text">البوابة الذكية</span>
                 <MIcon name={gateSwPanel ? "expand_less" : "expand_more"} className="!text-[17px]" />
               </button>
 
@@ -1776,7 +1776,7 @@ export default function CarsPage() {
                   {/* المفتاح الرئيسي */}
                   <div className="flex items-center justify-between rounded-xl px-3 py-2.5"
                        style={{ background: "#F6F8FA" }}>
-                    <span className="text-[12.5px] font-black text-slate-800">المراقب التلقائي (الكل)</span>
+                    <span className="text-[12.5px] font-black text-text">المراقب التلقائي (الكل)</span>
                     <button onClick={toggleGateSw} disabled={gateSwOn === null || gateSwBusy}
                             className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50"
                             style={{ background: gateSwOn ? UI.success : "#CBD5E1" }}>
@@ -1788,7 +1788,7 @@ export default function CarsPage() {
                   {/* مفتاح مستقل لكل كاميرا + مؤشر حي */}
                   <div className="mt-2 space-y-1.5">
                     {gateCamsStatus.length === 0 && (
-                      <p className="py-2 text-center text-[11.5px] font-bold text-slate-400">جارِ تحميل الكاميرات...</p>
+                      <p className="py-2 text-center text-[11.5px] font-bold text-text-dim">جارِ تحميل الكاميرات...</p>
                     )}
                     {gateCamsStatus.map((c) => (
                       <div key={c.id} className="flex items-center justify-between rounded-xl border px-3 py-2"
@@ -1797,8 +1797,8 @@ export default function CarsPage() {
                           <span className="inline-block h-2 w-2 shrink-0 rounded-full"
                                 style={{ background: !c.is_active ? "#CBD5E1" : c.ok === null ? "#F59E0B" : c.ok ? UI.success : "#DC2626" }}
                                 title={!c.is_active ? "موقوفة" : c.ok === null ? "بانتظار أول التقاط" : c.ok ? "تلتقط بنجاح" : "لا تستجيب"} />
-                          <span className="truncate text-[12px] font-bold text-slate-700">{c.name}</span>
-                          {c.last && <span className="tnum shrink-0 text-[10px] text-slate-400">{c.last}</span>}
+                          <span className="truncate text-[12px] font-bold text-text">{c.name}</span>
+                          {c.last && <span className="tnum shrink-0 text-[10px] text-text-dim">{c.last}</span>}
                         </span>
                         <button onClick={() => toggleCam(c.id, !c.is_active)}
                                 className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
@@ -1809,7 +1809,7 @@ export default function CarsPage() {
                       </div>
                     ))}
                   </div>
-                  <p className="mt-2 text-center text-[10px] font-bold text-slate-400">
+                  <p className="mt-2 text-center text-[10px] font-bold text-text-dim">
                     🟢 تلتقط · 🔴 لا تستجيب · 🟠 بانتظار أول التقاط · ⚪ موقوفة
                   </p>
                 </div>
@@ -1843,22 +1843,22 @@ export default function CarsPage() {
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="overflow-hidden rounded-2xl border bg-white shadow-sm" style={{ borderColor: UI.border }}>
           <div className="flex items-center justify-between border-b px-5 py-3" style={{ borderColor: UI.border }}>
-            <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-slate-800">
+            <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-text">
               <MIcon name="schedule" className="!text-[17px] text-amber-600" /> في الانتظار
             </h2>
-            <span className="tnum rounded-full bg-amber-100 px-2.5 py-0.5 text-[12px] font-black text-amber-700">{queued.length}</span>
+            <span className="tnum rounded-full bg-amber-100 px-2.5 py-0.5 text-[12px] font-black text-brass">{queued.length}</span>
           </div>
           <div className="max-h-56 divide-y overflow-y-auto" style={{ borderColor: UI.border }}>
             {queued.length === 0 ? (
-              <div className="flex flex-col items-center gap-1.5 py-6 text-slate-400">
+              <div className="flex flex-col items-center gap-1.5 py-6 text-text-dim">
                 <MIcon name="coffee" className="!text-[26px]" />
                 <p className="text-[12px] font-bold">لا توجد سيارات في الانتظار</p>
               </div>
             ) : queued.map((c) => (
-              <div key={c.id} className="flex items-center justify-between px-5 py-2.5 text-[12.5px] transition-colors duration-200 hover:bg-slate-50">
+              <div key={c.id} className="flex items-center justify-between px-5 py-2.5 text-[12.5px] transition-colors duration-200 hover:bg-ink-3">
                 <div className="min-w-0">
-                  <span className="tnum font-extrabold text-slate-900">{c.plate || "بدون لوحة"}</span>
-                  <span className="mr-2 text-slate-500">{c.customer_name}</span>
+                  <span className="tnum font-extrabold text-text">{c.plate || "بدون لوحة"}</span>
+                  <span className="mr-2 text-text-dim">{c.customer_name}</span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="tnum text-[11px] font-bold text-amber-600">{elapsed(c.created_at, now)}</span>
@@ -1871,25 +1871,25 @@ export default function CarsPage() {
 
         <div className="overflow-hidden rounded-2xl border bg-white shadow-sm" style={{ borderColor: UI.border }}>
           <div className="flex items-center justify-between border-b px-5 py-3" style={{ borderColor: UI.border }}>
-            <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-slate-800">
+            <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-text">
               <span style={{ color: UI.primary }}><MIcon name="build" className="!text-[17px]" /></span> في الخدمة
             </h2>
             <span className="tnum rounded-full px-2.5 py-0.5 text-[12px] font-black" style={{ background: "#DBEAFE", color: UI.primary }}>{inService.length}</span>
           </div>
           <div className="max-h-56 divide-y overflow-y-auto" style={{ borderColor: UI.border }}>
             {inService.length === 0 ? (
-              <div className="flex flex-col items-center gap-1.5 py-6 text-slate-400">
+              <div className="flex flex-col items-center gap-1.5 py-6 text-text-dim">
                 <MIcon name="build" className="!text-[26px]" />
                 <p className="text-[12px] font-bold">لا توجد سيارات في الخدمة</p>
               </div>
             ) : inService.map((c) => {
               const p = carProgress(c);
               return (
-                <div key={c.id} className="px-5 py-2.5 text-[12.5px] transition-colors duration-200 hover:bg-slate-50">
+                <div key={c.id} className="px-5 py-2.5 text-[12.5px] transition-colors duration-200 hover:bg-ink-3">
                   <div className="flex items-center justify-between">
                     <div className="min-w-0">
-                      <span className="tnum font-extrabold text-slate-900">{c.plate || "بدون لوحة"}</span>
-                      <span className="mr-2 text-slate-500">{c.customer_name}</span>
+                      <span className="tnum font-extrabold text-text">{c.plate || "بدون لوحة"}</span>
+                      <span className="mr-2 text-text-dim">{c.customer_name}</span>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       <span className="tnum text-[11px] font-bold" style={{ color: UI.primary }}>{elapsed(c.entered_at, now)}</span>
@@ -1898,11 +1898,11 @@ export default function CarsPage() {
                     </div>
                   </div>
                   <div className="mt-1.5 flex items-center gap-2">
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink-3">
                       <div className="h-full rounded-full transition-all duration-500"
                            style={{ width: `${p.pct}%`, background: p.ready ? UI.success : UI.primary }} />
                     </div>
-                    <span className="tnum shrink-0 text-[10.5px] font-bold text-slate-500">{p.finished}/{p.total}</span>
+                    <span className="tnum shrink-0 text-[10.5px] font-bold text-text-dim">{p.finished}/{p.total}</span>
                   </div>
                 </div>
               );
@@ -1914,14 +1914,14 @@ export default function CarsPage() {
       {/* ═══════ شريط الأدوات: بحث + فلاتر + تصدير ═══════ */}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border bg-white p-3 shadow-sm" style={{ borderColor: UI.border }}>
         <div className="relative min-w-[220px] flex-1">
-          <MIcon name="search" className="absolute right-3 top-1/2 -translate-y-1/2 !text-[18px] text-slate-400" />
+          <MIcon name="search" className="absolute right-3 top-1/2 -translate-y-1/2 !text-[18px] text-text-dim" />
           <input value={q} onChange={(e) => setQ(e.target.value)}
                  placeholder="بحث باللوحة أو العميل أو الجوال…"
-                 className="w-full rounded-xl border bg-slate-50 py-2 pl-3 pr-10 text-[13px] font-medium outline-none transition-all duration-200 focus:border-[#1E3A8A] focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/15"
+                 className="w-full rounded-xl border bg-ink-3 py-2 pl-3 pr-10 text-[13px] font-medium outline-none transition-all duration-200 focus:border-[#1E3A8A] focus:bg-white focus:ring-2 focus:ring-[#1E3A8A]/15"
                  style={{ borderColor: UI.border }} />
         </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-                className="rounded-xl border bg-white px-3 py-2 text-[12.5px] font-bold text-slate-700 outline-none transition focus:border-[#1E3A8A]"
+                className="rounded-xl border bg-white px-3 py-2 text-[12.5px] font-bold text-text outline-none transition focus:border-[#1E3A8A]"
                 style={{ borderColor: UI.border }}>
           <option value="active">النشطة (لم تغادر بعد)</option>
           <option value="queued">في الانتظار</option>
@@ -1931,7 +1931,7 @@ export default function CarsPage() {
         </select>
         {branches.length > 1 && (
           <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)}
-                  className="rounded-xl border bg-white px-3 py-2 text-[12.5px] font-bold text-slate-700 outline-none transition focus:border-[#1E3A8A]"
+                  className="rounded-xl border bg-white px-3 py-2 text-[12.5px] font-bold text-text outline-none transition focus:border-[#1E3A8A]"
                   style={{ borderColor: UI.border }}>
             <option value="">كل الفروع</option>
             {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -1939,12 +1939,12 @@ export default function CarsPage() {
         )}
         {(q || statusFilter !== "active" || branchFilter) && (
           <button onClick={() => { setQ(""); setStatusFilter("active"); setBranchFilter(""); }}
-                  className="flex items-center gap-1 rounded-xl px-3 py-2 text-[12px] font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800">
+                  className="flex items-center gap-1 rounded-xl px-3 py-2 text-[12px] font-bold text-text-dim transition hover:bg-ink-3 hover:text-text">
             <MIcon name="filter_alt_off" className="!text-[16px]" /> مسح الفلاتر
           </button>
         )}
         <button onClick={exportCsv}
-                className="flex items-center gap-1.5 rounded-xl border bg-white px-3.5 py-2 text-[12.5px] font-bold text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md"
+                className="flex items-center gap-1.5 rounded-xl border bg-white px-3.5 py-2 text-[12.5px] font-bold text-text shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md"
                 style={{ borderColor: UI.border }}>
           <MIcon name="download" className="!text-[16px]" /> تصدير
         </button>
@@ -1954,7 +1954,7 @@ export default function CarsPage() {
       <div className="hidden overflow-hidden rounded-2xl border bg-white shadow-sm md:block" style={{ borderColor: UI.border }}>
         <div className="max-h-[60vh] overflow-auto">
           <table className="w-full text-[12.5px]">
-            <thead className="sticky top-0 z-10 bg-slate-50 text-[11.5px] font-black text-slate-500">
+            <thead className="sticky top-0 z-10 bg-ink-3 text-[11.5px] font-black text-text-dim">
               <tr className="border-b" style={{ borderColor: UI.border }}>
                 <th className="px-4 py-3 text-right">اللوحة</th>
                 <th className="px-3 py-3 text-right">العميل</th>
@@ -1971,26 +1971,26 @@ export default function CarsPage() {
                 [1, 2, 3].map((i) => (
                   <tr key={i} className="border-b" style={{ borderColor: UI.border }}>
                     {Array.from({ length: 8 }).map((_, j) => (
-                      <td key={j} className="px-4 py-4"><div className="h-3.5 animate-pulse rounded-full bg-slate-100" /></td>
+                      <td key={j} className="px-4 py-4"><div className="h-3.5 animate-pulse rounded-full bg-ink-3" /></td>
                     ))}
                   </tr>
                 ))
               ) : pageRows.length === 0 ? (
                 <tr><td colSpan={8}>
-                  <div className="flex flex-col items-center gap-2 py-14 text-slate-400">
+                  <div className="flex flex-col items-center gap-2 py-14 text-text-dim">
                     <MIcon name="directions_car" className="!text-[38px]" />
                     <p className="text-[13px] font-bold">لا سيارات مطابقة</p>
                     <p className="text-[11.5px]">جرّب مسح عوامل التصفية — أو سجّل سيارة من الزر العائم</p>
                   </div>
                 </td></tr>
               ) : pageRows.map((c) => (
-                <tr key={c.id} className="border-b transition-colors duration-150 odd:bg-slate-50/40 hover:bg-blue-50/40"
+                <tr key={c.id} className="border-b transition-colors duration-150 odd:bg-ink-3/40 hover:bg-blue-50/40"
                     style={{ borderColor: UI.border }}>
-                  <td className="tnum px-4 py-3 font-extrabold text-slate-900">{c.plate || "—"}</td>
-                  <td className="px-3 py-3 font-bold text-slate-800">{c.customer_name || "—"}</td>
-                  <td className="tnum px-3 py-3 text-slate-500">{c.customer_phone || "—"}</td>
-                  <td className="px-3 py-3 text-slate-600">{[c.brand, c.name, c.model_year].filter(Boolean).join(" ") || "—"}</td>
-                  <td className="px-3 py-3 text-slate-600">{branchName[c.branch_id] || "—"}</td>
+                  <td className="tnum px-4 py-3 font-extrabold text-text">{c.plate || "—"}</td>
+                  <td className="px-3 py-3 font-bold text-text">{c.customer_name || "—"}</td>
+                  <td className="tnum px-3 py-3 text-text-dim">{c.customer_phone || "—"}</td>
+                  <td className="px-3 py-3 text-text-dim">{[c.brand, c.name, c.model_year].filter(Boolean).join(" ") || "—"}</td>
+                  <td className="px-3 py-3 text-text-dim">{branchName[c.branch_id] || "—"}</td>
                   <td className="px-3 py-3">{renderStatus(c)}</td>
                   <td className="px-3 py-3">{renderWait(c)}</td>
                   <td className="px-4 py-2">{renderActions(c)}</td>
@@ -2000,13 +2000,13 @@ export default function CarsPage() {
           </table>
         </div>
         {pages > 1 && (
-          <div className="flex items-center justify-between border-t bg-slate-50/60 px-4 py-2.5" style={{ borderColor: UI.border }}>
-            <span className="tnum text-[11.5px] font-bold text-slate-500">{filteredRows.length} سيارة — صفحة {page} من {pages}</span>
+          <div className="flex items-center justify-between border-t bg-ink-3/60 px-4 py-2.5" style={{ borderColor: UI.border }}>
+            <span className="tnum text-[11.5px] font-bold text-text-dim">{filteredRows.length} سيارة — صفحة {page} من {pages}</span>
             <div className="flex gap-1">
               <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}
-                      className="grid h-8 w-8 place-items-center rounded-lg border bg-white text-slate-600 transition enabled:hover:border-[#1E3A8A] disabled:opacity-40" style={{ borderColor: UI.border }}>›</button>
+                      className="grid h-8 w-8 place-items-center rounded-lg border bg-white text-text-dim transition enabled:hover:border-[#1E3A8A] disabled:opacity-40" style={{ borderColor: UI.border }}>›</button>
               <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)}
-                      className="grid h-8 w-8 place-items-center rounded-lg border bg-white text-slate-600 transition enabled:hover:border-[#1E3A8A] disabled:opacity-40" style={{ borderColor: UI.border }}>‹</button>
+                      className="grid h-8 w-8 place-items-center rounded-lg border bg-white text-text-dim transition enabled:hover:border-[#1E3A8A] disabled:opacity-40" style={{ borderColor: UI.border }}>‹</button>
             </div>
           </div>
         )}
@@ -2018,14 +2018,14 @@ export default function CarsPage() {
           <div key={c.id} className="rounded-2xl border bg-white p-4 shadow-sm" style={{ borderColor: UI.border }}>
             <div className="flex items-start justify-between gap-2">
               <div>
-                <div className="tnum text-[15px] font-black text-slate-900">{c.plate || "بدون لوحة"}</div>
-                <div className="text-[12px] font-bold text-slate-700">{c.customer_name}</div>
-                <div className="tnum text-[11px] text-slate-500">{c.customer_phone}</div>
+                <div className="tnum text-[15px] font-black text-text">{c.plate || "بدون لوحة"}</div>
+                <div className="text-[12px] font-bold text-text">{c.customer_name}</div>
+                <div className="tnum text-[11px] text-text-dim">{c.customer_phone}</div>
               </div>
               {renderStatus(c)}
             </div>
             <div className="mt-2 flex items-center justify-between border-t pt-2" style={{ borderColor: UI.border }}>
-              <span className="text-[11px] text-slate-500">{[c.brand, c.name].filter(Boolean).join(" ")}</span>
+              <span className="text-[11px] text-text-dim">{[c.brand, c.name].filter(Boolean).join(" ")}</span>
               {renderActions(c)}
             </div>
           </div>
@@ -2368,7 +2368,7 @@ export default function CarsPage() {
             )}
 
             {!team.filler && !team.fitter1 && !team.fitter2 && !team.checker && team.log.length === 0 && (
-              <p className="rounded-xl bg-amber-50 p-3 text-center text-[12px] font-bold text-amber-700">
+              <p className="rounded-xl bg-brass-soft p-3 text-center text-[12px] font-bold text-brass">
                 لم يُسجَّل أي فني على هذه السيارة — الفنيون يُسجَّلون لحظة اعتماد أمر العمل من التابلت
               </p>
             )}
@@ -2637,7 +2637,7 @@ export default function CarsPage() {
             ) : liveLog.map((l, i) => (
               <div key={i} className="flex items-center gap-2 text-[12px] font-bold">
                 <span className="tnum text-white/40">{l.t}</span>
-                <span className={l.tone === "ok" ? "text-emerald-400" : l.tone === "warn" ? "text-amber-400" : l.tone === "err" ? "text-red-400" : "text-white/70"}>
+                <span className={l.tone === "ok" ? "text-emerald-400" : l.tone === "warn" ? "text-brass" : l.tone === "err" ? "text-red-400" : "text-white/70"}>
                   {l.msg}
                 </span>
               </div>

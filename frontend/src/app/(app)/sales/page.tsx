@@ -935,7 +935,7 @@ export default function SalesPage() {
               <div className="flex items-center gap-2">
                 <Input id="pos-barcode" value={productQuery} onKeyDown={onSearchKey}
                        onChange={(e) => setProductQuery(e.target.value)}
-                       className="!w-72 shrink-0 !rounded-xl !py-2.5 !text-[13.5px] focus:!ring-2 focus:!ring-[#163A70]/20"
+                       className="!w-72 shrink-0 !rounded-xl !py-2.5 !text-[13.5px] focus:!ring-2 focus:!ring-petrol/20"
                        placeholder="🔍 امسح الباركود (F2) — البحث بالباركود فقط" autoFocus />
 
                 {/* سهم يمين */}
@@ -955,7 +955,7 @@ export default function SalesPage() {
                     ].map((c) => (
                       <button key={c.key} onClick={() => setActiveCat(c.key)}
                               className={`flex h-[58px] w-[88px] shrink-0 flex-col items-center justify-center gap-1 rounded-lg text-white shadow-card transition active:scale-[.94]
-                                ${activeCat === c.key ? "bg-[#163A70] text-white shadow-md" : "border border-[#E5E7EB] !bg-white !text-slate-600 hover:border-[#163A70] hover:!text-[#163A70]"}`}>
+                                ${activeCat === c.key ? "bg-petrol-deep text-white shadow-md" : "border border-line !bg-ink-2 !text-text-dim hover:border-petrol hover:!text-petrol"}`}>
                         <MIcon name={c.icon} className={`!text-[20px] ${activeCat === c.key ? "text-white" : "text-inherit"}`} />
                         <span className="max-w-[84px] truncate px-0.5 text-[10.5px] font-black leading-tight">{c.label}</span>
                       </button>
@@ -973,14 +973,14 @@ export default function SalesPage() {
               <div className="grid max-h-[calc(100vh-300px)] content-start gap-2 overflow-y-auto p-0.5 [grid-template-columns:repeat(5,minmax(0,1fr))]">
                 {products.length === 0 ? (
                   Array.from({ length: 10 }).map((_, i) => (
-                    <div key={i} className="rounded-2xl border border-[#E5E7EB] bg-white p-2">
-                      <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
-                      <div className="mt-2 h-3 animate-pulse rounded-full bg-slate-100" />
-                      <div className="mt-1.5 h-3 w-2/3 animate-pulse rounded-full bg-slate-100" />
+                    <div key={i} className="rounded-2xl border border-line bg-ink-2 p-2">
+                      <div className="h-16 animate-pulse rounded-xl bg-ink-3" />
+                      <div className="mt-2 h-3 animate-pulse rounded-full bg-ink-3" />
+                      <div className="mt-1.5 h-3 w-2/3 animate-pulse rounded-full bg-ink-3" />
                     </div>
                   ))
                 ) : gridProducts.length === 0 ? (
-                  <div className="col-span-full flex flex-col items-center gap-2 py-12 text-slate-400">
+                  <div className="col-span-full flex flex-col items-center gap-2 py-12 text-text-dim">
                     <MIcon name="barcode_scanner" className="!text-[40px]" />
                     <p className="text-[13px] font-bold">لا توجد أصناف مطابقة لهذا الباركود</p>
                     <p className="text-[11.5px]">امسح باركوداً آخر — أو اختر فئة من الأعلى</p>
@@ -990,37 +990,36 @@ export default function SalesPage() {
                   const inCart = cart.some((l) => l.productId === p.id);
                   const clr = catColor(p.category, p.is_service);
                   const stockTone = st === null ? null
-                    : st <= 0 ? { bg: "#FEE2E2", fg: "#B91C1C", label: "نفد" }
-                    : st <= 5 ? { bg: "#FEF3C7", fg: "#B45309", label: `قليل ${st}` }
-                    : { bg: "#DCFCE7", fg: "#15803D", label: `متوفر ${st}` };
+                    : st <= 0 ? { cls: "bg-ember-bg text-ember", label: "نفد" }
+                    : st <= 5 ? { cls: "bg-brass-soft text-brass", label: `قليل ${st}` }
+                    : { cls: "bg-emerald-bg text-emerald", label: `متوفر ${st}` };
                   return (
                     <button key={p.id} onClick={() => addProduct(p)}
-                            className="group relative flex flex-col rounded-2xl bg-white p-2 text-center shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg active:translate-y-0 active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#163A70]"
-                            style={{ border: `1.5px solid ${inCart ? "#22C55E" : "#E5E7EB"}` }}>
-                      <div className="relative grid h-16 place-items-center overflow-hidden rounded-xl bg-[#F7F8FA]">
-                        <span className="text-slate-300 transition-transform duration-200 group-hover:scale-110">
+                            className="group relative flex flex-col rounded-2xl bg-ink-2 p-2 text-center shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg active:translate-y-0 active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol"
+                            style={{ border: `1.5px solid ${inCart ? "var(--emerald)" : "var(--line)"}` }}>
+                      <div className="relative grid h-16 place-items-center overflow-hidden rounded-xl bg-ink-3">
+                        <span className="text-text-dim transition-transform duration-200 group-hover:scale-110">
                           <MIcon name={catIcon(p.category, p.is_service)} className="!text-[32px]" />
                         </span>
                         {inCart && (
-                          <span className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-[#22C55E] text-white shadow-sm">
+                          <span className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-emerald text-white shadow-sm">
                             <MIcon name="check" className="!text-[13px] text-white" />
                           </span>
                         )}
                         {stockTone && (
-                          <span className="tnum absolute left-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-[8.5px] font-black"
-                                style={{ background: stockTone.bg, color: stockTone.fg }}>{stockTone.label}</span>
+                          <span className={`tnum absolute left-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-[8.5px] font-black ${stockTone.cls}`}>{stockTone.label}</span>
                         )}
                       </div>
-                      <div className="mt-1.5 line-clamp-2 min-h-[32px] text-[12px] font-bold leading-tight text-slate-800">
+                      <div className="mt-1.5 line-clamp-2 min-h-[32px] text-[12px] font-bold leading-tight text-text">
                         {p.name}{p.spec ? ` — ${p.spec}` : ""}
                       </div>
-                      {p.barcode && <div className="tnum text-[9px] text-slate-400">{p.barcode}</div>}
+                      {p.barcode && <div className="tnum text-[9px] text-text-dim">{p.barcode}</div>}
                       <div className="mt-auto flex items-center justify-between pt-1.5">
-                        <span className="grid h-8 w-8 place-items-center rounded-full bg-[#22C55E] text-white shadow-md transition-all duration-200 group-hover:scale-110 group-hover:brightness-105 group-active:scale-90">
+                        <span className="grid h-8 w-8 place-items-center rounded-full bg-emerald text-white shadow-md transition-all duration-200 group-hover:scale-110 group-hover:brightness-105 group-active:scale-90">
                           <MIcon name="add" className="!text-[18px] text-white" />
                         </span>
-                        <span className="tnum text-[15px] font-black leading-none text-slate-900">
-                          {money(Number(p.price_vat))}<span className="mr-0.5 text-[9px] font-bold text-slate-400">ر.س</span>
+                        <span className="tnum text-[15px] font-black leading-none text-text">
+                          {money(Number(p.price_vat))}<span className="mr-0.5 text-[9px] font-bold text-text-dim">ر.س</span>
                         </span>
                       </div>
                     </button>
@@ -1031,7 +1030,7 @@ export default function SalesPage() {
 
             {/* ── السلة (خطوة 1) — ستايل الإيصال ── */}
             <Card className="!p-0 overflow-hidden lg:sticky lg:top-3">
-              <div className="flex items-center justify-between bg-[#163A70] px-4 py-3 text-white">
+              <div className="flex items-center justify-between bg-petrol-deep px-4 py-3 text-white">
                 <div className="min-w-0">
                   <h2 className="flex items-center gap-1.5 text-[13.5px] font-black">
                     <MIcon name="shopping_cart" className="!text-[18px] text-white" /> الفاتورة
@@ -1044,14 +1043,14 @@ export default function SalesPage() {
                   <span className="tnum rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold">{cart.length} صنف</span>
                   <button onClick={() => setHeldModal(true)}
                           className="rounded-lg bg-white/15 px-2.5 py-1 text-[10.5px] font-black hover:bg-white/25">
-                    المعلقة {held.length > 0 && <span className="tnum rounded-full bg-amber-400 px-1.5 text-[#1E2B4F]">{held.length}</span>}
+                    المعلقة {held.length > 0 && <span className="tnum rounded-full bg-brass px-1.5 text-petrol-deep">{held.length}</span>}
                   </button>
                 </div>
               </div>
 
               <div className="max-h-[calc(100vh-430px)] divide-y divide-line overflow-y-auto">
                 {cart.length === 0 ? (
-                  <div className="flex flex-col items-center gap-2 px-4 py-10 text-slate-400">
+                  <div className="flex flex-col items-center gap-2 px-4 py-10 text-text-dim">
                     <MIcon name="shopping_cart" className="!text-[34px]" />
                     <p className="text-[12.5px] font-bold">الفاتورة فارغة</p>
                     <p className="text-[11px]">امسح الباركود أو اضغط بطاقة الصنف — وسيظهر هنا فوراً</p>
@@ -1122,7 +1121,7 @@ export default function SalesPage() {
                         }}
                         disabled={cart.length === 0 || !branchId || !canCreateInvoice}
                         id="pos-pay"
-                        className="flex w-full items-center justify-between rounded-2xl bg-[#22C55E] px-5 py-4 text-white shadow-md transition-all duration-200 hover:-translate-y-px hover:shadow-lg hover:brightness-105 active:translate-y-0 active:scale-[0.99] disabled:opacity-40">
+                        className="flex w-full items-center justify-between rounded-2xl bg-emerald px-5 py-4 text-white shadow-md transition-all duration-200 hover:-translate-y-px hover:shadow-lg hover:brightness-105 active:translate-y-0 active:scale-[0.99] disabled:opacity-40">
                   <span className="flex items-center gap-2 text-[15.5px] font-black">
                     <MIcon name={scanBusy ? "videocam" : "payments"} className="!text-[21px] text-white" />
                     {scanBusy ? "الكاميرا تفحص..." : "ادفع الآن"}
