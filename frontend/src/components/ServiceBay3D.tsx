@@ -1,12 +1,13 @@
 "use client";
 // ═══════════════════════════════════════════════════════════════════════
 // بانوراما ثلاثية الأبعاد حقيقية (WebGL / three.js) لمحطتَي "الانتظار" و"الخدمة"
-// — سيارة حقيقية (نموذج GLTF مُحمَّل فعليًا، برخصة CC-BY-4.0 — راجع
-//   public/models/CREDITS.md)، وسير خدمة/عمّال مُبنيان إجرائيًا بأشكال
+// — سيارة وعامل حقيقيان (نموذجا GLTF مُحمَّلان فعليًا، مرخَّصان CC-BY-4.0 —
+//   راجع public/models/CREDITS.md)، وسير الخدمة نفسه مبني إجرائيًا بأشكال
 //   هندسية بسيطة، مع محرك حركة خاص خفيف يتبع حالة البيانات الحقيقية:
 //   دخول سيارة للانتظار → تدخل وتنتظر في مكانها، انتقالها للخدمة → تتحرك إلى
-//   سير الخدمة (يتّسع لـ 4 سيارات معًا) ويعمل العمّال عليها، وعند الخروج
-//   تنزل عن السير وتخرج السيارة.
+//   سير الخدمة (يتّسع لـ 4 سيارات معًا)، وعند وصولها فعليًا لحالة العمل
+//   يفتح كبودها ويَنحني العامل الثابت عند موقعها ليعمل فوق المحرك (فحص/تعبئة
+//   ماء الرديتر والمساحات)، وعند الخروج يُغلق الكبود وتنزل عن السير وتخرج.
 // — يحترم الوضع الليلي/النهاري، وتفضيل "تقليل الحركة"، ويوقف العرض عند
 //   اختفاء العنصر من الشاشة أو تبديل التبويب (حفاظًا على الأداء).
 // ═══════════════════════════════════════════════════════════════════════
@@ -14,6 +15,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
 
 export type BayCar = { id: string; plate?: string };
 
@@ -23,6 +25,24 @@ export type BayCar = { id: string; plate?: string };
 const CAR_MODEL_URL = "/models/car.glb";
 const CAR_LENGTH_TARGET = 1.9;
 const CAR_BODY_MATERIAL_NAME = "Kiri10_bodymat";
+
+// الكبود عقدة منفصلة داخل نموذج السيارة (Kiri10_Hood) — تُعاد هيكلته مرة
+// واحدة عند تحميل القالب حول محور دوران عند حافته الخلفية العلوية (قرب
+// الزجاج الأمامي)، فيرثه كل استنساخ لاحق تلقائيًا (clone(true) يستنسخ
+// التسلسل الهرمي كاملًا بما فيه هذه العقدة الفارغة الجديدة).
+const HOOD_NODE_NAME = "Kiri10_Hood";
+const HOOD_PIVOT_NAME = "Z8_HoodPivot";
+const HOOD_OPEN_DEG = 70;
+
+// نموذج العامل الحقيقي (public/models/worker.glb) — مُرخَّص CC-BY-4.0
+// (راجع public/models/CREDITS.md). عامل واحد ثابت عند كل موقع من مواقع
+// السير الأربعة، يُستنسخ بهيكل عظمي مستقل (SkeletonUtils.clone) حتى تملك
+// كل نسخة حركتها الخاصة. الانحناء للأمام أثناء العمل يُضاف إجرائيًا فوق
+// حركة "الوقوف" الأصلية بتدوير عظمة العمود الفقري Spine_02.
+const WORKER_MODEL_URL = "/models/worker.glb";
+const WORKER_HEIGHT_TARGET = 0.78;
+const WORKER_SPINE_BONE_NAME = "Spine_02";
+const WORKER_BEND_DEG = 34;
 
 const PARK_SLOTS = 4;
 const PARK_X = 4.8;
@@ -53,6 +73,8 @@ type TrackedCar = {
   liftP: number; // 0..1 ramp-mount progress
   bob: number; // idle bob phase
   doneWaiting: boolean; // الخدمة انتهت فعليًا لكنها لم تصل بعد لمقدمة السير
+  hoodPivot: THREE.Object3D | null; // عقدة دوران الكبود (نماذج GLTF فقط)
+  hoodP: number; // 0..1 تقدّم فتح الكبود
 };
 
 function hashColor(id: string): number {
@@ -350,6 +372,24 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
         root.traverse((o: any) => {
           if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
         });
+        // أعد هيكلة عقدة الكبود مرة واحدة فقط هنا (على القالب نفسه) حول محور
+        // دوران عند حافتها الخلفية العلوية، حتى يرثه كل استنساخ لاحق تلقائيًا.
+        let hoodNode: THREE.Object3D | null = null;
+        root.traverse((o: any) => { if (o.name === HOOD_NODE_NAME) hoodNode = o; });
+        if (hoodNode && (hoodNode as THREE.Object3D).parent) {
+          const hn = hoodNode as THREE.Object3D;
+          const hbox = new THREE.Box3().setFromObject(hn);
+          const hinge = new THREE.Vector3(hbox.min.x, hbox.max.y, (hbox.min.z + hbox.max.z) / 2);
+          const parent = hn.parent!;
+          const pivot = new THREE.Group();
+          pivot.name = HOOD_PIVOT_NAME;
+          pivot.position.copy(hinge);
+          parent.add(pivot);
+          const origPos = hn.position.clone();
+          parent.remove(hn);
+          pivot.add(hn);
+          hn.position.set(origPos.x - hinge.x, origPos.y - hinge.y, origPos.z - hinge.z);
+        }
         carTemplate = root;
       },
       undefined,
@@ -373,6 +413,82 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
       clone.userData.isGltfCar = true;
       return clone;
     }
+
+    // تحميل نموذج العامل الحقيقي — نفس نمط السيارة (قالب واحد + استنساخ)،
+    // مع فارق أن كل استنساخ يحتاج هيكلًا عظميًا مستقلًا (SkeletonUtils.clone)
+    // حتى تتحرك كل نسخة بحركتها الخاصة دون التأثير على بقية العمّال.
+    let workerTemplate: THREE.Group | null = null;
+    let workerTemplateScale = 1;
+    let workerAnimClip: THREE.AnimationClip | null = null;
+
+    type WorkerSlot = {
+      group: THREE.Group;
+      mixer: THREE.AnimationMixer | null;
+      spineBone: THREE.Object3D | null;
+      bendP: number; // 0..1 تقدّم الانحناء للأمام
+    };
+    const workerSlots: WorkerSlot[] = [];
+
+    function buildWorkerSlot(): WorkerSlot {
+      if (workerTemplate) {
+        const clone = skeletonClone(workerTemplate) as THREE.Group;
+        clone.scale.setScalar(workerTemplateScale);
+        let spineBone: THREE.Object3D | null = null;
+        clone.traverse((o: any) => {
+          if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
+          if (o.isBone && o.name === WORKER_SPINE_BONE_NAME) spineBone = o;
+        });
+        const group = new THREE.Group();
+        group.add(clone);
+        let mixer: THREE.AnimationMixer | null = null;
+        if (workerAnimClip) {
+          mixer = new THREE.AnimationMixer(clone);
+          const action = mixer.clipAction(workerAnimClip);
+          action.play();
+          // طور بداية عشوائي — حتى لا يتحرك كل العمّال بنفس الإيقاع معًا
+          action.time = Math.random() * workerAnimClip.duration;
+        }
+        return { group, mixer, spineBone, bendP: 0 };
+      }
+      // بديل إجرائي فوري حتى يكتمل تحميل الملف (14MB)
+      return { group: buildWorker(), mixer: null, spineBone: null, bendP: 0 };
+    }
+
+    const workerLoader = new GLTFLoader();
+    workerLoader.load(
+      WORKER_MODEL_URL,
+      (gltf) => {
+        if (disposed) {
+          gltf.scene.traverse((o: any) => {
+            if (o.geometry) o.geometry.dispose();
+            if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m: any) => m.dispose?.());
+          });
+          return;
+        }
+        const root = gltf.scene;
+        const box = new THREE.Box3().setFromObject(root);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        workerTemplateScale = WORKER_HEIGHT_TARGET / (size.y || 1);
+        workerAnimClip = gltf.animations[0] || null;
+        workerTemplate = root;
+        // استبدل أي عمّال إجرائيين مؤقتين ظهروا قبل اكتمال التحميل بالنموذج الحقيقي
+        workerSlots.forEach((slot, i) => {
+          scene.remove(slot.group);
+          slot.group.traverse((o: any) => {
+            if (o.geometry) o.geometry.dispose();
+            if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m: any) => m.dispose?.());
+          });
+          const fresh = buildWorkerSlot();
+          fresh.group.position.copy(slot.group.position);
+          fresh.group.rotation.copy(slot.group.rotation);
+          scene.add(fresh.group);
+          workerSlots[i] = fresh;
+        });
+      },
+      undefined,
+      () => { /* فشل التحميل — العمّال الإجرائيون يبقون كبديل دائم بصمت */ },
+    );
 
     const hemi = new THREE.HemisphereLight(0xffffff, 0x223344, 0.7);
     scene.add(hemi);
@@ -421,15 +537,14 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
     const serviceLine = buildServiceLine(LINE_X, LINE_HALF_LEN, LINE_HEIGHT);
     scene.add(serviceLine);
 
-    // عاملان على طول السير — كل عامل يغطي نصف المواقع الأربعة
-    const workers: THREE.Group[] = [];
-    const workerZ = [LINE_SLOT_Z[0] + 1.0, LINE_SLOT_Z[2] + 1.0];
-    for (const wz of workerZ) {
-      const worker = buildWorker();
-      worker.position.set(LINE_X + 1.55, 0, wz);
-      worker.rotation.y = 2.5;
-      scene.add(worker);
-      workers.push(worker);
+    // عامل ثابت عند كل موقع من مواقع السير الأربعة — واقف عند مقدمة السيارة
+    // (جهة الكبود) مواجهًا إياها، جاهزًا لينحني فوقها عندما تصل لحالة "working".
+    for (const wz of LINE_SLOT_Z) {
+      const slot = buildWorkerSlot();
+      slot.group.position.set(LINE_X - 1.15, 0, wz);
+      slot.group.rotation.y = Math.PI / 2;
+      scene.add(slot.group);
+      workerSlots.push(slot);
     }
 
     let skyTex: THREE.CanvasTexture | null = null;
@@ -469,10 +584,12 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
       const startZ = directToLift ? LINE_SLOT_POS[0][1] : (slot >= 0 ? SLOT_Z[slot] : 0);
       group.position.set(startX, 0, startZ);
       group.rotation.y = directToLift ? Math.PI : Math.PI;
+      const hoodPivot = group.getObjectByName(HOOD_PIVOT_NAME) ?? null;
       const tc: TrackedCar = {
         id, plate, group, label: sprite, labelMat: mat, labelTex: tex,
         state: "entering", slot, bay: -1, x: startX, z: startZ, liftP: 0,
         bob: Math.random() * Math.PI * 2, doneWaiting: false,
+        hoodPivot, hoodP: 0,
       };
       tracked.set(id, tc);
       return tc;
@@ -581,18 +698,31 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
         g.position.set(tc.x, bobY + tc.liftP * LINE_HEIGHT, tc.z);
         const desiredYaw = tc.state === "entering" || tc.state === "toLift" || tc.state === "leaving" ? Math.PI : Math.PI;
         g.rotation.y += (desiredYaw - g.rotation.y) * Math.min(1, dt * 4);
+
+        // الكبود يُفتح فقط أثناء "working" الفعلية (بعد اكتمال الصعود على
+        // السير)، ويُغلق تلقائيًا في أي حالة أخرى — نماذج السيارة الإجرائية
+        // (البديل المؤقت) لا تملك hoodPivot فتتجاهل هذا بأمان.
+        if (tc.hoodPivot) {
+          const hoodTarget = tc.state === "working" ? 1 : 0;
+          const hoodDur = reduceMotion ? 0.05 : 0.5;
+          tc.hoodP += Math.sign(hoodTarget - tc.hoodP) * Math.min(Math.abs(hoodTarget - tc.hoodP), dt / hoodDur);
+          tc.hoodPivot.rotation.z = THREE.MathUtils.degToRad(HOOD_OPEN_DEG * tc.hoodP);
+        }
       });
 
-      if (!reduceMotion) {
-        const cars = Array.from(tracked.values());
-        const anyWorking = cars.some((c) => (c.bay === 0 || c.bay === 1) && (c.state === "working" || c.state === "lifting"));
-        const anyWorking2 = cars.some((c) => (c.bay === 2 || c.bay === 3) && (c.state === "working" || c.state === "lifting"));
-        [anyWorking, anyWorking2].forEach((active, i) => {
-          const arm = (workers[i] as any)?._workArm as THREE.Mesh | undefined;
-          if (!arm) return;
-          arm.rotation.x = active ? Math.sin(now / 160) * 0.6 - 0.3 : -0.1;
-        });
-      }
+      // لكل موقع من مواقع السير: حرّك أنيميشن وقوف العامل، وانحنِ للأمام فوق
+      // الكبود فقط عندما توجد سيارة بنفس الفهرس في حالة "working" فعليًا.
+      workerSlots.forEach((slot, i) => {
+        if (!reduceMotion) slot.mixer?.update(dt);
+        let active = false;
+        tracked.forEach((c) => { if (c.bay === i && c.state === "working") active = true; });
+        const bendTarget = active ? 1 : 0;
+        const bendDur = reduceMotion ? 0.05 : 0.5;
+        slot.bendP += Math.sign(bendTarget - slot.bendP) * Math.min(Math.abs(bendTarget - slot.bendP), dt / bendDur);
+        if (slot.spineBone && slot.bendP > 0.001) {
+          slot.spineBone.rotateX(THREE.MathUtils.degToRad(WORKER_BEND_DEG * slot.bendP));
+        }
+      });
 
       renderer.render(scene, camera);
     }
@@ -639,6 +769,11 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
       });
       // قالب السيارة المحمَّل غير مُضاف للمشهد، فلن يزوره scene.traverse أعلاه
       carTemplate?.traverse((o: any) => {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m: any) => m.dispose?.());
+      });
+      // وكذلك قالب العامل المحمَّل
+      workerTemplate?.traverse((o: any) => {
         if (o.geometry) o.geometry.dispose();
         if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m: any) => m.dispose?.());
       });
