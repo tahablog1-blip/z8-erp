@@ -1,10 +1,11 @@
 "use client";
 // ═══════════════════════════════════════════════════════════════════════
 // بانوراما ثلاثية الأبعاد حقيقية (WebGL / three.js) لمحطتَي "الانتظار" و"الخدمة"
-// — سيارات/رافعة/عمّال مُبنية إجرائيًا بأشكال هندسية بسيطة (لا توجد أصول/ملفات
+// — سيارات/سير خدمة/عمّال مُبنية إجرائيًا بأشكال هندسية بسيطة (لا توجد أصول/ملفات
 //   3D جاهزة في المشروع)، مع محرك حركة خاص خفيف يتبع حالة البيانات الحقيقية:
 //   دخول سيارة للانتظار → تدخل وتنتظر في مكانها، انتقالها للخدمة → تتحرك إلى
-//   الرافعة وترتفع ويعمل العمّال، وعند الخروج تنخفض الرافعة وتخرج السيارة.
+//   سير الخدمة (يتّسع لـ 4 سيارات معًا) ويعمل العمّال عليها، وعند الخروج
+//   تنزل عن السير وتخرج السيارة.
 // — يحترم الوضع الليلي/النهاري، وتفضيل "تقليل الحركة"، ويوقف العرض عند
 //   اختفاء العنصر من الشاشة أو تبديل التبويب (حفاظًا على الأداء).
 // ═══════════════════════════════════════════════════════════════════════
@@ -14,14 +15,17 @@ import * as THREE from "three";
 export type BayCar = { id: string; plate?: string };
 
 const PARK_SLOTS = 4;
-const LIFT_BAYS = 2;
 const PARK_X = 4.8;
 const EXIT_X = 11;
 const SLOT_Z = [-2.4, -0.8, 0.8, 2.4];
-// كل رافعة مُعرّفة بموضعها [X, Z] — مفصولتان أفقيًا (X) لا بالعمق فقط،
-// حتى لا تتراكبا بصريًا من زاوية الكاميرا (هذا كان سبب ظهورهما متداخلتين).
-const BAY_POS: [number, number][] = [[-3.6, -0.15], [-7.2, 0.4]];
-const LIFT_HEIGHT = 1.1;
+
+// سير الخدمة: منصة واحدة طويلة تتّسع لـ 4 سيارات معًا (بدل رافعات منفصلة).
+const LINE_SLOTS = 4;
+const LINE_X = -5.6;
+const LINE_SLOT_Z = [-3.0, -1.0, 1.0, 3.0];
+const LINE_SLOT_POS: [number, number][] = LINE_SLOT_Z.map((z) => [LINE_X, z]);
+const LINE_HALF_LEN = 4.3;
+const LINE_HEIGHT = 0.3;
 
 type CarState = "entering" | "parked" | "toLift" | "lifting" | "working" | "lowering" | "leaving";
 
@@ -34,9 +38,9 @@ type TrackedCar = {
   labelTex: THREE.CanvasTexture;
   state: CarState;
   slot: number; // parking slot index, -1 if none
-  bay: number; // lift bay index, -1 if none
-  x: number; z: number; // logical ground position (lift group sits on top separately)
-  liftP: number; // 0..1 lift progress
+  bay: number; // line slot index (0..LINE_SLOTS-1), -1 if none
+  x: number; z: number; // logical ground position (ramp height applied separately)
+  liftP: number; // 0..1 ramp-mount progress
   bob: number; // idle bob phase
 };
 
@@ -130,40 +134,53 @@ function buildWorker(): THREE.Group {
   return g;
 }
 
-function buildLift(x: number, z: number): THREE.Group {
+function buildServiceLine(centerX: number, halfLen: number, height: number): THREE.Group {
   const g = new THREE.Group();
-  g.position.set(x, 0, z);
-  const pillarMat = new THREE.MeshStandardMaterial({ color: 0x8a94a3, roughness: 0.5, metalness: 0.6 });
-  const padMat = new THREE.MeshStandardMaterial({ color: 0x4b5563, roughness: 0.7 });
+  g.position.set(centerX, 0, 0);
 
-  const basePad = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.08, 1.3), padMat);
-  basePad.position.y = 0.04;
-  basePad.receiveShadow = true;
-  g.add(basePad);
+  const platMat = new THREE.MeshStandardMaterial({ color: 0x5b6472, roughness: 0.5, metalness: 0.4 });
+  const railMat = new THREE.MeshStandardMaterial({ color: 0x2f3645, roughness: 0.45, metalness: 0.55 });
+  const rollerMat = new THREE.MeshStandardMaterial({ color: 0xf2b800, roughness: 0.55 });
 
-  const hazardMat = new THREE.MeshStandardMaterial({ color: 0xf2b800, roughness: 0.6 });
+  const platform = new THREE.Mesh(new THREE.BoxGeometry(2.2, height, halfLen * 2), platMat);
+  platform.position.y = height / 2;
+  platform.castShadow = true;
+  platform.receiveShadow = true;
+  g.add(platform);
+
+  // قضيبا جانبَي السير — يبرزان المنصة كـ"خط" متصل بدل كتلة عادية
   for (const side of [-1, 1]) {
-    const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.5, 0.16), pillarMat);
-    pillar.position.set(side * 1.02, 1.25, -0.55);
-    pillar.castShadow = true;
-    g.add(pillar);
-    const pillar2 = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.5, 0.16), pillarMat);
-    pillar2.position.set(side * 1.02, 1.25, 0.55);
-    pillar2.castShadow = true;
-    g.add(pillar2);
-    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.07, 1.26), hazardMat);
-    foot.position.set(side * 1.02, 0.1, 0);
-    foot.castShadow = true;
-    g.add(foot);
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, halfLen * 2 + 0.2), railMat);
+    rail.position.set(side * 1.13, height + 0.06, 0);
+    rail.castShadow = true;
+    g.add(rail);
   }
 
-  const beam = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.14, 0.16), pillarMat);
-  beam.position.set(0, 2.48, -0.55);
-  beam.castShadow = true;
-  g.add(beam);
-  const beam2 = beam.clone();
-  beam2.position.z = 0.55;
-  g.add(beam2);
+  // شرائح صفراء متكررة على سطح السير — توحي بحزام/بكرات ناقلة (سير حقيقي)
+  const rollerCount = 18;
+  for (let i = 0; i < rollerCount; i++) {
+    const z = -halfLen + (i + 0.5) * ((halfLen * 2) / rollerCount);
+    const roller = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.03, 0.1), rollerMat);
+    roller.position.set(0, height + 0.016, z);
+    g.add(roller);
+  }
+
+  // منحدرا الدخول والخروج عند طرفَي السير — تقريب مبسّط (مشهد تصميمي مجسّم)
+  for (const side of [-1, 1]) {
+    const ramp = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.08, 1.2), platMat);
+    ramp.position.set(0, height / 2 - 0.03, side * (halfLen + 0.5));
+    ramp.rotation.x = -side * 0.22;
+    ramp.castShadow = true;
+    ramp.receiveShadow = true;
+    g.add(ramp);
+  }
+
+  // علامات تحذيرية صفراء/سوداء عند مدخل السير
+  for (let i = -1; i <= 1; i += 2) {
+    const marker = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.01, 0.12), rollerMat);
+    marker.position.set(0, height + 0.006, i * (halfLen + 0.95));
+    g.add(marker);
+  }
 
   return g;
 }
@@ -246,11 +263,11 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // بلاطة خرسانية أفتح تحت منطقة الرافعات — تميّزها بصريًا عن أرضية الانتظار
+    // بلاطة خرسانية أفتح تحت سير الخدمة — تميّزه بصريًا عن أرضية الانتظار
     const padMat = new THREE.MeshStandardMaterial({ roughness: 0.9 });
-    const pad = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 4.6), padMat);
+    const pad = new THREE.Mesh(new THREE.PlaneGeometry(3.0, LINE_HALF_LEN * 2 + 2.6), padMat);
     pad.rotation.x = -Math.PI / 2;
-    pad.position.set(-5.4, 0.006, 0.1);
+    pad.position.set(LINE_X, 0.006, 0);
     pad.receiveShadow = true;
     scene.add(pad);
 
@@ -268,22 +285,15 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
     }
     scene.add(slotLines);
 
-    const lifts: THREE.Group[] = [];
-    const platforms: THREE.Mesh[] = [];
+    const serviceLine = buildServiceLine(LINE_X, LINE_HALF_LEN, LINE_HEIGHT);
+    scene.add(serviceLine);
+
+    // عاملان على طول السير — كل عامل يغطي نصف المواقع الأربعة
     const workers: THREE.Group[] = [];
-    const platMat = new THREE.MeshStandardMaterial({ color: 0x5b6472, roughness: 0.45, metalness: 0.55 });
-    for (let i = 0; i < LIFT_BAYS; i++) {
-      const [bx, bz] = BAY_POS[i];
-      const lift = buildLift(bx, bz);
-      scene.add(lift);
-      lifts.push(lift);
-      const plat = new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.1, 1.05), platMat);
-      plat.position.set(bx, 0.08, bz);
-      plat.castShadow = true; plat.receiveShadow = true;
-      scene.add(plat);
-      platforms.push(plat);
+    const workerZ = [LINE_SLOT_Z[0] + 1.0, LINE_SLOT_Z[2] + 1.0];
+    for (const wz of workerZ) {
       const worker = buildWorker();
-      worker.position.set(bx + 1.55, 0, bz - 0.85);
+      worker.position.set(LINE_X + 1.55, 0, wz);
       worker.rotation.y = 2.5;
       scene.add(worker);
       workers.push(worker);
@@ -305,10 +315,10 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
       for (let i = 0; i < PARK_SLOTS; i++) if (!used.has(i)) return i;
       return -1;
     };
-    const freeLiftBay = () => {
+    const freeLineSlot = () => {
       const used = new Set<number>();
       tracked.forEach((c) => { if (c.bay >= 0 && c.state !== "leaving") used.add(c.bay); });
-      for (let i = 0; i < LIFT_BAYS; i++) if (!used.has(i)) return i;
+      for (let i = 0; i < LINE_SLOTS; i++) if (!used.has(i)) return i;
       return -1;
     };
 
@@ -320,7 +330,7 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
       scene.add(group);
       const slot = directToLift ? -1 : freeParkSlot();
       const startX = directToLift ? -EXIT_X : EXIT_X;
-      const startZ = directToLift ? BAY_POS[0][1] : (slot >= 0 ? SLOT_Z[slot] : 0);
+      const startZ = directToLift ? LINE_SLOT_POS[0][1] : (slot >= 0 ? SLOT_Z[slot] : 0);
       group.position.set(startX, 0, startZ);
       group.rotation.y = directToLift ? Math.PI : Math.PI;
       const tc: TrackedCar = {
@@ -340,7 +350,7 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
         if (!tracked.has(c.id)) { spawnCar(c.id, c.plate || "", true); return; }
         const tc = tracked.get(c.id)!;
         if (tc.state === "entering" || tc.state === "parked") {
-          const bay = freeLiftBay();
+          const bay = freeLineSlot();
           if (bay >= 0) { tc.bay = bay; tc.slot = -1; tc.state = "toLift"; }
         }
       });
@@ -376,19 +386,20 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
         } else if (tc.state === "parked") {
           tc.bob += dt * 1.4;
         } else if (tc.state === "toLift") {
-          const [bx, bz] = tc.bay >= 0 ? BAY_POS[tc.bay] : [0, 0];
+          const [bx, bz] = tc.bay >= 0 ? LINE_SLOT_POS[tc.bay] : [0, 0];
           tc.x += Math.sign(bx - tc.x) * Math.min(Math.abs(bx - tc.x), speed * dt);
           tc.z += Math.sign(bz - tc.z) * Math.min(Math.abs(bz - tc.z), speed * dt);
           if (Math.abs(tc.x - bx) < 0.04 && Math.abs(tc.z - bz) < 0.04) {
             tc.x = bx; tc.z = bz; tc.state = "lifting";
           }
         } else if (tc.state === "lifting") {
-          tc.liftP = Math.min(1, tc.liftP + dt / (reduceMotion ? 0.05 : 1.1));
+          // صعود قصير على منصة السير (ليس رافعة هيدروليكية) — أسرع بكثير
+          tc.liftP = Math.min(1, tc.liftP + dt / (reduceMotion ? 0.05 : 0.45));
           if (tc.liftP >= 1) tc.state = "working";
         } else if (tc.state === "working") {
-          // يبقى مرفوعًا — العمّال يعملون
+          // يبقى على السير — العمّال يعملون
         } else if (tc.state === "lowering") {
-          tc.liftP = Math.max(0, tc.liftP - dt / (reduceMotion ? 0.05 : 0.9));
+          tc.liftP = Math.max(0, tc.liftP - dt / (reduceMotion ? 0.05 : 0.35));
           if (tc.liftP <= 0) tc.state = "leaving";
         } else if (tc.state === "leaving") {
           const exitX = tc.bay >= 0 ? -EXIT_X : EXIT_X + 2;
@@ -403,14 +414,15 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
         }
 
         const bobY = (tc.state === "parked" && !reduceMotion) ? Math.sin(tc.bob) * 0.025 : 0;
-        g.position.set(tc.x, bobY + tc.liftP * LIFT_HEIGHT, tc.z);
+        g.position.set(tc.x, bobY + tc.liftP * LINE_HEIGHT, tc.z);
         const desiredYaw = tc.state === "entering" || tc.state === "toLift" || tc.state === "leaving" ? Math.PI : Math.PI;
         g.rotation.y += (desiredYaw - g.rotation.y) * Math.min(1, dt * 4);
       });
 
       if (!reduceMotion) {
-        const anyWorking = Array.from(tracked.values()).some((c) => c.bay === 0 && (c.state === "working" || c.state === "lifting"));
-        const anyWorking2 = Array.from(tracked.values()).some((c) => c.bay === 1 && (c.state === "working" || c.state === "lifting"));
+        const cars = Array.from(tracked.values());
+        const anyWorking = cars.some((c) => (c.bay === 0 || c.bay === 1) && (c.state === "working" || c.state === "lifting"));
+        const anyWorking2 = cars.some((c) => (c.bay === 2 || c.bay === 3) && (c.state === "working" || c.state === "lifting"));
         [anyWorking, anyWorking2].forEach((active, i) => {
           const arm = (workers[i] as any)?._workArm as THREE.Mesh | undefined;
           if (!arm) return;
@@ -479,7 +491,7 @@ export default function ServiceBay3D({ queued, inService }: { queued: BayCar[]; 
         <h2 className="text-[12.5px] font-extrabold text-text-dim">محطة الخدمة — عرض ثلاثي الأبعاد مباشر</h2>
         <div className="flex items-center gap-3 text-[11px] font-bold text-text-dim">
           <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-brass" /> انتظار</span>
-          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-petrol" /> رافعة الخدمة</span>
+          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-petrol" /> سير الخدمة (4 سيارات)</span>
         </div>
       </div>
       <div ref={mountRef} className="h-[230px] w-full sm:h-[260px]" />
