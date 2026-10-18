@@ -49,13 +49,7 @@ export const NAV_MODULES: NavModule[] = [
   { path: "/branches",   title: "الفروع",         icon: "branches", section: "الإدارة", permissions: ["branches.manage"] },
   { path: "/hr",         title: "الموارد البشرية", icon: "hr", section: "الإدارة", permissions: ["hr.view", "hr.manage", "hr.attendance", "hr.leave_approve", "hr.violations", "hr.payroll"] },
 
-  // ── الإعدادات — كل قسم صفحة كاملة مستقلة ──
-  { path: "/settings/company",  title: "المنشأة",                icon: "settings", section: "الإعدادات", permissions: ["settings.company"] },
-  { path: "/settings/users",    title: "المستخدمون والصلاحيات",  icon: "settings", section: "الإعدادات", permissions: ["settings.users"] },
-  { path: "/settings/roles",    title: "الأدوار والصلاحيات",      icon: "settings", section: "الإعدادات", permissions: ["settings.users"] },
-  { path: "/settings/cameras",  title: "كاميرات المحطات",        icon: "settings", section: "الإعدادات", permissions: ["settings.company"] },
-  { path: "/settings/printing",   title: "الطباعة",              icon: "settings", section: "الإعدادات", permissions: [], adminOnly: true },
-  { path: "/settings/system",     title: "النظام",               icon: "settings", section: "الإعدادات", permissions: [], adminOnly: true },
-  { path: "/settings/background", title: "الخلفية",              icon: "settings", section: "الإعدادات", permissions: ["settings.company"] },
-  { path: "/settings/design",     title: "التصميم",              icon: "settings", section: "الإعدادات", permissions: ["settings.company"] },
+  // ── الإعدادات — مدخل واحد؛ أقسامها الفرعية (المنشأة/المستخدمون/الأدوار/الأجهزة/الطباعة/النظام/الخلفية/التصميم)
+  //    لها قائمتها المجمّعة الخاصة جوه settings/layout.tsx — صفر تكرار بين القائمتين ──
+  { path: "/settings", title: "الإعدادات", icon: "settings", section: "الإعدادات", permissions: ["settings.company", "settings.users"] },
 ];

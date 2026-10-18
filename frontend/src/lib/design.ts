@@ -7,7 +7,7 @@ export type ArFontKey =
   | "el-messiri" | "readex-pro" | "reem-kufi" | "markazi-text" | "lalezar" | "harmattan";
 export type EnFontKey =
   | "inter" | "roboto" | "poppins" | "montserrat" | "lato" | "open-sans"
-  | "nunito" | "work-sans" | "source-sans" | "manrope" | "dm-sans" | "outfit";
+  | "nunito" | "work-sans" | "source-sans" | "manrope" | "dm-sans" | "outfit" | "arial";
 export type ButtonShape = "sharp" | "rounded" | "pill";
 
 export type DesignInfo = {
@@ -88,6 +88,7 @@ export const FONT_STACKS_EN: Record<EnFontKey, string> = {
   "manrope": "'Manrope', sans-serif",
   "dm-sans": "'DM Sans', sans-serif",
   "outfit": "'Outfit', sans-serif",
+  "arial": "Arial, Helvetica, sans-serif", // خط نظام — بلا تحميل شبكة، العادي والبولد مدعومين تلقائياً من النظام
 };
 
 export const FONT_LABELS_AR: Record<ArFontKey, string> = {
@@ -101,6 +102,7 @@ export const FONT_LABELS_EN: Record<EnFontKey, string> = {
   "inter": "Inter — افتراضي", "roboto": "Roboto", "poppins": "Poppins", "montserrat": "Montserrat",
   "lato": "Lato", "open-sans": "Open Sans", "nunito": "Nunito", "work-sans": "Work Sans",
   "source-sans": "Source Sans 3", "manrope": "Manrope", "dm-sans": "DM Sans", "outfit": "Outfit",
+  "arial": "Arial",
 };
 
 export const BUTTON_SHAPE_LABELS: Record<ButtonShape, string> = {

@@ -12,6 +12,7 @@ const DICT: Record<string, { ar: string; en: string }> = {
   "sec.finance": { ar: "المالية", en: "Finance" },
   "sec.admin": { ar: "الإدارة", en: "Administration" },
   "sec.settings": { ar: "الإعدادات", en: "Settings" },
+  "nav.settings": { ar: "الإعدادات", en: "Settings" },
   "nav.dashboard": { ar: "لوحة القيادة", en: "Dashboard" },
   "nav.sales": { ar: "نقطة البيع", en: "Point of Sale" },
   "nav.direct_sales": { ar: "البيع المباشر", en: "Direct Sales" },

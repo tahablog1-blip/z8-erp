@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { MIcon } from "@/components/m-icon";
 
-type SettingsLink = { path: string; label: string; icon: string; perms: string[] };
+type SettingsLink = { path: string; label: string; icon: string; perms: string[]; adminOnly?: boolean };
 type SettingsGroup = { title: string; items: SettingsLink[] };
 
 const GROUPS: SettingsGroup[] = [
@@ -15,7 +15,7 @@ const GROUPS: SettingsGroup[] = [
     title: "عام",
     items: [
       { path: "/settings/company", label: "المنشأة", icon: "apartment", perms: ["settings.company"] },
-      { path: "/settings/system", label: "النظام", icon: "dns", perms: [] },
+      { path: "/settings/system", label: "النظام", icon: "dns", perms: [], adminOnly: true },
       { path: "/settings/background", label: "الخلفية", icon: "wallpaper", perms: ["settings.company"] },
       { path: "/settings/design", label: "التصميم", icon: "palette", perms: ["settings.company"] },
     ],
@@ -31,7 +31,7 @@ const GROUPS: SettingsGroup[] = [
     title: "الأجهزة",
     items: [
       { path: "/settings/cameras", label: "كاميرات المحطات", icon: "videocam", perms: ["settings.company"] },
-      { path: "/settings/printing", label: "الطباعة", icon: "print", perms: [] },
+      { path: "/settings/printing", label: "الطباعة", icon: "print", perms: [], adminOnly: true },
     ],
   },
 ];
@@ -45,7 +45,10 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   useEffect(() => { setDrawerOpen(false); }, [pathname]);
 
   const visibleGroups = GROUPS
-    .map((g) => ({ ...g, items: g.items.filter((it) => it.perms.length === 0 || isAdmin || hasPerm(...it.perms)) }))
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((it) => it.adminOnly ? isAdmin : (it.perms.length === 0 || isAdmin || hasPerm(...it.perms))),
+    }))
     .filter((g) => g.items.length > 0);
 
   const NavList = () => (

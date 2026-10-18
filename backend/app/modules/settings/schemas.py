@@ -270,7 +270,7 @@ _FONT_FAMILIES_AR = {
 # خطوط إنجليزية — تُستخدم لما واجهة النظام English
 _FONT_FAMILIES_EN = {
     "inter", "roboto", "poppins", "montserrat", "lato", "open-sans",
-    "nunito", "work-sans", "source-sans", "manrope", "dm-sans", "outfit",
+    "nunito", "work-sans", "source-sans", "manrope", "dm-sans", "outfit", "arial",
 }
 _BUTTON_SHAPES = {"sharp", "rounded", "pill"}
 _SIDEBAR_DEFAULTS = {"expanded", "collapsed"}
