@@ -12,6 +12,9 @@ import { Car, carStatus } from "@/modules/cars/types";
 import { Product, productLabel } from "@/modules/products/types";
 import { MIcon } from "@/components/m-icon";
 import { STAGES, CHECKPOINTS, CK_LABEL, FINISHED, stageOf, type CkStatus, type CkItem } from "@/lib/service-line";
+import dynamic from "next/dynamic";
+
+const ServiceBay3D = dynamic(() => import("@/components/ServiceBay3D"), { ssr: false });
 
 type Branch = { id: string; name: string; lines?: string[] };
 
@@ -1837,6 +1840,12 @@ export default function CarsPage() {
                   hint={queued.length ? "للسيارات الواقفة الآن" : "الطابور فارغ"}
                   color="var(--petrol)" tint="var(--petrol-soft)" />
       </div>
+
+      {/* ═══════ بانوراما ثلاثية الأبعاد (WebGL) — انتظار / رافعة الخدمة ═══════ */}
+      <ServiceBay3D
+        queued={queued.map((c) => ({ id: c.id, plate: c.plate || undefined }))}
+        inService={inService.map((c) => ({ id: c.id, plate: c.plate || undefined }))}
+      />
 
       {/* ═══════ لوحتا المحطات الحية (انتظار / خدمة) ═══════ */}
       <div className="grid gap-3 sm:grid-cols-2">
