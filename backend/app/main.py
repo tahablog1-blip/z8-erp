@@ -658,6 +658,32 @@ async def lifespan(app: FastAPI):
              created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
            )""",
         "CREATE INDEX IF NOT EXISTS idx_backgrounds_company ON backgrounds (company_id)",
+        # ══ إصلاح عطل حجز العميل: عمود engine_size كان موجوداً في الكود (تسجيل سيارة
+        # العميل، شاشة الحجز العامة، ربط فلاتر السيارات) لكن migration-026-engine-size.sql
+        # الخاص بيه اتكتب ولسه ما اتشغّلش على قاعدة الإنتاج — نفس نمط العطل اللي سبّب
+        # حادثة اليوم الأولى بالظبط. هنا بقى self-healing زي كل حاجة تانية، صفر psql يدوي. ══
+        "ALTER TABLE cars ADD COLUMN IF NOT EXISTS engine_size TEXT",
+        "ALTER TABLE customer_cars ADD COLUMN IF NOT EXISTS engine_size TEXT",
+        "ALTER TABLE customer_vehicles ADD COLUMN IF NOT EXISTS engine_size TEXT",
+        # car_oil_filters نفسه مش موجود في أي DDL متتبّع بالكود (لا هنا ولا في أي migration) —
+        # غالباً اتعمل يدوياً على الإنتاج قبل كده. شبكة أمان: لو موجود فعلاً IF NOT EXISTS
+        # هيتجاهله تماماً، ولو مش موجود (بيئة تانية/نسخة احتياطية جديدة) هيتكوّن صح من الأول.
+        """CREATE TABLE IF NOT EXISTS car_oil_filters (
+             id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id        uuid NOT NULL,
+             brand             text NOT NULL,
+             model             text NOT NULL,
+             year_from         int NOT NULL,
+             year_to           int NOT NULL,
+             filter_product_id uuid NOT NULL,
+             created_by        uuid,
+             filter_kind       text NOT NULL DEFAULT 'oil',
+             cylinders         int,
+             engine_size       text,
+             created_at        timestamptz NOT NULL DEFAULT now()
+           )""",
+        "ALTER TABLE car_oil_filters ADD COLUMN IF NOT EXISTS engine_size TEXT",
+        "CREATE INDEX IF NOT EXISTS idx_car_oil_filters_company ON car_oil_filters (company_id, brand, model)",
     ):
         try:
             await execute(stmt)
