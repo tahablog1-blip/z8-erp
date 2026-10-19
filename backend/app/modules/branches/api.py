@@ -17,7 +17,8 @@ async def list_branches(user: CurrentUser = Depends(get_current_user)):
 async def create_branch(body: BranchCreate,
                         user: CurrentUser = Depends(require_permission("branches.manage"))):
     branch = await service.create_branch(
-        user.company_id, body.name, body.category, body.capacitySir, body.capacityHafr, body.capacityRafaat, body.lines)
+        user.company_id, body.name, body.category, body.capacitySir, body.capacityHafr, body.capacityRafaat,
+        body.lines, body.managerUserId, body.address, body.invoicePrefix, body.independentInvoiceNumbering)
     await log_action(user, "edit", "settings", details=f"إنشاء فرع: {body.name}")
     return branch
 

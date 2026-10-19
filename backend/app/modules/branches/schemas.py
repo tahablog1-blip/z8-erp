@@ -14,6 +14,12 @@ class BranchCreate(BaseModel):
     capacityRafaat: int = Field(default=0, ge=0)
     # خطوط السير المتعددة بالاسم — سعة السير بتتحسب تلقائياً من عددهم
     lines: list[str] = []
+    managerUserId: str | None = None
+    address: str | None = Field(default=None, max_length=300)
+    # ترقيم فواتير مستقل: لو مفعّل، فواتير هذا الفرع تاخد تسلسلها الخاص
+    # (وبادئة خاصة لو محددة) بدل التسلسل العام المشترك بين كل الفروع
+    invoicePrefix: str | None = Field(default=None, max_length=10)
+    independentInvoiceNumbering: bool = False
 
 class BranchUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=150)
@@ -23,6 +29,10 @@ class BranchUpdate(BaseModel):
     capacityRafaat: int | None = Field(default=None, ge=0)
     is_frozen: bool | None = None
     lines: list[str] | None = None
+    managerUserId: str | None = None
+    address: str | None = Field(default=None, max_length=300)
+    invoicePrefix: str | None = Field(default=None, max_length=10)
+    independentInvoiceNumbering: bool | None = None
 
 class BranchOut(BaseModel):
     id: str
@@ -34,3 +44,8 @@ class BranchOut(BaseModel):
     lines: list[str] = []
     is_frozen: bool
     created_at: datetime
+    manager_user_id: str | None = None
+    manager_name: str | None = None     # اسم المدير جاهز للعرض (JOIN مع users)
+    address: str | None = None
+    invoice_prefix: str | None = None
+    independent_invoice_numbering: bool = False

@@ -881,6 +881,18 @@ async def lifespan(app: FastAPI):
              created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
            )""",
         "CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_customer ON loyalty_ledger (customer_id)",
+
+        # ── المرحلة 6: مدير الفرع + العنوان + ترقيم فواتير مستقل اختياري لكل فرع ──
+        "ALTER TABLE branches ADD COLUMN IF NOT EXISTS manager_user_id uuid",
+        "ALTER TABLE branches ADD COLUMN IF NOT EXISTS address text",
+        "ALTER TABLE branches ADD COLUMN IF NOT EXISTS invoice_prefix text",
+        "ALTER TABLE branches ADD COLUMN IF NOT EXISTS independent_invoice_numbering boolean NOT NULL DEFAULT FALSE",
+        """CREATE TABLE IF NOT EXISTS branch_invoice_counters (
+             company_id   uuid NOT NULL,
+             branch_id    uuid NOT NULL,
+             last_number  bigint NOT NULL DEFAULT 0,
+             PRIMARY KEY (company_id, branch_id)
+           )""",
     ):
         try:
             await execute(stmt)

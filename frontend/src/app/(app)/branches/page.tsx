@@ -16,10 +16,16 @@ type Branch = {
   id: string; name: string; category: BranchCategory;
   capacity_sir: number; capacity_hafr: number; capacity_rafaat: number;
   lines: string[]; is_frozen: boolean; created_at: string;
+  manager_user_id: string | null; manager_name: string | null;
+  address: string | null; invoice_prefix: string | null;
+  independent_invoice_numbering: boolean;
 };
 
+type UserRow = { id: string; full_name: string; is_active: boolean };
+
 const EMPTY = { name: "", category: "service" as BranchCategory,
-                capacitySir: 0, capacityHafr: 0, capacityRafaat: 0, lines: [] as string[] };
+                capacitySir: 0, capacityHafr: 0, capacityRafaat: 0, lines: [] as string[],
+                managerUserId: "", address: "", invoicePrefix: "", independentInvoiceNumbering: false };
 
 export default function BranchesPage() {
   const { hasPerm } = useAuth();
@@ -27,6 +33,7 @@ export default function BranchesPage() {
   const canManage = hasPerm("branches.manage");
 
   const [rows, setRows] = useState<Branch[]>([]);
+  const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<null | { mode: "create" } | { mode: "edit"; id: string }>(null);
   const [form, setForm] = useState({ ...EMPTY });
@@ -39,7 +46,12 @@ export default function BranchesPage() {
     catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // قائمة المستخدمين اختيارية (لاختيار مدير الفرع) — لو المستخدم الحالي
+    // بلا صلاحية settings.users نتجاهل الفشل بصمت ونعرض الحقل بدون قائمة
+    api<UserRow[]>("/settings/users").then(setUsers).catch(() => {});
+  }, []);
 
   function openCreate() {
     setForm({ ...EMPTY }); setErr(""); setModal({ mode: "create" });
@@ -47,17 +59,22 @@ export default function BranchesPage() {
   function openEdit(b: Branch) {
     setForm({ name: b.name, category: b.category || "service", capacitySir: b.capacity_sir,
               capacityHafr: b.capacity_hafr, capacityRafaat: b.capacity_rafaat,
-              lines: b.lines || [] });
+              lines: b.lines || [], managerUserId: b.manager_user_id || "",
+              address: b.address || "", invoicePrefix: b.invoice_prefix || "",
+              independentInvoiceNumbering: !!b.independent_invoice_numbering });
     setErr(""); setModal({ mode: "edit", id: b.id });
   }
 
   async function save() {
     setErr(""); setBusy(true);
+    // ملاحظة: الفروع (بخلاف باقي الموديولات) تتعامل مع "" كقيمة صريحة للمسح،
+    // لا null — الراوتر هنا بيفلتر v is not None فتفضل null بلا أي تأثير
+    const body = { ...form, address: form.address.trim(), invoicePrefix: form.invoicePrefix.trim() };
     try {
       if (modal?.mode === "create") {
-        await api("/branches", { method: "POST", body: JSON.stringify(form) });
+        await api("/branches", { method: "POST", body: JSON.stringify(body) });
       } else if (modal?.mode === "edit") {
-        await api(`/branches/${modal.id}`, { method: "PUT", body: JSON.stringify(form) });
+        await api(`/branches/${modal.id}`, { method: "PUT", body: JSON.stringify(body) });
       }
       setModal(null);
       await load();
@@ -95,6 +112,8 @@ export default function BranchesPage() {
       render: (b) => b.category === "retail"
         ? <Badge tone="info">{t("branches.categoryRetail", "تجزئة")}</Badge>
         : <Badge tone="good">{t("branches.categoryService", "خدمة")}</Badge> },
+    { key: "manager_name", title: t("branches.manager", "المدير"), width: "140px",
+      render: (b) => b.manager_name || <span className="text-text-dim">—</span> },
     { key: "capacity_sir",    title: t("branches.lines", "خطوط السير"),  width: "110px",
       render: (b) => <span className="tnum">{b.category === "retail" ? "—" : b.capacity_sir}</span> },
     { key: "capacity_hafr",   title: t("branches.capacityHafr", "سعة الحفرة"),  width: "110px",
@@ -247,6 +266,43 @@ export default function BranchesPage() {
               </Field>
             </div>
           )}
+
+          <div className="grid grid-cols-2 gap-2">
+            <Field label={t("branches.manager", "مدير الفرع")}>
+              <Select value={form.managerUserId}
+                      onChange={(e) => setForm({ ...form, managerUserId: e.target.value })}>
+                <option value="">{t("branches.noManager", "بدون تحديد")}</option>
+                {users.filter((u) => u.is_active).map((u) => (
+                  <option key={u.id} value={u.id}>{u.full_name}</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label={t("branches.address", "العنوان")}>
+              <Input value={form.address}
+                     onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 rounded-lg border border-line bg-ink-3 p-2.5">
+            <label className="col-span-full flex cursor-pointer items-center justify-between">
+              <div>
+                <div className="text-[12.5px] font-bold">{t("branches.independentNumbering", "ترقيم فواتير مستقل لهذا الفرع")}</div>
+                <div className="text-[11px] text-text-dim">
+                  {t("branches.independentNumberingHint", "تسلسل خاص بالفرع بدل التسلسل العام المشترك بين كل الفروع")}
+                </div>
+              </div>
+              <input type="checkbox" className="h-4 w-4"
+                     checked={form.independentInvoiceNumbering}
+                     onChange={(e) => setForm({ ...form, independentInvoiceNumbering: e.target.checked })} />
+            </label>
+            {form.independentInvoiceNumbering && (
+              <Field label={t("branches.invoicePrefix", "بادئة رقم الفاتورة")} hint={t("branches.invoicePrefixHint", "فاضي = أول 3 حروف من اسم الفرع")}>
+                <Input value={form.invoicePrefix} className="tnum" maxLength={10}
+                       onChange={(e) => setForm({ ...form, invoicePrefix: e.target.value.toUpperCase() })} />
+              </Field>
+            )}
+          </div>
+
           <ErrorNote msg={err} />
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" onClick={() => setModal(null)}>

@@ -15,6 +15,7 @@ from fastapi import HTTPException
 from ...core import accounting, zatca
 from ...core.db import fetch, fetchrow, transaction
 from ...core.stock_lock import lock_stock_location
+from ..branches.service import next_branch_invoice_no
 from ..shifts.service import require_open_shift
 
 
@@ -134,7 +135,11 @@ async def create_invoice(company_id: str, user_id: str, user_email: str, d: dict
             )
 
             # 4) رقم الفاتورة + بيانات البائع لتوليد الـ QR
-            invoice_no = await _next_invoice_no(conn, company_id)
+            # لو الفرع مفعّل عليه ترقيم مستقل، ياخد تسلسله الخاص؛ غير كده
+            # التسلسل العام المشترك بين كل الفروع (نفس السلوك القديم تماماً)
+            invoice_no = await next_branch_invoice_no(conn, company_id, d["branchId"])
+            if not invoice_no:
+                invoice_no = await _next_invoice_no(conn, company_id)
             seller = await conn.fetchrow("SELECT name, vat_number FROM companies WHERE id = $1", company_id)
             qr_tlv = zatca.generate_qr_tlv(
                 seller_name=(seller and seller["name"]) or "",
