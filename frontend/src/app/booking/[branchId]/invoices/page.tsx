@@ -58,7 +58,7 @@ export default function MyInvoicesPage() {
   async function openOfficial(inv: Inv) {
     setErr(""); setBusyId(inv.id);
     try {
-      const full = await call<InvoiceDetail & { company: { name: string; vat: string; cr: string; address: string; phone: string } }>(
+      const full = await call<InvoiceDetail & { company: { name: string; vat: string; cr: string; address: string; phone: string; logoUrl?: string } }>(
         `booking-invoice-full/${inv.id}?phone=${encodeURIComponent(phone)}`);
       // زرع بيانات المنشأة في نفس الكاش الذي يقرأه القالب — ترويسة مطابقة
       cacheCompany(full.company);

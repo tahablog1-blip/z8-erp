@@ -1131,17 +1131,22 @@ async def public_booking_invoice_full(invoice_id: str, phone: str = ""):
     from ...core.db import fetchrow as _fr, fetch as _f
     digits = "".join(ch for ch in phone if ch.isdigit())
     inv = await _fr(
-        """SELECT i.*, b.name AS branch_name
-           FROM invoices i LEFT JOIN branches b ON b.id = i.branch_id
+        """SELECT i.*, b.name AS branch_name, u.full_name AS cashier_name,
+                  cu.phone AS cust_phone_fallback
+           FROM invoices i
+           LEFT JOIN branches b ON b.id = i.branch_id
+           LEFT JOIN users u ON u.id = i.created_by
+           LEFT JOIN customers cu ON cu.id = i.customer_id
            WHERE i.id=$1::uuid
              AND (regexp_replace(COALESCE(i.customer_phone,''), '[^0-9]', '', 'g') = $2
-                  OR EXISTS (SELECT 1 FROM customers cu
-                             WHERE cu.id = i.customer_id
-                               AND regexp_replace(COALESCE(cu.phone,''), '[^0-9]', '', 'g') = $2))""",
+                  OR regexp_replace(COALESCE(cu.phone,''), '[^0-9]', '', 'g') = $2)""",
         invoice_id, digits)
     if not inv:
         raise HTTPException(403, "غير مسموح")
     d = dict(inv)
+    if not d.get("customer_phone"):
+        d["customer_phone"] = d.get("cust_phone_fallback")
+    d.pop("cust_phone_fallback", None)
 
     items = await _f(
         """SELECT id, product_id, label, qty, unit_price, unit_price_vat,
@@ -1160,9 +1165,20 @@ async def public_booking_invoice_full(invoice_id: str, phone: str = ""):
     car = None
     if d.get("car_id"):
         crow = await _fr(
-            """SELECT plate, name AS model, brand, model_year, fuel_type, color, chassis_number,
-                      odometer_current, odometer_previous, checklist, notes, registrar_name
-               FROM cars WHERE id=$1""", d["car_id"])
+            """SELECT c.plate, c.name AS model, c.brand, c.model_year, c.fuel_type,
+                      c.car_category, c.cylinders, c.color, c.chassis_number,
+                      c.odometer_current, c.odometer_previous, c.checklist,
+                      c.notes, c.registrar_name,
+                      f.full_name  AS filler_name,
+                      t1.full_name AS fitter1_name,
+                      t2.full_name AS fitter2_name,
+                      ch.full_name AS checker_name
+               FROM cars c
+               LEFT JOIN hr_employees f  ON f.id  = c.filler_id
+               LEFT JOIN hr_employees t1 ON t1.id = c.fitter1_id
+               LEFT JOIN hr_employees t2 ON t2.id = c.fitter2_id
+               LEFT JOIN hr_employees ch ON ch.id = c.checker_id
+               WHERE c.id=$1""", d["car_id"])
         if crow:
             car = dict(crow)
             import json as _json
@@ -1198,12 +1214,14 @@ async def public_booking_invoice_full(invoice_id: str, phone: str = ""):
     out["items"] = [{k: _ser(v) for k, v in dict(r).items()} for r in items]
     out["payments"] = [{k: _ser(v) for k, v in p.items()} for p in payments]
     out["car"] = {k: _ser(v) for k, v in car.items()} if car else None
+    has_logo = bool(co.get("logo_base64"))
     out["company"] = {
         "name": _pick("name", "company_name") or "مصدر الزيوت",
         "vat": _pick("vat_number", "vat", "tax_number"),
         "cr": _pick("cr_number", "cr", "commercial_register"),
         "address": _pick("address"),
         "phone": _pick("phone", "mobile"),
+        "logoUrl": f"/api/settings/company/logo/{out['company_id']}" if has_logo else "",
     }
     return out
 

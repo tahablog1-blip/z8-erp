@@ -247,7 +247,7 @@ function thermalHTML(inv: InvoiceDetail): string {
     : [];
 
   return `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
-<title>${esc(inv.invoice_no)}</title>
+<title>${esc(CO.name)} — فاتورة ${esc(inv.invoice_no)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700&display=swap" rel="stylesheet">
@@ -321,7 +321,8 @@ function a4CopyHTML(inv: InvoiceDetail, CO: ReturnType<typeof getCompany>, PR: P
     <img src="${location.origin}${CO.logoUrl || "/logo-navy.png"}" alt="" style="width:44px;height:44px;object-fit:contain;display:block;margin:0 auto 4px" />
     <div>
       <h1>${esc(CO.name)}</h1>
-      <div class="sub">الرقم الضريبي: <span class="tnum">${esc(CO.vat)}</span> — السجل التجاري: <span class="tnum">${esc(CO.cr)}</span></div>
+      <div class="sub">الرقم الضريبي: <span class="tnum">${esc(CO.vat)}</span></div>
+      <div class="sub">السجل التجاري: <span class="tnum">${esc(CO.cr)}</span></div>
       <div class="sub">${esc(CO.address)}${CO.phone ? ` — هاتف: <span class="tnum">${esc(CO.phone)}</span>` : ""}</div>
     </div>
     <div class="badge">${title}</div>
@@ -417,7 +418,7 @@ function a4HTML(inv: InvoiceDetail): string {
   const qrScripts = Array.from({ length: copies }, (_, i) => ({ id: `qrcode-${i}`, tlv: inv.qr_tlv || "" }));
 
   return `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
-<title>${esc(inv.invoice_no)}</title>
+<title>${esc(CO.name)} — فاتورة ${esc(inv.invoice_no)}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   @page { size:A4; margin:12mm; }
