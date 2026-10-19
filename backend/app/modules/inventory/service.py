@@ -501,10 +501,19 @@ async def list_requests(company_id: str, branch_id: str | None, status: str | No
             LEFT JOIN branches sb ON r.source_loc_type = 'branch' AND sb.id::text = r.source_branch_id
             WHERE {' AND '.join(conds)}
             ORDER BY r.created_at DESC LIMIT 200""", *params)
+
+    # استعلام واحد لبنود كل الطلبات دفعة واحدة (بدل استعلام منفصل لكل طلب — كانت توصل لـ 200 استعلام إضافي)
+    items_by_request: dict[str, list] = {}
+    if rows:
+        all_items = await fetch(
+            """SELECT * FROM branch_request_items WHERE request_id = ANY($1::uuid[]) ORDER BY request_id, id""",
+            [r["id"] for r in rows])
+        for it in all_items:
+            items_by_request.setdefault(str(it["request_id"]), []).append(it)
+
     out = []
     for r in rows:
-        items = await fetch(
-            "SELECT * FROM branch_request_items WHERE request_id=$1 ORDER BY id", r["id"])
+        items = items_by_request.get(str(r["id"]), [])
         out.append({
             "id": str(r["id"]), "status": r["status"],
             "requestingBranchId": str(r["requesting_branch_id"]), "requestingBranchName": r["requesting_branch_name"],

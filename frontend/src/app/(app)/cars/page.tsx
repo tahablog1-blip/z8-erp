@@ -588,6 +588,20 @@ export default function CarsPage() {
   const PAGE_SIZE = 10;
   const [now, setNow] = useState(() => Date.now());
 
+  // البانوراما 3D تحمّل عدة ميجابايت من النماذج — ما تتحمّلش تلقائيًا، المستخدم يختار عرضها.
+  // (تذكّر اختياره محليًا في المتصفح عشان ما يضطرش يضغط الزر كل مرة لو هو فاعلها قبل كده)
+  const [show3D, setShow3D] = useState(false);
+  useEffect(() => {
+    try { setShow3D(localStorage.getItem("z8.cars.show3D") === "1"); } catch { }
+  }, []);
+  function toggle3D() {
+    setShow3D((v) => {
+      const next = !v;
+      try { localStorage.setItem("z8.cars.show3D", next ? "1" : "0"); } catch { }
+      return next;
+    });
+  }
+
   const [modal, setModal] = useState<null | { mode: "create" } | { mode: "edit"; car: Car }>(null);
   const [form, setForm] = useState({ ...EMPTY });
   const [err, setErr] = useState("");
@@ -1841,11 +1855,28 @@ export default function CarsPage() {
                   color="var(--petrol)" tint="var(--petrol-soft)" />
       </div>
 
-      {/* ═══════ بانوراما ثلاثية الأبعاد (WebGL) — انتظار / رافعة الخدمة ═══════ */}
-      <ServiceBay3D
-        queued={queued.map((c) => ({ id: c.id, plate: c.plate || undefined }))}
-        inService={inService.map((c) => ({ id: c.id, plate: c.plate || undefined }))}
-      />
+      {/* ═══════ بانوراما ثلاثية الأبعاد (WebGL) — انتظار / رافعة الخدمة ═══════
+          اختيارية: تحمّل عدة ميجابايت من نماذج 3D، فما تتحمّلش إلا لو المستخدم طلبها صراحةً
+          (تسريع فتح الصفحة الأكثر استخدامًا في النظام). */}
+      {show3D ? (
+        <div className="relative">
+          <button onClick={toggle3D}
+                  className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-xl border bg-ink-2/90 px-3 py-1.5 text-[12px] font-bold shadow-sm backdrop-blur"
+                  style={{ borderColor: UI.border, color: UI.primary }}>
+            <MIcon name="visibility_off" className="!text-[16px]" /> إخفاء البانوراما
+          </button>
+          <ServiceBay3D
+            queued={queued.map((c) => ({ id: c.id, plate: c.plate || undefined }))}
+            inService={inService.map((c) => ({ id: c.id, plate: c.plate || undefined }))}
+          />
+        </div>
+      ) : (
+        <button onClick={toggle3D}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border bg-ink-2 px-4 py-3 text-[13px] font-bold transition-colors hover:brightness-95"
+                style={{ borderColor: UI.border, color: UI.primary }}>
+          <MIcon name="view_in_ar" className="!text-[18px]" /> عرض البانوراما ثلاثية الأبعاد
+        </button>
+      )}
 
       {/* ═══════ لوحتا المحطات الحية (انتظار / خدمة) ═══════ */}
       <div className="grid gap-3 sm:grid-cols-2">
