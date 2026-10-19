@@ -132,7 +132,8 @@ td.num,th.num{text-align:center}
   </div>
   <div class="row wrap" style="margin-top:10px">
     <button class="btn-secondary" id="stopScanBtn" type="button" hidden style="flex:1"><span class="icon" aria-hidden="true">videocam_off</span>إيقاف الكاميرا</button>
-    <input type="text" id="manualInput" placeholder="أو اكتب رقم الباركود يدويًا واضغط Enter" inputmode="numeric" style="flex:2;min-width:180px">
+    <input type="text" id="manualInput" placeholder="أو اكتب رقم الباركود يدويًا" inputmode="numeric" style="flex:2;min-width:140px">
+    <button class="btn-primary" id="manualAddBtn" type="button"><span class="icon" aria-hidden="true">search</span>بحث</button>
   </div>
   <div id="resultArea"></div>
 </section>
@@ -170,7 +171,7 @@ td.num,th.num{text-align:center}
   function loadState(){
     try{
       var c = safeGet('shortage_catalog_v1');
-      if(c){ catalog = JSON.parse(c); catalogMap = new Map(catalog.map(function(x){return [x.barcode,x];})); }
+      if(c){ catalog = JSON.parse(c); catalogMap = buildCatalogMap(catalog); }
     }catch(e){ catalog=[]; catalogMap=new Map(); }
     try{
       var s = safeGet('shortage_scanlist_v1');
@@ -287,8 +288,40 @@ td.num,th.num{text-align:center}
     if(navigator.vibrate){ try{ navigator.vibrate(80); }catch(e){} }
   }
 
+  function normalizeCode(s){
+    s = String(s==null?'':s).trim();
+    s = s.replace(/[‎‏‪-‮]/g,''); // strip bidi/invisible marks
+    s = s.replace(/\s+/g,'');
+    s = s.replace(/^'+/,''); // Excel text-marker apostrophe
+    s = s.replace(/\.0$/,''); // trailing .0 from numeric Excel cells
+    return s;
+  }
+  function digitsOnly(s){ return String(s||'').replace(/\D/g,''); }
+
+  function buildCatalogMap(items){
+    var m = new Map();
+    items.forEach(function(x){
+      var raw = normalizeCode(x.barcode);
+      if(raw && !m.has(raw)) m.set(raw, x);
+      var d = digitsOnly(raw);
+      if(d && !m.has(d)) m.set(d, x);
+      var noLead = d.replace(/^0+/,'');
+      if(noLead && !m.has(noLead)) m.set(noLead, x);
+    });
+    return m;
+  }
+
+  function findInCatalog(code){
+    if(catalogMap.has(code)) return catalogMap.get(code);
+    var d = digitsOnly(code);
+    if(d && catalogMap.has(d)) return catalogMap.get(d);
+    var noLead = d.replace(/^0+/,'');
+    if(noLead && catalogMap.has(noLead)) return catalogMap.get(noLead);
+    return null;
+  }
+
   function lookupBarcode(raw, fromCamera){
-    var code = String(raw||'').trim();
+    var code = normalizeCode(raw);
     if(!code) return;
     if(fromCamera){
       var now = Date.now();
@@ -296,7 +329,7 @@ td.num,th.num{text-align:center}
       lastCode = code; lastCodeAt = now;
       beep();
     }
-    var match = catalogMap.get(code);
+    var match = findInCatalog(code);
     var existing = scanList.find(function(it){ return it.barcode===code; });
     if(existing){
       existing.qty += 1;
@@ -315,10 +348,18 @@ td.num,th.num{text-align:center}
   }
 
   // ---- manual entry ----
+  function submitManual(){
+    var v = el('manualInput').value;
+    if(!v.trim()) return;
+    lookupBarcode(v, false);
+    el('manualInput').value='';
+    el('manualInput').focus();
+  }
+  el('manualAddBtn').addEventListener('click', submitManual);
   el('manualInput').addEventListener('keydown', function(e){
-    if(e.key==='Enter'){
-      lookupBarcode(el('manualInput').value, false);
-      el('manualInput').value='';
+    if(e.key==='Enter' || e.key==='Go' || e.keyCode===13){
+      e.preventDefault();
+      submitManual();
     }
   });
 
@@ -492,7 +533,7 @@ td.num,th.num{text-align:center}
       newCatalog.push({barcode:barcode, name:name, price:price});
     }
     catalog = newCatalog;
-    catalogMap = new Map(catalog.map(function(x){ return [x.barcode,x]; }));
+    catalogMap = buildCatalogMap(catalog);
     saveCatalog();
     pendingRows = null;
     el('mappingPanel').hidden = true;
