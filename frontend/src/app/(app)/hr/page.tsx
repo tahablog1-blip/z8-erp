@@ -8,12 +8,13 @@ import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch, Ta
 import { appAlert, appConfirm } from "@/components/dialog";
 import {
   Attendance, CommissionPreviewRow, CommissionType, COMMISSION_TYPE_LABELS, CONTRACT_LABELS,
-  Employee, IqamaAlert, LEAVE_TYPE_LABELS, LeaveBalance,
-  LeaveRequest, LeaveType, PayrollRun, Payslip, Violation, money,
+  CustodyItem, CustodyStatus, CUSTODY_STATUS_LABELS, Employee, EmployeeRequest,
+  IqamaAlert, LEAVE_TYPE_LABELS, LeaveBalance,
+  LeaveRequest, LeaveType, PayrollRun, Payslip, RequestType, REQUEST_TYPE_LABELS, Violation, money,
 } from "@/modules/hr/types";
 
 type Branch = { id: string; name: string };
-type Tab = "employees" | "attendance" | "leave" | "violations" | "payroll";
+type Tab = "employees" | "attendance" | "leave" | "violations" | "payroll" | "custody" | "requests";
 
 const dateFmt = (s: string) =>
   new Date(s).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { year: "numeric", month: "2-digit", day: "2-digit" });
@@ -35,6 +36,9 @@ export default function HrPage() {
   const canLeaveApprove = hasPerm("hr.leave_approve");
   const canViolations = hasPerm("hr.violations");
   const canPayroll = hasPerm("hr.payroll");
+  const canCustody = hasPerm("hr.custody");
+  const canRequestsApprove = hasPerm("hr.requests_approve");
+  const canRequestsCreate = hasPerm("hr.manage", "hr.requests_approve");
 
   const [tab, setTab] = useState<Tab>(canView ? "employees" : "attendance");
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -47,6 +51,8 @@ export default function HrPage() {
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [violations, setViolations] = useState<Violation[]>([]);
   const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([]);
+  const [custodyItems, setCustodyItems] = useState<CustodyItem[]>([]);
+  const [empRequests, setEmpRequests] = useState<EmployeeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [pageErr, setPageErr] = useState("");
 
@@ -72,6 +78,16 @@ export default function HrPage() {
   const [violModal, setViolModal] = useState(false);
   const [violForm, setViolForm] = useState({ employeeId: "", violationType: "", description: "", deductionAmount: 0 });
   const [violErr, setViolErr] = useState("");
+
+  // ── نموذج عهدة ──
+  const [custodyModal, setCustodyModal] = useState(false);
+  const [custodyForm, setCustodyForm] = useState({ employeeId: "", itemName: "", description: "", estimatedValue: 0, assignedDate: "", notes: "" });
+  const [custodyErr, setCustodyErr] = useState("");
+
+  // ── نموذج طلب عام (نقل فرع / مستلزمات / بلاغ عطل) ──
+  const [reqModal, setReqModal] = useState(false);
+  const [reqForm, setReqForm] = useState({ employeeId: "", requestType: "supplies" as RequestType, targetBranchId: "", itemsText: "", reason: "" });
+  const [reqErr, setReqErr] = useState("");
 
   // ── الرواتب ──
   const [payrollModal, setPayrollModal] = useState(false);
@@ -120,6 +136,12 @@ export default function HrPage() {
   async function loadPayroll() {
     try { setPayrollRuns(await api<PayrollRun[]>("/hr/payroll-runs")); } catch (e: any) { setPageErr(e.message); }
   }
+  async function loadCustody() {
+    try { setCustodyItems(await api<CustodyItem[]>("/hr/custody")); } catch (e: any) { setPageErr(e.message); }
+  }
+  async function loadRequests() {
+    try { setEmpRequests(await api<EmployeeRequest[]>("/hr/requests")); } catch (e: any) { setPageErr(e.message); }
+  }
 
   function changeTab(t: Tab) {
     setTab(t);
@@ -127,6 +149,8 @@ export default function HrPage() {
     if (t === "leave" && leaves.length === 0) loadLeaves();
     if (t === "violations" && violations.length === 0) loadViolations();
     if (t === "payroll" && payrollRuns.length === 0) loadPayroll();
+    if (t === "custody" && custodyItems.length === 0) loadCustody();
+    if (t === "requests" && empRequests.length === 0) loadRequests();
   }
 
   // ══════════════════ الموظفون ══════════════════
@@ -223,6 +247,51 @@ export default function HrPage() {
       setViolModal(false);
       await loadViolations();
     } catch (e: any) { setViolErr(e.message); }
+  }
+
+  // ══════════════════ عهد الموظفين ══════════════════
+
+  function openCustodyModal() {
+    setCustodyForm({ employeeId: employees[0]?.id || "", itemName: "", description: "", estimatedValue: 0, assignedDate: "", notes: "" });
+    setCustodyErr(""); setCustodyModal(true);
+  }
+  async function submitCustody() {
+    setCustodyErr("");
+    try {
+      await api("/hr/custody", { method: "POST", body: JSON.stringify(custodyForm) });
+      setCustodyModal(false);
+      await loadCustody();
+    } catch (e: any) { setCustodyErr(e.message); }
+  }
+  async function custodyReturn(c: CustodyItem, status: CustodyStatus) {
+    if (!await appConfirm(status === "returned" ? `تسجيل إرجاع «${c.item_name}»؟` : `تسجيل «${c.item_name}» كمفقودة؟`)) return;
+    try { await api(`/hr/custody/${c.id}/status`, { method: "PUT", body: JSON.stringify({ status }) }); await loadCustody(); }
+    catch (e: any) { await appAlert(e.message); }
+  }
+
+  // ══════════════════ الطلبات الإلكترونية العامة ══════════════════
+
+  function openReqModal() {
+    setReqForm({ employeeId: employees[0]?.id || "", requestType: "supplies", targetBranchId: "", itemsText: "", reason: "" });
+    setReqErr(""); setReqModal(true);
+  }
+  async function submitRequest() {
+    setReqErr("");
+    try {
+      const details: Record<string, any> = { reason: reqForm.reason || undefined };
+      if (reqForm.requestType === "branch_transfer") details.targetBranchId = reqForm.targetBranchId;
+      if (reqForm.requestType === "supplies") details.items = reqForm.itemsText;
+      if (reqForm.requestType === "malfunction_report") details.description = reqForm.reason;
+      await api("/hr/requests", { method: "POST", body: JSON.stringify({
+        employeeId: reqForm.employeeId, requestType: reqForm.requestType, details,
+      }) });
+      setReqModal(false);
+      await loadRequests();
+    } catch (e: any) { setReqErr(e.message); }
+  }
+  async function decideRequest(r: EmployeeRequest, decision: "approved" | "rejected") {
+    try { await api(`/hr/requests/${r.id}/decision`, { method: "POST", body: JSON.stringify({ decision }) }); await loadRequests(); }
+    catch (e: any) { await appAlert(e.message); }
   }
 
   // ══════════════════ الرواتب ══════════════════
@@ -348,6 +417,52 @@ export default function HrPage() {
     { key: "actions", title: "", width: "90px", render: (r) => <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => openPayslips(r)}>عرض</Button> },
   ];
 
+  const custodyCols: Column<CustodyItem>[] = [
+    { key: "employee_name", title: "الموظف" },
+    { key: "item_name", title: "العنصر", render: (c) => (
+      <div><div className="font-extrabold">{c.item_name}</div>{c.description && <div className="text-[11px] text-text-dim">{c.description}</div>}</div>
+    ) },
+    { key: "estimated_value", title: "القيمة التقديرية", width: "120px", render: (c) => <span className="tnum font-bold">{money(c.estimated_value)}</span> },
+    { key: "assigned_date", title: "تاريخ التسليم", width: "110px", render: (c) => dateFmt(c.assigned_date) },
+    { key: "status", title: "الحالة", width: "130px", render: (c) =>
+      c.status === "returned" ? <Badge tone="good">{CUSTODY_STATUS_LABELS.returned}</Badge>
+      : c.status === "lost" ? <Badge tone="warn">{CUSTODY_STATUS_LABELS.lost}</Badge>
+      : <Badge tone="neutral">{CUSTODY_STATUS_LABELS.held}</Badge> },
+    ...(canCustody ? [{
+      key: "actions", title: "", width: "160px",
+      render: (c: CustodyItem) => c.status === "held" ? (
+        <div className="flex justify-end gap-1.5">
+          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => custodyReturn(c, "returned")}>إرجاع</Button>
+          <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => custodyReturn(c, "lost")}>فقد</Button>
+        </div>
+      ) : null,
+    } satisfies Column<CustodyItem>] : []),
+  ];
+
+  const reqCols: Column<EmployeeRequest>[] = [
+    { key: "employee_name", title: "الموظف" },
+    { key: "request_type", title: "نوع الطلب", width: "110px", render: (r) => REQUEST_TYPE_LABELS[r.request_type] },
+    { key: "title", title: "التفاصيل", render: (r) => (
+      <div className="text-[12px] text-text-dim">
+        {r.request_type === "branch_transfer" && <>نقل إلى فرع: {branches.find((b) => b.id === r.details?.targetBranchId)?.name || "—"}</>}
+        {r.request_type === "supplies" && <>{r.details?.items || "—"}</>}
+        {r.request_type === "malfunction_report" && <>{r.details?.description || "—"}</>}
+        {r.details?.reason && <div className="text-[11px]">السبب: {r.details.reason}</div>}
+      </div>
+    ) },
+    { key: "status", title: "الحالة", width: "100px", render: (r) =>
+      r.status === "approved" ? <Badge tone="good">معتمد</Badge> : r.status === "rejected" ? <Badge tone="warn">مرفوض</Badge> : <Badge tone="neutral">معلّق</Badge> },
+    ...(canRequestsApprove ? [{
+      key: "actions", title: "", width: "150px",
+      render: (r: EmployeeRequest) => r.status === "pending" ? (
+        <div className="flex justify-end gap-1.5">
+          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => decideRequest(r, "approved")}>اعتماد</Button>
+          <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => decideRequest(r, "rejected")}>رفض</Button>
+        </div>
+      ) : null,
+    } satisfies Column<EmployeeRequest>] : []),
+  ];
+
   if (loading) return <div className="text-text-dim">جارِ التحميل...</div>;
 
   return (
@@ -370,6 +485,8 @@ export default function HrPage() {
             { key: "leave" as Tab, label: "الإجازات" },
             ...(canViolations ? [{ key: "violations" as Tab, label: "المخالفات" }] : []),
             ...(canPayroll ? [{ key: "payroll" as Tab, label: "الرواتب" }] : []),
+            ...(canCustody ? [{ key: "custody" as Tab, label: "العهد" }] : []),
+            { key: "requests" as Tab, label: "الطلبات" },
           ]} />
         </div>
 
@@ -419,6 +536,18 @@ export default function HrPage() {
                           <Button onClick={() => { setPayErr(""); setPayrollModal(true); }}>+ تشغيل رواتب</Button>
                         </div>
                       } />
+          )}
+
+          {tab === "custody" && canCustody && (
+            <DataTable columns={custodyCols} rows={custodyItems} searchKeys={["employee_name", "item_name"]}
+                      searchPlaceholder="بحث بالموظف أو العنصر..." emptyText="لا توجد عهد مسجّلة"
+                      toolbar={<Button onClick={openCustodyModal}>+ تسجيل عهدة</Button>} />
+          )}
+
+          {tab === "requests" && (
+            <DataTable columns={reqCols} rows={empRequests} searchKeys={["employee_name"]}
+                      searchPlaceholder="بحث بالموظف..." emptyText="لا توجد طلبات"
+                      toolbar={canRequestsCreate && <Button onClick={openReqModal}>+ طلب جديد</Button>} />
           )}
         </div>
       </Card>
@@ -581,6 +710,80 @@ export default function HrPage() {
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" onClick={() => setViolModal(false)}>إلغاء</Button>
             <Button onClick={submitViolation} disabled={!violForm.employeeId || !violForm.violationType.trim()}>حفظ</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ══════════ تسجيل عهدة ══════════ */}
+      <Modal open={custodyModal} onClose={() => setCustodyModal(false)} title="تسجيل عهدة جديدة">
+        <div className="space-y-3">
+          <Field label="الموظف">
+            <Select value={custodyForm.employeeId} onChange={(e) => setCustodyForm({ ...custodyForm, employeeId: e.target.value })}>
+              <option value="">— اختر الموظف —</option>
+              {employees.filter((e) => e.is_active).map((e) => <option key={e.id} value={e.id}>{e.full_name}</option>)}
+            </Select>
+          </Field>
+          <Field label="العنصر" hint="مثال: جهاز لابتوب، عدة فنية، يونيفورم">
+            <Input value={custodyForm.itemName} onChange={(e) => setCustodyForm({ ...custodyForm, itemName: e.target.value })} />
+          </Field>
+          <Field label="الوصف"><Textarea value={custodyForm.description} onChange={(e) => setCustodyForm({ ...custodyForm, description: e.target.value })} /></Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="القيمة التقديرية">
+              <Input type="number" min={0} step="0.01" className="tnum" value={custodyForm.estimatedValue}
+                     onChange={(e) => setCustodyForm({ ...custodyForm, estimatedValue: +e.target.value || 0 })} />
+            </Field>
+            <Field label="تاريخ التسليم" hint="فارغ = اليوم">
+              <Input type="date" className="tnum" value={custodyForm.assignedDate} onChange={(e) => setCustodyForm({ ...custodyForm, assignedDate: e.target.value })} />
+            </Field>
+          </div>
+          <Field label="ملاحظات"><Textarea value={custodyForm.notes} onChange={(e) => setCustodyForm({ ...custodyForm, notes: e.target.value })} /></Field>
+          <ErrorNote msg={custodyErr} />
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="ghost" onClick={() => setCustodyModal(false)}>إلغاء</Button>
+            <Button onClick={submitCustody} disabled={!custodyForm.employeeId || !custodyForm.itemName.trim()}>حفظ</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ══════════ طلب عام جديد (نقل فرع / مستلزمات / بلاغ عطل) ══════════ */}
+      <Modal open={reqModal} onClose={() => setReqModal(false)} title="طلب جديد">
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="الموظف">
+              <Select value={reqForm.employeeId} onChange={(e) => setReqForm({ ...reqForm, employeeId: e.target.value })}>
+                <option value="">— اختر الموظف —</option>
+                {employees.filter((e) => e.is_active).map((e) => <option key={e.id} value={e.id}>{e.full_name}</option>)}
+              </Select>
+            </Field>
+            <Field label="نوع الطلب">
+              <Select value={reqForm.requestType} onChange={(e) => setReqForm({ ...reqForm, requestType: e.target.value as RequestType })}>
+                {Object.entries(REQUEST_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </Select>
+            </Field>
+          </div>
+          {reqForm.requestType === "branch_transfer" && (
+            <Field label="الفرع المطلوب النقل إليه">
+              <Select value={reqForm.targetBranchId} onChange={(e) => setReqForm({ ...reqForm, targetBranchId: e.target.value })}>
+                <option value="">— اختر الفرع —</option>
+                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </Select>
+            </Field>
+          )}
+          {reqForm.requestType === "supplies" && (
+            <Field label="المستلزمات المطلوبة" hint="عدد وأصناف — نص حر">
+              <Textarea value={reqForm.itemsText} onChange={(e) => setReqForm({ ...reqForm, itemsText: e.target.value })} />
+            </Field>
+          )}
+          <Field label={reqForm.requestType === "malfunction_report" ? "وصف العطل" : "السبب"}>
+            <Textarea value={reqForm.reason} onChange={(e) => setReqForm({ ...reqForm, reason: e.target.value })} />
+          </Field>
+          <ErrorNote msg={reqErr} />
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="ghost" onClick={() => setReqModal(false)}>إلغاء</Button>
+            <Button onClick={submitRequest}
+                    disabled={!reqForm.employeeId || (reqForm.requestType === "branch_transfer" && !reqForm.targetBranchId) || (reqForm.requestType === "supplies" && !reqForm.itemsText.trim()) || (reqForm.requestType === "malfunction_report" && !reqForm.reason.trim())}>
+              تقديم الطلب
+            </Button>
           </div>
         </div>
       </Modal>

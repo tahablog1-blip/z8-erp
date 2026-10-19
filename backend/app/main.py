@@ -948,6 +948,41 @@ async def lifespan(app: FastAPI):
              created_at timestamptz NOT NULL DEFAULT now()
            )""",
         "CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(company_id, user_id, is_read, created_at DESC)",
+
+        # ── المرحلة 9: عهد الموظفين (مالية/عينية) ──
+        """CREATE TABLE IF NOT EXISTS hr_custody_items (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             employee_id uuid NOT NULL,
+             item_name text NOT NULL,
+             description text,
+             estimated_value numeric(12,2) NOT NULL DEFAULT 0,
+             assigned_date date NOT NULL DEFAULT CURRENT_DATE,
+             returned_date date,
+             status text NOT NULL DEFAULT 'held',
+             notes text,
+             created_by uuid,
+             created_at timestamptz NOT NULL DEFAULT now()
+           )""",
+        "CREATE INDEX IF NOT EXISTS idx_hr_custody_employee ON hr_custody_items(company_id, employee_id)",
+
+        # ── المرحلة 9: تعميم نظام الطلبات الإلكترونية (نقل فرع / مستلزمات / بلاغ عطل) ──
+        """CREATE TABLE IF NOT EXISTS hr_employee_requests (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             employee_id uuid NOT NULL,
+             request_type text NOT NULL,
+             title text,
+             details jsonb NOT NULL DEFAULT '{}'::jsonb,
+             status text NOT NULL DEFAULT 'pending',
+             decided_by uuid,
+             decided_at timestamptz,
+             decision_note text,
+             created_by uuid,
+             created_at timestamptz NOT NULL DEFAULT now()
+           )""",
+        "CREATE INDEX IF NOT EXISTS idx_hr_requests_employee ON hr_employee_requests(company_id, employee_id)",
+        "CREATE INDEX IF NOT EXISTS idx_hr_requests_status ON hr_employee_requests(company_id, status)",
     ):
         try:
             await execute(stmt)

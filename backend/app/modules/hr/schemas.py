@@ -239,3 +239,70 @@ class CommissionPreviewRow(BaseModel):
     sales_ex: float
     gross_profit: float
     commission_amount: float
+
+
+# ══════════════════ عهد الموظفين ══════════════════
+
+CustodyStatus = Literal["held", "returned", "lost"]
+
+
+class CustodyItemCreate(BaseModel):
+    employeeId: str
+    itemName: str = Field(min_length=1, max_length=200)
+    description: str | None = None
+    estimatedValue: float = Field(default=0, ge=0)
+    assignedDate: str | None = None
+    notes: str | None = None
+
+
+class CustodyStatusBody(BaseModel):
+    status: CustodyStatus
+    returnedDate: str | None = None
+    notes: str | None = None
+
+
+class CustodyItemOut(BaseModel):
+    id: str
+    employee_id: str
+    employee_name: str
+    item_name: str
+    description: str | None = None
+    estimated_value: float
+    assigned_date: date
+    returned_date: date | None = None
+    status: str
+    notes: str | None = None
+    created_at: datetime
+
+
+# ══════════════════ الطلبات الإلكترونية العامة ══════════════════
+# (الإجازات لها مسارها الخاص فوق — هنا بقية الأنواع: نقل فرع / مستلزمات / بلاغ عطل)
+
+RequestType = Literal["branch_transfer", "supplies", "malfunction_report"]
+RequestStatus = Literal["pending", "approved", "rejected"]
+
+
+class EmployeeRequestCreate(BaseModel):
+    employeeId: str
+    requestType: RequestType
+    title: str | None = None
+    details: dict = Field(default_factory=dict)
+
+
+class EmployeeRequestDecisionBody(BaseModel):
+    decision: Literal["approved", "rejected"]
+    decisionNote: str | None = None
+
+
+class EmployeeRequestOut(BaseModel):
+    id: str
+    employee_id: str
+    employee_name: str
+    request_type: str
+    title: str | None = None
+    details: dict
+    status: str
+    decided_by_name: str | None = None
+    decided_at: datetime | None = None
+    decision_note: str | None = None
+    created_at: datetime

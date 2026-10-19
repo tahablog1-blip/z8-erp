@@ -11,6 +11,7 @@ import asyncpg
 from fastapi import HTTPException
 
 from ..treasury import service as _treasury
+from ...core import notify
 from ...core.db import execute, fetch, fetchrow, transaction
 
 
@@ -655,4 +656,158 @@ async def pay_payroll_run(company_id: str, user_id: str, run_id: str, method: st
                     lines=[{"account_id": net_payable_acc, "debit": total, "description": "تسوية رواتب مستحقة"},
                            {"account_id": cash_acc, "credit": total, "description": f"صرف ({method})"}])
     return _row_id(row)
+
+
+# ══════════════════ عهد الموظفين (مالية وعينية) ══════════════════
+
+def _custody_row(r: dict) -> dict:
+    r = dict(r)
+    r["id"] = str(r["id"])
+    r["employee_id"] = str(r["employee_id"])
+    return r
+
+
+async def list_custody_items(company_id: str, employee_id: str | None, status: str | None) -> list[dict]:
+    conditions = ["c.company_id = $1"]
+    params: list = [company_id]
+    if employee_id:
+        params.append(employee_id); conditions.append(f"c.employee_id = ${len(params)}")
+    if status:
+        params.append(status); conditions.append(f"c.status = ${len(params)}")
+    rows = await fetch(
+        f"""SELECT c.*, e.full_name AS employee_name
+            FROM hr_custody_items c JOIN hr_employees e ON e.id = c.employee_id
+            WHERE {' AND '.join(conditions)}
+            ORDER BY c.created_at DESC""",
+        *params,
+    )
+    return [_custody_row(r) for r in rows]
+
+
+async def create_custody_item(company_id: str, user_id: str, d: dict) -> dict:
+    assigned = date.fromisoformat(d["assignedDate"]) if d.get("assignedDate") else date.today()
+    row = await fetchrow(
+        """INSERT INTO hr_custody_items
+             (company_id, employee_id, item_name, description, estimated_value, assigned_date, notes, created_by)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *""",
+        company_id, d["employeeId"], d["itemName"], d.get("description"),
+        d.get("estimatedValue", 0), assigned, d.get("notes"), user_id,
+    )
+    emp = await fetchrow("SELECT full_name FROM hr_employees WHERE id=$1", row["employee_id"])
+    out = _custody_row(row)
+    out["employee_name"] = emp["full_name"] if emp else ""
+    return out
+
+
+async def update_custody_status(company_id: str, item_id: str, d: dict) -> dict:
+    """تحديث حالة عنصر عهدة: استرجاع أو فقد. الرجوع لحالة 'محتجزة' يمسح تاريخ الإرجاع تلقائياً."""
+    status = d["status"]
+    returned_date = (
+        date.fromisoformat(d["returnedDate"]) if d.get("returnedDate")
+        else (date.today() if status in ("returned", "lost") else None)
+    )
+    row = await fetchrow(
+        """UPDATE hr_custody_items
+           SET status=$1, returned_date=$2, notes=COALESCE($3, notes)
+           WHERE id=$4 AND company_id=$5 RETURNING *""",
+        status, returned_date, d.get("notes"), item_id, company_id,
+    )
+    if not row:
+        raise HTTPException(404, "عنصر العهدة غير موجود")
+    emp = await fetchrow("SELECT full_name FROM hr_employees WHERE id=$1", row["employee_id"])
+    out = _custody_row(row)
+    out["employee_name"] = emp["full_name"] if emp else ""
+    return out
+
+
+# ══════════════════ الطلبات الإلكترونية العامة ══════════════════
+# (نقل فرع / مستلزمات / بلاغ عطل — الإجازات لها مسارها الخاص فوق تحت "الإجازات")
+
+_REQUEST_TITLES = {
+    "branch_transfer": "طلب نقل فرع",
+    "supplies": "طلب مستلزمات",
+    "malfunction_report": "بلاغ عطل",
+}
+
+
+def _request_row(r: dict) -> dict:
+    r = dict(r)
+    r["id"] = str(r["id"])
+    r["employee_id"] = str(r["employee_id"])
+    return r
+
+
+async def list_employee_requests(company_id: str, employee_id: str | None,
+                                  request_type: str | None, status: str | None) -> list[dict]:
+    conditions = ["r.company_id = $1"]
+    params: list = [company_id]
+    if employee_id:
+        params.append(employee_id); conditions.append(f"r.employee_id = ${len(params)}")
+    if request_type:
+        params.append(request_type); conditions.append(f"r.request_type = ${len(params)}")
+    if status:
+        params.append(status); conditions.append(f"r.status = ${len(params)}")
+    rows = await fetch(
+        f"""SELECT r.*, e.full_name AS employee_name, u.full_name AS decided_by_name
+            FROM hr_employee_requests r
+            JOIN hr_employees e ON e.id = r.employee_id
+            LEFT JOIN users u ON u.id = r.decided_by
+            WHERE {' AND '.join(conditions)}
+            ORDER BY r.created_at DESC""",
+        *params,
+    )
+    return [_request_row(r) for r in rows]
+
+
+async def create_employee_request(company_id: str, user_id: str, d: dict) -> dict:
+    request_type = d["requestType"]
+    details = d.get("details") or {}
+    title = d.get("title") or _REQUEST_TITLES.get(request_type, "طلب")
+    row = await fetchrow(
+        """INSERT INTO hr_employee_requests (company_id, employee_id, request_type, title, details, created_by)
+           VALUES ($1,$2,$3,$4,$5::jsonb,$6) RETURNING *""",
+        company_id, d["employeeId"], request_type, title, details, user_id,
+    )
+    emp = await fetchrow("SELECT full_name FROM hr_employees WHERE id=$1", row["employee_id"])
+    out = _request_row(row)
+    out["employee_name"] = emp["full_name"] if emp else ""
+    out["decided_by_name"] = None
+
+    await notify.notify_users_with_permission(
+        company_id, "hr.requests_approve", "hr_request_pending",
+        f"{title} — بانتظار الاعتماد ({out['employee_name']})",
+        body=details.get("reason") or details.get("description"),
+        link="/hr", severity="info", dedupe_key=f"hr_request_pending:{row['id']}",
+    )
+    return out
+
+
+async def decide_employee_request(company_id: str, user_id: str, request_id: str, d: dict) -> dict:
+    decision = d["decision"]
+    row = await fetchrow(
+        """UPDATE hr_employee_requests
+           SET status=$1, decided_by=$2, decided_at=now(), decision_note=$3
+           WHERE id=$4 AND company_id=$5 AND status='pending' RETURNING *""",
+        decision, user_id, d.get("decisionNote"), request_id, company_id,
+    )
+    if not row:
+        raise HTTPException(404, "الطلب غير موجود أو تم البت فيه بالفعل")
+
+    # نقل الفرع: تطبيق فعلي تلقائي عند الاعتماد لو الطلب بيحدد فرعاً مستهدفاً صالحاً
+    if decision == "approved" and row["request_type"] == "branch_transfer":
+        target_branch_id = (row["details"] or {}).get("targetBranchId")
+        if target_branch_id:
+            try:
+                await execute(
+                    "UPDATE hr_employees SET branch_id=$1, updated_at=now() WHERE id=$2 AND company_id=$3",
+                    target_branch_id, row["employee_id"], company_id)
+            except Exception:
+                pass  # فرع غير صالح — الاعتماد يُسجَّل برغم ذلك؛ التصحيح يدوي من شاشة الموظفين
+
+    emp = await fetchrow("SELECT full_name FROM hr_employees WHERE id=$1", row["employee_id"])
+    decider = await fetchrow("SELECT full_name FROM users WHERE id=$1", user_id)
+    out = _request_row(row)
+    out["employee_name"] = emp["full_name"] if emp else ""
+    out["decided_by_name"] = decider["full_name"] if decider else None
+    return out
 

@@ -77,6 +77,8 @@ PERMISSIONS = [
         {"key": "hr.leave_approve", "label": "اعتماد الإجازات"},
         {"key": "hr.violations",    "label": "المخالفات والإنذارات"},
         {"key": "hr.payroll",       "label": "الرواتب"},
+        {"key": "hr.custody",          "label": "عهد الموظفين (مالية وعينية)"},
+        {"key": "hr.requests_approve", "label": "اعتماد طلبات الموظفين العامة (نقل/مستلزمات/بلاغ عطل)"},
     ]},
     {"group": "مركز ملاحظات الخدمة", "items": [
         {"key": "service_notes.view",   "label": "عرض الملاحظات والمحادثات"},

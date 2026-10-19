@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, Query
 from ...core.deps import CurrentUser, require_permission
 from . import service
 from .schemas import (
-    AttendanceOut, CheckInBody, CommissionPreviewRow, EmployeeCreate, EmployeeOut, EmployeeUpdate,
-    IqamaAlertOut, LeaveBalanceOut, LeaveCreate, LeaveDecisionBody, LeaveOut,
+    AttendanceOut, CheckInBody, CommissionPreviewRow, CustodyItemCreate, CustodyItemOut, CustodyStatusBody,
+    EmployeeCreate, EmployeeOut, EmployeeRequestCreate, EmployeeRequestDecisionBody, EmployeeRequestOut,
+    EmployeeUpdate, IqamaAlertOut, LeaveBalanceOut, LeaveCreate, LeaveDecisionBody, LeaveOut,
     PayrollPayIn, PayrollRunCreate, PayrollRunOut, PayrollRunResultOut, PayslipOut,
     TerminateBody, TerminateOut, ViolationCreate, ViolationOut,
 )
@@ -142,3 +143,45 @@ async def pay_payroll_run(run_id: str, body: PayrollPayIn,
                           user: CurrentUser = Depends(require_permission("hr.payroll"))):
     """تسجيل الصرف الفعلي لصافي الرواتب (بعد الاعتماد) — مدين رواتب مستحقة، دائن النقد/البنك"""
     return await service.pay_payroll_run(user.company_id, user.user_id, run_id, body.method)
+
+
+# ══════════════════ عهد الموظفين ══════════════════
+
+@router.get("/custody", response_model=list[CustodyItemOut])
+async def list_custody_items(employeeId: str | None = Query(default=None),
+                             status: str | None = Query(default=None),
+                             user: CurrentUser = Depends(require_permission("hr.view", "hr.custody"))):
+    return await service.list_custody_items(user.company_id, employeeId, status)
+
+
+@router.post("/custody", response_model=CustodyItemOut, status_code=201)
+async def create_custody_item(body: CustodyItemCreate, user: CurrentUser = Depends(require_permission("hr.custody"))):
+    return await service.create_custody_item(user.company_id, user.user_id, body.model_dump())
+
+
+@router.put("/custody/{item_id}/status", response_model=CustodyItemOut)
+async def update_custody_status(item_id: str, body: CustodyStatusBody,
+                                user: CurrentUser = Depends(require_permission("hr.custody"))):
+    return await service.update_custody_status(user.company_id, item_id, body.model_dump())
+
+
+# ══════════════════ الطلبات الإلكترونية العامة ══════════════════
+
+@router.get("/requests", response_model=list[EmployeeRequestOut])
+async def list_employee_requests(employeeId: str | None = Query(default=None),
+                                 requestType: str | None = Query(default=None),
+                                 status: str | None = Query(default=None),
+                                 user: CurrentUser = Depends(require_permission("hr.view", "hr.requests_approve"))):
+    return await service.list_employee_requests(user.company_id, employeeId, requestType, status)
+
+
+@router.post("/requests", response_model=EmployeeRequestOut, status_code=201)
+async def create_employee_request(body: EmployeeRequestCreate,
+                                  user: CurrentUser = Depends(require_permission("hr.manage", "hr.requests_approve"))):
+    return await service.create_employee_request(user.company_id, user.user_id, body.model_dump())
+
+
+@router.post("/requests/{request_id}/decision", response_model=EmployeeRequestOut)
+async def decide_employee_request(request_id: str, body: EmployeeRequestDecisionBody,
+                                  user: CurrentUser = Depends(require_permission("hr.requests_approve"))):
+    return await service.decide_employee_request(user.company_id, user.user_id, request_id, body.model_dump())

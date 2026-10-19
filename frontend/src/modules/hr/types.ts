@@ -129,5 +129,40 @@ export type CommissionPreviewRow = {
   commission_amount: number;
 };
 
+export type CustodyStatus = "held" | "returned" | "lost";
+export const CUSTODY_STATUS_LABELS: Record<CustodyStatus, string> = {
+  held: "محتجزة لدى الموظف", returned: "مُرجعة", lost: "مفقودة",
+};
+
+export type CustodyItem = {
+  id: string;
+  employee_id: string;
+  employee_name: string;
+  item_name: string;
+  description: string | null;
+  estimated_value: number;
+  assigned_date: string;
+  returned_date: string | null;
+  status: CustodyStatus;
+  notes: string | null;
+};
+
+export type RequestType = "branch_transfer" | "supplies" | "malfunction_report";
+export const REQUEST_TYPE_LABELS: Record<RequestType, string> = {
+  branch_transfer: "نقل فرع", supplies: "مستلزمات", malfunction_report: "بلاغ عطل",
+};
+
+export type EmployeeRequest = {
+  id: string;
+  employee_id: string;
+  employee_name: string;
+  request_type: RequestType;
+  title: string | null;
+  details: Record<string, any>;
+  status: "pending" | "approved" | "rejected";
+  decided_by_name: string | null;
+  decision_note: string | null;
+};
+
 export const money = (n: number) =>
   Number(n || 0).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
