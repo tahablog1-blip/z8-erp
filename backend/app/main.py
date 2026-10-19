@@ -721,6 +721,16 @@ async def lifespan(app: FastAPI):
            )""",
         "CREATE INDEX IF NOT EXISTS idx_price_list_items_list ON price_list_items (price_list_id)",
         "ALTER TABLE customers ADD COLUMN IF NOT EXISTS price_list_id UUID",
+        # ══ خصومات حسب الكمية — لكل صنف حدود كمية بنسب خصم، تُطبّق تلقائياً في شاشة البيع ══
+        """CREATE TABLE IF NOT EXISTS quantity_discount_rules (
+             id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id       UUID NOT NULL,
+             product_id       UUID NOT NULL,
+             min_qty          NUMERIC(12,3) NOT NULL,
+             discount_percent NUMERIC(5,2) NOT NULL,
+             created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+           )""",
+        "CREATE INDEX IF NOT EXISTS idx_qty_discount_rules_product ON quantity_discount_rules (product_id)",
     ):
         try:
             await execute(stmt)

@@ -141,20 +141,38 @@ export default function PreparePage() {
       .slice(0, 12);
   }, [search, products]);
 
+  // خصومات الكمية: أعلى حد كمية (من قواعد الصنف) تحقّقته الكمية الحالية — ما
+  // بتتجاوزش سعراً يدوياً (manualPrice) ثبّته الموظف
+  function effectivePriceVat(p: Product, qty: number) {
+    const rules = p.qty_discount_rules || [];
+    let pct = 0;
+    for (const r of rules) { if (qty >= r.min_qty) pct = r.discount_percent; }
+    return Number(p.price_vat) * (1 - pct / 100);
+  }
+
   function addProduct(p: Product) {
     setCart((c) => {
       const i = c.findIndex((l) => l.productId === p.id);
       if (i >= 0 && !p.is_service) {
-        const next = [...c]; next[i] = { ...next[i], qty: next[i].qty + 1 }; return next;
+        const next = [...c];
+        const qty = next[i].qty + 1;
+        next[i] = { ...next[i], qty, ...(next[i].manualPrice ? {} : { unitPriceVat: effectivePriceVat(p, qty) }) };
+        return next;
       }
       if (i >= 0) return c; // الخدمة مرة واحدة
       return [...c, { productId: p.id, label: productLabel(p), qty: 1,
-                      unitPriceVat: Number(p.price_vat), isService: p.is_service, manualPrice: false }];
+                      unitPriceVat: effectivePriceVat(p, 1), isService: p.is_service, manualPrice: false }];
     });
     setSearch("");
   }
   const setQty = (id: string, d: number) =>
-    setCart((c) => c.map((l) => l.productId === id ? { ...l, qty: Math.max(1, l.qty + d) } : l));
+    setCart((c) => c.map((l) => {
+      if (l.productId !== id) return l;
+      const qty = Math.max(1, l.qty + d);
+      if (l.manualPrice) return { ...l, qty };
+      const p = products.find((pp) => pp.id === id);
+      return p ? { ...l, qty, unitPriceVat: effectivePriceVat(p, qty) } : { ...l, qty };
+    }));
   const setPrice = (id: string, v: string) =>
     setCart((c) => c.map((l) => l.productId === id
       ? { ...l, unitPriceVat: Number(v) || 0, manualPrice: true } : l));

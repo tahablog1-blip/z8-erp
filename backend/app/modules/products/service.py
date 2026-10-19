@@ -17,6 +17,12 @@ _COLS = """id, category, name, spec, unit, barcode, price, price_vat, is_service
 # عشان نستبدل السعرين بـ COALESCE مع price_list_items بدل العمودين الأصليين
 _COLS_NO_PRICE = [c.strip() for c in _COLS.split(",") if c.strip() not in ("price", "price_vat")]
 
+# قواعد خصم الكمية مجمّعة كـ JSON داخل صف الصنف نفسه — شاشة البيع تحسب الخصم
+# محلياً عند تغيير الكمية بلا أي طلب إضافي للسيرفر (نفس فلسفة إرفاق السعر الجاهز)
+_QTY_RULES_SQL = """COALESCE((SELECT json_agg(json_build_object(
+                       'min_qty', q.min_qty, 'discount_percent', q.discount_percent) ORDER BY q.min_qty)
+                     FROM quantity_discount_rules q WHERE q.product_id = p.id), '[]'::json) AS qty_discount_rules"""
+
 
 def _row_out(r: dict) -> dict:
     """UUID → نص، و NUMERIC (Decimal) → float عشان JSON"""
@@ -87,7 +93,8 @@ async def list_products(company_id: str, search: str | None = None, price_list_i
         f"""SELECT {cols}, {price_sql}
                   COALESCE((SELECT SUM(inv.qty) FROM inventory inv
                              WHERE inv.product_id = p.id AND inv.loc_type = 'branch'), 0) AS stock_qty,
-                  (p.image_base64 IS NOT NULL) AS has_image
+                  (p.image_base64 IS NOT NULL) AS has_image,
+                  {_QTY_RULES_SQL}
            FROM products p {join_sql} WHERE {where} ORDER BY p.category, p.name, p.spec""", *params
     )
     return [_row_out(r) for r in rows]
@@ -99,7 +106,8 @@ async def get_by_barcode(company_id: str, code: str, price_list_id: str | None =
         row = await fetchrow(
             f"""SELECT {cols}, COALESCE(pli.price, p.price) AS price,
                       COALESCE(pli.price_vat, p.price_vat) AS price_vat,
-                      (pli.id IS NOT NULL) AS price_overridden
+                      (pli.id IS NOT NULL) AS price_overridden,
+                      {_QTY_RULES_SQL}
                FROM products p
                LEFT JOIN price_list_items pli ON pli.product_id = p.id AND pli.price_list_id = $3
                WHERE p.company_id = $1 AND p.barcode = $2 AND p.is_active = TRUE""",
@@ -107,7 +115,7 @@ async def get_by_barcode(company_id: str, code: str, price_list_id: str | None =
         )
     else:
         row = await fetchrow(
-            f"""SELECT {_COLS} FROM products
+            f"""SELECT {_COLS}, {_QTY_RULES_SQL} FROM products p
                 WHERE company_id = $1 AND barcode = $2 AND is_active = TRUE""",
             company_id, code,
         )
@@ -598,6 +606,47 @@ async def create_service_rule(company_id: str, d: dict) -> dict:
 async def delete_service_rule(company_id: str, rule_id: str) -> dict:
     row = await fetchrow(
         "DELETE FROM service_price_rules WHERE id=$1 AND company_id=$2 RETURNING id",
+        rule_id, company_id)
+    if not row:
+        raise HTTPException(404, "القاعدة غير موجودة")
+    return {"ok": True}
+
+
+# ══════════════════ خصومات حسب الكمية ══════════════════
+# كل قاعدة: صنف + حد أدنى كمية + نسبة خصم — شاشة البيع بتطبّق أعلى حد تحقق
+# فيه الكمية المضافة تلقائياً (نفس منطق "الأخص بيكسب" في أسعار الخدمة، لكن
+# هنا الترتيب بالكمية الأكبر لا الأخص)
+
+async def list_quantity_rules(company_id: str) -> list[dict]:
+    rows = await fetch(
+        """SELECT r.*, p.name AS product_name, p.category AS product_category
+           FROM quantity_discount_rules r JOIN products p ON p.id = r.product_id
+           WHERE r.company_id=$1
+           ORDER BY p.name, r.min_qty""", company_id)
+    return [{**r, "id": str(r["id"]), "product_id": str(r["product_id"]),
+             "min_qty": float(r["min_qty"]), "discount_percent": float(r["discount_percent"])} for r in rows]
+
+
+async def create_quantity_rule(company_id: str, d: dict) -> dict:
+    min_qty = d.get("minQty")
+    pct = d.get("discountPercent")
+    if min_qty is None or float(min_qty) <= 0:
+        raise HTTPException(422, "أدخل حد كمية صحيح (أكبر من صفر)")
+    if pct is None or not (0 < float(pct) <= 100):
+        raise HTTPException(422, "أدخل نسبة خصم صحيحة بين 0 و100")
+    prod = await fetchrow("SELECT id FROM products WHERE id=$1 AND company_id=$2", d["productId"], company_id)
+    if not prod:
+        raise HTTPException(404, "الصنف غير موجود")
+    row = await fetchrow(
+        """INSERT INTO quantity_discount_rules (company_id, product_id, min_qty, discount_percent)
+           VALUES ($1,$2,$3,$4) RETURNING id""",
+        company_id, d["productId"], min_qty, pct)
+    return {"ok": True, "id": str(row["id"])}
+
+
+async def delete_quantity_rule(company_id: str, rule_id: str) -> dict:
+    row = await fetchrow(
+        "DELETE FROM quantity_discount_rules WHERE id=$1 AND company_id=$2 RETURNING id",
         rule_id, company_id)
     if not row:
         raise HTTPException(404, "القاعدة غير موجودة")

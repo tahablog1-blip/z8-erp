@@ -220,6 +220,31 @@ async def delete_service_rule(rule_id: str,
     return await service.delete_service_rule(user.company_id, rule_id)
 
 
+# ══════════════════ خصومات حسب الكمية ══════════════════
+
+class QuantityRuleIn(BaseModel):
+    productId: str
+    minQty: float
+    discountPercent: float
+
+
+@router.get("/quantity-discount-rules")
+async def list_quantity_rules(user: CurrentUser = Depends(get_current_user)):
+    return await service.list_quantity_rules(user.company_id)
+
+
+@router.post("/quantity-discount-rules", status_code=201)
+async def create_quantity_rule(body: QuantityRuleIn,
+                               user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
+    return await service.create_quantity_rule(user.company_id, body.model_dump())
+
+
+@router.delete("/quantity-discount-rules/{rule_id}")
+async def delete_quantity_rule(rule_id: str,
+                               user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
+    return await service.delete_quantity_rule(user.company_id, rule_id)
+
+
 class AiCleanIn(BaseModel):
     apply: bool = False
     onlyOils: bool = True

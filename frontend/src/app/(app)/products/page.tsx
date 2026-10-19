@@ -728,6 +728,41 @@ export default function ProductsPage() {
     catch (e: any) { await appAlert(e.message); }
   }
 
+  // ══════════ خصومات حسب الكمية ══════════
+  type QtyRule = {
+    id: string; product_id: string; product_name: string; product_category: string | null;
+    min_qty: number; discount_percent: number;
+  };
+  const [qtyRulesOpen, setQtyRulesOpen] = useState(false);
+  const [qtyRules, setQtyRules] = useState<QtyRule[]>([]);
+  const [qtyRuleForm, setQtyRuleForm] = useState({ productId: "", minQty: "", discountPercent: "" });
+  const [qtyRuleBusy, setQtyRuleBusy] = useState(false);
+  const [qtyRuleErr, setQtyRuleErr] = useState("");
+
+  async function loadQtyRules() {
+    try { setQtyRules(await api<QtyRule[]>("/products/quantity-discount-rules")); } catch { /* */ }
+  }
+  async function addQtyRule() {
+    setQtyRuleErr(""); setQtyRuleBusy(true);
+    try {
+      await api("/products/quantity-discount-rules", {
+        method: "POST",
+        body: JSON.stringify({
+          productId: qtyRuleForm.productId,
+          minQty: Number(qtyRuleForm.minQty),
+          discountPercent: Number(qtyRuleForm.discountPercent),
+        }),
+      });
+      setQtyRuleForm({ ...qtyRuleForm, minQty: "", discountPercent: "" });
+      await loadQtyRules();
+    } catch (e: any) { setQtyRuleErr(e.message); }
+    finally { setQtyRuleBusy(false); }
+  }
+  async function removeQtyRule(id: string) {
+    try { await api(`/products/quantity-discount-rules/${id}`, { method: "DELETE" }); await loadQtyRules(); }
+    catch (e: any) { await appAlert(e.message); }
+  }
+
   // ══════════ المصنّف الذكي الجماعي ══════════
   const [clsOpen, setClsOpen] = useState(false);
   const [clsBusy, setClsBusy] = useState(false);
@@ -1039,6 +1074,17 @@ export default function ProductsPage() {
                     }}
                   >
                     أسعار الخدمة
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setQtyRulesOpen(true);
+                      setQtyRuleErr("");
+                      loadQtyRules();
+                    }}
+                  >
+                    خصومات الكمية
                   </Button>
 
                   <Button
@@ -1677,6 +1723,59 @@ export default function ProductsPage() {
                 <span className="flex items-center gap-2">
                   <b className="tnum text-petrol">{r.price.toFixed(2)} ر.س</b>
                   <button onClick={() => removeRule(r.id)} className="mi-hover rounded-md px-1.5 py-1 text-text-dim hover:bg-ember-bg hover:text-ember">
+                    <MIcon name="delete" className="!text-[16px]" />
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Modal>
+
+      {/* ══════════ خصومات حسب الكمية ══════════ */}
+      <Modal open={qtyRulesOpen} size="lg" onClose={() => setQtyRulesOpen(false)} title="📦 خصومات حسب الكمية">
+        <div className="space-y-3">
+          <p className="text-[12px] leading-relaxed text-text-dim">
+            حدّد حد كمية لصنف معيّن ونسبة خصم — شاشة البيع بتطبّق أعلى حد تحقّق فيه الكمية المضافة
+            تلقائياً على سعر هذا الصنف (قبل أو بعد قائمة الأسعار المخصّصة لو العميل له قائمة).
+          </p>
+
+          <div className="grid gap-2 rounded-xl border border-dashed border-line p-3 sm:grid-cols-2">
+            <Field label="الصنف">
+              <Select value={qtyRuleForm.productId} onChange={(e) => setQtyRuleForm({ ...qtyRuleForm, productId: e.target.value })}>
+                <option value="">— اختر الصنف —</option>
+                {rows.map((p: Product) => <option key={p.id} value={p.id}>{productLabel(p)}</option>)}
+              </Select>
+            </Field>
+            <Field label="نسبة الخصم (%)">
+              <Input value={qtyRuleForm.discountPercent} inputMode="decimal" placeholder="مثال: 10"
+                onChange={(e) => setQtyRuleForm({ ...qtyRuleForm, discountPercent: e.target.value.replace(/[^0-9.]/g, "") })} />
+            </Field>
+            <Field label="حد الكمية الأدنى (ومافوق)">
+              <Input value={qtyRuleForm.minQty} inputMode="decimal" placeholder="مثال: 5"
+                onChange={(e) => setQtyRuleForm({ ...qtyRuleForm, minQty: e.target.value.replace(/[^0-9.]/g, "") })} />
+            </Field>
+            <div className="sm:col-span-2">
+              <Button className="w-full justify-center"
+                disabled={qtyRuleBusy || !qtyRuleForm.productId || !qtyRuleForm.minQty || !qtyRuleForm.discountPercent}
+                onClick={addQtyRule}>
+                {qtyRuleBusy ? "..." : "+ إضافة القاعدة"}
+              </Button>
+            </div>
+          </div>
+          <ErrorNote msg={qtyRuleErr} />
+
+          <div className="max-h-64 divide-y divide-line overflow-y-auto rounded-lg border border-line">
+            {qtyRules.length === 0 && <p className="p-5 text-center text-[12px] text-text-dim">لا قواعد بعد</p>}
+            {qtyRules.map((r) => (
+              <div key={r.id} className="flex items-center justify-between px-3 py-2 text-[12.5px]">
+                <span>
+                  <span className="rounded-full bg-ink-3 px-2 py-0.5 text-[10px] text-text-dim">{r.product_name}</span>
+                  <span className="tnum mr-2"> كمية ≥ {r.min_qty}</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <b className="tnum text-petrol">خصم {r.discount_percent}%</b>
+                  <button onClick={() => removeQtyRule(r.id)} className="mi-hover rounded-md px-1.5 py-1 text-text-dim hover:bg-ember-bg hover:text-ember">
                     <MIcon name="delete" className="!text-[16px]" />
                   </button>
                 </span>

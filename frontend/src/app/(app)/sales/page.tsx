@@ -536,16 +536,27 @@ export default function SalesPage() {
     return products.filter((p) => (p.barcode || "").toLowerCase().includes(q)).slice(0, 8);
   }, [products, productQuery]);
 
+  // خصومات الكمية: أعلى حد كمية (من قواعد الصنف) تحقّقته الكمية الحالية —
+  // بتتطبّق على سعر الصنف الحالي (العادي أو سعر قائمة أسعار العميل لو معيّن عليها)
+  function effectivePrice(p: Product, qty: number) {
+    const rules = p.qty_discount_rules || [];
+    let pct = 0;
+    for (const r of rules) { if (qty >= r.min_qty) pct = r.discount_percent; }
+    const factor = 1 - pct / 100;
+    return { unitPrice: Number(p.price) * factor, unitPriceVat: Number(p.price_vat) * factor };
+  }
+
   function addProduct(p: Product) {
     setCart((prev) => {
       const existing = prev.find((l) => l.productId === p.id);
       if (existing) {
         if (p.is_service) return prev;               // صنف خدمة: كمية ثابتة = 1
-        return prev.map((l) => l.productId === p.id ? { ...l, qty: l.qty + 1 } : l);
+        const qty = existing.qty + 1;
+        return prev.map((l) => l.productId === p.id ? { ...l, qty, ...effectivePrice(p, qty) } : l);
       }
       return [...prev, {
         productId: p.id, label: productLabel(p), qty: 1,
-        unitPrice: Number(p.price), unitPriceVat: Number(p.price_vat),
+        ...effectivePrice(p, 1),
         isService: !!p.is_service,
       }];
     });
@@ -553,7 +564,10 @@ export default function SalesPage() {
     setProductQuery("");
   }
   function setLineQty(productId: string, qty: number) {
-    setCart((prev) => prev.map((l) => l.productId === productId ? { ...l, qty: Math.max(1, qty) } : l));
+    const q = Math.max(1, qty);
+    const p = products.find((pp) => pp.id === productId);
+    setCart((prev) => prev.map((l) => l.productId === productId
+      ? { ...l, qty: q, ...(p ? effectivePrice(p, q) : {}) } : l));
   }
 
   // ── الكرتونة = 12 قطعة: أزرار +/− بتشتغل بالكراتين فقط — القطع المفردة من الباركود بس ──
@@ -561,14 +575,19 @@ export default function SalesPage() {
   //    (−) بتنزل كرتونة كاملة، ولو وصلت صفر السطر بيتشال
   const CARTON = 12;
   function cartonUp(productId: string) {
-    setCart((prev) => prev.map((l) => l.productId === productId
-      ? { ...l, qty: (Math.floor(l.qty / CARTON) + 1) * CARTON } : l));
+    const p = products.find((pp) => pp.id === productId);
+    setCart((prev) => prev.map((l) => {
+      if (l.productId !== productId) return l;
+      const qty = (Math.floor(l.qty / CARTON) + 1) * CARTON;
+      return { ...l, qty, ...(p ? effectivePrice(p, qty) : {}) };
+    }));
   }
   function cartonDown(productId: string) {
+    const p = products.find((pp) => pp.id === productId);
     setCart((prev) => prev.flatMap((l) => {
       if (l.productId !== productId) return [l];
       const next = (Math.ceil(l.qty / CARTON) - 1) * CARTON;
-      return next <= 0 ? [] : [{ ...l, qty: next }];
+      return next <= 0 ? [] : [{ ...l, qty: next, ...(p ? effectivePrice(p, next) : {}) }];
     }));
   }
   function removeLine(productId: string) {
