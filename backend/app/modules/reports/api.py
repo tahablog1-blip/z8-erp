@@ -70,7 +70,7 @@ _SCHEMA_BRIEF = """
 - products(id, category, name, spec, price numeric, price_vat numeric, cost_price numeric, is_service bool, is_oil bool, oil_brand, is_active)
 - inventory(company_id, loc_type, loc_id, product_id, qty)  -- الرصيد الحالي لكل موقع
 - invoices(id, branch_id, invoice_no, customer_id, customer_name, issued_at timestamptz, total_ex, total_vat, total_inc, paid_total, credit_total, is_returned, source, created_by)
-- invoice_items(invoice_id, product_id, product_label, qty, unit_price, line_total)  -- بدون company_id: اربطها بـ invoices
+- invoice_items(invoice_id, product_id, label, qty, unit_price, unit_price_vat, line_ex, line_vat, line_inc, discount_amount)  -- بدون company_id: اربطها بـ invoices
 - branches(id, name)
 - suppliers(id, name, vat_number)
 - purchase_invoices(id, supplier_id, invoice_no, invoice_date, subtotal, vat_total, total, paid_total, status)
@@ -213,10 +213,10 @@ async def anomalies(user: CurrentUser = Depends(require_permission("reports.view
            GROUP BY customer_name HAVING SUM(credit_total) > 500 ORDER BY due DESC LIMIT 8""",
         user.company_id)]
     checks["zero_price_lines"] = [dict(r) for r in await _fetch(
-        """SELECT ii.product_label, COUNT(*) AS times
+        """SELECT ii.label, COUNT(*) AS times
            FROM invoice_items ii JOIN invoices i ON i.id = ii.invoice_id
            WHERE i.company_id=$1 AND i.issued_at >= CURRENT_DATE - 30 AND ii.unit_price <= 0
-           GROUP BY ii.product_label ORDER BY times DESC LIMIT 8""", user.company_id)]
+           GROUP BY ii.label ORDER BY times DESC LIMIT 8""", user.company_id)]
 
     prompt = (
         "أنت مدقق مالي لمركز خدمة سيارات. اقرأ نتائج الفحوصات واكتب تقريراً عربياً موجزاً "

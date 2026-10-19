@@ -740,12 +740,12 @@ async def gate_scan(company_id: str, letters: str, numbers: str, branch_id: str 
         if inv:
             last_invoice_id = str(inv["id"])
             items = await fetch(
-                """SELECT ii.product_id, ii.product_label, ii.qty, ii.unit_price_vat
+                """SELECT ii.product_id, ii.label, ii.qty, ii.unit_price_vat
                    FROM invoice_items ii WHERE ii.invoice_id=$1 ORDER BY ii.id""",
                 inv["id"])
             last_invoice_items = [
                 {"productId": str(i["product_id"]) if i["product_id"] else None,
-                 "label": i["product_label"], "qty": i["qty"], "unitPriceVat": float(i["unit_price_vat"])}
+                 "label": i["label"], "qty": i["qty"], "unitPriceVat": float(i["unit_price_vat"])}
                 for i in items if i["product_id"]]
 
     return {
