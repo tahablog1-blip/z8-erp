@@ -20,7 +20,14 @@ export type Employee = {
   iban: string | null;
   iqama_number: string | null;
   iqama_expiry_date: string | null;
+  commission_type: CommissionType;
+  commission_pct: number;
   is_active: boolean;
+};
+
+export type CommissionType = "none" | "pct_sales" | "pct_profit";
+export const COMMISSION_TYPE_LABELS: Record<CommissionType, string> = {
+  none: "بدون عمولة", pct_sales: "نسبة من صافي المبيعات", pct_profit: "نسبة من الربح الإجمالي",
 };
 
 export const CONTRACT_LABELS: Record<Employee["contract_type"], string> = {
@@ -103,11 +110,23 @@ export type Payslip = {
   iban: string | null;
   basic_salary: number;
   allowances: number;
+  commission_amount: number;
   violations_deduction: number;
   other_deductions: number;
+  advance_deduction: number;
   gosi_employee: number;
   gosi_employer: number;
   net_pay: number;
+};
+
+export type CommissionPreviewRow = {
+  employee_id: string;
+  employee_name: string;
+  commission_type: CommissionType;
+  commission_pct: number;
+  sales_ex: number;
+  gross_profit: number;
+  commission_amount: number;
 };
 
 export const money = (n: number) =>

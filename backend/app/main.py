@@ -507,6 +507,12 @@ async def lifespan(app: FastAPI):
         "ALTER TABLE hr_payroll_runs ADD COLUMN IF NOT EXISTS paid_by uuid",
         "ALTER TABLE hr_payroll_runs ADD COLUMN IF NOT EXISTS payment_method text",
         "ALTER TABLE hr_payslips ADD COLUMN IF NOT EXISTS advance_deduction numeric(12,2) NOT NULL DEFAULT 0",
+
+        # ── عمولات المبيعات: نسبة لكل موظف (مبيعات أو ربح) تُحسَب تلقائياً عند تشغيل الرواتب ──
+        "ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS commission_type text NOT NULL DEFAULT 'none'",
+        "ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS commission_pct numeric(5,2) NOT NULL DEFAULT 0",
+        "ALTER TABLE hr_payslips ADD COLUMN IF NOT EXISTS commission_amount numeric(12,2) NOT NULL DEFAULT 0",
+
         # ── دورة الشراء الرسمية: عروض أسعار ← أمر شراء معتمد ← استلام مخزني ← مطابقة فاتورة المورد ──
         """CREATE TABLE IF NOT EXISTS purchase_quotations (
              id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

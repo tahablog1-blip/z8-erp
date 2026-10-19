@@ -7,7 +7,8 @@ import { DataTable, Column } from "@/components/DataTable";
 import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch, Tabs, Textarea } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import {
-  Attendance, CONTRACT_LABELS, Employee, IqamaAlert, LEAVE_TYPE_LABELS, LeaveBalance,
+  Attendance, CommissionPreviewRow, CommissionType, COMMISSION_TYPE_LABELS, CONTRACT_LABELS,
+  Employee, IqamaAlert, LEAVE_TYPE_LABELS, LeaveBalance,
   LeaveRequest, LeaveType, PayrollRun, Payslip, Violation, money,
 } from "@/modules/hr/types";
 
@@ -23,7 +24,7 @@ const EMPTY_EMP = {
   branchId: "", fullName: "", nationalId: "", nationality: "", isSaudi: false, phone: "",
   jobTitle: "", techRole: "", contractType: "full_time" as Employee["contract_type"], hireDate: "",
   basicSalary: 0, allowances: 0, iban: "", iqamaNumber: "", iqamaExpiryDate: "", approvalPin: "",
-  linkedUserId: "",
+  linkedUserId: "", commissionType: "none" as CommissionType, commissionPct: 0,
 };
 
 export default function HrPage() {
@@ -79,6 +80,13 @@ export default function HrPage() {
   const [payErr, setPayErr] = useState("");
   const [payBusy, setPayBusy] = useState(false);
   const [viewPayslips, setViewPayslips] = useState<{ run: PayrollRun; slips: Payslip[] } | null>(null);
+
+  const [commPreviewOpen, setCommPreviewOpen] = useState(false);
+  const [commFrom, setCommFrom] = useState("");
+  const [commTo, setCommTo] = useState("");
+  const [commRows, setCommRows] = useState<CommissionPreviewRow[]>([]);
+  const [commErr, setCommErr] = useState("");
+  const [commBusy, setCommBusy] = useState(false);
 
   const employeeName = useMemo(() => {
     const m: Record<string, string> = {};
@@ -139,6 +147,7 @@ export default function HrPage() {
       iqamaExpiryDate: e.iqama_expiry_date || "",
       approvalPin: (e as { approval_pin?: string | null }).approval_pin || "",
       linkedUserId: (e as { linked_user_id?: string | null }).linked_user_id || "",
+      commissionType: e.commission_type || "none", commissionPct: e.commission_pct || 0,
     });
     setEmpErr(""); setEmpModal({ mode: "edit", emp: e });
   }
@@ -217,6 +226,20 @@ export default function HrPage() {
   }
 
   // ══════════════════ الرواتب ══════════════════
+
+  function openCommissionsPreview() {
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().slice(0, 10);
+    setCommFrom(first); setCommTo(next); setCommRows([]); setCommErr(""); setCommPreviewOpen(true);
+  }
+  async function loadCommissionsPreview() {
+    setCommErr(""); setCommBusy(true);
+    try {
+      setCommRows(await api<CommissionPreviewRow[]>(`/hr/commissions-preview?from=${commFrom}&to=${commTo}`));
+    } catch (e: any) { setCommErr(e.message); }
+    finally { setCommBusy(false); }
+  }
 
   async function submitPayroll() {
     setPayErr(""); setPayBusy(true);
@@ -390,7 +413,12 @@ export default function HrPage() {
 
           {tab === "payroll" && canPayroll && (
             <DataTable columns={payrollCols} rows={payrollRuns} emptyText="لا توجد دورات رواتب بعد"
-                      toolbar={<Button onClick={() => { setPayErr(""); setPayrollModal(true); }}>+ تشغيل رواتب</Button>} />
+                      toolbar={
+                        <div className="flex gap-2">
+                          <Button variant="ghost" onClick={openCommissionsPreview}>معاينة العمولات</Button>
+                          <Button onClick={() => { setPayErr(""); setPayrollModal(true); }}>+ تشغيل رواتب</Button>
+                        </div>
+                      } />
           )}
         </div>
       </Card>
@@ -473,6 +501,25 @@ export default function HrPage() {
             </Field>
             <Field label="رقم الآيبان"><Input value={empForm.iban} className="tnum" onChange={(e) => setEmpForm({ ...empForm, iban: e.target.value })} /></Field>
           </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Field label="عمولة المبيعات">
+              <Select value={empForm.commissionType}
+                      onChange={(e) => setEmpForm({ ...empForm, commissionType: e.target.value as CommissionType })}>
+                {Object.entries(COMMISSION_TYPE_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+              </Select>
+            </Field>
+            {empForm.commissionType !== "none" && (
+              <Field label="نسبة العمولة %" hint="تُحسب تلقائياً عند تشغيل الرواتب">
+                <Input type="number" min={0} max={100} step="0.1" className="tnum" value={empForm.commissionPct}
+                       onChange={(e) => setEmpForm({ ...empForm, commissionPct: +e.target.value || 0 })} />
+              </Field>
+            )}
+          </div>
+          {empForm.commissionType !== "none" && !empForm.linkedUserId && (
+            <div className="rounded-lg bg-brass-soft p-2.5 text-[11.5px] font-bold text-brass">
+              العمولة تُحسَب من فواتير الكاشير المرتبط بحساب دخول — اربط حساب دخول للموظف بالأعلى ليُحسب له شيء.
+            </div>
+          )}
           <ErrorNote msg={empErr} />
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" onClick={() => setEmpModal(null)}>إلغاء</Button>
@@ -538,6 +585,54 @@ export default function HrPage() {
         </div>
       </Modal>
 
+      {/* ══════════ معاينة عمولات المبيعات ══════════ */}
+      <Modal open={commPreviewOpen} size="lg" onClose={() => setCommPreviewOpen(false)} title="معاينة عمولات المبيعات">
+        <div className="space-y-3">
+          <p className="text-[12px] leading-5 text-text-dim">
+            معاينة فقط — لا تُسجَّل ولا تؤثر على أي شيء. العمولة الفعلية تُحسَب تلقائياً عند تشغيل رواتب الشهر لنفس الفترة.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Field label="من تاريخ"><Input type="date" className="tnum" value={commFrom} onChange={(e) => setCommFrom(e.target.value)} /></Field>
+            <Field label="إلى تاريخ" hint="غير شامل">
+              <Input type="date" className="tnum" value={commTo} onChange={(e) => setCommTo(e.target.value)} />
+            </Field>
+            <div className="flex items-end"><Button onClick={loadCommissionsPreview} disabled={commBusy || !commFrom || !commTo}>
+              {commBusy ? "جارِ الحساب..." : "حساب"}
+            </Button></div>
+          </div>
+          <ErrorNote msg={commErr} />
+          <div className="overflow-x-auto rounded-lg border border-line">
+            <table className="w-full border-collapse text-[12.5px]">
+              <thead>
+                <tr className="bg-ink-3 text-[11.5px] font-extrabold text-text-dim">
+                  <th className="px-3 py-2 text-right">الموظف</th>
+                  <th className="px-2 py-2 text-right">نوع العمولة</th>
+                  <th className="px-2 py-2 text-right">النسبة</th>
+                  <th className="px-2 py-2 text-right">الأساس</th>
+                  <th className="px-2 py-2 text-right">العمولة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {commRows.length === 0 ? (
+                  <tr><td colSpan={5} className="px-3 py-6 text-center text-text-dim">اختر الفترة واضغط حساب</td></tr>
+                ) : commRows.map((r) => (
+                  <tr key={r.employee_id} className="border-t border-line/70">
+                    <td className="px-3 py-1.5">{r.employee_name}</td>
+                    <td className="px-2 py-1.5 text-text-dim">{COMMISSION_TYPE_LABELS[r.commission_type]}</td>
+                    <td className="px-2 py-1.5 tnum">{r.commission_pct}%</td>
+                    <td className="px-2 py-1.5 tnum text-text-dim">{money(r.commission_type === "pct_sales" ? r.sales_ex : r.gross_profit)}</td>
+                    <td className="px-2 py-1.5 tnum font-bold text-emerald">{money(r.commission_amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={() => setCommPreviewOpen(false)}>إغلاق</Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* ══════════ تشغيل رواتب ══════════ */}
       <Modal open={payrollModal} onClose={() => setPayrollModal(false)} title="تشغيل رواتب الشهر">
         <div className="space-y-3">
@@ -570,7 +665,9 @@ export default function HrPage() {
                   <tr className="bg-ink-3 text-[11px] font-extrabold text-text-dim">
                     <th className="px-3 py-2 text-right">الموظف</th>
                     <th className="px-2 py-2 text-right">الأساسي</th>
+                    <th className="px-2 py-2 text-right">عمولة</th>
                     <th className="px-2 py-2 text-right">خصم مخالفات</th>
+                    <th className="px-2 py-2 text-right">سلفة</th>
                     <th className="px-2 py-2 text-right">تأمينات (موظف)</th>
                     <th className="px-2 py-2 text-right">الصافي</th>
                   </tr>
@@ -580,7 +677,9 @@ export default function HrPage() {
                     <tr key={s.id} className="border-t border-line/70">
                       <td className="px-3 py-1.5">{s.employee_name}</td>
                       <td className="px-2 py-1.5 tnum">{money(s.basic_salary)}</td>
+                      <td className="px-2 py-1.5 tnum text-emerald">{s.commission_amount > 0 ? `+${money(s.commission_amount)}` : "—"}</td>
                       <td className="px-2 py-1.5 tnum text-ember">{s.violations_deduction > 0 ? `-${money(s.violations_deduction)}` : "—"}</td>
+                      <td className="px-2 py-1.5 tnum text-ember">{s.advance_deduction > 0 ? `-${money(s.advance_deduction)}` : "—"}</td>
                       <td className="px-2 py-1.5 tnum text-text-dim">{s.gosi_employee > 0 ? `-${money(s.gosi_employee)}` : "—"}</td>
                       <td className="px-2 py-1.5 tnum font-bold">{money(s.net_pay)}</td>
                     </tr>

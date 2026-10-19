@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 ContractType = Literal["full_time", "part_time", "temporary"]
 LeaveType = Literal["annual", "sick", "unpaid", "other"]
 LeaveStatus = Literal["pending", "approved", "rejected"]
+CommissionType = Literal["none", "pct_sales", "pct_profit"]
 
 
 # ══════════════════ الموظفون ══════════════════
@@ -30,6 +31,8 @@ class EmployeeCreate(BaseModel):
     iqamaExpiryDate: str | None = None
     approvalPin: str | None = None   # رمز اعتماد أوامر العمل من التابلت (4-6 أرقام، فريد بالشركة)
     allowances: float = Field(default=0, ge=0)   # البدلات الشهرية — تدخل في صافي الراتب
+    commissionType: CommissionType = "none"    # عمولة مبيعات: من صافي المبيعات أو من الربح الإجمالي
+    commissionPct: float = Field(default=0, ge=0, le=100)
 
 
 class EmployeeUpdate(BaseModel):
@@ -51,6 +54,8 @@ class EmployeeUpdate(BaseModel):
     iqamaExpiryDate: str | None = None
     approvalPin: str | None = None
     allowances: float | None = Field(default=None, ge=0)
+    commissionType: CommissionType | None = None
+    commissionPct: float | None = Field(default=None, ge=0, le=100)
 
 
 class EmployeeOut(BaseModel):
@@ -75,6 +80,8 @@ class EmployeeOut(BaseModel):
     iqama_expiry_date: date | None = None
     approval_pin: str | None = None   # ظاهر لمشرفي HR فقط — الصفحة كلها خلف hr.view/hr.manage
     allowances: float = 0
+    commission_type: CommissionType = "none"
+    commission_pct: float = 0
     is_active: bool
 
 
@@ -210,8 +217,10 @@ class PayslipOut(BaseModel):
     iban: str | None = None
     basic_salary: float
     allowances: float
+    commission_amount: float = 0
     violations_deduction: float
     other_deductions: float
+    advance_deduction: float = 0
     gosi_employee: float
     gosi_employer: float
     net_pay: float
@@ -220,3 +229,13 @@ class PayslipOut(BaseModel):
 class PayrollRunResultOut(BaseModel):
     run: PayrollRunOut
     payslips: list[PayslipOut]
+
+
+class CommissionPreviewRow(BaseModel):
+    employee_id: str
+    employee_name: str
+    commission_type: CommissionType
+    commission_pct: float
+    sales_ex: float
+    gross_profit: float
+    commission_amount: float

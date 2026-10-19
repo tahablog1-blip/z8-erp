@@ -34,6 +34,9 @@ NET_SALARIES_PAYABLE_ACCOUNT = ("2040", "رواتب مستحقة الدفع")
 GRIR_CLEARING_ACCOUNT = ("2050", "بضاعة مستلمة غير مفوترة (GR/IR)")
 PURCHASE_VARIANCE_ACCOUNT = ("5295", "فروق أسعار الشراء")
 
+# عمولات المبيعات المستحقة للموظفين (تُدمَج في قيد الرواتب الشامل كبند منفصل عن الأساسي)
+COMMISSION_EXPENSE_ACCOUNT = ("5265", "عمولات المبيعات")
+
 
 async def _get_or_create_account(conn, company_id: str, code: str, name: str, acc_type: str) -> str:
     row = await conn.fetchrow(

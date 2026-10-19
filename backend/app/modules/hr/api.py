@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from ...core.deps import CurrentUser, require_permission
 from . import service
 from .schemas import (
-    AttendanceOut, CheckInBody, EmployeeCreate, EmployeeOut, EmployeeUpdate,
+    AttendanceOut, CheckInBody, CommissionPreviewRow, EmployeeCreate, EmployeeOut, EmployeeUpdate,
     IqamaAlertOut, LeaveBalanceOut, LeaveCreate, LeaveDecisionBody, LeaveOut,
     PayrollPayIn, PayrollRunCreate, PayrollRunOut, PayrollRunResultOut, PayslipOut,
     TerminateBody, TerminateOut, ViolationCreate, ViolationOut,
@@ -107,6 +107,13 @@ async def create_violation(body: ViolationCreate, user: CurrentUser = Depends(re
 
 
 # ══════════════════ الرواتب ══════════════════
+
+@router.get("/commissions-preview", response_model=list[CommissionPreviewRow])
+async def commissions_preview(dateFrom: str = Query(..., alias="from"), dateTo: str = Query(..., alias="to"),
+                              user: CurrentUser = Depends(require_permission("hr.payroll"))):
+    """معاينة عمولات المبيعات لأي فترة قبل تشغيل الرواتب فعلياً — dateTo غير شامل (exclusive)"""
+    return await service.commissions_preview(user.company_id, dateFrom, dateTo)
+
 
 @router.get("/payroll-runs", response_model=list[PayrollRunOut])
 async def list_payroll_runs(user: CurrentUser = Depends(require_permission("hr.payroll"))):

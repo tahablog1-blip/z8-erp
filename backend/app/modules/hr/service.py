@@ -50,6 +50,7 @@ async def list_employees(company_id: str, branch_scope: str | None, branch_id_pa
         r = _row_id(r)
         r["basic_salary"] = _num(r["basic_salary"])
         r["allowances"] = _num(r.get("allowances"))
+        r["commission_pct"] = _num(r.get("commission_pct"))
         out.append(r)
     return out
 
@@ -99,8 +100,9 @@ async def create_employee(company_id: str, branch_scope: str | None, d: dict) ->
             """INSERT INTO hr_employees
                  (company_id, branch_id, linked_user_id, full_name, national_id, nationality,
                   is_saudi, birth_date, phone, job_title, contract_type, hire_date, basic_salary,
-                  iban, iqama_number, iqama_expiry_date, tech_role, approval_pin, allowances)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8::text::date,$9,$10,$11,COALESCE($12::text::date,CURRENT_DATE),$13,$14,$15,$16::text::date,$17,$18,$19)
+                  iban, iqama_number, iqama_expiry_date, tech_role, approval_pin, allowances,
+                  commission_type, commission_pct)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8::text::date,$9,$10,$11,COALESCE($12::text::date,CURRENT_DATE),$13,$14,$15,$16::text::date,$17,$18,$19,$20,$21)
                RETURNING *""",
             company_id, _nz(branch_scope or d.get("branchId")), _nz(d.get("linkedUserId")), d["fullName"],
             _nz(d.get("nationalId")), _nz(d.get("nationality")), d.get("isSaudi", False), _nz(d.get("birthDate")),
@@ -108,12 +110,14 @@ async def create_employee(company_id: str, branch_scope: str | None, d: dict) ->
             Decimal(str(d.get("basicSalary") or 0)), _nz(d.get("iban")), _nz(d.get("iqamaNumber")), _nz(d.get("iqamaExpiryDate")),
             _nz(d.get("techRole")), _clean_pin(d.get("approvalPin")),
             Decimal(str(d.get("allowances") or 0)),
+            d.get("commissionType", "none"), Decimal(str(d.get("commissionPct") or 0)),
         )
     except asyncpg.UniqueViolationError as e:
         if "approval_pin" in str(e):
             raise HTTPException(400, "رمز الاعتماد هذا مستخدم لموظف آخر — اختر رقماً مختلفاً")
         raise
     r = _row_id(row); r["basic_salary"] = _num(r["basic_salary"]); r["allowances"] = _num(r.get("allowances"))
+    r["commission_pct"] = _num(r.get("commission_pct"))
     return r
 
 
@@ -124,6 +128,7 @@ _EMP_COL_MAP = {
     "contractType": "contract_type", "hireDate": "hire_date", "basicSalary": "basic_salary",
     "iban": "iban", "iqamaNumber": "iqama_number", "iqamaExpiryDate": "iqama_expiry_date",
     "techRole": "tech_role", "approvalPin": "approval_pin", "allowances": "allowances",
+    "commissionType": "commission_type", "commissionPct": "commission_pct",
 }
 
 # أعمدة التاريخ — لازم تتحول بالكاست ::text::date في التحديث (سبب خطأ toordinal)
@@ -145,7 +150,7 @@ async def update_employee(company_id: str, employee_id: str, fields: dict) -> di
     ]
     set_parts.append("updated_at = now()")
     def _val(k):
-        if k in ("basicSalary", "allowances"):
+        if k in ("basicSalary", "allowances", "commissionPct"):
             return Decimal(str(fields[k] or 0))
         if k == "approvalPin":
             return _clean_pin(fields[k])
@@ -164,6 +169,7 @@ async def update_employee(company_id: str, employee_id: str, fields: dict) -> di
     if not row:
         raise HTTPException(404, "الموظف غير موجود")
     r = _row_id(row); r["basic_salary"] = _num(r["basic_salary"]); r["allowances"] = _num(r.get("allowances"))
+    r["commission_pct"] = _num(r.get("commission_pct"))
     return r
 
 
@@ -365,6 +371,69 @@ async def create_violation(company_id: str, user_id: str, d: dict) -> dict:
 
 # ══════════════════ الرواتب ══════════════════
 
+def _month_range(year: int, month: int) -> tuple[date, date]:
+    start = date(year, month, 1)
+    end = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+    return start, end
+
+
+async def _commission_basis(fetch_fn, company_id: str, date_from: date, date_to: date) -> dict[str, dict]:
+    """صافي أساس العمولة لكل كاشير (مستخدم) خلال فترة — من فواتير المبيعات غير المرتجعة
+    بالكامل، بعد خصم المرتجعات الجزئية المسجّلة خلال نفس الفترة على فواتيره.
+    ⚠ تبسيط مقصود: المرتجع الجزئي يُخصَم من صافي المبيعات والربح بالتساوي (بدون إعادة
+    حساب تكلفة البضاعة المرتجعة بدقة) — كافٍ لعمولة تقديرية شهرية، يُراجَع مع المحاسب
+    لو اتضح أن حجم المرتجعات الجزئية كبير مؤثر."""
+    sales_rows = await fetch_fn(
+        """SELECT created_by, SUM(total_ex)::numeric(12,2) AS sales_ex,
+                  SUM(total_ex - COALESCE(cogs_total,0))::numeric(12,2) AS gross_profit
+           FROM invoices
+           WHERE company_id=$1 AND is_returned=FALSE AND created_at >= $2 AND created_at < $3
+           GROUP BY created_by""",
+        company_id, date_from, date_to)
+    ret_rows = await fetch_fn(
+        """SELECT i.created_by, SUM(r.total_ex)::numeric(12,2) AS returned_ex
+           FROM invoice_returns r JOIN invoices i ON i.id = r.invoice_id
+           WHERE i.company_id=$1 AND r.created_at >= $2 AND r.created_at < $3
+           GROUP BY i.created_by""",
+        company_id, date_from, date_to)
+    ret_map = {str(r["created_by"]): Decimal(str(r["returned_ex"])) for r in ret_rows if r["created_by"]}
+    basis: dict[str, dict] = {}
+    for r in sales_rows:
+        if not r["created_by"]:
+            continue
+        uid = str(r["created_by"])
+        returned = ret_map.get(uid, Decimal("0.00"))
+        basis[uid] = {
+            "sales_ex": max(Decimal(str(r["sales_ex"])) - returned, Decimal("0.00")),
+            "gross_profit": max(Decimal(str(r["gross_profit"])) - returned, Decimal("0.00")),
+        }
+    return basis
+
+
+async def commissions_preview(company_id: str, date_from: str, date_to: str) -> list[dict]:
+    """معاينة عمولات المبيعات لأي فترة (بلا ربط بدورة رواتب) — لمراجعة المحاسب/المدير
+    قبل تشغيل الرواتب فعلياً."""
+    basis_map = await _commission_basis(fetch, company_id, date.fromisoformat(date_from), date.fromisoformat(date_to))
+    employees = await fetch(
+        """SELECT id, full_name, linked_user_id, commission_type, commission_pct
+           FROM hr_employees WHERE company_id=$1 AND is_active=TRUE AND commission_type<>'none'
+           ORDER BY full_name""",
+        company_id)
+    out = []
+    for emp in employees:
+        basis = basis_map.get(str(emp["linked_user_id"])) if emp["linked_user_id"] else None
+        sales_ex = basis["sales_ex"] if basis else Decimal("0.00")
+        gross_profit = basis["gross_profit"] if basis else Decimal("0.00")
+        base_val = sales_ex if emp["commission_type"] == "pct_sales" else gross_profit
+        amount = (base_val * Decimal(str(emp["commission_pct"])) / 100).quantize(Decimal("0.01"))
+        out.append({
+            "employee_id": str(emp["id"]), "employee_name": emp["full_name"],
+            "commission_type": emp["commission_type"], "commission_pct": _num(emp["commission_pct"]),
+            "sales_ex": _num(sales_ex), "gross_profit": _num(gross_profit), "commission_amount": _num(amount),
+        })
+    return out
+
+
 async def list_payroll_runs(company_id: str) -> list[dict]:
     rows = await fetch(
         """SELECT r.*, COUNT(p.id)::int AS payslip_count, COALESCE(SUM(p.net_pay),0)::numeric(12,2) AS total_net
@@ -414,32 +483,40 @@ async def run_payroll(company_id: str, user_id: str, period_month: int, period_y
             )
             viol_map = {str(r["employee_id"]): Decimal(str(r["total"])) for r in viol_rows}
             adv_map = await _treasury.payroll_advance_deductions(conn, company_id)
+            date_from, date_to = _month_range(period_year, period_month)
+            commission_basis_map = await _commission_basis(conn.fetch, company_id, date_from, date_to)
 
             slips = []
             for emp in employees:
                 viol_deduction = viol_map.get(str(emp["id"]), Decimal("0.00"))
                 basic = Decimal(str(emp["basic_salary"]))
                 allowances = Decimal(str(emp["allowances"] if emp["allowances"] is not None else 0))
+                comm_amount = Decimal("0.00")
+                if emp["linked_user_id"] and emp["commission_type"] != "none" and emp["commission_pct"]:
+                    basis = commission_basis_map.get(str(emp["linked_user_id"]))
+                    if basis:
+                        base_val = basis["sales_ex"] if emp["commission_type"] == "pct_sales" else basis["gross_profit"]
+                        comm_amount = (base_val * Decimal(str(emp["commission_pct"])) / 100).quantize(Decimal("0.01"))
                 if emp["is_saudi"]:
                     gosi_employee = (basic * Decimal(str(company["gosi_saudi_employee_pct"])) / 100).quantize(Decimal("0.01"))
                     gosi_employer = (basic * Decimal(str(company["gosi_saudi_employer_pct"])) / 100).quantize(Decimal("0.01"))
                 else:
                     gosi_employee = Decimal("0.00")
                     gosi_employer = (basic * Decimal(str(company["gosi_nonsaudi_employer_pct"])) / 100).quantize(Decimal("0.01"))
-                # ⚠ التأمينات محسوبة على الأساسي فقط — لو بدلاتك تدخل في وعاء GOSI راجعها مع محاسبك
-                net_pre = basic + allowances - viol_deduction - gosi_employee
+                # ⚠ التأمينات محسوبة على الأساسي فقط — لو بدلاتك (أو العمولة) تدخل في وعاء GOSI راجعها مع محاسبك
+                net_pre = basic + allowances + comm_amount - viol_deduction - gosi_employee
                 adv_ded = min(adv_map.get(str(emp["id"]), Decimal("0.00")), max(net_pre, Decimal("0.00"))).quantize(Decimal("0.01"))
                 net_pay = (net_pre - adv_ded).quantize(Decimal("0.01"))
                 slips.append((run["id"], emp["id"], basic, allowances, viol_deduction,
-                              gosi_employee, gosi_employer, net_pay, adv_ded))
+                              gosi_employee, gosi_employer, net_pay, adv_ded, comm_amount))
 
             # إدخال كل القسائم دفعة واحدة
             if slips:
                 await conn.executemany(
                     """INSERT INTO hr_payslips
                          (payroll_run_id, employee_id, basic_salary, allowances, violations_deduction,
-                          gosi_employee, gosi_employer, net_pay, advance_deduction)
-                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)""",
+                          gosi_employee, gosi_employer, net_pay, advance_deduction, commission_amount)
+                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)""",
                     slips,
                 )
 
@@ -458,8 +535,8 @@ async def get_payslips(company_id: str, run_id: str) -> list[dict]:
     out = []
     for r in rows:
         r = _row_id(r)
-        for k in ("basic_salary", "allowances", "violations_deduction", "other_deductions", "advance_deduction",
-                 "gosi_employee", "gosi_employer", "net_pay"):
+        for k in ("basic_salary", "allowances", "commission_amount", "violations_deduction", "other_deductions",
+                 "advance_deduction", "gosi_employee", "gosi_employer", "net_pay"):
             r[k] = _num(r[k])
         out.append(r)
     return out
@@ -485,7 +562,7 @@ async def finalize_payroll_run(company_id: str, run_id: str) -> dict:
 
             slips = await conn.fetch(
                 """SELECT employee_id, basic_salary, allowances, violations_deduction,
-                          gosi_employee, gosi_employer, net_pay, advance_deduction
+                          gosi_employee, gosi_employer, net_pay, advance_deduction, commission_amount
                    FROM hr_payslips WHERE payroll_run_id=$1""", run_id)
             if not slips:
                 return _row_id(row)
@@ -502,6 +579,7 @@ async def finalize_payroll_run(company_id: str, run_id: str) -> dict:
             gosi_employee_total = sum(accounting.dec(sl["gosi_employee"]) for sl in slips)
             gosi_employer_total = sum(accounting.dec(sl["gosi_employer"]) for sl in slips)
             violations_total = sum(accounting.dec(sl["violations_deduction"]) for sl in slips)
+            commission_total = sum(accounting.dec(sl["commission_amount"]) for sl in slips)
             net_pay_total = sum(accounting.dec(sl["net_pay"]) for sl in slips)
             gosi_total = gosi_employee_total + gosi_employer_total
 
@@ -530,6 +608,12 @@ async def finalize_payroll_run(company_id: str, run_id: str) -> dict:
                     conn, company_id, _treasury.OTHER_INCOME[0], _treasury.OTHER_INCOME[1], "revenue")
                 lines.append({"account_id": inc_acc, "credit": violations_total,
                               "description": "خصم مخالفات من الرواتب"})
+            if commission_total > 0:
+                comm_acc = await _treasury._get_or_create_account(
+                    conn, company_id, _treasury.COMMISSION_EXPENSE_ACCOUNT[0],
+                    _treasury.COMMISSION_EXPENSE_ACCOUNT[1], "expense")
+                lines.append({"account_id": comm_acc, "debit": commission_total,
+                              "description": "عمولات مبيعات مستحقة للموظفين"})
             if adv_total > 0:
                 adv_acc = await _treasury._get_or_create_account(
                     conn, company_id, _treasury.ADVANCE_ACCOUNT[0], _treasury.ADVANCE_ACCOUNT[1], "asset")
