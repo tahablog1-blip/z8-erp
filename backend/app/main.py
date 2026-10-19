@@ -932,6 +932,22 @@ async def lifespan(app: FastAPI):
              created_at timestamptz NOT NULL DEFAULT now()
            )""",
         "CREATE INDEX IF NOT EXISTS idx_bank_stmt_account ON bank_statement_lines(bank_account_id)",
+
+        # ── المرحلة 8: محرك الإشعارات — مركز داخلي (راجع core/notify.py + modules/notifications) ──
+        """CREATE TABLE IF NOT EXISTS notifications (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             user_id uuid NOT NULL,
+             type text NOT NULL,
+             title text NOT NULL,
+             body text,
+             link text,
+             severity text NOT NULL DEFAULT 'info',
+             is_read boolean NOT NULL DEFAULT FALSE,
+             dedupe_key text,
+             created_at timestamptz NOT NULL DEFAULT now()
+           )""",
+        "CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(company_id, user_id, is_read, created_at DESC)",
     ):
         try:
             await execute(stmt)

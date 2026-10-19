@@ -11,6 +11,7 @@ from .schemas import (
     PrintingSettingsOut, PrintingSettingsIn, SystemSettingsOut, SystemSettingsIn,
     BackgroundOut, BackgroundCreateIn, BackgroundSettingsOut, BackgroundSettingsIn,
     DesignSettingsOut, DesignSettingsIn, LoyaltySettingsOut, LoyaltySettingsIn,
+    EmailSettingsOut, EmailSettingsIn,
 )
 
 router = APIRouter()
@@ -206,6 +207,32 @@ async def update_system_settings(body: SystemSettingsIn,
     row = await service.update_system_settings(user.company_id, body)
     await log_action(user, "edit", "settings", details="تحديث إعدادات النظام")
     return row
+
+
+# ══════════════════ البريد الإلكتروني (SMTP) — جزء محرك الإشعارات ══════════════════
+
+@router.get("/email", response_model=EmailSettingsOut)
+async def get_email_settings(user: CurrentUser = Depends(require_permission("settings.company"))):
+    return await service.get_email_settings(user.company_id)
+
+
+@router.put("/email", response_model=EmailSettingsOut)
+async def update_email_settings(body: EmailSettingsIn,
+                                 user: CurrentUser = Depends(require_permission("settings.company"))):
+    row = await service.update_email_settings(user.company_id, body)
+    await log_action(user, "edit", "settings", details="تحديث إعدادات البريد الإلكتروني")
+    return row
+
+
+class TestEmailIn(BaseModel):
+    to: str
+
+
+@router.post("/email/test")
+async def send_test_email(body: TestEmailIn,
+                          user: CurrentUser = Depends(require_permission("settings.company"))):
+    await service.send_test_email(user.company_id, body.to)
+    return {"success": True}
 
 
 # ══════════════════ الخلفية الموحدة للنظام (معرض متعدد) ══════════════════

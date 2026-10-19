@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from fastapi import HTTPException
 
+from ...core import notify
 from ...core.db import execute, fetch, fetchrow, transaction
 
 
@@ -160,7 +161,21 @@ async def close_shift(company_id: str, shift_id: str, counted_cash: float, notes
            WHERE id=$1""",
         shift_id, Decimal(str(counted_cash)), notes,
     )
-    return await _build_shift_report(company_id, shift_id)
+    report = await _build_shift_report(company_id, shift_id)
+
+    # إشعار فرق الصندوق — لو الفرق تجاوز هامش تافه (5 ر.س) يستحق مراجعة المشرف
+    diff = report["cash"]["difference"] if report else None
+    if diff is not None and abs(diff) > 5:
+        user_name = report["shift"].get("user_name") or ""
+        await notify.notify_users_with_permission(
+            company_id, "shifts.view_branch", "shift_cash_variance",
+            f"فرق صندوق في وردية {user_name}".strip(),
+            body=f"المتوقع {report['cash']['expected']} — المعدود {report['cash']['counted']} "
+                 f"— الفرق {diff:+.2f} ر.س",
+            link="/shifts", severity="danger",
+            dedupe_key=f"shift_variance:{shift_id}",
+        )
+    return report
 
 
 async def list_shifts(company_id: str, viewer_id: str, can_view_branch: bool,

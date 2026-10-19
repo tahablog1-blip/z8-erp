@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from fastapi import HTTPException
 
-from ...core import accounting
+from ...core import accounting, notify
 from ...core.db import fetch, fetchrow, transaction
 from ...core.stock_lock import lock_stock_location
 from ..treasury import service as _treasury
@@ -432,6 +432,14 @@ async def create_po(company_id: str, user_id: str, d: dict) -> dict:
             if d.get("quotationId"):
                 await conn.execute(
                     "UPDATE purchase_quotations SET status='selected' WHERE id=$1", d["quotationId"])
+
+    await notify.notify_users_with_permission(
+        company_id, "purchasing.orders", "po_pending_approval",  # نفس _PERM_PO في api.py
+        f"أمر شراء بانتظار الاعتماد: {po_no}",
+        body=f"إجمالي {total} ر.س — المورد غير مُعتمد بعد",
+        link="/purchases", severity="info",
+        dedupe_key=f"po_pending:{po['id']}",
+    )
     return await get_po(company_id, str(po["id"]))
 
 

@@ -357,3 +357,37 @@ class DesignSettingsIn(BaseModel):
         if v not in _SIDEBAR_DEFAULTS:
             raise ValueError("وضع قائمة غير صالح")
         return v
+
+
+# ══════════════════ البريد الإلكتروني (SMTP) — جزء محرك الإشعارات ══════════════════
+
+class EmailSettingsOut(BaseModel):
+    enabled: bool = False
+    smtpHost: str | None = None
+    smtpPort: int = 587
+    smtpUser: str | None = None
+    hasPassword: bool = False     # لا نُرجع كلمة السر نفسها أبداً، فقط إن كانت محفوظة
+    fromAddress: str | None = None
+    fromName: str | None = None
+    notifyOnWarnAndDanger: bool = True   # يبعت إيميل تلقائي للإشعارات warn/danger فقط
+
+
+class EmailSettingsIn(BaseModel):
+    enabled: bool = False
+    smtpHost: str | None = None
+    smtpPort: int = Field(default=587, ge=1, le=65535)
+    smtpUser: str | None = None
+    smtpPassword: str | None = None   # فاضي = يسيب كلمة السر المحفوظة كما هي
+    fromAddress: str | None = None
+    fromName: str | None = None
+    notifyOnWarnAndDanger: bool = True
+
+    @field_validator("fromAddress")
+    @classmethod
+    def _from_addr(cls, v: str | None) -> str | None:
+        v = (v or "").strip()
+        if not v:
+            return None
+        if not _EMAIL_RE.match(v):
+            raise ValueError("بريد إلكتروني غير صالح")
+        return v

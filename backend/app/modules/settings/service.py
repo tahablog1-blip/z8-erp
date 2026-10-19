@@ -602,3 +602,53 @@ async def audit_log_entities(company_id: str) -> list[str]:
     rows = await fetch(
         "SELECT DISTINCT entity FROM audit_log WHERE company_id=$1 ORDER BY entity", company_id)
     return [r["entity"] for r in rows]
+
+
+# ══════════════════ البريد الإلكتروني (SMTP) — جزء محرك الإشعارات ══════════════════
+_EMAIL_DEFAULTS = {
+    "enabled": "0", "smtpHost": "", "smtpPort": "587", "smtpUser": "",
+    "smtpPassword": "", "fromAddress": "", "fromName": "", "notifyOnWarnAndDanger": "1",
+}
+_EMAIL_BOOL = {"enabled", "notifyOnWarnAndDanger"}
+
+
+async def get_email_settings(company_id: str) -> dict:
+    kv = await _get_kv(company_id, [f"email.{k}" for k in _EMAIL_DEFAULTS])
+    out: dict = {}
+    for k, default in _EMAIL_DEFAULTS.items():
+        if k == "smtpPassword":
+            continue
+        raw = kv.get(f"email.{k}", default)
+        if k in _EMAIL_BOOL:
+            out[k] = raw == "1"
+        elif k == "smtpPort":
+            out[k] = int(raw or 587)
+        else:
+            out[k] = raw or None
+    out["hasPassword"] = bool(kv.get("email.smtpPassword"))
+    return out
+
+
+async def update_email_settings(company_id: str, body) -> dict:
+    kv = {
+        "email.enabled": "1" if body.enabled else "0",
+        "email.smtpHost": body.smtpHost or "",
+        "email.smtpPort": str(body.smtpPort),
+        "email.smtpUser": body.smtpUser or "",
+        "email.fromAddress": body.fromAddress or "",
+        "email.fromName": body.fromName or "",
+        "email.notifyOnWarnAndDanger": "1" if body.notifyOnWarnAndDanger else "0",
+    }
+    # فاضي = نسيب كلمة السر المحفوظة كما هي (ما نمسحهاش بالخطأ بمجرد حفظ باقي الحقول)
+    if body.smtpPassword:
+        kv["email.smtpPassword"] = body.smtpPassword
+    await _set_kv(company_id, kv)
+    return await get_email_settings(company_id)
+
+
+async def send_test_email(company_id: str, to_address: str) -> None:
+    from ...core import email as _email
+    ok = await _email.send_email(company_id, to_address, "رسالة اختبار — Z8",
+                                 "لو وصلتك هذه الرسالة فإعدادات البريد الإلكتروني سليمة. ✅")
+    if not ok:
+        raise HTTPException(422, "تعذّر إرسال الرسالة — تأكد من إعدادات SMTP وأن الإرسال مفعّل")

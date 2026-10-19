@@ -9,7 +9,7 @@ from decimal import Decimal
 
 from fastapi import HTTPException
 
-from ...core import accounting
+from ...core import accounting, notify
 from ...core.db import execute, fetch, fetchrow, transaction
 from ...core.stock_lock import lock_stock_location, lock_stock_locations
 
@@ -292,6 +292,7 @@ async def transfer(company_id: str, user_id: str, actor_name: str, d: dict) -> d
         raise HTTPException(400, "لا يمكن التحويل من الموقع إلى نفسه")
 
     move_no = _new_move_no("T")
+    low_stock_hits: list[dict] = []
 
     async with transaction() as conn:
         async with conn.transaction():
@@ -319,6 +320,14 @@ async def transfer(company_id: str, user_id: str, actor_name: str, d: dict) -> d
                        WHERE company_id=$2 AND loc_type=$3 AND loc_id=$4 AND product_id=$5""",
                     it["qty"], company_id, d["fromLocType"], d["fromLocId"], it["productId"],
                 )
+                prod = await conn.fetchrow(
+                    "SELECT min_qty, name FROM products WHERE id=$1", it["productId"])
+                new_qty = current - it["qty"]
+                if prod and prod["min_qty"] and new_qty <= prod["min_qty"]:
+                    low_stock_hits.append({
+                        "productId": it["productId"], "name": prod["name"] or it["productLabel"],
+                        "qty": new_qty, "minQty": prod["min_qty"], "locId": d["fromLocId"],
+                    })
                 await conn.execute(
                     """INSERT INTO inventory (company_id, loc_type, loc_id, product_id, qty)
                        VALUES ($1,$2,$3,$4,$5)
@@ -340,6 +349,15 @@ async def transfer(company_id: str, user_id: str, actor_name: str, d: dict) -> d
                    VALUES ($1,$2,$3,'stock_transfer','stock',$4)""",
                 company_id, user_id, actor_name, f"{len(d['items'])} صنف — سند {move_no}",
             )
+
+    for hit in low_stock_hits:
+        await notify.notify_users_with_permission(
+            company_id, "products.view_stock", "low_stock",
+            f"نقص مخزون: {hit['name']}",
+            body=f"الرصيد الحالي {hit['qty']} (الحد الأدنى {hit['minQty']})",
+            link="/inventory", severity="warn",
+            dedupe_key=f"low_stock:{hit['productId']}:{d['fromLocType']}:{hit['locId']}",
+        )
 
     return {"success": True, "moveNo": move_no, "itemCount": len(d["items"])}
 

@@ -24,6 +24,16 @@ const DEFAULT: SystemSettings = {
 const MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
   "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 
+type EmailSettings = {
+  enabled: boolean; smtpHost: string | null; smtpPort: number; smtpUser: string | null;
+  hasPassword: boolean; fromAddress: string | null; fromName: string | null;
+  notifyOnWarnAndDanger: boolean;
+};
+const EMAIL_DEFAULT: EmailSettings = {
+  enabled: false, smtpHost: null, smtpPort: 587, smtpUser: null,
+  hasPassword: false, fromAddress: null, fromName: null, notifyOnWarnAndDanger: true,
+};
+
 // المسارات المرشّحة لوجهة الدخول: كل الصفحات غير الخاصة بالأدمن فقط (الموظف لازم يملك صلاحية وصول حقيقية)
 const EMPLOYEE_LANDING_CANDIDATES = NAV_MODULES.filter((m) => !m.adminOnly);
 
@@ -41,6 +51,43 @@ export default function SystemSettingsPage() {
     api<SystemSettings>("/settings/system").then((r) => { setForm(r); setLoaded(true); })
       .catch((e) => { setErr(e.message); setLoaded(true); });
   }, []);
+
+  // ── البريد الإلكتروني (SMTP) — جزء محرك الإشعارات ──
+  const [emailForm, setEmailForm] = useState<EmailSettings>(EMAIL_DEFAULT);
+  const [emailPassword, setEmailPassword] = useState("");
+  const [emailLoaded, setEmailLoaded] = useState(false);
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailErr, setEmailErr] = useState("");
+  const [emailOk, setEmailOk] = useState("");
+  const [testTo, setTestTo] = useState("");
+  const [testBusy, setTestBusy] = useState(false);
+  const [testMsg, setTestMsg] = useState("");
+
+  useEffect(() => {
+    api<EmailSettings>("/settings/email").then((r) => { setEmailForm(r); setEmailLoaded(true); })
+      .catch(() => setEmailLoaded(true));
+  }, []);
+
+  async function saveEmail() {
+    setEmailErr(""); setEmailOk(""); setEmailBusy(true);
+    try {
+      const saved = await api<EmailSettings>("/settings/email", {
+        method: "PUT", body: JSON.stringify({ ...emailForm, smtpPassword: emailPassword || null }),
+      });
+      setEmailForm(saved); setEmailPassword("");
+      setEmailOk("تم الحفظ");
+    } catch (e: any) { setEmailErr(e.message); }
+    finally { setEmailBusy(false); }
+  }
+
+  async function sendTestEmail() {
+    setTestMsg(""); setTestBusy(true);
+    try {
+      await api("/settings/email/test", { method: "POST", body: JSON.stringify({ to: testTo }) });
+      setTestMsg("تم الإرسال ✓ تفقّد صندوق الوارد");
+    } catch (e: any) { setTestMsg(e.message); }
+    finally { setTestBusy(false); }
+  }
 
   async function save() {
     setErr(""); setOk(""); setBusy(true);
@@ -141,6 +188,72 @@ export default function SystemSettingsPage() {
         <p className="mt-2 text-[11px] text-text-dim">
           بداية السنة المالية بتُستخدم في زر «السنة المالية الحالية» بشاشة التقارير لحساب نطاق التاريخ تلقائياً.
         </p>
+      </Card>
+
+      <Card>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-[14px] font-extrabold">البريد الإلكتروني (SMTP)</div>
+          <Switch checked={emailForm.enabled} onChange={(v) => setEmailForm({ ...emailForm, enabled: v })} />
+        </div>
+        <p className="mb-3 text-[11px] text-text-dim">
+          لإرسال إشعارات تلقائية بالبريد (نقص مخزون، موافقة معلقة، فرق صندوق...) — جزء من مركز الإشعارات.
+        </p>
+        {!emailLoaded ? (
+          <div className="text-[12px] text-text-dim">جارِ التحميل...</div>
+        ) : (
+          <div className="space-y-2.5">
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Field label="خادم SMTP">
+                <Input value={emailForm.smtpHost || ""} placeholder="smtp.example.com"
+                       onChange={(e) => setEmailForm({ ...emailForm, smtpHost: e.target.value })} />
+              </Field>
+              <Field label="المنفذ">
+                <Input type="number" className="tnum" value={emailForm.smtpPort}
+                       onChange={(e) => setEmailForm({ ...emailForm, smtpPort: +e.target.value || 587 })} />
+              </Field>
+              <Field label="اسم المستخدم">
+                <Input value={emailForm.smtpUser || ""}
+                       onChange={(e) => setEmailForm({ ...emailForm, smtpUser: e.target.value })} />
+              </Field>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Field label="كلمة السر" hint={emailForm.hasPassword ? "محفوظة — اتركها فاضية إن لم ترد تغييرها" : "لم تُحفظ بعد"}>
+                <Input type="password" value={emailPassword} placeholder={emailForm.hasPassword ? "••••••••" : ""}
+                       onChange={(e) => setEmailPassword(e.target.value)} />
+              </Field>
+              <Field label="اسم المرسل">
+                <Input value={emailForm.fromName || ""} placeholder="مصدر الزيوت"
+                       onChange={(e) => setEmailForm({ ...emailForm, fromName: e.target.value })} />
+              </Field>
+            </div>
+            <Field label="بريد المرسل">
+              <Input type="email" value={emailForm.fromAddress || ""} placeholder="notifications@example.com"
+                     onChange={(e) => setEmailForm({ ...emailForm, fromAddress: e.target.value })} />
+            </Field>
+            <label className="flex cursor-pointer items-center justify-between rounded-lg border border-line p-2.5">
+              <div className="text-[12px] font-bold">إرسال بريد تلقائي للتنبيهات المهمة فقط</div>
+              <Switch size="sm" checked={emailForm.notifyOnWarnAndDanger}
+                      onChange={(v) => setEmailForm({ ...emailForm, notifyOnWarnAndDanger: v })} />
+            </label>
+
+            <ErrorNote msg={emailErr} />
+            {emailOk && <p className="text-[12px] font-bold text-emerald">{emailOk}</p>}
+            <div className="flex justify-end">
+              <Button onClick={saveEmail} disabled={emailBusy}>{emailBusy ? "جارِ الحفظ..." : "حفظ إعدادات البريد"}</Button>
+            </div>
+
+            <div className="flex items-end gap-2 border-t border-line pt-3">
+              <Field label="إرسال رسالة اختبار">
+                <Input type="email" value={testTo} placeholder="your@email.com"
+                       onChange={(e) => setTestTo(e.target.value)} />
+              </Field>
+              <Button variant="ghost" onClick={sendTestEmail} disabled={testBusy || !testTo.trim()}>
+                {testBusy ? "جارِ الإرسال..." : "إرسال"}
+              </Button>
+            </div>
+            {testMsg && <p className="text-[11.5px] text-text-dim">{testMsg}</p>}
+          </div>
+        )}
       </Card>
 
       <Card>

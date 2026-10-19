@@ -12,7 +12,7 @@ from decimal import Decimal
 
 from fastapi import HTTPException
 
-from ...core import accounting, zatca
+from ...core import accounting, notify, zatca
 from ...core.db import fetch, fetchrow, transaction
 from ...core.stock_lock import lock_stock_location
 from ..branches.service import next_branch_invoice_no
@@ -103,15 +103,18 @@ async def create_invoice(company_id: str, user_id: str, user_email: str, d: dict
             # 3) خصم المخزون من الفرع + حساب تكلفة البضاعة المباعة
             product_ids = [it["productId"] for it in d["items"]]
             cost_rows = await conn.fetch(
-                "SELECT id, cost_price, is_service FROM products WHERE id = ANY($1::uuid[])", product_ids
+                "SELECT id, cost_price, is_service, min_qty, name FROM products WHERE id = ANY($1::uuid[])",
+                product_ids
             )
             cost_map = {str(r["id"]): accounting.dec(r["cost_price"]) for r in cost_rows}
             service_ids = {str(r["id"]) for r in cost_rows if r["is_service"]}
+            min_qty_map = {str(r["id"]): (r["min_qty"], r["name"]) for r in cost_rows}
             if any(it['productId'] not in service_ids for it in d['items']):
                 await lock_stock_location(
                     conn, company_id, 'branch', d['branchId']
                 )
 
+            low_stock_hits: list[dict] = []
             for it in d["items"]:
                 if it["productId"] in service_ids:
                     continue  # صنف خدمة — لا مخزون يُخصم
@@ -124,11 +127,16 @@ async def create_invoice(company_id: str, user_id: str, user_email: str, d: dict
                 if current_qty < it["qty"]:
                     raise HTTPException(
                         409, f"الكمية غير كافية للصنف: {it['label']} (المتاح {current_qty})")
+                new_qty = current_qty - it["qty"]
                 await conn.execute(
                     """UPDATE inventory SET qty = qty - $1, updated_at = now()
                        WHERE loc_type='branch' AND loc_id=$2 AND product_id=$3""",
                     it["qty"], d["branchId"], it["productId"],
                 )
+                min_qty, p_name = min_qty_map.get(it["productId"], (0, it.get("label")))
+                if min_qty and new_qty <= min_qty:
+                    low_stock_hits.append({"productId": it["productId"], "name": p_name or it.get("label"),
+                                           "qty": new_qty, "minQty": min_qty})
             total_cost = sum(
                 cost_map.get(it["productId"], Decimal("0.00")) * it["qty"]
                 for it in d["items"] if it["productId"] not in service_ids
@@ -272,6 +280,17 @@ async def create_invoice(company_id: str, user_id: str, user_email: str, d: dict
                 company_id, d["branchId"], user_id, user_email,
                 f"{invoice_no} — {len(d['items'])} صنف — {total_inc} ر.س",
             )
+
+    # إشعار نقص المخزون — بعد نجاح العملية بالكامل (أثر جانبي لا يدخل الـ transaction)
+    for hit in low_stock_hits:
+        await notify.notify_users_with_permission(
+            company_id, "products.view_stock", "low_stock",
+            f"نقص مخزون: {hit['name']}",
+            body=f"الرصيد الحالي {hit['qty']} (الحد الأدنى {hit['minQty']})",
+            link="/inventory",
+            severity="warn",
+            dedupe_key=f"low_stock:{hit['productId']}:branch:{d['branchId']}",
+        )
 
     return _invoice_out(invoice)
 

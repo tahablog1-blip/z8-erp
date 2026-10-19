@@ -43,6 +43,11 @@ import { NAV_MODULES, NAV_SECTIONS, SECTION_ICONS } from "@/modules/registry";
 import { NavIcon } from "@/components/nav-icons";
 import { NAV_TITLE_KEYS, SECTION_TITLE_KEYS, useLang } from "@/lib/i18n";
 
+type NotificationRow = {
+  id: string; type: string; title: string; body: string | null; link: string | null;
+  severity: "info" | "warn" | "danger"; is_read: boolean; created_at: string;
+};
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const { user, logout, hasPerm } = useAuth();
   const { lang, setLang, t } = useLang();
@@ -158,6 +163,47 @@ export function Shell({ children }: { children: React.ReactNode }) {
     const base = document.title.replace(/^\(\d+\) /, "");
     document.title = unread > 0 ? `(${unread}) ${base}` : base;
   }, [unread]);
+
+  // ── 🔔 مركز الإشعارات الداخلي (نقص مخزون/موافقات معلقة/فرق صندوق...) ──
+  const [notifUnread, setNotifUnread] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifList, setNotifList] = useState<NotificationRow[]>([]);
+  const [notifLoading, setNotifLoading] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    async function poll() {
+      try {
+        const r = await api<{ unread: number }>("/notifications/unread-count");
+        if (alive) setNotifUnread(r.unread);
+      } catch { /* الخادم غير متاح مؤقتاً */ }
+    }
+    poll();
+    const t = setInterval(poll, 20000);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
+  async function openNotifications() {
+    const next = !notifOpen;
+    setNotifOpen(next);
+    if (next) {
+      setNotifLoading(true);
+      try { setNotifList(await api<NotificationRow[]>("/notifications?limit=30")); }
+      catch { /* */ }
+      finally { setNotifLoading(false); }
+    }
+  }
+  async function markNotifRead(n: NotificationRow) {
+    if (!n.is_read) {
+      try { await api(`/notifications/${n.id}/read`, { method: "POST" }); } catch { /* */ }
+      setNotifList((prev) => prev.map((x) => x.id === n.id ? { ...x, is_read: true } : x));
+      setNotifUnread((c) => Math.max(0, c - 1));
+    }
+    if (n.link) router.push(n.link);
+  }
+  async function markAllNotifRead() {
+    try { await api("/notifications/read-all", { method: "POST" }); } catch { /* */ }
+    setNotifList((prev) => prev.map((x) => ({ ...x, is_read: true })));
+    setNotifUnread(0);
+  }
 
   // الفلترة: adminOnly = لمدير النظام وحده؛ غير كده الصلاحيات هي الحكم
   const isAdmin = user?.role === "admin";
@@ -320,11 +366,60 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <div className="truncate text-page-title text-text">{pageTitle}</div>
             </div>
 
-            {/* الإشعارات */}
+            {/* مركز الإشعارات الداخلي */}
+            <div className="relative">
+              <Tooltip label="مركز الإشعارات" side="bottom">
+                <button onClick={openNotifications} aria-label="مركز الإشعارات"
+                  className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol">
+                  <MIcon name="notifications_active" className="!text-[19px]" />
+                  {notifUnread > 0 && (
+                    <span className="absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-ember px-1 text-[9px] font-black text-white">
+                      {notifUnread > 99 ? "99+" : notifUnread}
+                    </span>
+                  )}
+                </button>
+              </Tooltip>
+              {notifOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+                  <div className="absolute left-0 top-11 z-50 w-80 overflow-hidden rounded-xl border border-line bg-ink2 shadow-panel">
+                    <div className="flex items-center justify-between border-b border-line px-3 py-2">
+                      <span className="text-[12.5px] font-bold">الإشعارات</span>
+                      {notifUnread > 0 && (
+                        <button onClick={markAllNotifRead} className="text-[11px] font-bold text-petrol hover:underline">
+                          تعليم الكل كمقروء
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifLoading ? (
+                        <div className="p-4 text-center text-[12px] text-text-dim">جارِ التحميل...</div>
+                      ) : notifList.length === 0 ? (
+                        <div className="p-4 text-center text-[12px] text-text-dim">لا توجد إشعارات</div>
+                      ) : notifList.map((n) => (
+                        <button key={n.id} onClick={() => markNotifRead(n)}
+                          className={`block w-full border-b border-line/60 px-3 py-2.5 text-right transition hover:bg-ink-3 ${n.is_read ? "" : "bg-petrol-soft/40"}`}>
+                          <div className="flex items-start gap-1.5">
+                            <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${
+                              n.severity === "danger" ? "bg-ember" : n.severity === "warn" ? "bg-amber-500" : "bg-petrol"}`} />
+                            <div className="min-w-0 flex-1">
+                              <div className={`text-[12.5px] ${n.is_read ? "text-text-dim" : "font-bold"}`}>{n.title}</div>
+                              {n.body && <div className="mt-0.5 text-[11px] text-text-dim">{n.body}</div>}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* المحادثات */}
             <Tooltip label="المحادثات" side="bottom">
-              <button onClick={() => router.push("/service-notes")} aria-label="الإشعارات"
+              <button onClick={() => router.push("/service-notes")} aria-label="المحادثات"
                 className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol">
-                <MIcon name="notifications" className="!text-[19px]" />
+                <MIcon name="chat" className="!text-[19px]" />
                 {unread > 0 && (
                   <span className="absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-ember px-1 text-[9px] font-black text-white">
                     {unread > 99 ? "99+" : unread}
