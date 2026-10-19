@@ -59,6 +59,21 @@ async def list_customers(company_id: str) -> list[dict]:
     return [_customer_out(r) for r in rows]
 
 
+async def get_customer(company_id: str, customer_id: str) -> dict:
+    """عميل واحد ببياناته الكاملة — لصفحة ملف العميل (بديل سحب القائمة كلها والفلترة محليًا)"""
+    row = await fetchrow(
+        """SELECT c.*,
+                  COALESCE((SELECT SUM(cl.amount) FROM customer_ledger cl WHERE cl.customer_id = c.id),0)::numeric(12,2) AS balance,
+                  COALESCE((SELECT COUNT(*) FROM customer_vehicles cv WHERE cv.customer_id = c.id),0)::int AS vehicle_count
+           FROM customers c
+           WHERE c.id = $1 AND c.company_id = $2""",
+        customer_id, company_id,
+    )
+    if not row:
+        raise HTTPException(404, "العميل غير موجود")
+    return _customer_out(row)
+
+
 async def search_by_plate(company_id: str, plate: str) -> list[dict]:
     q = _clean_plate(plate)
     if len(q) < 2:

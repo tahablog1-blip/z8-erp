@@ -2,9 +2,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, getToken } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { MIcon } from "@/components/m-icon";
-import { Badge, Button, Card, ErrorNote } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Textarea } from "@/components/ui";
 import { Customer, Vehicle, Statement, money } from "@/modules/customers/types";
+import { PriceList } from "@/modules/price-lists/types";
+
+const EMPTY_CUSTOMER_FORM = {
+  name: "", customerType: "individual" as "individual" | "company", phone: "", email: "",
+  vatNumber: "", crNumber: "", address: "",
+  buildingNo: "", street: "", district: "", city: "", postalCode: "", additionalNo: "",
+  creditLimit: "", priceListId: "",
+  contractDiscountPct: "", contractValidFrom: "", contractValidUntil: "", contractNotes: "",
+};
 
 type Invoice = {
   id: string; invoice_no: string; issued_at: string; total_inc: number;
@@ -32,6 +42,8 @@ export default function CustomerDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const router = useRouter();
+  const { hasPerm } = useAuth();
+  const canEdit = hasPerm("customers.edit");
 
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -44,6 +56,48 @@ export default function CustomerDetailPage() {
   const [stErr, setStErr] = useState("");
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  // ── تعديل بيانات العميل ──
+  const [priceLists, setPriceLists] = useState<PriceList[]>([]);
+  const [editOpen, setEditOpen] = useState(false);
+  const [form, setForm] = useState({ ...EMPTY_CUSTOMER_FORM });
+  const [saveErr, setSaveErr] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { api<PriceList[]>("/price-lists").then(setPriceLists).catch(() => {}); }, []);
+
+  function openEdit() {
+    if (!customer) return;
+    setForm({
+      name: customer.name, customerType: customer.customer_type, phone: customer.phone || "", email: customer.email || "",
+      vatNumber: customer.vat_number || "", crNumber: customer.cr_number || "", address: customer.address || "",
+      buildingNo: customer.building_no || "", street: customer.street || "", district: customer.district || "",
+      city: customer.city || "", postalCode: customer.postal_code || "", additionalNo: customer.additional_no || "",
+      creditLimit: customer.credit_limit != null ? String(customer.credit_limit) : "",
+      priceListId: customer.price_list_id || "",
+      contractDiscountPct: customer.contract_discount_pct != null ? String(customer.contract_discount_pct) : "",
+      contractValidFrom: customer.contract_valid_from || "", contractValidUntil: customer.contract_valid_until || "",
+      contractNotes: customer.contract_notes || "",
+    });
+    setSaveErr(""); setEditOpen(true);
+  }
+
+  async function saveEdit() {
+    setSaveErr(""); setSaving(true);
+    const body = { ...form, email: form.email.trim() || null,
+                   creditLimit: form.creditLimit.trim() === "" ? null : Number(form.creditLimit),
+                   priceListId: form.priceListId || null,
+                   contractDiscountPct: form.contractDiscountPct.trim() === "" ? null : Number(form.contractDiscountPct),
+                   contractValidFrom: form.contractValidFrom || null,
+                   contractValidUntil: form.contractValidUntil || null,
+                   contractNotes: form.contractNotes.trim() || null };
+    try {
+      const updated = await api<Customer>(`/customers/${id}`, { method: "PUT", body: JSON.stringify(body) });
+      setCustomer(updated);
+      setEditOpen(false);
+    } catch (e: any) { setSaveErr(e.message); }
+    finally { setSaving(false); }
+  }
 
   async function fetchPdf(inv: Invoice): Promise<Blob> {
     const token = getToken();
@@ -91,10 +145,8 @@ export default function CustomerDetailPage() {
     let alive = true;
     (async () => {
       try {
-        const all = await api<Customer[]>("/customers");
-        const c = all.find((x) => x.id === id) ?? null;
+        const c = await api<Customer>(`/customers/${id}`);
         if (!alive) return;
-        if (!c) { setErr("العميل غير موجود"); setLoading(false); return; }
         setCustomer(c);
       } catch (e: any) { if (alive) { setErr(e.message); setLoading(false); } return; }
       try { const v = await api<Vehicle[]>(`/customers/${id}/vehicles`); if (alive) setVehicles(v); } catch {}
@@ -168,6 +220,11 @@ export default function CustomerDetailPage() {
                   {money(balance)} ر.س{balance > 0 && <span className="mr-1 text-[12px]">مستحق</span>}
                 </div>
               </div>
+              {canEdit && (
+                <Button variant="ghost" onClick={openEdit} className="gap-1">
+                  <MIcon name="edit" className="!text-[16px]" /> تعديل البيانات
+                </Button>
+              )}
               <Button variant="ghost" onClick={() => router.push("/customers")}>
                 <MIcon name="arrow_forward" className="!text-[16px]" /> العملاء
               </Button>
@@ -378,6 +435,129 @@ export default function CustomerDetailPage() {
           )}
         </div>
       </Card>
+
+      {/* ══════════ تعديل بيانات العميل ══════════ */}
+      <Modal open={editOpen} size="lg" onClose={() => setEditOpen(false)} title="تعديل العميل">
+        <div className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Field label="نوع العميل">
+              <Select value={form.customerType}
+                      onChange={(e) => setForm({ ...form, customerType: e.target.value as any })}>
+                <option value="individual">فرد</option>
+                <option value="company">شركة</option>
+              </Select>
+            </Field>
+            <Field label="الاسم">
+              <Input value={form.name} autoFocus
+                     onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </Field>
+            <Field label="رقم الجوال">
+              <Input value={form.phone} className="tnum"
+                     onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            </Field>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Field label="البريد الإلكتروني">
+              <Input type="email" value={form.email}
+                     onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            </Field>
+            <Field label="الرقم الضريبي" hint={form.customerType === "company" ? "مطلوب للفاتورة الضريبية القياسية" : undefined}>
+              <Input value={form.vatNumber} className="tnum"
+                     onChange={(e) => setForm({ ...form, vatNumber: e.target.value })} />
+            </Field>
+            <Field label="رقم السجل التجاري">
+              <Input value={form.crNumber} className="tnum"
+                     onChange={(e) => setForm({ ...form, crNumber: e.target.value })} />
+            </Field>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Field label="حد الائتمان (ر.س)" hint="فاضي = بلا حد — البيع الآجل غير مقيّد لهذا العميل">
+              <Input type="number" min={0} step={0.01} className="tnum" value={form.creditLimit}
+                     placeholder="بلا حد"
+                     onChange={(e) => setForm({ ...form, creditLimit: e.target.value })} />
+            </Field>
+            <Field label="قائمة الأسعار" hint="فاضي = السعر العادي لكل الأصناف">
+              <Select value={form.priceListId}
+                      onChange={(e) => setForm({ ...form, priceListId: e.target.value })}>
+                <option value="">السعر العادي</option>
+                {priceLists.map((pl) => (
+                  <option key={pl.id} value={pl.id}>{pl.name}</option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+
+          <div className="rounded-lg border border-line bg-ink-3 p-3">
+            <p className="mb-2 text-[12px] font-bold text-text-dim">عقد/اتفاقية تسعير (اختياري — للعملاء الكبار والشركات)</p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Field label="نسبة خصم العقد (%)" hint="فاضي = بلا اتفاقية">
+                <Input type="number" min={0} max={100} step={0.01} className="tnum" value={form.contractDiscountPct}
+                       placeholder="مثال: 10"
+                       onChange={(e) => setForm({ ...form, contractDiscountPct: e.target.value })} />
+              </Field>
+              <Field label="سارية من" hint="فاضي = بدون بداية محددة">
+                <Input type="date" value={form.contractValidFrom}
+                       onChange={(e) => setForm({ ...form, contractValidFrom: e.target.value })} />
+              </Field>
+              <Field label="سارية حتى" hint="فاضي = بلا تاريخ انتهاء">
+                <Input type="date" value={form.contractValidUntil}
+                       onChange={(e) => setForm({ ...form, contractValidUntil: e.target.value })} />
+              </Field>
+            </div>
+            <Field label="ملاحظات العقد" hint="اختياري">
+              <Textarea rows={2} value={form.contractNotes}
+                        onChange={(e) => setForm({ ...form, contractNotes: e.target.value })} />
+            </Field>
+          </div>
+
+          {form.customerType === "company" ? (
+            <div className="rounded-lg border border-line bg-ink-3 p-3">
+              <p className="mb-2 text-[12px] font-bold text-text-dim">العنوان الوطني (للفاتورة الضريبية)</p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                <Field label="رقم المبنى">
+                  <Input value={form.buildingNo} className="tnum"
+                         onChange={(e) => setForm({ ...form, buildingNo: e.target.value })} />
+                </Field>
+                <Field label="الشارع">
+                  <Input value={form.street}
+                         onChange={(e) => setForm({ ...form, street: e.target.value })} />
+                </Field>
+                <Field label="الحي">
+                  <Input value={form.district}
+                         onChange={(e) => setForm({ ...form, district: e.target.value })} />
+                </Field>
+                <Field label="المدينة">
+                  <Input value={form.city}
+                         onChange={(e) => setForm({ ...form, city: e.target.value })} />
+                </Field>
+                <Field label="الرمز البريدي">
+                  <Input value={form.postalCode} className="tnum"
+                         onChange={(e) => setForm({ ...form, postalCode: e.target.value })} />
+                </Field>
+                <Field label="الرقم الإضافي">
+                  <Input value={form.additionalNo} className="tnum"
+                         onChange={(e) => setForm({ ...form, additionalNo: e.target.value })} />
+                </Field>
+              </div>
+            </div>
+          ) : (
+            <Field label="العنوان">
+              <Textarea value={form.address}
+                        onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            </Field>
+          )}
+
+          <ErrorNote msg={saveErr} />
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="ghost" onClick={() => setEditOpen(false)}>إلغاء</Button>
+            <Button onClick={saveEdit} disabled={saving || form.name.trim().length < 1}>
+              {saving ? "جارِ الحفظ..." : "حفظ"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -995,6 +995,17 @@ async def lifespan(app: FastAPI):
              created_at timestamptz NOT NULL DEFAULT now()
            )""",
         "CREATE INDEX IF NOT EXISTS idx_integration_log ON integration_log(company_id, created_at DESC)",
+
+        # ── فهارس تسريع: الفواتير/نقاط البيع/الخدمة — جداول قديمة (عهد Node) من غير فهارس
+        # على أعمدة البحث/الفرز الأساسية، وبيتصفحها الداشبورد ونقطة البيع كل ١٥-٣٠ ثانية ──
+        "CREATE INDEX IF NOT EXISTS idx_invoices_company_issued ON invoices (company_id, issued_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_invoices_company_returned_issued ON invoices (company_id, is_returned, issued_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items (invoice_id)",
+        "CREATE INDEX IF NOT EXISTS idx_invoice_payments_invoice ON invoice_payments (invoice_id)",
+        "CREATE INDEX IF NOT EXISTS idx_cars_company_active ON cars (company_id, is_deleted, exited_at)",
+        "CREATE INDEX IF NOT EXISTS idx_cars_company_plate ON cars (company_id, plate)",
+        "CREATE INDEX IF NOT EXISTS idx_customers_company ON customers (company_id)",
+        "CREATE INDEX IF NOT EXISTS idx_customer_ledger_customer ON customer_ledger (customer_id)",
     ):
         try:
             await execute(stmt)

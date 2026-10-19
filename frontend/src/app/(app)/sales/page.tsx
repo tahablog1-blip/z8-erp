@@ -157,8 +157,10 @@ export default function SalesPage() {
   const [stats, setStats] = useState<DashStats | null>(null);
   useEffect(() => {
     let stop = false;
-    const sync = () => api<DashStats>("/reports/dashboard").then((d) => !stop && setStats(d)).catch(() => {});
+    const sync = () => {
+      api<DashStats>("/reports/dashboard").then((d) => !stop && setStats(d)).catch(() => {});
       api<BillingQueueRow[]>("/cars/billing-queue").then((q) => !stop && setQueue(q)).catch(() => {});
+    };
     sync();
     const t = setInterval(sync, 15000);
     return () => { stop = true; clearInterval(t); };

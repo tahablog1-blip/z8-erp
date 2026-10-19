@@ -206,59 +206,8 @@ async def sales_summary(company_id: str, date_from: str | None, date_to: str | N
 # ══════════════════ لوحة القيادة ══════════════════
 
 async def dashboard(company_id: str) -> dict:
+    import asyncio
     from ...core.db import fetch, fetchrow
-
-    today = await fetchrow(
-        """SELECT COALESCE(SUM(total_inc),0) AS total, COUNT(*) AS cnt,
-                  COALESCE(SUM(total_ex - COALESCE(cogs_total,0)),0) AS profit
-           FROM invoices
-           WHERE company_id=$1 AND is_returned=FALSE AND issued_at::date = CURRENT_DATE""",
-        company_id)
-    month = await fetchrow(
-        """SELECT COALESCE(SUM(total_inc),0) AS total, COUNT(*) AS cnt,
-                  COALESCE(SUM(total_vat),0) AS vat,
-                  COALESCE(SUM(total_ex - COALESCE(cogs_total,0)),0) AS profit
-           FROM invoices
-           WHERE company_id=$1 AND is_returned=FALSE
-             AND date_trunc('month', issued_at) = date_trunc('month', CURRENT_DATE)""",
-        company_id)
-    cars = await fetchrow(
-        """SELECT
-             COUNT(*) FILTER (WHERE entered_at IS NULL AND exited_at IS NULL) AS queued,
-             COUNT(*) FILTER (WHERE entered_at IS NOT NULL AND exited_at IS NULL) AS in_service,
-             COUNT(*) FILTER (WHERE exited_at::date = CURRENT_DATE) AS done_today
-           FROM cars WHERE company_id=$1 AND is_deleted=FALSE""",
-        company_id)
-    today_src = await fetch(
-        """SELECT source, COUNT(*)::int AS cnt
-           FROM invoices
-           WHERE company_id=$1 AND is_returned=FALSE AND issued_at::date = CURRENT_DATE
-           GROUP BY source""", company_id)
-    low_stock = await fetchrow(
-        """SELECT COUNT(*) AS cnt FROM inventory i
-           JOIN products p ON p.id = i.product_id
-           WHERE p.company_id=$1 AND i.loc_type='branch' AND i.qty <= COALESCE(p.min_qty,0)""",
-        company_id)
-    credit = await fetchrow(
-        """SELECT COALESCE(SUM(credit_total),0) AS total
-           FROM invoices WHERE company_id=$1 AND is_returned=FALSE AND credit_total > 0""",
-        company_id)
-    series = await fetch(
-        """SELECT issued_at::date AS d,
-                  COALESCE(SUM(total_inc),0) AS total, COUNT(*) AS cnt
-           FROM invoices
-           WHERE company_id=$1 AND is_returned=FALSE
-             AND issued_at >= CURRENT_DATE - INTERVAL '13 days'
-           GROUP BY 1 ORDER BY 1""",
-        company_id)
-    pay = await fetch(
-        """SELECT p.method, COALESCE(SUM(p.amount),0) AS total
-           FROM invoice_payments p
-           JOIN invoices i ON i.id = p.invoice_id
-           WHERE i.company_id=$1 AND i.is_returned=FALSE
-             AND date_trunc('month', i.issued_at) = date_trunc('month', CURRENT_DATE)
-           GROUP BY p.method""",
-        company_id)
 
     # ── عدادات المنظومة + الأكثر مبيعاً + آخر الفواتير (للوحة القيادة الجديدة) ──
     # قاعدة الصلابة: أي ودجة إضافية استعلامها فشل (عمود ناقص في قاعدة قديمة مثلاً)
@@ -270,67 +219,126 @@ async def dashboard(company_id: str) -> dict:
             print(f"⚠ ودجة داشبورد اتصفّرت: {type(e).__name__}: {e}")
             return default
 
-    counts = await _safe(fetchrow(
-        """SELECT
-             (SELECT COUNT(*) FROM customers WHERE company_id=$1) AS customers,
-             (SELECT COUNT(*) FROM suppliers WHERE company_id=$1) AS suppliers,
-             (SELECT COUNT(*) FROM products  WHERE company_id=$1 AND is_active=TRUE) AS products""",
-        company_id), {"customers": 0, "suppliers": 0, "products": 0})
-    top_products = await _safe(fetch(
-        """SELECT ii.label AS label,
-                  SUM(ii.qty)::int AS qty,
-                  COALESCE(SUM(ii.line_inc),0) AS total
-           FROM invoice_items ii
-           JOIN invoices i ON i.id = ii.invoice_id
-           WHERE i.company_id=$1 AND i.is_returned=FALSE
-             AND date_trunc('month', i.issued_at) = date_trunc('month', CURRENT_DATE)
-           GROUP BY ii.label ORDER BY total DESC LIMIT 5""",
-        company_id), [])
-    recent_invoices = await _safe(fetch(
-        """SELECT invoice_no, customer_name, total_inc, source, issued_at,
-                  (credit_total > 0) AS on_credit
-           FROM invoices WHERE company_id=$1 AND is_returned=FALSE
-           ORDER BY issued_at DESC LIMIT 6""",
-        company_id), [])
-
-    # ── العملاء الجدد (هذا الأسبوع) + أفضل الموردين (هذا الشهر بالمشتريات) ──
-    new_customers = await _safe(fetchrow(
-        """SELECT COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) AS today,
-                  COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '6 days') AS week
-           FROM customers WHERE company_id=$1""", company_id), {"today": 0, "week": 0})
-    latest_customers = await _safe(fetch(
-        """SELECT name, phone, created_at FROM customers
-           WHERE company_id=$1 ORDER BY created_at DESC LIMIT 4""", company_id), [])
-    # العملاء الأكثر زيارة — الزيارة = سيارة دخلت المركز فعلاً (سجل السيارات)،
-    # والإنفاق من فواتيره إن وُجدت — فتشتغل حتى قبل ربط الفواتير بالعملاء
-    top_customers = await _safe(fetch(
-        """SELECT * FROM (
-             SELECT c.name, c.phone,
-                    (SELECT COUNT(*) FROM cars cr
-                      WHERE cr.customer_id = c.id
-                        AND COALESCE(cr.is_deleted, FALSE) = FALSE)::int AS visits,
-                    COALESCE((SELECT SUM(i.total_inc) FROM invoices i
-                               WHERE i.customer_id = c.id AND i.is_returned=FALSE),0)::numeric(12,2) AS total
-             FROM customers c
-             WHERE c.company_id=$1 AND c.is_active=TRUE
-           ) t WHERE t.visits > 0
-           ORDER BY t.visits DESC, t.total DESC LIMIT 5""", company_id), [])
-
-    top_suppliers = await _safe(fetch(
-        """SELECT s.name, COALESCE(SUM(pi.total),0) AS total, COUNT(pi.id)::int AS cnt
-           FROM purchase_invoices pi JOIN suppliers s ON s.id = pi.supplier_id
-           WHERE pi.company_id=$1
-             AND date_trunc('month', pi.invoice_date) = date_trunc('month', CURRENT_DATE)
-           GROUP BY s.name ORDER BY total DESC LIMIT 4""", company_id), [])
-
-    # ── لوحة المؤشرات التنفيذية: أبرز نواقص المخزون + ملخّص أعمار ذمم العملاء ──
-    # (نفس منطق /inventory/low-stock-alerts و /reports/ar-aging لكن بأعلى N بس،
-    # وبصلابة _safe لأن أي خطأ فيهما ما يكسرش الداشبورد الأساسية)
     async def _low_stock_top():
         from ..inventory.service import low_stock_alerts
         return (await low_stock_alerts(company_id))[:8]
-    low_stock_items = await _safe(_low_stock_top(), [])
-    ar_summary = await _safe(ar_aging(company_id, summary_only=True), {"totals": {"current": 0, "d31_60": 0, "d61_90": 0, "d90plus": 0, "total": 0}})
+
+    # كل الاستعلامات دي مستقلة عن بعضها (ولا واحد يعتمد على نتيجة التاني) —
+    # كانت تتنفذ بالتتابع (~17 رحلة ذهاب-رجوع متتالية لقاعدة البيانات)، وده
+    # نداء يتكرر كل 15 ثانية من الداشبورد ونقطة البيع معاً طول وقت الدوام.
+    # تشغيلها بالتوازي عبر asyncio.gather بيحوّل الزمن الكلي من "مجموع" كل
+    # الاستعلامات لـ "أطولها فقط" — تسريع حقيقي بدون أي تغيير في الناتج.
+    (
+        today, month, cars, today_src, low_stock, credit, series, pay,
+        counts, top_products, recent_invoices, new_customers, latest_customers,
+        top_customers, top_suppliers, low_stock_items, ar_summary,
+    ) = await asyncio.gather(
+        fetchrow(
+            """SELECT COALESCE(SUM(total_inc),0) AS total, COUNT(*) AS cnt,
+                      COALESCE(SUM(total_ex - COALESCE(cogs_total,0)),0) AS profit
+               FROM invoices
+               WHERE company_id=$1 AND is_returned=FALSE AND issued_at::date = CURRENT_DATE""",
+            company_id),
+        fetchrow(
+            """SELECT COALESCE(SUM(total_inc),0) AS total, COUNT(*) AS cnt,
+                      COALESCE(SUM(total_vat),0) AS vat,
+                      COALESCE(SUM(total_ex - COALESCE(cogs_total,0)),0) AS profit
+               FROM invoices
+               WHERE company_id=$1 AND is_returned=FALSE
+                 AND date_trunc('month', issued_at) = date_trunc('month', CURRENT_DATE)""",
+            company_id),
+        fetchrow(
+            """SELECT
+                 COUNT(*) FILTER (WHERE entered_at IS NULL AND exited_at IS NULL) AS queued,
+                 COUNT(*) FILTER (WHERE entered_at IS NOT NULL AND exited_at IS NULL) AS in_service,
+                 COUNT(*) FILTER (WHERE exited_at::date = CURRENT_DATE) AS done_today
+               FROM cars WHERE company_id=$1 AND is_deleted=FALSE""",
+            company_id),
+        fetch(
+            """SELECT source, COUNT(*)::int AS cnt
+               FROM invoices
+               WHERE company_id=$1 AND is_returned=FALSE AND issued_at::date = CURRENT_DATE
+               GROUP BY source""", company_id),
+        fetchrow(
+            """SELECT COUNT(*) AS cnt FROM inventory i
+               JOIN products p ON p.id = i.product_id
+               WHERE p.company_id=$1 AND i.loc_type='branch' AND i.qty <= COALESCE(p.min_qty,0)""",
+            company_id),
+        fetchrow(
+            """SELECT COALESCE(SUM(credit_total),0) AS total
+               FROM invoices WHERE company_id=$1 AND is_returned=FALSE AND credit_total > 0""",
+            company_id),
+        fetch(
+            """SELECT issued_at::date AS d,
+                      COALESCE(SUM(total_inc),0) AS total, COUNT(*) AS cnt
+               FROM invoices
+               WHERE company_id=$1 AND is_returned=FALSE
+                 AND issued_at >= CURRENT_DATE - INTERVAL '13 days'
+               GROUP BY 1 ORDER BY 1""",
+            company_id),
+        fetch(
+            """SELECT p.method, COALESCE(SUM(p.amount),0) AS total
+               FROM invoice_payments p
+               JOIN invoices i ON i.id = p.invoice_id
+               WHERE i.company_id=$1 AND i.is_returned=FALSE
+                 AND date_trunc('month', i.issued_at) = date_trunc('month', CURRENT_DATE)
+               GROUP BY p.method""",
+            company_id),
+        _safe(fetchrow(
+            """SELECT
+                 (SELECT COUNT(*) FROM customers WHERE company_id=$1) AS customers,
+                 (SELECT COUNT(*) FROM suppliers WHERE company_id=$1) AS suppliers,
+                 (SELECT COUNT(*) FROM products  WHERE company_id=$1 AND is_active=TRUE) AS products""",
+            company_id), {"customers": 0, "suppliers": 0, "products": 0}),
+        _safe(fetch(
+            """SELECT ii.label AS label,
+                      SUM(ii.qty)::int AS qty,
+                      COALESCE(SUM(ii.line_inc),0) AS total
+               FROM invoice_items ii
+               JOIN invoices i ON i.id = ii.invoice_id
+               WHERE i.company_id=$1 AND i.is_returned=FALSE
+                 AND date_trunc('month', i.issued_at) = date_trunc('month', CURRENT_DATE)
+               GROUP BY ii.label ORDER BY total DESC LIMIT 5""",
+            company_id), []),
+        _safe(fetch(
+            """SELECT invoice_no, customer_name, total_inc, source, issued_at,
+                      (credit_total > 0) AS on_credit
+               FROM invoices WHERE company_id=$1 AND is_returned=FALSE
+               ORDER BY issued_at DESC LIMIT 6""",
+            company_id), []),
+        _safe(fetchrow(
+            """SELECT COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) AS today,
+                      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '6 days') AS week
+               FROM customers WHERE company_id=$1""", company_id), {"today": 0, "week": 0}),
+        _safe(fetch(
+            """SELECT name, phone, created_at FROM customers
+               WHERE company_id=$1 ORDER BY created_at DESC LIMIT 4""", company_id), []),
+        # العملاء الأكثر زيارة — الزيارة = سيارة دخلت المركز فعلاً (سجل السيارات)،
+        # والإنفاق من فواتيره إن وُجدت — فتشتغل حتى قبل ربط الفواتير بالعملاء
+        _safe(fetch(
+            """SELECT * FROM (
+                 SELECT c.name, c.phone,
+                        (SELECT COUNT(*) FROM cars cr
+                          WHERE cr.customer_id = c.id
+                            AND COALESCE(cr.is_deleted, FALSE) = FALSE)::int AS visits,
+                        COALESCE((SELECT SUM(i.total_inc) FROM invoices i
+                                   WHERE i.customer_id = c.id AND i.is_returned=FALSE),0)::numeric(12,2) AS total
+                 FROM customers c
+                 WHERE c.company_id=$1 AND c.is_active=TRUE
+               ) t WHERE t.visits > 0
+               ORDER BY t.visits DESC, t.total DESC LIMIT 5""", company_id), []),
+        _safe(fetch(
+            """SELECT s.name, COALESCE(SUM(pi.total),0) AS total, COUNT(pi.id)::int AS cnt
+               FROM purchase_invoices pi JOIN suppliers s ON s.id = pi.supplier_id
+               WHERE pi.company_id=$1
+                 AND date_trunc('month', pi.invoice_date) = date_trunc('month', CURRENT_DATE)
+               GROUP BY s.name ORDER BY total DESC LIMIT 4""", company_id), []),
+        # ── لوحة المؤشرات التنفيذية: أبرز نواقص المخزون + ملخّص أعمار ذمم العملاء ──
+        # (نفس منطق /inventory/low-stock-alerts و /reports/ar-aging لكن بأعلى N بس،
+        # وبصلابة _safe لأن أي خطأ فيهما ما يكسرش الداشبورد الأساسية)
+        _safe(_low_stock_top(), []),
+        _safe(ar_aging(company_id, summary_only=True), {"totals": {"current": 0, "d31_60": 0, "d61_90": 0, "d90plus": 0, "total": 0}}),
+    )
 
     def n(v):
         from decimal import Decimal

@@ -53,6 +53,11 @@ async def create_customer(body: CustomerCreate,
     return await service.create_customer(user.company_id, body.model_dump())
 
 
+@router.get("/{customer_id}", response_model=CustomerOut)
+async def get_customer(customer_id: str, user: CurrentUser = Depends(get_current_user)):
+    return await service.get_customer(user.company_id, customer_id)
+
+
 @router.put("/{customer_id}", response_model=CustomerOut)
 async def update_customer(customer_id: str, body: CustomerUpdate,
                           user: CurrentUser = Depends(require_permission("customers.edit"))):
