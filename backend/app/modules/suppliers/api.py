@@ -3,7 +3,9 @@ from fastapi import APIRouter, Depends
 
 from ...core.deps import CurrentUser, require_permission
 from . import service
-from .schemas import PaymentBody, StatementOut, SupplierCreate, SupplierOut, SupplierUpdate
+from .schemas import (
+    PaymentBody, StatementOut, SupplierCreate, SupplierOut, SupplierScorecardOut, SupplierUpdate,
+)
 
 router = APIRouter()
 _PERM = "purchasing.suppliers"
@@ -33,6 +35,12 @@ async def delete_supplier(supplier_id: str, user: CurrentUser = Depends(require_
 @router.get("/{supplier_id}/statement", response_model=StatementOut)
 async def get_statement(supplier_id: str, user: CurrentUser = Depends(require_permission(_PERM))):
     return await service.get_statement(user.company_id, supplier_id)
+
+
+@router.get("/{supplier_id}/scorecard", response_model=SupplierScorecardOut)
+async def get_scorecard(supplier_id: str, user: CurrentUser = Depends(require_permission(_PERM))):
+    """بطاقة أداء محسوبة: الالتزام بمواعيد التوريد + حوادث فرق السعر + إجمالي المشتريات"""
+    return await service.get_scorecard(user.company_id, supplier_id)
 
 
 @router.post("/{supplier_id}/pay", status_code=201)

@@ -5,9 +5,12 @@ import { api } from "@/lib/api";
 import { DataTable, Column } from "@/components/DataTable";
 import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
-import { Supplier, SupplierStatement, money } from "@/modules/suppliers/types";
+import { Supplier, SupplierScorecard, SupplierStatement, money } from "@/modules/suppliers/types";
 
-const EMPTY = { name: "", phone: "", vatNumber: "", address: "", paymentTermsDays: 0 };
+const EMPTY = {
+  name: "", phone: "", vatNumber: "", address: "", paymentTermsDays: 0,
+  category: "", rating: 0, ratingNote: "",
+};
 
 const dateFmt = (s: string) =>
   new Date(s).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { year: "numeric", month: "2-digit", day: "2-digit" });
@@ -23,6 +26,7 @@ export default function SuppliersPage() {
   const [busy, setBusy] = useState(false);
 
   const [statement, setStatement] = useState<SupplierStatement | null>(null);
+  const [scorecard, setScorecard] = useState<SupplierScorecard | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState<"cash" | "card" | "transfer">("cash");
   const [payInvoiceId, setPayInvoiceId] = useState("");
@@ -44,6 +48,7 @@ export default function SuppliersPage() {
     setForm({
       name: s.name, phone: s.phone || "", vatNumber: s.vat_number || "",
       address: s.address || "", paymentTermsDays: s.payment_terms_days,
+      category: s.category || "", rating: s.rating || 0, ratingNote: s.rating_note || "",
     });
     setErr(""); setModal({ mode: "edit", id: s.id });
   }
@@ -51,10 +56,15 @@ export default function SuppliersPage() {
   async function save() {
     setErr(""); setBusy(true);
     try {
+      const body = JSON.stringify({
+        ...form, category: form.category.trim() || null,
+        rating: form.rating > 0 ? form.rating : null,
+        ratingNote: form.ratingNote.trim() || null,
+      });
       if (modal?.mode === "create") {
-        await api("/suppliers", { method: "POST", body: JSON.stringify(form) });
+        await api("/suppliers", { method: "POST", body });
       } else if (modal?.mode === "edit") {
-        await api(`/suppliers/${modal.id}`, { method: "PUT", body: JSON.stringify(form) });
+        await api(`/suppliers/${modal.id}`, { method: "PUT", body });
       }
       setModal(null);
       await load();
@@ -69,9 +79,14 @@ export default function SuppliersPage() {
   }
 
   async function openStatement(s: Supplier) {
-    setPayAmount(""); setPayInvoiceId(""); setPayNote(""); setPayErr("");
-    try { setStatement(await api<SupplierStatement>(`/suppliers/${s.id}/statement`)); }
-    catch (e: any) { await appAlert(e.message); }
+    setPayAmount(""); setPayInvoiceId(""); setPayNote(""); setPayErr(""); setScorecard(null);
+    try {
+      const [stmt, card] = await Promise.all([
+        api<SupplierStatement>(`/suppliers/${s.id}/statement`),
+        api<SupplierScorecard>(`/suppliers/${s.id}/scorecard`),
+      ]);
+      setStatement(stmt); setScorecard(card);
+    } catch (e: any) { await appAlert(e.message); }
   }
 
   async function submitPayment() {
@@ -101,6 +116,14 @@ export default function SuppliersPage() {
           <div className="text-[11px] text-text-dim">{s.phone || "—"}</div>
         </div>
       ),
+    },
+    {
+      key: "category", title: "التصنيف", width: "120px",
+      render: (s) => s.category ? <Badge tone="info">{s.category}</Badge> : <span className="text-text-dim">—</span>,
+    },
+    {
+      key: "rating", title: "التقييم", width: "90px",
+      render: (s) => s.rating ? <span className="tnum font-bold text-brass">{"★".repeat(Math.round(s.rating))}{"☆".repeat(5 - Math.round(s.rating))}</span> : <span className="text-text-dim">—</span>,
     },
     {
       key: "payment_terms_days", title: "شروط السداد", width: "110px",
@@ -176,6 +199,22 @@ export default function SuppliersPage() {
             <Input type="number" min={0} className="tnum" value={form.paymentTermsDays}
                    onChange={(e) => setForm({ ...form, paymentTermsDays: +e.target.value || 0 })} />
           </Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="التصنيف" hint="مثال: زيوت، قطع غيار، خدمات">
+              <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+            </Field>
+            <Field label="التقييم العام" hint="0 = بدون تقييم">
+              <Select value={form.rating} onChange={(e) => setForm({ ...form, rating: +e.target.value })}>
+                <option value={0}>بدون تقييم</option>
+                {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map((v) => <option key={v} value={v}>{v} / 5</option>)}
+              </Select>
+            </Field>
+          </div>
+          {form.rating > 0 && (
+            <Field label="ملاحظة التقييم" hint="اختياري">
+              <Input value={form.ratingNote} onChange={(e) => setForm({ ...form, ratingNote: e.target.value })} />
+            </Field>
+          )}
           <ErrorNote msg={err} />
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" onClick={() => setModal(null)}>إلغاء</Button>
@@ -197,6 +236,42 @@ export default function SuppliersPage() {
                 {money(statement.balance)} ر.س
               </span>
             </div>
+
+            {(statement.supplier.category || statement.supplier.rating) && (
+              <div className="flex items-center gap-3 text-[12px]">
+                {statement.supplier.category && <Badge tone="info">{statement.supplier.category}</Badge>}
+                {!!statement.supplier.rating && (
+                  <span className="tnum font-bold text-brass">
+                    {"★".repeat(Math.round(statement.supplier.rating))}{"☆".repeat(5 - Math.round(statement.supplier.rating))}
+                    <span className="text-text-dim"> ({statement.supplier.rating}/5)</span>
+                  </span>
+                )}
+                {statement.supplier.rating_note && <span className="text-text-dim">— {statement.supplier.rating_note}</span>}
+              </div>
+            )}
+
+            {scorecard && (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="rounded-lg bg-ink-3 p-2.5 text-center">
+                  <div className="text-[11px] text-text-dim">أوامر الشراء</div>
+                  <div className="tnum font-bold">{scorecard.totalPos}</div>
+                </div>
+                <div className="rounded-lg bg-ink-3 p-2.5 text-center">
+                  <div className="text-[11px] text-text-dim">الالتزام بالمواعيد</div>
+                  <div className="tnum font-bold">
+                    {scorecard.onTimePct !== null ? `${scorecard.onTimePct}%` : "—"}
+                  </div>
+                </div>
+                <div className="rounded-lg bg-ink-3 p-2.5 text-center">
+                  <div className="text-[11px] text-text-dim">استلامات متأخرة</div>
+                  <div className={`tnum font-bold ${scorecard.lateDeliveries > 0 ? "text-ember" : ""}`}>{scorecard.lateDeliveries}</div>
+                </div>
+                <div className="rounded-lg bg-ink-3 p-2.5 text-center">
+                  <div className="text-[11px] text-text-dim">حوادث فرق سعر</div>
+                  <div className={`tnum font-bold ${scorecard.priceVarianceIncidents > 0 ? "text-ember" : ""}`}>{scorecard.priceVarianceIncidents}</div>
+                </div>
+              </div>
+            )}
 
             {statement.dueInvoices.length > 0 && (
               <div className="rounded-lg border border-ember/30 bg-ember-bg p-3">

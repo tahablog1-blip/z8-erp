@@ -170,6 +170,10 @@ async def create_purchase_invoice(company_id: str, user_id: str, d: dict) -> dic
                     raise HTTPException(422,
                         "فرق سعر كبير (>10%) بين أمر الشراء والفاتورة — راجع السعر، أو أعد الإرسال "
                         "بتأكيد الفرق إن كان مقصوداً:\n" + "\n".join(variance_notes))
+                if variance_notes:
+                    # وصلنا هنا فقط بتأكيد الفرق — يُسجَّل كحادثة فرق سعر في بطاقة أداء المورد
+                    await conn.execute(
+                        "UPDATE purchase_invoices SET price_variance_confirmed=TRUE WHERE id=$1", invoice["id"])
 
             # شراء مباشر (أو أصناف خارج أمر الشراء): يزوّد مخزون المستودع فوراً
             unmatched_subtotal = Decimal("0.00")

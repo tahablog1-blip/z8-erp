@@ -11,6 +11,9 @@ class SupplierCreate(BaseModel):
     vatNumber: str | None = None
     address: str | None = None
     paymentTermsDays: int = Field(default=0, ge=0)
+    category: str | None = None             # تصنيف حر (زيوت، قطع غيار، خدمات...) — بلا قائمة مقفلة
+    rating: float | None = Field(default=None, ge=0, le=5)   # تقييم يدوي عام من 5
+    ratingNote: str | None = None
 
 
 class SupplierUpdate(BaseModel):
@@ -19,6 +22,9 @@ class SupplierUpdate(BaseModel):
     vatNumber: str | None = None
     address: str | None = None
     paymentTermsDays: int | None = Field(default=None, ge=0)
+    category: str | None = None
+    rating: float | None = Field(default=None, ge=0, le=5)
+    ratingNote: str | None = None
 
 
 class SupplierOut(BaseModel):
@@ -29,7 +35,20 @@ class SupplierOut(BaseModel):
     address: str | None = None
     payment_terms_days: int
     balance: float = 0     # موجب = مستحق للمورد (ذمة دائنة)
+    category: str | None = None
+    rating: float | None = None
+    rating_note: str | None = None
     created_at: datetime | None = None
+
+
+class SupplierScorecardOut(BaseModel):
+    totalPos: int
+    receivedPos: int
+    onTimeDeliveries: int
+    lateDeliveries: int
+    onTimePct: float | None = None
+    priceVarianceIncidents: int
+    totalPurchasesEx: float
 
 
 class PaymentBody(BaseModel):

@@ -583,6 +583,12 @@ async def lifespan(app: FastAPI):
              qty_received int NOT NULL CHECK (qty_received > 0)
            )""",
         "ALTER TABLE purchase_invoices ADD COLUMN IF NOT EXISTS po_id uuid",
+        "ALTER TABLE purchase_invoices ADD COLUMN IF NOT EXISTS price_variance_confirmed boolean NOT NULL DEFAULT FALSE",
+
+        # ── تقييم وتصنيف الموردين (راجع modules/suppliers get_scorecard) ──
+        "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS category text",
+        "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS rating numeric(2,1)",
+        "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS rating_note text",
 
         # ── المدفوعات الإلكترونية: بنية هيكلية جاهزة لتفعيل مزوّد حقيقي (راجع modules/payments) ──
         """CREATE TABLE IF NOT EXISTS payment_transactions (

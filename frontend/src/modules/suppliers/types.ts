@@ -7,6 +7,19 @@ export type Supplier = {
   address: string | null;
   payment_terms_days: number;
   balance: number;   // موجب = مستحق للمورد (ذمة دائنة)
+  category: string | null;
+  rating: number | null;      // تقييم يدوي من 5
+  rating_note: string | null;
+};
+
+export type SupplierScorecard = {
+  totalPos: number;
+  receivedPos: number;
+  onTimeDeliveries: number;
+  lateDeliveries: number;
+  onTimePct: number | null;
+  priceVarianceIncidents: number;
+  totalPurchasesEx: number;
 };
 
 export type SupplierLedgerEntry = {

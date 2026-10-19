@@ -14,12 +14,15 @@ def _out(r: dict) -> dict:
     r["id"] = str(r["id"])
     if isinstance(r.get("balance"), Decimal):
         r["balance"] = float(r["balance"])
+    if isinstance(r.get("rating"), Decimal):
+        r["rating"] = float(r["rating"])
     return r
 
 
 _COL_MAP = {
     "name": "name", "phone": "phone", "vatNumber": "vat_number",
     "address": "address", "paymentTermsDays": "payment_terms_days",
+    "category": "category", "rating": "rating", "ratingNote": "rating_note",
 }
 
 
@@ -37,10 +40,12 @@ async def list_suppliers(company_id: str) -> list[dict]:
 
 async def create_supplier(company_id: str, d: dict) -> dict:
     row = await fetchrow(
-        """INSERT INTO suppliers (company_id, name, phone, vat_number, address, payment_terms_days)
-           VALUES ($1,$2,$3,$4,$5,$6) RETURNING *, 0::numeric(12,2) AS balance""",
+        """INSERT INTO suppliers (company_id, name, phone, vat_number, address, payment_terms_days,
+                                  category, rating, rating_note)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *, 0::numeric(12,2) AS balance""",
         company_id, d["name"], d.get("phone"), d.get("vatNumber"),
         d.get("address"), d.get("paymentTermsDays", 0),
+        d.get("category"), d.get("rating"), d.get("ratingNote"),
     )
     return _out(row)
 
@@ -108,6 +113,49 @@ async def get_statement(company_id: str, supplier_id: str) -> dict:
     due = [{**dict(r), "id": str(r["id"]), "total": float(r["total"]), "paid_total": float(r["paid_total"])} for r in due_rows]
 
     return {"supplier": _out(supplier), "entries": entries, "balance": float(running), "dueInvoices": due}
+
+
+async def get_scorecard(company_id: str, supplier_id: str) -> dict:
+    """بطاقة أداء المورد — مؤشرات محسوبة من أوامر الشراء والفواتير الفعلية، بجانب
+    التصنيف/التقييم اليدوي المخزّن على المورد نفسه (suppliers.category/rating).
+    الالتزام بالمواعيد: أول سند استلام لكل أمر شراء له تاريخ توريد متوقع، مقارنةً به."""
+    supplier = await fetchrow("SELECT id FROM suppliers WHERE id=$1 AND company_id=$2", supplier_id, company_id)
+    if not supplier:
+        raise HTTPException(404, "المورد غير موجود")
+
+    po_stats = await fetchrow(
+        """SELECT COUNT(*)::int AS total_pos,
+                  COUNT(*) FILTER (WHERE status IN ('received','partially_received','invoiced'))::int AS received_pos
+           FROM purchase_orders
+           WHERE company_id=$1 AND supplier_id=$2 AND status NOT IN ('pending_approval','rejected','cancelled')""",
+        company_id, supplier_id)
+
+    timing_rows = await fetch(
+        """SELECT po.expected_date, MIN(r.created_at) AS first_receipt_at
+           FROM purchase_orders po JOIN purchase_order_receipts r ON r.po_id = po.id
+           WHERE po.company_id=$1 AND po.supplier_id=$2 AND po.expected_date IS NOT NULL
+           GROUP BY po.id, po.expected_date""",
+        company_id, supplier_id)
+    on_time = sum(1 for r in timing_rows if r["first_receipt_at"].date() <= r["expected_date"])
+    late = len(timing_rows) - on_time
+    on_time_pct = round(on_time / len(timing_rows) * 100, 1) if timing_rows else None
+
+    variance_row = await fetchrow(
+        """SELECT COUNT(*)::int AS n FROM purchase_invoices
+           WHERE company_id=$1 AND supplier_id=$2 AND price_variance_confirmed=TRUE""",
+        company_id, supplier_id)
+
+    purchases_row = await fetchrow(
+        """SELECT COALESCE(SUM(subtotal),0)::numeric(12,2) AS total
+           FROM purchase_invoices WHERE company_id=$1 AND supplier_id=$2""",
+        company_id, supplier_id)
+
+    return {
+        "totalPos": po_stats["total_pos"], "receivedPos": po_stats["received_pos"],
+        "onTimeDeliveries": on_time, "lateDeliveries": late, "onTimePct": on_time_pct,
+        "priceVarianceIncidents": variance_row["n"],
+        "totalPurchasesEx": float(purchases_row["total"]),
+    }
 
 
 async def record_payment(company_id: str, user_id: str, supplier_id: str,
