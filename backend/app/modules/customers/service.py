@@ -22,6 +22,8 @@ def _clean_plate(s: str) -> str:
 def _customer_out(r: dict) -> dict:
     r = dict(r)
     r["id"] = str(r["id"])
+    if r.get("price_list_id") is not None:
+        r["price_list_id"] = str(r["price_list_id"])
     for k in ("balance", "credit_limit"):
         if isinstance(r.get(k), Decimal):
             r[k] = float(r[k])
@@ -33,7 +35,7 @@ _COL_MAP = {
     "vatNumber": "vat_number", "crNumber": "cr_number", "address": "address",
     "buildingNo": "building_no", "street": "street", "district": "district",
     "city": "city", "postalCode": "postal_code", "additionalNo": "additional_no",
-    "creditLimit": "credit_limit",
+    "creditLimit": "credit_limit", "priceListId": "price_list_id",
 }
 
 
@@ -127,13 +129,14 @@ async def create_customer(company_id: str, d: dict) -> dict:
     row = await fetchrow(
         """INSERT INTO customers
              (company_id, name, customer_type, phone, email, vat_number, cr_number, address,
-              building_no, street, district, city, postal_code, additional_no, credit_limit)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+              building_no, street, district, city, postal_code, additional_no, credit_limit,
+              price_list_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
            RETURNING *, 0::numeric(12,2) AS balance, 0::int AS vehicle_count""",
         company_id, d["name"], d.get("customerType", "individual"), d.get("phone"),
         d.get("email") or None, d.get("vatNumber"), d.get("crNumber"), d.get("address"),
         d.get("buildingNo"), d.get("street"), d.get("district"), d.get("city"),
-        d.get("postalCode"), d.get("additionalNo"), d.get("creditLimit"),
+        d.get("postalCode"), d.get("additionalNo"), d.get("creditLimit"), d.get("priceListId"),
     )
     return _customer_out(row)
 

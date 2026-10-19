@@ -388,12 +388,14 @@ export default function SalesPage() {
   async function load() {
     setLoading(true);
     try {
-      const [br, pr, sh] = await Promise.all([
+      const [br, pr, sh, cu] = await Promise.all([
         api<Branch[]>("/branches"),
         api<Product[]>("/products"),
         canManageShift ? api<ShiftReport | null>("/shifts/current") : Promise.resolve(null),
+        api<Customer[]>("/customers").catch(() => null),
       ]);
       setBranches(br); setProducts(pr); setShift(sh);
+      if (cu) setAllCustomers(cu);
       if (sh) {
         setBranchId(sh.shift.branch_id);
         const [q, inv] = await Promise.all([
@@ -411,6 +413,22 @@ export default function SalesPage() {
     finally { setLoading(false); }
   }
   useEffect(() => { load(); setHeld(loadHeld()); }, []);
+
+  // قوائم الأسعار: العميل المختار معيّن على قائمة؟ لو كذلك، أسعار الأصناف
+  // (المعروضة وبالتالي المضافة للسلة عبر addProduct) تتحول تلقائياً لأسعار
+  // هذه القائمة — نقطة ربط واحدة، بلا أي لمس لمنطق السلة نفسه.
+  const activePriceListId = useMemo(() => {
+    if (!customerId || !allCustomers) return null;
+    return allCustomers.find((c) => c.id === customerId)?.price_list_id ?? null;
+  }, [customerId, allCustomers]);
+  const prevPriceListRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (prevPriceListRef.current === undefined) { prevPriceListRef.current = activePriceListId; return; }
+    if (prevPriceListRef.current === activePriceListId) return;
+    prevPriceListRef.current = activePriceListId;
+    api<Product[]>(`/products${activePriceListId ? `?priceListId=${encodeURIComponent(activePriceListId)}` : ""}`)
+      .then(setProducts).catch(() => {});
+  }, [activePriceListId]);
 
   const totalInc = useMemo(() => cart.reduce((s, l) => s + l.unitPriceVat * l.qty, 0), [cart]);
   const paidSum = useMemo(() => payments.reduce((s, p) => s + (Number(p.amount) || 0), 0), [payments]);

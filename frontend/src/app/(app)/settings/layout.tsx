@@ -25,6 +25,7 @@ const GROUPS: SettingsGroup[] = [
     items: [
       { path: "/settings/users", label: "المستخدمون والصلاحيات", icon: "group", perms: ["settings.users"] },
       { path: "/settings/roles", label: "الأدوار والصلاحيات", icon: "shield_person", perms: ["settings.users"] },
+      { path: "/settings/price-lists", label: "قوائم الأسعار", icon: "sell", perms: ["products.price_lists"] },
     ],
   },
   {

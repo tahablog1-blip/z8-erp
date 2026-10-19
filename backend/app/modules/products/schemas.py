@@ -69,6 +69,7 @@ class ProductOut(BaseModel):
     created_at: datetime | None = None
     stock_qty: float = 0          # مجموع أرصدة الفروع
     has_image: bool = False
+    price_overridden: bool = False   # السعر راجع من قائمة أسعار مخصّصة (priceListId) لا السعر العادي
 
 
 class SpecOut(BaseModel):

@@ -42,6 +42,7 @@ PERMISSIONS = [
         {"key": "products.delete",     "label": "حذف صنف"},
         {"key": "products.view_stock", "label": "أرصدة المخزون"},
         {"key": "products.import",     "label": "استيراد من إكسيل"},
+        {"key": "products.price_lists", "label": "إدارة قوائم الأسعار"},
         {"key": "inventory.request",    "label": "طلب أصناف لفرعي"},
         {"key": "inventory.approve_requests", "label": "الموافقة على طلبات الفروع"},
         {"key": "inventory.stocktake", "label": "إدارة الجرد الفعلي"},

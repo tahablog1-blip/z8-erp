@@ -24,6 +24,7 @@ class CustomerCreate(BaseModel):
     postalCode: str | None = None
     additionalNo: str | None = None
     creditLimit: float | None = None   # None = بلا حد ائتمان (الافتراضي — بلا تغيير في السلوك الحالي)
+    priceListId: str | None = None     # None = السعر العادي (الافتراضي — بلا تغيير في السلوك الحالي)
 
 
 class CustomerUpdate(BaseModel):
@@ -41,6 +42,7 @@ class CustomerUpdate(BaseModel):
     postalCode: str | None = None
     additionalNo: str | None = None
     creditLimit: float | None = None
+    priceListId: str | None = None
 
 
 class CustomerOut(BaseModel):
@@ -59,6 +61,7 @@ class CustomerOut(BaseModel):
     postal_code: str | None = None
     additional_no: str | None = None
     credit_limit: float | None = None
+    price_list_id: str | None = None
     balance: float = 0
     vehicle_count: int = 0
     created_at: datetime | None = None

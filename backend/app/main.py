@@ -702,6 +702,25 @@ async def lifespan(app: FastAPI):
         "CREATE INDEX IF NOT EXISTS idx_sessions_user ON user_sessions (user_id, revoked_at)",
         # ══ حد ائتمان العميل (إعداد المبيعات) — NULL = بلا حد (سلوك كل العملاء الحاليين بلا تغيير) ══
         "ALTER TABLE customers ADD COLUMN IF NOT EXISTS credit_limit NUMERIC(12,2)",
+        # ══ قوائم أسعار متعددة — عميل بلا قائمة معيّنة (NULL) يفضل على السعر العادي بلا أي تغيير ══
+        """CREATE TABLE IF NOT EXISTS price_lists (
+             id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id UUID NOT NULL,
+             name       TEXT NOT NULL,
+             created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+           )""",
+        "CREATE INDEX IF NOT EXISTS idx_price_lists_company ON price_lists (company_id)",
+        """CREATE TABLE IF NOT EXISTS price_list_items (
+             id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+             price_list_id UUID NOT NULL,
+             product_id    UUID NOT NULL,
+             price         NUMERIC(12,2) NOT NULL,
+             price_vat     NUMERIC(12,2) NOT NULL,
+             created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+             UNIQUE (price_list_id, product_id)
+           )""",
+        "CREATE INDEX IF NOT EXISTS idx_price_list_items_list ON price_list_items (price_list_id)",
+        "ALTER TABLE customers ADD COLUMN IF NOT EXISTS price_list_id UUID",
     ):
         try:
             await execute(stmt)

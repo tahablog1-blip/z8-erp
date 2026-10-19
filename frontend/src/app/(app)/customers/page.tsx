@@ -10,12 +10,13 @@ import { DataTable, Column } from "@/components/DataTable";
 import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Textarea } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import { Customer, Vehicle, Statement, money } from "@/modules/customers/types";
+import { PriceList } from "@/modules/price-lists/types";
 
 const EMPTY_CUSTOMER = {
   name: "", customerType: "individual" as "individual" | "company", phone: "", email: "",
   vatNumber: "", crNumber: "", address: "",
   buildingNo: "", street: "", district: "", city: "", postalCode: "", additionalNo: "",
-  creditLimit: "",
+  creditLimit: "", priceListId: "",
 };
 
 const EMPTY_VEHICLE = {
@@ -39,6 +40,7 @@ export default function CustomersPage() {
   const [rows, setRows] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [pageErr, setPageErr] = useState("");
+  const [priceLists, setPriceLists] = useState<PriceList[]>([]);
 
   const [modal, setModal] = useState<null | { mode: "create" } | { mode: "edit"; id: string }>(null);
   const [form, setForm] = useState({ ...EMPTY_CUSTOMER });
@@ -67,6 +69,7 @@ export default function CustomersPage() {
     finally { setLoading(false); }
   }
   useEffect(() => { load(); }, []);
+  useEffect(() => { api<PriceList[]>("/price-lists").then(setPriceLists).catch(() => {}); }, []);
 
   function openCreate() {
     setForm({ ...EMPTY_CUSTOMER }); setErr(""); setModal({ mode: "create" });
@@ -78,6 +81,7 @@ export default function CustomersPage() {
       buildingNo: c.building_no || "", street: c.street || "", district: c.district || "",
       city: c.city || "", postalCode: c.postal_code || "", additionalNo: c.additional_no || "",
       creditLimit: c.credit_limit != null ? String(c.credit_limit) : "",
+      priceListId: c.price_list_id || "",
     });
     setErr(""); setModal({ mode: "edit", id: c.id });
   }
@@ -85,7 +89,8 @@ export default function CustomersPage() {
   async function save() {
     setErr(""); setBusy(true);
     const body = { ...form, email: form.email.trim() || null,
-                   creditLimit: form.creditLimit.trim() === "" ? null : Number(form.creditLimit) };
+                   creditLimit: form.creditLimit.trim() === "" ? null : Number(form.creditLimit),
+                   priceListId: form.priceListId || null };
     try {
       if (modal?.mode === "create") {
         await api("/customers", { method: "POST", body: JSON.stringify(body) });
@@ -168,6 +173,11 @@ export default function CustomersPage() {
             {c.customer_type === "company" ? "شركة" : "فرد"}
             {c.phone ? ` · ${c.phone}` : ""}
           </div>
+          {c.price_list_id && (
+            <div className="mt-0.5 text-[10.5px] font-bold text-petrol">
+              {priceLists.find((pl) => pl.id === c.price_list_id)?.name || "قائمة أسعار خاصة"}
+            </div>
+          )}
         </div>
       ),
     },
@@ -312,6 +322,15 @@ export default function CustomersPage() {
               <Input type="number" min={0} step={0.01} className="tnum" value={form.creditLimit}
                      placeholder="بلا حد"
                      onChange={(e) => setForm({ ...form, creditLimit: e.target.value })} />
+            </Field>
+            <Field label="قائمة الأسعار" hint="فاضي = السعر العادي لكل الأصناف">
+              <Select value={form.priceListId}
+                      onChange={(e) => setForm({ ...form, priceListId: e.target.value })}>
+                <option value="">السعر العادي</option>
+                {priceLists.map((pl) => (
+                  <option key={pl.id} value={pl.id}>{pl.name}</option>
+                ))}
+              </Select>
             </Field>
           </div>
 

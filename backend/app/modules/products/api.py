@@ -17,8 +17,11 @@ router = APIRouter()
 
 @router.get("", response_model=list[ProductOut])
 async def list_products(search: str | None = Query(default=None),
+                        priceListId: str | None = Query(default=None),
                         user: CurrentUser = Depends(get_current_user)):
-    return await service.list_products(user.company_id, search)
+    """priceListId: شاشة البيع تبعته لما يكون العميل معيّن على قائمة أسعار —
+    الأسعار الراجعة بترجع مخصّصة لهذه القائمة تلقائياً بدل السعر العادي"""
+    return await service.list_products(user.company_id, search, priceListId)
 
 
 @router.get("/cascade/categories", response_model=list[str])
@@ -43,9 +46,10 @@ async def cascade_specs(category: str = Query(...), name: str = Query(...),
 
 # ملاحظة ترتيب: المسار الثابت ده لازم يفضل قبل أي مسار متغير زي /{id}
 @router.get("/barcode/{code}", response_model=ProductOut)
-async def get_by_barcode(code: str, user: CurrentUser = Depends(get_current_user)):
+async def get_by_barcode(code: str, priceListId: str | None = Query(default=None),
+                         user: CurrentUser = Depends(get_current_user)):
     """البحث بالباركود — لقارئ الباركود في نقطة البيع"""
-    return await service.get_by_barcode(user.company_id, code)
+    return await service.get_by_barcode(user.company_id, code, priceListId)
 
 
 # ══════════════════ كتابة ══════════════════

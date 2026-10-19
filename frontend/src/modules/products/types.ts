@@ -28,6 +28,7 @@ export type Product = {
   year_from: number | null;
   year_to: number | null;
   counts?: Record<string, number> | null;
+  price_overridden?: boolean;
 };
 /** وصف الصنف الكامل بسطر واحد — نفس الصيغة المخزّنة في السندات والفواتير */
 export function productLabel(p: Pick<Product, "category" | "name" | "spec">) {

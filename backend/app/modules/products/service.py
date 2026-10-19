@@ -13,6 +13,10 @@ from ...core.db import execute, fetch, fetchrow, transaction
 _COLS = """id, category, name, spec, unit, barcode, price, price_vat, is_service, is_oil, is_oil_filter, oil_brand,
            oil_type, filter_kind, cost_price, min_qty, service_interval_km, is_active, created_at"""
 
+# نفس الأعمدة بدون price/price_vat — تُستخدم وقت تطبيق قائمة أسعار مخصّصة،
+# عشان نستبدل السعرين بـ COALESCE مع price_list_items بدل العمودين الأصليين
+_COLS_NO_PRICE = [c.strip() for c in _COLS.split(",") if c.strip() not in ("price", "price_vat")]
+
 
 def _row_out(r: dict) -> dict:
     """UUID → نص، و NUMERIC (Decimal) → float عشان JSON"""
@@ -54,7 +58,7 @@ def _unique_violation_message(err: asyncpg.UniqueViolationError) -> str:
 
 # ══════════════════ قراءة ══════════════════
 
-async def list_products(company_id: str, search: str | None = None) -> list[dict]:
+async def list_products(company_id: str, search: str | None = None, price_list_id: str | None = None) -> list[dict]:
     params: list = [company_id]
     where = "p.company_id = $1 AND p.is_active = TRUE"
     if search:
@@ -62,25 +66,51 @@ async def list_products(company_id: str, search: str | None = None) -> list[dict
         i = len(params)
         where += (f" AND (p.category ILIKE ${i} OR p.name ILIKE ${i} "
                   f"OR p.spec ILIKE ${i} OR p.barcode ILIKE ${i})")
+    # قائمة أسعار مخصّصة (عميل معيّن عليها): نفس الأعمدة لكن price/price_vat
+    # تُستبدل بسعر القائمة لو الصنف له تخصيص فيها، وإلا السعر العادي كما هو —
+    # صفر تغيير لأي شاشة ما بتبعتش priceListId
+    if price_list_id:
+        params.append(price_list_id)
+        pli = len(params)
+        cols = ", ".join(f"p.{c}" for c in _COLS_NO_PRICE)
+        price_sql = ("COALESCE(pli.price, p.price) AS price, "
+                     "COALESCE(pli.price_vat, p.price_vat) AS price_vat, "
+                     "(pli.id IS NOT NULL) AS price_overridden,")
+        join_sql = f"LEFT JOIN price_list_items pli ON pli.product_id = p.id AND pli.price_list_id = ${pli}"
+    else:
+        cols = ", ".join(f"p.{c.strip()}" for c in _COLS.split(","))
+        price_sql = ""
+        join_sql = ""
     # المخزون الفعلي: مجموع الرصيد في كل الفروع (loc_type='branch') لكل صنف —
     # عمود إضافي جديد stock_qty لا يكسر أي مستهلك حالي للمسار
-    cols = ", ".join(f"p.{c.strip()}" for c in _COLS.split(","))
     rows = await fetch(
-        f"""SELECT {cols},
+        f"""SELECT {cols}, {price_sql}
                   COALESCE((SELECT SUM(inv.qty) FROM inventory inv
                              WHERE inv.product_id = p.id AND inv.loc_type = 'branch'), 0) AS stock_qty,
                   (p.image_base64 IS NOT NULL) AS has_image
-           FROM products p WHERE {where} ORDER BY p.category, p.name, p.spec""", *params
+           FROM products p {join_sql} WHERE {where} ORDER BY p.category, p.name, p.spec""", *params
     )
     return [_row_out(r) for r in rows]
 
 
-async def get_by_barcode(company_id: str, code: str) -> dict:
-    row = await fetchrow(
-        f"""SELECT {_COLS} FROM products
-            WHERE company_id = $1 AND barcode = $2 AND is_active = TRUE""",
-        company_id, code,
-    )
+async def get_by_barcode(company_id: str, code: str, price_list_id: str | None = None) -> dict:
+    if price_list_id:
+        cols = ", ".join(f"p.{c}" for c in _COLS_NO_PRICE)
+        row = await fetchrow(
+            f"""SELECT {cols}, COALESCE(pli.price, p.price) AS price,
+                      COALESCE(pli.price_vat, p.price_vat) AS price_vat,
+                      (pli.id IS NOT NULL) AS price_overridden
+               FROM products p
+               LEFT JOIN price_list_items pli ON pli.product_id = p.id AND pli.price_list_id = $3
+               WHERE p.company_id = $1 AND p.barcode = $2 AND p.is_active = TRUE""",
+            company_id, code, price_list_id,
+        )
+    else:
+        row = await fetchrow(
+            f"""SELECT {_COLS} FROM products
+                WHERE company_id = $1 AND barcode = $2 AND is_active = TRUE""",
+            company_id, code,
+        )
     if not row:
         raise HTTPException(404, "لا يوجد صنف بهذا الباركود")
     return _row_out(row)

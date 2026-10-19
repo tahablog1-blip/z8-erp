@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Button, Card, Badge, Input, Field, Textarea, ErrorNote } from "@/components/ui";
 import { Product, productLabel, money } from "@/modules/products/types";
+import { Customer } from "@/modules/customers/types";
 import { BillingQueueRow } from "@/modules/cars/types";
 import { appAlert, appConfirm } from "@/components/dialog";
 import AddNoteModal from "@/components/AddNoteModal";
@@ -37,6 +38,7 @@ export default function PreparePage() {
   const [odometer, setOdometer] = useState("");
   const [notes, setNotes] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
+  const [allCustomers, setAllCustomers] = useState<Customer[] | null>(null);
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [approvalPin, setApprovalPin] = useState("");
@@ -68,6 +70,26 @@ export default function PreparePage() {
   useEffect(() => {
     if (canPrepare) api<Product[]>("/products").then(setProducts).catch(() => {});
   }, [canPrepare]);
+  useEffect(() => {
+    if (canPrepare) api<Customer[]>("/customers").then(setAllCustomers).catch(() => {});
+  }, [canPrepare]);
+
+  // قوائم الأسعار: عميل السيارة النشطة معيّن على قائمة؟ لو كذلك، أسعار الأصناف
+  // (المعروضة وبالتالي المضافة للعربة عبر addProduct) تتحول تلقائياً لأسعار
+  // هذه القائمة — نقطة ربط واحدة، بلا أي لمس لمنطق العربة نفسه.
+  const activePriceListId = useMemo(() => {
+    const cid = active?.customer_id;
+    if (!cid || !allCustomers) return null;
+    return allCustomers.find((c) => c.id === cid)?.price_list_id ?? null;
+  }, [active, allCustomers]);
+  const prevPriceListRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (prevPriceListRef.current === undefined) { prevPriceListRef.current = activePriceListId; return; }
+    if (prevPriceListRef.current === activePriceListId) return;
+    prevPriceListRef.current = activePriceListId;
+    api<Product[]>(`/products${activePriceListId ? `?priceListId=${encodeURIComponent(activePriceListId)}` : ""}`)
+      .then(setProducts).catch(() => {});
+  }, [activePriceListId]);
 
   // ── عند اختيار سيارة: تعبئة العربة من المسودة (اختيار العميل من الكشك أو آخر فاتورة) ──
   useEffect(() => {
