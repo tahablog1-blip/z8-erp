@@ -97,7 +97,9 @@ export default function CompanySettingsPage() {
     e.target.value = "";
     if (!file) return;
     if (!file.type.startsWith("image/")) { setLogoErr("الملف المختار مش صورة"); return; }
-    if (file.size > 1_500_000) { setLogoErr("حجم الصورة أكبر من 1.5 ميجابايت — اختر صورة أصغر"); return; }
+    // السيرفر بيصغّر وبيضغط أي شعار تلقائياً مهما كانت صيغته أو دقته (PNG بشفافية، JPG، ..)،
+    // فالسقف هنا للحماية من ملف ضخم جداً بس — مش قيد حقيقي على الاستخدام العادي
+    if (file.size > 15_000_000) { setLogoErr("حجم الملف أكبر من 15 ميجابايت — اختر صورة أصغر"); return; }
     setLogoErr(""); setLogoBusy(true);
     try {
       const b64 = await new Promise<string>((resolve, reject) => {

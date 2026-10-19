@@ -62,10 +62,46 @@ async def update_company(company_id: str, body) -> dict:
     return _with_logo_url(row, company_id)
 
 
+_LOGO_MAX_INPUT = 15_000_000  # سقف حماية قبل المعالجة فقط (مش حد للاستخدام العادي)
+_LOGO_MAX_DIM = 640            # كافي جداً لأي استخدام فعلي للشعار (فاتورة/شاشة تحميل/قوائم)
+
+
+def _normalize_logo(data_url: str) -> str:
+    """تطبيع أي شعار مرفوع (أي صيغة — PNG بشفافية، JPG، WEBP.. وأي أبعاد) لنسخة PNG صغيرة
+    وثابتة الجودة، بدل الرفض اللي كان بيحصل تحديداً مع شعارات PNG عالية الدقة (شائعة من
+    برامج التصميم، أكبر حجمًا من JPEG للجودة نفسها بسبب الشفافية) لما تتجاوز سقف بايتات
+    تعسفي على الملف الخام — ده كان بيظهر للمالك وكأن النظام "مش بيدعم PNG" أصلاً."""
+    import numpy as np
+    import cv2
+
+    _, _, rest = data_url.partition(",")
+    b64 = rest if rest else data_url
+    try:
+        raw = _b64.b64decode(b64)
+    except Exception:
+        raise HTTPException(400, "تعذّر قراءة ملف الشعار")
+    if len(raw) > _LOGO_MAX_INPUT:
+        raise HTTPException(400, "حجم الملف كبير جداً (أكبر من 15 ميجابايت) — اختر صورة أصغر")
+
+    img = cv2.imdecode(np.frombuffer(raw, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+    if img is None:
+        raise HTTPException(400, "الملف المختار مش صورة صالحة")
+
+    h, w = img.shape[:2]
+    scale = _LOGO_MAX_DIM / max(h, w)
+    if scale < 1:
+        img = cv2.resize(img, (max(1, round(w * scale)), max(1, round(h * scale))), interpolation=cv2.INTER_AREA)
+
+    ok, buf = cv2.imencode(".png", img, [int(cv2.IMWRITE_PNG_COMPRESSION), 9])
+    if not ok:
+        raise HTTPException(400, "تعذّرت معالجة الشعار")
+    return "data:image/png;base64," + _b64.b64encode(buf.tobytes()).decode()
+
+
 async def set_logo(company_id: str, logo_b64: str | None) -> dict:
     clean = (logo_b64 or "").strip() or None
-    if clean and len(clean) > 2_000_000:  # ~1.5MB بعد فك التشفير — يكفي لشعار فاتورة
-        raise HTTPException(400, "حجم الشعار كبير جداً — استخدم صورة أصغر (أقل من 1.5 ميجابايت)")
+    if clean:
+        clean = _normalize_logo(clean)
     # logo_version بيتزايد مع كل تغيير (رفع أو إزالة) — هو الـ cache-buster الحقيقي في رابط الشعار
     row = await fetchrow(
         "UPDATE companies SET logo_base64=$1, logo_version = logo_version + 1 WHERE id=$2 RETURNING logo_version",
