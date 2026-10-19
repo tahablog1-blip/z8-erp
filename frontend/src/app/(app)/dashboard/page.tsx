@@ -306,7 +306,9 @@ export default function DashboardPage() {
   const [anomBusy, setAnomBusy] = useState(false);
   const canAi = hasPerm("reports.view");
   useEffect(() => {
-    if (canAi) api<{ brief: string }>("/reports/daily-brief").then((r) => setBrief(r.brief)).catch(() => { });
+    if (canAi) api<{ brief: string }>("/reports/daily-brief")
+      .then((r) => setBrief(r.brief))
+      .catch((e: any) => setBrief(e.message || "تعذّر تحميل الملخص الصباحي"));
   }, [canAi]);
 
   async function askAi() {
