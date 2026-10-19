@@ -266,3 +266,79 @@ async def delete_vehicle(company_id: str, vehicle_id: str) -> None:
     )
     if not row:
         raise HTTPException(404, "السيارة غير موجودة")
+
+
+# ══════════════════ نقاط الولاء ══════════════════
+# برنامج مستقل عن كشف الحساب والقيود المحاسبية عمداً — نقاط اكتساب/استبدال
+# فقط، بلا أي قيد يومية (محتاج حساب "مصروفات تخفيضات الولاء" في شجرة حسابات
+# كل شركة أولاً، وده خارج نطاق هذه الدفعة). صفر معدّل اكتساب = البرنامج معطّل.
+
+async def accrue_points(company_id: str, customer_id: str, total_inc: float) -> None:
+    row = await fetchrow(
+        "SELECT value FROM company_settings WHERE company_id=$1 AND key='loyalty.earnPerSar'",
+        company_id,
+    )
+    rate = float(row["value"]) if row and row["value"] else 0.0
+    if rate <= 0:
+        return
+    points = int(float(total_inc or 0) * rate)   # تقريب لأسفل دايماً — ما ينفعش نكسب العميل نقطة أكتر من حقه
+    if points <= 0:
+        return
+    async with transaction() as conn:
+        async with conn.transaction():
+            updated = await conn.fetchrow(
+                "UPDATE customers SET loyalty_points = loyalty_points + $1 WHERE id=$2 AND company_id=$3 RETURNING id",
+                points, customer_id, company_id,
+            )
+            if not updated:
+                return
+            await conn.execute(
+                """INSERT INTO loyalty_ledger (company_id, customer_id, points, kind, note)
+                   VALUES ($1,$2,$3,'earn',$4)""",
+                company_id, customer_id, points,
+                f"اكتساب من فاتورة بإجمالي {float(total_inc or 0):.2f} ر.س",
+            )
+
+
+async def redeem_points(company_id: str, customer_id: str, points: int) -> dict:
+    if points <= 0:
+        raise HTTPException(422, "أدخل عدد نقاط صحيح أكبر من صفر")
+    row = await fetchrow(
+        "SELECT value FROM company_settings WHERE company_id=$1 AND key='loyalty.redeemValue'",
+        company_id,
+    )
+    redeem_value = float(row["value"]) if row and row["value"] else 0.0
+    if redeem_value <= 0:
+        raise HTTPException(422, "استبدال النقاط غير مفعّل — حدد قيمة النقطة من الإعدادات أولاً")
+
+    async with transaction() as conn:
+        async with conn.transaction():
+            cust = await conn.fetchrow(
+                "SELECT loyalty_points FROM customers WHERE id=$1 AND company_id=$2 FOR UPDATE",
+                customer_id, company_id,
+            )
+            if not cust:
+                raise HTTPException(404, "العميل غير موجود")
+            if cust["loyalty_points"] < points:
+                raise HTTPException(422, f"رصيد العميل {cust['loyalty_points']} نقطة فقط")
+            amount = round(points * redeem_value, 2)
+            await conn.execute(
+                "UPDATE customers SET loyalty_points = loyalty_points - $1 WHERE id=$2", points, customer_id,
+            )
+            await conn.execute(
+                """INSERT INTO loyalty_ledger (company_id, customer_id, points, kind, note)
+                   VALUES ($1,$2,$3,'redeem',$4)""",
+                company_id, customer_id, -points, f"استبدال {points} نقطة بقيمة {amount:.2f} ر.س",
+            )
+            remaining = cust["loyalty_points"] - points
+    return {"ok": True, "points": points, "amount": amount, "remaining": remaining}
+
+
+async def list_loyalty_ledger(company_id: str, customer_id: str) -> list[dict]:
+    rows = await fetch(
+        """SELECT id, points, kind, note, invoice_id, created_at
+           FROM loyalty_ledger WHERE company_id=$1 AND customer_id=$2
+           ORDER BY created_at DESC LIMIT 100""",
+        company_id, customer_id,
+    )
+    return [{**r, "id": str(r["id"]), "invoice_id": str(r["invoice_id"]) if r["invoice_id"] else None} for r in rows]

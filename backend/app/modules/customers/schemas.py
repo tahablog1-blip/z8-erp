@@ -75,6 +75,7 @@ class CustomerOut(BaseModel):
     contract_valid_from: date | None = None
     contract_valid_until: date | None = None
     contract_notes: str | None = None
+    loyalty_points: int = 0
     balance: float = 0
     vehicle_count: int = 0
     created_at: datetime | None = None

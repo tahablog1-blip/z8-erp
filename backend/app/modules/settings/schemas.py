@@ -139,6 +139,16 @@ class SettingsDashboardOut(BaseModel):
 
 # ══════════════════ إعدادات الطباعة (7 إعدادات جديدة) ══════════════════
 
+class LoyaltySettingsOut(BaseModel):
+    earnPerSar: float = 0      # نقاط لكل 1 ر.س من إجمالي الفاتورة — 0 = البرنامج معطّل
+    redeemValue: float = 0     # قيمة النقطة بالريال عند الاستبدال — 0 = الاستبدال معطّل
+
+
+class LoyaltySettingsIn(BaseModel):
+    earnPerSar: float = Field(default=0, ge=0)
+    redeemValue: float = Field(default=0, ge=0)
+
+
 class PrintingSettingsOut(BaseModel):
     autoPrint: bool = True
     footer: str = "شكراً لتعاملكم معنا"

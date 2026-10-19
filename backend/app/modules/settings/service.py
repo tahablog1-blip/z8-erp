@@ -196,6 +196,24 @@ async def _set_kv(company_id: str, kv: dict[str, str]) -> None:
             company_id, k, v)
 
 
+# ══════════════════ برنامج نقاط الولاء ══════════════════
+
+_LOYALTY_DEFAULTS = {"earnPerSar": "0", "redeemValue": "0"}
+
+
+async def get_loyalty_settings(company_id: str) -> dict:
+    kv = await _get_kv(company_id, [f"loyalty.{k}" for k in _LOYALTY_DEFAULTS])
+    return {k: float(kv.get(f"loyalty.{k}", default) or default) for k, default in _LOYALTY_DEFAULTS.items()}
+
+
+async def update_loyalty_settings(company_id: str, body) -> dict:
+    await _set_kv(company_id, {
+        "loyalty.earnPerSar": str(body.earnPerSar),
+        "loyalty.redeemValue": str(body.redeemValue),
+    })
+    return await get_loyalty_settings(company_id)
+
+
 # ══════════════════ إعدادات الطباعة ══════════════════
 
 _PRINT_DEFAULTS = {

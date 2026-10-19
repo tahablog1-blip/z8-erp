@@ -20,6 +20,7 @@ export type Customer = {
   contract_valid_from: string | null;
   contract_valid_until: string | null;
   contract_notes: string | null;
+  loyalty_points: number;
   balance: number;
   vehicle_count: number;
   created_at?: string | null;

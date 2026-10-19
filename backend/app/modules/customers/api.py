@@ -2,6 +2,7 @@
 # ملاحظة ترتيب: المسارات الثابتة (search-by-plate, lookup-by-plate) لازم تفضل
 # قبل /{customer_id} وإلا Express/FastAPI هيحاول يفسّرها كـ id.
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, Field
 
 from ...core.deps import CurrentUser, get_current_user, require_permission
 from . import service
@@ -9,6 +10,10 @@ from .schemas import (
     CustomerCreate, CustomerOut, CustomerUpdate, PaymentBody,
     StatementOut, VehicleCreate, VehicleOut,
 )
+
+
+class RedeemPointsIn(BaseModel):
+    points: int = Field(gt=0)
 
 router = APIRouter()
 
@@ -76,6 +81,19 @@ async def record_payment(customer_id: str, body: PaymentBody,
         user.company_id, user.user_id, customer_id, body.amount, body.method, body.note
     )
     return {"success": True}
+
+
+# ══════════════════ نقاط الولاء ══════════════════
+
+@router.get("/{customer_id}/loyalty-ledger")
+async def loyalty_ledger(customer_id: str, user: CurrentUser = Depends(get_current_user)):
+    return await service.list_loyalty_ledger(user.company_id, customer_id)
+
+
+@router.post("/{customer_id}/redeem-points", status_code=201)
+async def redeem_points(customer_id: str, body: RedeemPointsIn,
+                        user: CurrentUser = Depends(require_permission("customers.record_payment"))):
+    return await service.redeem_points(user.company_id, customer_id, body.points)
 
 
 # ══════════════════ سيارات العميل (الأسطول) ══════════════════

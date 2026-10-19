@@ -736,6 +736,21 @@ async def lifespan(app: FastAPI):
         "ALTER TABLE customers ADD COLUMN IF NOT EXISTS contract_valid_from DATE",
         "ALTER TABLE customers ADD COLUMN IF NOT EXISTS contract_valid_until DATE",
         "ALTER TABLE customers ADD COLUMN IF NOT EXISTS contract_notes TEXT",
+        # ══ برنامج نقاط/ولاء العملاء — معدّلات الاكتساب/الاستبدال في company_settings
+        # (loyalty.earnPerSar / loyalty.redeemValue)، صفر = البرنامج معطّل بلا أي تغيير سلوك ══
+        "ALTER TABLE customers ADD COLUMN IF NOT EXISTS loyalty_points INTEGER NOT NULL DEFAULT 0",
+        """CREATE TABLE IF NOT EXISTS loyalty_ledger (
+             id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id  UUID NOT NULL,
+             customer_id UUID NOT NULL,
+             points      INTEGER NOT NULL,
+             kind        TEXT NOT NULL,
+             note        TEXT,
+             invoice_id  UUID,
+             created_by  UUID,
+             created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+           )""",
+        "CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_customer ON loyalty_ledger (customer_id)",
     ):
         try:
             await execute(stmt)

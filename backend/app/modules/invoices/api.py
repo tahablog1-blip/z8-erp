@@ -49,6 +49,14 @@ async def create_invoice(body: InvoiceCreate,
 
     inv = await service.create_invoice(user.company_id, user.user_id, user.email, body.model_dump())
 
+    # 🎁 نقاط الولاء: اكتساب تلقائي حسب إجمالي الفاتورة — صفر تأثير لو معدّل
+    # الاكتساب غير مفعّل من الإعدادات (0 الافتراضي)، وما بيعطّلش إصدار الفاتورة لو فشل
+    if inv.get("customer_id"):
+        try:
+            await customers_service.accrue_points(user.company_id, inv["customer_id"], inv["total_inc"])
+        except Exception as _e:
+            print(f"⚠ نقاط الولاء: {_e}")
+
     # 📝 سجل تدقيق: أي فاتورة فيها خصم أو بيع آجل تُسجَّل — عملية fire-and-forget
     if total_discount > 0 or any(p.method == "credit" for p in body.payments):
         from ...core import audit

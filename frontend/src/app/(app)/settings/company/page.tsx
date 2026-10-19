@@ -46,6 +46,11 @@ export default function CompanySettingsPage() {
   const [waToken, setWaToken] = useState("");
   const [waMsg, setWaMsg] = useState("");
 
+  // ── 🎁 برنامج نقاط الولاء ──
+  const [loyalty, setLoyalty] = useState({ earnPerSar: "0", redeemValue: "0" });
+  const [loyaltyBusy, setLoyaltyBusy] = useState(false);
+  const [loyaltyMsg, setLoyaltyMsg] = useState("");
+
   function set<K extends keyof Company>(k: K, v: Company[K]) { setForm((f) => ({ ...f, [k]: v })); }
 
   useEffect(() => {
@@ -53,8 +58,23 @@ export default function CompanySettingsPage() {
     api<Company>("/settings/company").then(setForm).catch((e) => setCoErr(e.message));
     api<{ waInstance: string; waToken: string }>("/auth/wa-settings")
       .then((r) => { setWaInstance(r.waInstance); setWaToken(r.waToken); }).catch(() => {});
+    api<{ earnPerSar: number; redeemValue: number }>("/settings/loyalty")
+      .then((r) => setLoyalty({ earnPerSar: String(r.earnPerSar), redeemValue: String(r.redeemValue) })).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function saveLoyalty() {
+    setLoyaltyMsg(""); setLoyaltyBusy(true);
+    try {
+      const r = await api<{ earnPerSar: number; redeemValue: number }>("/settings/loyalty", {
+        method: "PUT",
+        body: JSON.stringify({ earnPerSar: Number(loyalty.earnPerSar) || 0, redeemValue: Number(loyalty.redeemValue) || 0 }),
+      });
+      setLoyalty({ earnPerSar: String(r.earnPerSar), redeemValue: String(r.redeemValue) });
+      setLoyaltyMsg("تم الحفظ");
+    } catch (e: any) { setLoyaltyMsg(e.message); }
+    finally { setLoyaltyBusy(false); }
+  }
 
   async function saveCompany() {
     setCoErr(""); setCoOk(""); setCoBusy(true);
@@ -248,6 +268,28 @@ export default function CompanySettingsPage() {
         <div className="mt-3 flex items-center gap-3">
           <Button onClick={saveWa}>حفظ إعداد واتساب</Button>
           {waMsg && <span className="text-[12px] font-bold">{waMsg}</span>}
+        </div>
+      </Card>
+
+      <Card>
+        <h2 className="mb-2 text-[14px] font-black">🎁 برنامج نقاط الولاء</h2>
+        <p className="mb-3 text-[11.5px] text-text-dim">
+          صفر في أي خانة = ميزتها معطّلة. الاكتساب يحصل تلقائياً عند إصدار أي فاتورة لعميل مسجّل،
+          والاستبدال يتم من صفحة العميل نفسه. البرنامج مستقل عن كشف الحساب ولا يُنشئ قيوداً محاسبية.
+        </p>
+        <div className="grid max-w-2xl gap-3 sm:grid-cols-2">
+          <Field label="معدّل الاكتساب (نقطة لكل 1 ر.س)" hint="مثال: 0.1 = نقطة واحدة كل 10 ر.س">
+            <Input type="number" min={0} step="0.01" className="tnum" value={loyalty.earnPerSar}
+                   onChange={(e) => setLoyalty({ ...loyalty, earnPerSar: e.target.value })} />
+          </Field>
+          <Field label="قيمة النقطة عند الاستبدال (ر.س)" hint="مثال: 0.05 = كل نقطة تساوي 5 هللات">
+            <Input type="number" min={0} step="0.01" className="tnum" value={loyalty.redeemValue}
+                   onChange={(e) => setLoyalty({ ...loyalty, redeemValue: e.target.value })} />
+          </Field>
+        </div>
+        <div className="mt-3 flex items-center gap-3">
+          <Button onClick={saveLoyalty} disabled={loyaltyBusy}>{loyaltyBusy ? "جارِ الحفظ..." : "حفظ إعداد النقاط"}</Button>
+          {loyaltyMsg && <span className="text-[12px] font-bold">{loyaltyMsg}</span>}
         </div>
       </Card>
     </div>

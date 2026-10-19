@@ -52,7 +52,7 @@ export default function CustomersPage() {
   const [detail, setDetail] = useState<Customer | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [statement, setStatement] = useState<Statement | null>(null);
-  const [detailTab, setDetailTab] = useState<"vehicles" | "statement">("vehicles");
+  const [detailTab, setDetailTab] = useState<"vehicles" | "statement" | "loyalty">("vehicles");
   const [vehicleForm, setVehicleForm] = useState({ ...EMPTY_VEHICLE });
   const [vehicleErr, setVehicleErr] = useState("");
   const [showVehicleForm, setShowVehicleForm] = useState(false);
@@ -62,6 +62,13 @@ export default function CustomersPage() {
   const [payMethod, setPayMethod] = useState<"cash" | "card" | "transfer">("cash");
   const [payNote, setPayNote] = useState("");
   const [payErr, setPayErr] = useState("");
+
+  // ── نقاط الولاء ──
+  type LoyaltyEntry = { id: string; points: number; kind: string; note: string | null; invoice_id: string | null; created_at: string };
+  const [loyaltyLedger, setLoyaltyLedger] = useState<LoyaltyEntry[] | null>(null);
+  const [redeemPoints, setRedeemPoints] = useState("");
+  const [redeemErr, setRedeemErr] = useState("");
+  const [redeemBusy, setRedeemBusy] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -121,6 +128,7 @@ export default function CustomersPage() {
     setDetail(c); setDetailTab("vehicles"); setShowVehicleForm(false);
     setVehicleForm({ ...EMPTY_VEHICLE }); setVehicleErr("");
     setPayAmount(""); setPayNote(""); setPayErr("");
+    setLoyaltyLedger(null); setRedeemPoints(""); setRedeemErr("");
     try {
       const v = await api<Vehicle[]>(`/customers/${c.id}/vehicles`);
       setVehicles(v);
@@ -130,6 +138,29 @@ export default function CustomersPage() {
   async function loadStatement(customerId: string) {
     try { setStatement(await api<Statement>(`/customers/${customerId}/statement`)); }
     catch (e: any) { await appAlert(e.message); }
+  }
+
+  async function loadLoyaltyLedger(customerId: string) {
+    try { setLoyaltyLedger(await api<LoyaltyEntry[]>(`/customers/${customerId}/loyalty-ledger`)); }
+    catch (e: any) { await appAlert(e.message); }
+  }
+
+  async function submitRedeem() {
+    if (!detail) return;
+    const points = Number(redeemPoints);
+    setRedeemErr("");
+    if (!points || points <= 0) { setRedeemErr("أدخل عدد نقاط صحيح"); return; }
+    setRedeemBusy(true);
+    try {
+      const r = await api<{ remaining: number }>(`/customers/${detail.id}/redeem-points`, {
+        method: "POST", body: JSON.stringify({ points }),
+      });
+      setDetail({ ...detail, loyalty_points: r.remaining });
+      setRedeemPoints("");
+      await loadLoyaltyLedger(detail.id);
+      await load();
+    } catch (e: any) { setRedeemErr(e.message); }
+    finally { setRedeemBusy(false); }
   }
 
   async function addVehicle() {
@@ -184,6 +215,11 @@ export default function CustomersPage() {
           {c.price_list_id && (
             <div className="mt-0.5 text-[10.5px] font-bold text-petrol">
               {priceLists.find((pl) => pl.id === c.price_list_id)?.name || "قائمة أسعار خاصة"}
+            </div>
+          )}
+          {c.loyalty_points > 0 && (
+            <div className="mt-0.5 text-[10.5px] font-bold text-text-dim">
+              <MIcon name="star" className="!text-[12px] align-middle" /> {c.loyalty_points} نقطة
             </div>
           )}
           {c.contract_discount_pct != null && (() => {
@@ -440,6 +476,11 @@ export default function CustomersPage() {
                   كشف الحساب
                 </button>
               )}
+              <button onClick={() => { setDetailTab("loyalty"); if (!loyaltyLedger) loadLoyaltyLedger(detail.id); }}
+                      className={`-mb-px border-b-2 px-4 py-2 text-[13px] font-bold transition
+                        ${detailTab === "loyalty" ? "border-petrol text-petrol" : "border-transparent text-text-dim"}`}>
+                نقاط الولاء
+              </button>
             </div>
 
             {detailTab === "vehicles" && (
@@ -592,6 +633,59 @@ export default function CustomersPage() {
                       </div>
                     )}
                   </>
+                )}
+              </div>
+            )}
+
+            {detailTab === "loyalty" && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between rounded-lg bg-ink-3 p-3">
+                  <span className="text-[12.5px] font-bold text-text-dim">رصيد النقاط الحالي</span>
+                  <span className="tnum text-[16px] font-black text-petrol">{detail.loyalty_points} نقطة</span>
+                </div>
+
+                <div className="max-h-56 overflow-y-auto rounded-lg border border-line">
+                  <table className="w-full border-collapse text-[12px]">
+                    <thead>
+                      <tr className="bg-ink-3 text-[11px] font-extrabold text-text-dim">
+                        <th className="px-3 py-2 text-right">التاريخ</th>
+                        <th className="px-3 py-2 text-right">الحركة</th>
+                        <th className="px-3 py-2 text-right">النقاط</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {!loyaltyLedger ? (
+                        <tr><td colSpan={3} className="px-3 py-5 text-center text-text-dim">جارِ التحميل...</td></tr>
+                      ) : loyaltyLedger.length === 0 ? (
+                        <tr><td colSpan={3} className="px-3 py-5 text-center text-text-dim">لا توجد حركات بعد</td></tr>
+                      ) : loyaltyLedger.map((e) => (
+                        <tr key={e.id} className="border-t border-line/70">
+                          <td className="px-3 py-2 text-text-dim">{dateFmt(e.created_at)}</td>
+                          <td className="px-3 py-2">{e.note || (e.kind === "earn" ? "اكتساب" : "استبدال")}</td>
+                          <td className={`px-3 py-2 tnum font-bold ${e.points > 0 ? "text-emerald" : "text-ember"}`}>
+                            {e.points > 0 ? "+" : ""}{e.points}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {canPay && detail.loyalty_points > 0 && (
+                  <div className="space-y-2 rounded-lg border border-line bg-ink-3 p-3">
+                    <p className="text-[12.5px] font-bold">استبدال نقاط</p>
+                    <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                      <Field label="عدد النقاط">
+                        <Input type="number" min={1} step={1} className="tnum" value={redeemPoints}
+                               placeholder={`حتى ${detail.loyalty_points}`}
+                               onChange={(e) => setRedeemPoints(e.target.value)} />
+                      </Field>
+                      <Button className="self-end" disabled={redeemBusy || !redeemPoints} onClick={submitRedeem}>
+                        {redeemBusy ? "..." : "استبدال"}
+                      </Button>
+                    </div>
+                    <ErrorNote msg={redeemErr} />
+                  </div>
                 )}
               </div>
             )}

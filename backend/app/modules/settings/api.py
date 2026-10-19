@@ -10,7 +10,7 @@ from .schemas import (
     CompanyOut, CompanyIn, LogoIn, RoleOut, RoleIn, SettingsDashboardOut,
     PrintingSettingsOut, PrintingSettingsIn, SystemSettingsOut, SystemSettingsIn,
     BackgroundOut, BackgroundCreateIn, BackgroundSettingsOut, BackgroundSettingsIn,
-    DesignSettingsOut, DesignSettingsIn,
+    DesignSettingsOut, DesignSettingsIn, LoyaltySettingsOut, LoyaltySettingsIn,
 )
 
 router = APIRouter()
@@ -147,6 +147,21 @@ async def update_user(user_id: str, body: UserUpdateIn,
         user.company_id, user.user_id, user_id, body.fullName, body.role,
         body.branchId, body.permissions, body.isActive, body.newPassword, body.roleId)
     await log_action(user, "edit", "settings", details=f"تعديل موظف: {row['full_name']}")
+    return row
+
+
+# ══════════════════ برنامج نقاط الولاء ══════════════════
+
+@router.get("/loyalty", response_model=LoyaltySettingsOut)
+async def get_loyalty_settings(user: CurrentUser = Depends(get_current_user)):
+    return await service.get_loyalty_settings(user.company_id)
+
+
+@router.put("/loyalty", response_model=LoyaltySettingsOut)
+async def update_loyalty_settings(body: LoyaltySettingsIn,
+                                  user: CurrentUser = Depends(require_permission("settings.company"))):
+    row = await service.update_loyalty_settings(user.company_id, body)
+    await log_action(user, "edit", "settings", details="تحديث إعدادات نقاط الولاء")
     return row
 
 
