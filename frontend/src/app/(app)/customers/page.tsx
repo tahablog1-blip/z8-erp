@@ -15,6 +15,7 @@ const EMPTY_CUSTOMER = {
   name: "", customerType: "individual" as "individual" | "company", phone: "", email: "",
   vatNumber: "", crNumber: "", address: "",
   buildingNo: "", street: "", district: "", city: "", postalCode: "", additionalNo: "",
+  creditLimit: "",
 };
 
 const EMPTY_VEHICLE = {
@@ -76,13 +77,15 @@ export default function CustomersPage() {
       vatNumber: c.vat_number || "", crNumber: c.cr_number || "", address: c.address || "",
       buildingNo: c.building_no || "", street: c.street || "", district: c.district || "",
       city: c.city || "", postalCode: c.postal_code || "", additionalNo: c.additional_no || "",
+      creditLimit: c.credit_limit != null ? String(c.credit_limit) : "",
     });
     setErr(""); setModal({ mode: "edit", id: c.id });
   }
 
   async function save() {
     setErr(""); setBusy(true);
-    const body = { ...form, email: form.email.trim() || null };
+    const body = { ...form, email: form.email.trim() || null,
+                   creditLimit: form.creditLimit.trim() === "" ? null : Number(form.creditLimit) };
     try {
       if (modal?.mode === "create") {
         await api("/customers", { method: "POST", body: JSON.stringify(body) });
@@ -173,12 +176,22 @@ export default function CustomersPage() {
       render: (c) => <span className="tnum">{c.vehicle_count}</span>,
     },
     {
-      key: "balance", title: "الرصيد (آجل)", width: "130px",
-      render: (c) => (
-        <span className={`tnum font-bold ${c.balance > 0 ? "text-ember" : "text-text-dim"}`}>
-          {money(c.balance)}
-        </span>
-      ),
+      key: "balance", title: "الرصيد (آجل)", width: "160px",
+      render: (c) => {
+        const overLimit = c.credit_limit != null && c.balance > c.credit_limit;
+        return (
+          <div>
+            <span className={`tnum font-bold ${c.balance > 0 ? "text-ember" : "text-text-dim"}`}>
+              {money(c.balance)}
+            </span>
+            {c.credit_limit != null && (
+              <div className={`text-[10.5px] ${overLimit ? "font-bold text-ember" : "text-text-dim"}`}>
+                {overLimit ? "تجاوز حد " : "حد "}{money(c.credit_limit)}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "vat_number", title: "الرقم الضريبي", width: "140px",
@@ -291,6 +304,14 @@ export default function CustomersPage() {
             <Field label="رقم السجل التجاري">
               <Input value={form.crNumber} className="tnum"
                      onChange={(e) => setForm({ ...form, crNumber: e.target.value })} />
+            </Field>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Field label="حد الائتمان (ر.س)" hint="فاضي = بلا حد — البيع الآجل غير مقيّد لهذا العميل">
+              <Input type="number" min={0} step={0.01} className="tnum" value={form.creditLimit}
+                     placeholder="بلا حد"
+                     onChange={(e) => setForm({ ...form, creditLimit: e.target.value })} />
             </Field>
           </div>
 

@@ -23,6 +23,7 @@ class CustomerCreate(BaseModel):
     city: str | None = None
     postalCode: str | None = None
     additionalNo: str | None = None
+    creditLimit: float | None = None   # None = بلا حد ائتمان (الافتراضي — بلا تغيير في السلوك الحالي)
 
 
 class CustomerUpdate(BaseModel):
@@ -39,6 +40,7 @@ class CustomerUpdate(BaseModel):
     city: str | None = None
     postalCode: str | None = None
     additionalNo: str | None = None
+    creditLimit: float | None = None
 
 
 class CustomerOut(BaseModel):
@@ -56,6 +58,7 @@ class CustomerOut(BaseModel):
     city: str | None = None
     postal_code: str | None = None
     additional_no: str | None = None
+    credit_limit: float | None = None
     balance: float = 0
     vehicle_count: int = 0
     created_at: datetime | None = None

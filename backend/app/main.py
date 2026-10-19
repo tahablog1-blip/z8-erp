@@ -700,6 +700,8 @@ async def lifespan(app: FastAPI):
              revoked_at   TIMESTAMPTZ
            )""",
         "CREATE INDEX IF NOT EXISTS idx_sessions_user ON user_sessions (user_id, revoked_at)",
+        # ══ حد ائتمان العميل (إعداد المبيعات) — NULL = بلا حد (سلوك كل العملاء الحاليين بلا تغيير) ══
+        "ALTER TABLE customers ADD COLUMN IF NOT EXISTS credit_limit NUMERIC(12,2)",
     ):
         try:
             await execute(stmt)

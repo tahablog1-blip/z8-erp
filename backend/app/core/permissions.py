@@ -17,6 +17,7 @@ PERMISSIONS = [
         {"key": "invoices.discount_supervisor", "label": "خصم حتى 20% — مشرف"},
         {"key": "invoices.discount_manager",    "label": "خصم بلا حد — مدير"},
         {"key": "invoices.price_override",      "label": "تعديل سعر الصنف يدوياً وقت البيع"},
+        {"key": "invoices.credit_override",      "label": "تجاوز حد ائتمان العميل عند البيع الآجل"},
         {"key": "audit.view",                   "label": "عرض سجل التدقيق"},
         {"key": "invoices.create_service",  "label": "كاشير الخدمة — فوترة سيارات الطابور فقط"},
         {"key": "invoices.create_direct",   "label": "كاشير البيع المباشر فقط"},

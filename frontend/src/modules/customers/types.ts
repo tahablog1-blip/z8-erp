@@ -14,6 +14,7 @@ export type Customer = {
   city: string | null;
   postal_code: string | null;
   additional_no: string | null;
+  credit_limit: number | null;
   balance: number;
   vehicle_count: number;
   created_at?: string | null;

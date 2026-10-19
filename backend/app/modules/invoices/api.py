@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ...core.deps import CurrentUser, get_current_user, require_permission
+from ..customers import service as customers_service
 from . import service
 from .schemas import InvoiceCreate, InvoiceDetailOut, InvoiceOut, PartialReturnIn, PartialReturnOut
 
@@ -33,6 +34,18 @@ async def create_invoice(body: InvoiceCreate,
         if pct > max_pct + 0.01:
             raise HTTPException(403,
                 f"الخصم المطلوب {pct:.1f}% يتجاوز حدك المسموح ({max_pct:.0f}%) — راجع مشرفك")
+
+    # ── حد ائتمان العميل: نفس فلسفة حد الخصم — القرار هنا، مهما أرسلت الواجهة ──
+    credit_amount = sum(p.amount for p in body.payments if p.method == "credit")
+    if credit_amount > 0 and body.customerId:
+        status = await customers_service.get_credit_status(user.company_id, body.customerId)
+        if status and status["creditLimit"] is not None:
+            projected = status["balance"] + credit_amount
+            if projected > status["creditLimit"] + 0.01 and not user.has("invoices.credit_override"):
+                raise HTTPException(403,
+                    f"تجاوز حد ائتمان العميل ({status['creditLimit']:.2f} ر.س) — "
+                    f"الرصيد الحالي {status['balance']:.2f} + هذه الفاتورة {credit_amount:.2f} ر.س. "
+                    "راجع مشرفك لتجاوز الحد.")
 
     inv = await service.create_invoice(user.company_id, user.user_id, user.email, body.model_dump())
 

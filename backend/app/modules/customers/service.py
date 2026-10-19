@@ -22,7 +22,7 @@ def _clean_plate(s: str) -> str:
 def _customer_out(r: dict) -> dict:
     r = dict(r)
     r["id"] = str(r["id"])
-    for k in ("balance",):
+    for k in ("balance", "credit_limit"):
         if isinstance(r.get(k), Decimal):
             r[k] = float(r[k])
     return r
@@ -33,6 +33,7 @@ _COL_MAP = {
     "vatNumber": "vat_number", "crNumber": "cr_number", "address": "address",
     "buildingNo": "building_no", "street": "street", "district": "district",
     "city": "city", "postalCode": "postal_code", "additionalNo": "additional_no",
+    "creditLimit": "credit_limit",
 }
 
 
@@ -126,15 +127,28 @@ async def create_customer(company_id: str, d: dict) -> dict:
     row = await fetchrow(
         """INSERT INTO customers
              (company_id, name, customer_type, phone, email, vat_number, cr_number, address,
-              building_no, street, district, city, postal_code, additional_no)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+              building_no, street, district, city, postal_code, additional_no, credit_limit)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
            RETURNING *, 0::numeric(12,2) AS balance, 0::int AS vehicle_count""",
         company_id, d["name"], d.get("customerType", "individual"), d.get("phone"),
         d.get("email") or None, d.get("vatNumber"), d.get("crNumber"), d.get("address"),
         d.get("buildingNo"), d.get("street"), d.get("district"), d.get("city"),
-        d.get("postalCode"), d.get("additionalNo"),
+        d.get("postalCode"), d.get("additionalNo"), d.get("creditLimit"),
     )
     return _customer_out(row)
+
+
+async def get_credit_status(company_id: str, customer_id: str) -> dict | None:
+    """بيُستخدم من موديول الفواتير وقت البيع الآجل — None لو العميل غير موجود."""
+    row = await fetchrow(
+        """SELECT c.credit_limit,
+                  COALESCE((SELECT SUM(cl.amount) FROM customer_ledger cl WHERE cl.customer_id=c.id),0)::numeric(12,2) AS balance
+           FROM customers c WHERE c.id=$1 AND c.company_id=$2""",
+        customer_id, company_id)
+    if not row:
+        return None
+    return {"creditLimit": float(row["credit_limit"]) if row["credit_limit"] is not None else None,
+            "balance": float(row["balance"])}
 
 
 async def update_customer(company_id: str, customer_id: str, fields: dict) -> dict:
