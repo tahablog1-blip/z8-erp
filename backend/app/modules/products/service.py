@@ -10,7 +10,7 @@ from ...core.db import execute, fetch, fetchrow, transaction
 
 # الأعمدة اللي بترجع للواجهة — مكتوبة صراحةً بدل SELECT *
 # عشان أي عمود جديد يتضاف للجدول ما يسربش للواجهة من غير قصد.
-_COLS = """id, category, name, spec, unit, barcode, price, price_vat, is_service, is_oil, is_oil_filter, oil_brand,
+_COLS = """id, category, name, spec, unit, barcode, sku, price, price_vat, is_service, is_oil, is_oil_filter, oil_brand,
            oil_type, filter_kind, cost_price, min_qty, service_interval_km, is_active, created_at"""
 
 # نفس الأعمدة بدون price/price_vat — تُستخدم وقت تطبيق قائمة أسعار مخصّصة،
@@ -59,7 +59,21 @@ def _unique_violation_message(err: asyncpg.UniqueViolationError) -> str:
     constraint = err.constraint_name or ""
     if "barcode" in constraint:
         return "الباركود مستخدم بالفعل لصنف آخر"
+    if "sku" in constraint:
+        return "رمز SKU هذا مستخدم بالفعل لصنف آخر"
     return "هذا الصنف مسجل بالفعل بنفس الفئة والاسم واللزوجة"
+
+
+async def _next_sku(company_id: str) -> str:
+    """SKU تسلسلي مستقل عن الباركود — رقم كتالوج داخلي ثابت لا يتغير حتى لو الصنف
+    اتغيّر باركوده أو مفيش له باركود من الأساس (شائع في قطع الغيار). نفس آلية ترقيم
+    المستندات (document_counters) المستخدمة في المشتريات."""
+    row = await fetchrow(
+        """INSERT INTO document_counters (company_id, doc_type, last_number) VALUES ($1,'product_sku',1)
+           ON CONFLICT (company_id, doc_type) DO UPDATE SET last_number = document_counters.last_number + 1
+           RETURNING last_number""",
+        company_id)
+    return f"SKU-{row['last_number']:06d}"
 
 
 # ══════════════════ قراءة ══════════════════
@@ -171,15 +185,16 @@ async def create_product(company_id: str, d: dict) -> dict:
             if any(k.lower() in low for k in keys + [bn.lower()]):
                 d["oilBrand"] = bn
                 break
+    sku = (d.get("sku") or "").strip() or await _next_sku(company_id)
     try:
         row = await fetchrow(
             f"""INSERT INTO products
-                  (company_id, category, name, spec, unit, barcode,
+                  (company_id, category, name, spec, unit, barcode, sku,
                    price, cost_price, min_qty, service_interval_km, is_service, is_oil, is_oil_filter, oil_brand, oil_type, filter_kind)
-                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
                 RETURNING {_COLS}""",
             company_id, category, d["name"], d.get("spec", ""), d.get("unit", "قطعة"),
-            d.get("barcode") or None,
+            d.get("barcode") or None, sku,
             Decimal(str(d.get("price", 0))), Decimal(str(d.get("costPrice", 0))),
             d.get("minQty", 0), d.get("serviceIntervalKm"), bool(d.get("isService", False)),
             bool(d.get("isOil", False)), bool(d.get("isOilFilter", False)), d.get("oilBrand"),
@@ -192,7 +207,7 @@ async def create_product(company_id: str, d: dict) -> dict:
 
 _COL_MAP = {
     "category": "category", "name": "name", "spec": "spec", "unit": "unit",
-    "barcode": "barcode", "price": "price", "costPrice": "cost_price",
+    "barcode": "barcode", "sku": "sku", "price": "price", "costPrice": "cost_price",
     "minQty": "min_qty", "serviceIntervalKm": "service_interval_km",
     "isService": "is_service", "isOil": "is_oil", "isOilFilter": "is_oil_filter",
     "oilBrand": "oil_brand", "oilType": "oil_type", "filterKind": "filter_kind",
@@ -211,6 +226,8 @@ async def update_product(company_id: str, product_id: str, fields: dict) -> dict
     set_parts, values = [], []
     for i, (k, v) in enumerate(updates.items(), start=3):
         set_parts.append(f"{_COL_MAP[k]} = ${i}")
+        if k == "sku" and v is not None and not str(v).strip():
+            v = None   # فراغ = امسح الـ SKU (الفهرس الفريد يتجاهل NULL فقط — فراغ متكرر يتعارض)
         values.append(Decimal(str(v)) if (k in _DECIMAL_KEYS and v is not None) else v)
 
     try:
@@ -1109,3 +1126,69 @@ async def get_product_detail(company_id: str, product_id: str) -> dict:
         "totalStock": sum(s["qty"] or 0 for s in stock),
         "moves": moves,
     }
+
+
+# ══════════════════ أصناف بديلة/مرتبطة (product_links) ══════════════════
+# تطبيع الترتيب: نخزّن الزوج دايماً بترتيب نصّي ثابت لـ UUID الاتنين، عشان
+# ربط A→B وربط B→A بعد كده يقعوا على نفس الصف تحت UNIQUE(product_id, linked_product_id, link_type)
+# بدل ما يتكرر الربط عكسياً بصفين متضاربين.
+
+async def add_product_link(company_id: str, product_id: str, linked_product_id: str, link_type: str) -> dict:
+    if product_id == linked_product_id:
+        raise HTTPException(422, "لا يمكن ربط الصنف بنفسه")
+    a, b = sorted([product_id, linked_product_id])
+    try:
+        row = await fetchrow(
+            """INSERT INTO product_links (company_id, product_id, linked_product_id, link_type)
+               VALUES ($1,$2,$3,$4) RETURNING id""",
+            company_id, a, b, link_type,
+        )
+    except asyncpg.UniqueViolationError:
+        raise HTTPException(409, "الربط موجود بالفعل")
+    except asyncpg.ForeignKeyViolationError:
+        raise HTTPException(404, "الصنف المطلوب ربطه غير موجود")
+    return {"id": str(row["id"])}
+
+
+async def remove_product_link(company_id: str, link_id: str) -> None:
+    row = await fetchrow(
+        "DELETE FROM product_links WHERE id=$1 AND company_id=$2 RETURNING id",
+        link_id, company_id,
+    )
+    if not row:
+        raise HTTPException(404, "الربط غير موجود")
+
+
+async def list_product_links(company_id: str, product_id: str) -> list[dict]:
+    """بيانات الصنف الآخر (مش الصنف الحالي) — الربط مخزّن بترتيب نصّي ثابت
+    للزوج فمرة الصنف الحالي يكون product_id ومرة linked_product_id."""
+    rows = await fetch(
+        """SELECT pl.id, pl.link_type,
+                  CASE WHEN pl.product_id = $2 THEN pl.linked_product_id ELSE pl.product_id END AS other_id
+           FROM product_links pl
+           WHERE pl.company_id = $1 AND (pl.product_id = $2 OR pl.linked_product_id = $2)""",
+        company_id, product_id,
+    )
+    if not rows:
+        return []
+    other_ids = [str(r["other_id"]) for r in rows]
+    prod_rows = await fetch(
+        f"""SELECT p.id, p.category, p.name, p.spec, p.price,
+                   COALESCE((SELECT SUM(inv.qty) FROM inventory inv
+                              WHERE inv.product_id = p.id AND inv.loc_type = 'branch'), 0) AS stock_qty
+            FROM products p WHERE p.company_id = $1 AND p.id = ANY($2::uuid[])""",
+        company_id, other_ids,
+    )
+    by_id = {str(p["id"]): p for p in prod_rows}
+    out = []
+    for r in rows:
+        p = by_id.get(str(r["other_id"]))
+        if not p:   # الصنف الآخر محذوف/غير موجود — تجاهل الربط بدل كسر الطلب
+            continue
+        out.append({
+            "id": str(r["id"]), "linkType": r["link_type"], "productId": str(p["id"]),
+            "category": p["category"], "name": p["name"], "spec": p["spec"],
+            "price": float(p["price"]) if isinstance(p["price"], Decimal) else p["price"],
+            "stock_qty": float(p["stock_qty"]) if isinstance(p["stock_qty"], Decimal) else p["stock_qty"],
+        })
+    return out

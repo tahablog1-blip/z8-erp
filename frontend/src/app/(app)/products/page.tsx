@@ -8,11 +8,11 @@ import { useAuth } from "@/lib/auth";
 import { DataTable, Column } from "@/components/DataTable";
 import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
-import { Product, productLabel, money } from "@/modules/products/types";
+import { Product, ProductLink, productLabel, money } from "@/modules/products/types";
 import ProductCards from "@/components/ProductCards";
 
 const EMPTY = {
-  category: "", name: "", spec: "", unit: "قطعة", barcode: "",
+  category: "", name: "", spec: "", unit: "قطعة", barcode: "", sku: "",
   price: 0, costPrice: 0, minQty: 0, serviceIntervalKm: "", isService: false, isOil: false, isOilFilter: false, oilBrand: null as string | null,
   oilType: null as string | null, // للزيت: نوعه — للخدمة: نوع الزيت اللي تتطلبه (يحصر الاقتراح في بوابة الحجز)
 };
@@ -241,7 +241,7 @@ export default function ProductsPage() {
   function openEdit(p: Product) {
     setForm({
       category: p.category || "", name: p.name, spec: p.spec || "",
-      unit: p.unit || "قطعة", barcode: p.barcode || "",
+      unit: p.unit || "قطعة", barcode: p.barcode || "", sku: p.sku || "",
       price: Number(p.price), costPrice: Number(p.cost_price), minQty: p.min_qty,
       serviceIntervalKm: p.service_interval_km == null ? "" : String(p.service_interval_km),
       isService: !!p.is_service, isOil: !!p.is_oil, isOilFilter: !!p.is_oil_filter, oilBrand: p.oil_brand,
@@ -257,6 +257,7 @@ export default function ProductsPage() {
     const body = {
       ...form,
       barcode: form.barcode.trim() || null,
+      sku: form.sku.trim() || null,
       spec: form.spec.trim(),
       serviceIntervalKm: form.serviceIntervalKm === "" ? null : Number(form.serviceIntervalKm),
       isService: form.isService, isOil: form.isOil, isOilFilter: form.isOilFilter, oilBrand: form.oilBrand,
@@ -287,6 +288,40 @@ export default function ProductsPage() {
     if (!await appConfirm(`حذف الصنف «${productLabel(p)}»؟ الفواتير والحركات القديمة تبقى محفوظة.`)) return;
     try { await api(`/products/${p.id}`, { method: "DELETE" }); await load(); }
     catch (e: any) { await appAlert(e.message); }
+  }
+
+  // ══════════ الأصناف البديلة/المرتبطة ══════════
+  const [linksModal, setLinksModal] = useState<Product | null>(null);
+  const [links, setLinks] = useState<ProductLink[]>([]);
+  const [linksErr, setLinksErr] = useState("");
+  const [linksBusy, setLinksBusy] = useState(false);
+  const [linkPickId, setLinkPickId] = useState("");
+  const [linkType, setLinkType] = useState<"substitute" | "related">("substitute");
+
+  async function loadLinks(productId: string) {
+    try { setLinks(await api<ProductLink[]>(`/products/${productId}/links`)); setLinksErr(""); }
+    catch (e: any) { setLinksErr(e.message); }
+  }
+  function openLinks(p: Product) {
+    setLinksModal(p); setLinkPickId(""); setLinkType("substitute"); setLinksErr("");
+    loadLinks(p.id);
+  }
+  async function addLink() {
+    if (!linksModal || !linkPickId) return;
+    setLinksBusy(true); setLinksErr("");
+    try {
+      await api(`/products/${linksModal.id}/links`, {
+        method: "POST", body: JSON.stringify({ linkedProductId: linkPickId, linkType }),
+      });
+      setLinkPickId("");
+      await loadLinks(linksModal.id);
+    } catch (e: any) { setLinksErr(e.message); }
+    finally { setLinksBusy(false); }
+  }
+  async function removeLink(linkId: string) {
+    if (!linksModal) return;
+    try { await api(`/products/links/${linkId}`, { method: "DELETE" }); await loadLinks(linksModal.id); }
+    catch (e: any) { setLinksErr(e.message); }
   }
 
   // ══════════ فلترة احترافية لكل الأصناف ══════════
@@ -397,6 +432,12 @@ export default function ProductsPage() {
         : <span className="text-text-dim">—</span>,
     },
     {
+      key: "sku", title: "SKU", width: "110px",
+      render: (p) => p.sku
+        ? <span className="tnum text-[12px] text-text-dim">{p.sku}</span>
+        : <span className="text-text-dim">—</span>,
+    },
+    {
       key: "price", title: "السعر", width: "100px",
       render: (p) => <span className="tnum font-bold">{money(p.price)}</span>,
     },
@@ -427,6 +468,10 @@ export default function ProductsPage() {
           {canEdit && (
             <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
               onClick={() => openEdit(p)}>تعديل</Button>
+          )}
+          {canEdit && (
+            <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
+              onClick={() => openLinks(p)}>بدائل/مرتبطة</Button>
           )}
           {canDelete && (
             <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]"
@@ -1176,11 +1221,18 @@ export default function ProductsPage() {
             </Field>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <Field label="الباركود">
               <Input value={form.barcode} className="tnum"
                 onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
             </Field>
+            <Field label="رمز SKU" hint="فاضي = يُولَّد تلقائياً">
+              <Input value={form.sku} className="tnum" placeholder="SKU-000001"
+                onChange={(e) => setForm({ ...form, sku: e.target.value })} />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
             <Field label="حد الانخفاض">
               <Input type="number" min={0} className="tnum" value={form.minQty}
                 onChange={(e) => setForm({ ...form, minQty: +e.target.value || 0 })} />
@@ -1274,6 +1326,58 @@ export default function ProductsPage() {
             <Button onClick={save} disabled={busy || form.name.trim().length < 1}>
               {busy ? "جارِ الحفظ..." : "حفظ"}
             </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ══════════ الأصناف البديلة/المرتبطة ══════════ */}
+      <Modal open={!!linksModal} onClose={() => setLinksModal(null)}
+        title={linksModal ? `بدائل/مرتبطة — ${productLabel(linksModal)}` : ""}>
+        <div className="space-y-3">
+          {linksErr && <ErrorNote msg={linksErr} />}
+
+          <div className="grid grid-cols-[1fr_120px_auto] gap-2">
+            <Select value={linkPickId} onChange={(e) => setLinkPickId(e.target.value)}>
+              <option value="">اختر صنفاً...</option>
+              {rows
+                .filter((p) => p.id !== linksModal?.id && !links.some((l) => l.productId === p.id))
+                .map((p) => (
+                  <option key={p.id} value={p.id}>{productLabel(p)}</option>
+                ))}
+            </Select>
+            <Select value={linkType} onChange={(e) => setLinkType(e.target.value as any)}>
+              <option value="substitute">بديل</option>
+              <option value="related">مرتبط</option>
+            </Select>
+            <Button onClick={addLink} disabled={!linkPickId || linksBusy}>إضافة</Button>
+          </div>
+
+          <div className="divide-y divide-line rounded-lg border border-line">
+            {links.length === 0 && (
+              <div className="p-3 text-center text-[12px] text-text-dim">لا توجد أصناف بديلة أو مرتبطة بعد</div>
+            )}
+            {links.map((l) => (
+              <div key={l.id} className="flex items-center justify-between gap-2 p-2.5">
+                <div className="min-w-0">
+                  <div className="truncate text-[12.5px] font-bold">
+                    {l.category} — {l.name}{l.spec ? ` — ${l.spec}` : ""}
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-text-dim">
+                    <Badge tone={l.linkType === "substitute" ? "warn" : "info"}>
+                      {l.linkType === "substitute" ? "بديل" : "مرتبط"}
+                    </Badge>
+                    <span className="tnum">{money(l.price)}</span>
+                    <span className="tnum">مخزون: {l.stock_qty}</span>
+                  </div>
+                </div>
+                <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]"
+                  onClick={() => removeLink(l.id)}>حذف</Button>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={() => setLinksModal(null)}>إغلاق</Button>
           </div>
         </div>
       </Modal>

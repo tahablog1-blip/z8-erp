@@ -23,6 +23,7 @@ type Level = {
   category: string | null; name: string | null; spec: string | null;
   unit: string | null; min_qty: number; barcode: string | null;
   branch_name: string | null; loc_name: string; is_low: boolean;
+  shelf_location: string | null;
 };
 
 type BranchRequest = {
@@ -308,6 +309,22 @@ export default function InventoryPage() {
     finally { setBusy(false); }
   }
 
+  async function saveShelfLocation(l: Level, value: string) {
+    try {
+      await api("/inventory/shelf-location", {
+        method: "PUT",
+        body: JSON.stringify({
+          locType: l.loc_type, locId: l.loc_id, productId: l.product_id,
+          shelfLocation: value || null,
+        }),
+      });
+      setLevels((prev) => prev.map((x) =>
+        x.loc_type === l.loc_type && x.loc_id === l.loc_id && x.product_id === l.product_id
+          ? { ...x, shelf_location: value || null } : x
+      ));
+    } catch (e: any) { await appAlert(e.message); }
+  }
+
   // ══════════════════ الأعمدة ══════════════════
 
   const levelCols: Column<Level>[] = [
@@ -338,6 +355,21 @@ export default function InventoryPage() {
       render: (l) => l.is_low
         ? <Badge tone="warn">يحتاج تزويد</Badge>
         : <Badge tone="good">كافٍ</Badge>,
+    },
+    {
+      key: "shelf_location", title: "موقع الرف", width: "130px",
+      render: (l) => (
+        <Input
+          defaultValue={l.shelf_location || ""}
+          placeholder="رف A-3"
+          className="!h-7 !py-1 !text-[11.5px]"
+          onBlur={(e) => {
+            const v = e.target.value.trim();
+            if (v === (l.shelf_location || "")) return;
+            saveShelfLocation(l, v);
+          }}
+        />
+      ),
     },
   ];
 
@@ -581,7 +613,7 @@ export default function InventoryPage() {
               columns={levelCols}
               rows={visibleLevels}
               loading={loading}
-              searchKeys={["name", "category", "spec", "barcode", "loc_name"]}
+              searchKeys={["name", "category", "spec", "barcode", "loc_name", "shelf_location"]}
               searchPlaceholder="بحث بالصنف أو الموقع..."
               emptyText="لا توجد أرصدة بعد — سجّل أول استلام من مورد"
               toolbar={

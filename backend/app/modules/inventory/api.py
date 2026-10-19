@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from ...core.deps import CurrentUser, get_current_user, require_permission
 from . import service
 from .schemas import (
-    LevelOut, MoveOut, MoveResult, QtyOut, ReceiveBody,
+    LevelOut, MoveOut, MoveResult, QtyOut, ReceiveBody, ShelfLocationIn,
     TransferBody, VoucherDetailOut, VoucherEditBody, VoucherOut,
 )
 
@@ -85,6 +85,14 @@ async def transfer(body: TransferBody,
     return await service.transfer(
         user.company_id, user.user_id, user.full_name, body.model_dump()
     )
+
+
+@router.put("/shelf-location")
+async def set_shelf_location(body: ShelfLocationIn,
+                             user: CurrentUser = Depends(require_permission("products.view_stock"))):
+    """تحديد/تعديل موقع الرف الداخلي لصنف في موقع معيّن (مستودع أو فرع)"""
+    return await service.set_shelf_location(
+        user.company_id, body.locType, body.locId, body.productId, body.shelfLocation)
 
 
 @router.put("/vouchers/{move_no}", response_model=MoveResult)

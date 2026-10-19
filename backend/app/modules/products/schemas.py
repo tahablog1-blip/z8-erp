@@ -12,6 +12,8 @@ class ProductCreate(BaseModel):
     spec: str = Field(default="", max_length=100)
     unit: str = Field(default="قطعة", max_length=30)
     barcode: str | None = Field(default=None, max_length=64)
+    # رمز الكتالوج الداخلي — مستقل عن الباركود، تلقائي (SKU-000001) لو فاضي
+    sku: str | None = Field(default=None, max_length=64)
     price: float = Field(ge=0)
     costPrice: float = Field(default=0, ge=0)
     minQty: int = Field(default=0, ge=0)
@@ -34,6 +36,7 @@ class ProductUpdate(BaseModel):
     spec: str | None = Field(default=None, max_length=100)
     unit: str | None = Field(default=None, max_length=30)
     barcode: str | None = Field(default=None, max_length=64)
+    sku: str | None = Field(default=None, max_length=64)
     price: float | None = Field(default=None, ge=0)
     costPrice: float | None = Field(default=None, ge=0)
     minQty: int | None = Field(default=None, ge=0)
@@ -54,6 +57,7 @@ class ProductOut(BaseModel):
     spec: str | None = None
     unit: str | None = None
     barcode: str | None = None
+    sku: str | None = None
     price: float = 0
     price_vat: float = 0          # محسوب بتريجر في القاعدة — للقراءة فقط
     cost_price: float = 0
@@ -71,6 +75,24 @@ class ProductOut(BaseModel):
     has_image: bool = False
     price_overridden: bool = False   # السعر راجع من قائمة أسعار مخصّصة (priceListId) لا السعر العادي
     qty_discount_rules: list[dict] = Field(default_factory=list)   # [{min_qty, discount_percent}, ...] تصاعدياً
+
+
+class ProductLinkIn(BaseModel):
+    linkedProductId: str
+    linkType: str = Field(default="related", pattern="^(substitute|related)$")
+
+
+class ProductLinkOut(BaseModel):
+    """صف صنف مرتبط/بديل — بيانات الصنف الآخر نفسه (لا الصنف الحالي) عشان
+    الواجهة تعرضه مباشرة بدون استدعاء إضافي."""
+    id: str                 # id صف الربط نفسه (لحذفه)
+    linkType: str
+    productId: str          # الصنف الآخر (البديل/المرتبط)
+    category: str
+    name: str
+    spec: str | None = None
+    price: float = 0
+    stock_qty: float = 0
 
 
 class SpecOut(BaseModel):

@@ -71,6 +71,14 @@ class LevelOut(BaseModel):
     branch_name: str | None = None       # فاضي للمستودع
     loc_name: str                        # اسم الموقع جاهز للعرض
     is_low: bool = False                 # الرصيد وصل حد الانخفاض أو أقل
+    shelf_location: str | None = None    # موقع الرف الداخلي (نص حر)
+
+
+class ShelfLocationIn(BaseModel):
+    locType: LocType
+    locId: str
+    productId: str
+    shelfLocation: str | None = None
 
 
 class MoveOut(BaseModel):

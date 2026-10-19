@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from ...core.audit import log_action
 from ...core.deps import CurrentUser, get_current_user, require_permission
 from . import service
-from .schemas import ProductCreate, ProductOut, ProductUpdate, SpecOut
+from .schemas import ProductCreate, ProductLinkIn, ProductLinkOut, ProductOut, ProductUpdate, SpecOut
 
 router = APIRouter()
 
@@ -401,6 +401,26 @@ async def public_brand_logo(brand_id: str):
         raise HTTPException(404, "لا يوجد شعار")
     return _Response(content=img["bytes"], media_type=img["mime"],
                      headers={"Cache-Control": "public, max-age=86400"})
+
+
+@router.get("/{product_id}/links", response_model=list[ProductLinkOut])
+async def list_product_links(product_id: str,
+                              user: CurrentUser = Depends(require_permission(
+                                  "products.create", "products.edit", "products.view_stock"))):
+    """الأصناف البديلة/المرتبطة بهذا الصنف — تُعرض في شاشة الصنف وشاشة البيع"""
+    return await service.list_product_links(user.company_id, product_id)
+
+
+@router.post("/{product_id}/links", status_code=201)
+async def add_product_link(product_id: str, body: ProductLinkIn,
+                           user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
+    return await service.add_product_link(user.company_id, product_id, body.linkedProductId, body.linkType)
+
+
+@router.delete("/links/{link_id}", status_code=204)
+async def remove_product_link(link_id: str,
+                              user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
+    await service.remove_product_link(user.company_id, link_id)
 
 
 @router.get("/{product_id}/detail")

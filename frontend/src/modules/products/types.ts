@@ -9,6 +9,7 @@ export type Product = {
   spec: string | null;
   unit: string | null;
   barcode: string | null;
+  sku: string | null;
   price: number;
   price_vat: number;
   cost_price: number;
@@ -30,6 +31,17 @@ export type Product = {
   counts?: Record<string, number> | null;
   price_overridden?: boolean;
   qty_discount_rules?: { min_qty: number; discount_percent: number }[];
+};
+
+export type ProductLink = {
+  id: string;
+  linkType: "substitute" | "related";
+  productId: string;
+  category: string;
+  name: string;
+  spec: string | null;
+  price: number;
+  stock_qty: number;
 };
 /** وصف الصنف الكامل بسطر واحد — نفس الصيغة المخزّنة في السندات والفواتير */
 export function productLabel(p: Pick<Product, "category" | "name" | "spec">) {

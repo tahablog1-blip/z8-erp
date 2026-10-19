@@ -590,6 +590,22 @@ async def lifespan(app: FastAPI):
         "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS rating numeric(2,1)",
         "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS rating_note text",
 
+        # ── SKU مستقل عن الباركود + مواقع تخزين داخلية (أرفف) + أصناف بديلة/مرتبطة ──
+        "ALTER TABLE products ADD COLUMN IF NOT EXISTS sku text",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_products_sku_company ON products(company_id, sku) WHERE sku IS NOT NULL",
+        "ALTER TABLE inventory ADD COLUMN IF NOT EXISTS shelf_location text",
+        """CREATE TABLE IF NOT EXISTS product_links (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             product_id uuid NOT NULL,
+             linked_product_id uuid NOT NULL,
+             link_type text NOT NULL DEFAULT 'related',
+             created_at timestamptz NOT NULL DEFAULT now(),
+             UNIQUE(company_id, product_id, linked_product_id, link_type)
+           )""",
+        "CREATE INDEX IF NOT EXISTS idx_product_links_product ON product_links(product_id)",
+        "CREATE INDEX IF NOT EXISTS idx_product_links_linked ON product_links(linked_product_id)",
+
         # ── المدفوعات الإلكترونية: بنية هيكلية جاهزة لتفعيل مزوّد حقيقي (راجع modules/payments) ──
         """CREATE TABLE IF NOT EXISTS payment_transactions (
              id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

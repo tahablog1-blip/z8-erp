@@ -50,7 +50,7 @@ async def _branch_map(company_id: str) -> dict:
 async def list_levels(company_id: str) -> list[dict]:
     """أرصدة كل الأصناف في كل المواقع (المستودع + الفروع)"""
     rows = await fetch(
-        """SELECT i.loc_type, i.loc_id, i.product_id, i.qty,
+        """SELECT i.loc_type, i.loc_id, i.product_id, i.qty, i.shelf_location,
                   p.category, p.name, p.spec, p.unit, p.min_qty, p.barcode,
                   b.name AS branch_name
            FROM inventory i
@@ -109,6 +109,22 @@ async def get_qty(company_id: str, loc_type: str, loc_id: str, product_id: str) 
         company_id, loc_type, loc_id, product_id,
     )
     return row["qty"] if row else 0
+
+
+async def set_shelf_location(company_id: str, loc_type: str, loc_id: str,
+                             product_id: str, shelf_location: str | None) -> dict:
+    """موقع الرف داخل المستودع/الفرع — نص حر بسيط (مش تسلسل هرمي بالكامل)،
+    يُحفظ على صف الرصيد نفسه (inventory) لا على الصنف، لأنه يختلف من موقع لآخر."""
+    shelf_location = (shelf_location or "").strip() or None
+    row = await fetchrow(
+        """UPDATE inventory SET shelf_location = $5
+           WHERE company_id = $1 AND loc_type = $2 AND loc_id = $3 AND product_id = $4
+           RETURNING shelf_location""",
+        company_id, loc_type, loc_id, product_id, shelf_location,
+    )
+    if not row:
+        raise HTTPException(404, "لا يوجد رصيد لهذا الصنف في هذا الموقع")
+    return {"shelfLocation": row["shelf_location"]}
 
 
 async def list_suppliers(company_id: str) -> list[str]:
