@@ -86,6 +86,15 @@ td.num,th.num{text-align:center}
 .mapping-preview{font-size:.78rem;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:8px}
 .msg{font-size:.82rem;margin-top:8px}
 .msg.err{color:var(--danger)}
+.search-results{margin-top:8px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.search-results button{
+  width:100%;border-radius:0;background:var(--surface-2);justify-content:space-between;
+  text-align:right;padding:10px 12px;border-bottom:1px solid var(--border);font-weight:400;
+}
+.search-results button:last-child{border-bottom:none}
+.search-results .sr-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.search-results .sr-price{color:var(--accent);font-weight:600;white-space:nowrap}
+.search-empty{font-size:.82rem;color:var(--muted);padding:10px 2px}
 
 /* live scanner */
 .scanner-wrap{position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:4/3}
@@ -132,9 +141,10 @@ td.num,th.num{text-align:center}
   </div>
   <div class="row wrap" style="margin-top:10px">
     <button class="btn-secondary" id="stopScanBtn" type="button" hidden style="flex:1"><span class="icon" aria-hidden="true">videocam_off</span>إيقاف الكاميرا</button>
-    <input type="text" id="manualInput" placeholder="أو اكتب رقم الباركود يدويًا" inputmode="numeric" style="flex:2;min-width:140px">
+    <input type="text" id="manualInput" placeholder="ابحث بالاسم أو اكتب رقم الباركود" style="flex:2;min-width:140px">
     <button class="btn-primary" id="manualAddBtn" type="button"><span class="icon" aria-hidden="true">search</span>بحث</button>
   </div>
+  <div id="searchResults"></div>
   <div id="resultArea"></div>
 </section>
 
@@ -347,13 +357,62 @@ td.num,th.num{text-align:center}
     renderList();
   }
 
-  // ---- manual entry ----
+  // ---- manual entry: barcode or name search ----
+  function isBarcodeLike(s){ return /^[0-9]+$/.test(normalizeCode(s).replace(/[\s-]/g,'')); }
+
+  function searchCatalogByText(query){
+    var q = query.trim().toLowerCase();
+    if(!q) return [];
+    var qDigits = digitsOnly(q);
+    return catalog.filter(function(x){
+      var nameHit = x.name && x.name.toLowerCase().indexOf(q) > -1;
+      var codeHit = qDigits && digitsOnly(x.barcode).indexOf(qDigits) > -1;
+      return nameHit || codeHit;
+    }).slice(0, 8);
+  }
+
+  function clearSearchResults(){ el('searchResults').innerHTML=''; }
+
+  function selectCatalogItem(item){
+    lookupBarcode(item.barcode, false);
+    el('manualInput').value='';
+    clearSearchResults();
+    el('manualInput').focus();
+  }
+
+  function renderSearchResults(query){
+    var results = searchCatalogByText(query);
+    var area = el('searchResults');
+    if(!results.length){
+      area.innerHTML = '<div class="search-empty">لا نتائج مطابقة في ملف الأصناف</div>';
+      return;
+    }
+    area.innerHTML = '<div class="search-results">' + results.map(function(x,i){
+      return '<button type="button" class="row" data-i="'+i+'">' +
+        '<span class="sr-name">'+esc(x.name)+'</span>' +
+        '<span class="sr-price mono">'+(x.price||0).toFixed(2)+' ر.س</span>' +
+      '</button>';
+    }).join('') + '</div>';
+    area.querySelectorAll('button').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        selectCatalogItem(results[parseInt(btn.getAttribute('data-i'),10)]);
+      });
+    });
+  }
+
   function submitManual(){
     var v = el('manualInput').value;
     if(!v.trim()) return;
-    lookupBarcode(v, false);
-    el('manualInput').value='';
-    el('manualInput').focus();
+    if(isBarcodeLike(v)){
+      lookupBarcode(v, false);
+      el('manualInput').value='';
+      clearSearchResults();
+      el('manualInput').focus();
+    } else {
+      var results = searchCatalogByText(v);
+      if(results.length===1){ selectCatalogItem(results[0]); }
+      else { renderSearchResults(v); }
+    }
   }
   el('manualAddBtn').addEventListener('click', submitManual);
   el('manualInput').addEventListener('keydown', function(e){
@@ -361,6 +420,11 @@ td.num,th.num{text-align:center}
       e.preventDefault();
       submitManual();
     }
+  });
+  el('manualInput').addEventListener('input', function(){
+    var v = el('manualInput').value;
+    if(v.trim().length >= 2 && !isBarcodeLike(v)){ renderSearchResults(v); }
+    else { clearSearchResults(); }
   });
 
   // ---- live camera scanning ----
