@@ -684,6 +684,22 @@ async def lifespan(app: FastAPI):
            )""",
         "ALTER TABLE car_oil_filters ADD COLUMN IF NOT EXISTS engine_size TEXT",
         "CREATE INDEX IF NOT EXISTS idx_car_oil_filters_company ON car_oil_filters (company_id, brand, model)",
+        # ══ المصادقة الثنائية (2FA — تطبيق مصادقة TOTP) + إدارة الجلسات/الأجهزة ══
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret TEXT",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_pending_secret TEXT",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_backup_codes JSONB NOT NULL DEFAULT '[]'::jsonb",
+        """CREATE TABLE IF NOT EXISTS user_sessions (
+             id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+             user_id      UUID NOT NULL,
+             company_id   UUID NOT NULL,
+             device_label TEXT,
+             ip           TEXT,
+             created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+             last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+             revoked_at   TIMESTAMPTZ
+           )""",
+        "CREATE INDEX IF NOT EXISTS idx_sessions_user ON user_sessions (user_id, revoked_at)",
     ):
         try:
             await execute(stmt)

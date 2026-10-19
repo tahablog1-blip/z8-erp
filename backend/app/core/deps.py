@@ -5,7 +5,7 @@ import jwt as pyjwt
 from dataclasses import dataclass, field
 from fastapi import Depends, HTTPException, Request
 from .security import decode_token
-from .db import fetchrow
+from .db import fetchrow, execute
 
 @dataclass
 class CurrentUser:
@@ -38,6 +38,26 @@ async def get_current_user(request: Request) -> CurrentUser:
         raise HTTPException(401, "انتهت الجلسة — سجّل الدخول من جديد")
     except pyjwt.PyJWTError:
         raise HTTPException(401, "جلسة غير صالحة")
+
+    # توكن مؤقت لخطوة المصادقة الثنائية (2fa_pending) مالوش صلاحية دخول عادية مهما حصل
+    if payload.get("purpose"):
+        raise HTTPException(401, "جلسة غير صالحة")
+
+    # فصل جلسة عن بُعد (شاشة الأجهزة النشطة) — توكنات ما قبل هذه الميزة بلا sid تفضل شغالة
+    # لحد ما تنتهي صلاحيتها الطبيعية، بلا أي قطع مفاجئ لمستخدمين Online دلوقتي.
+    sid = payload.get("sid")
+    if sid:
+        sess = await fetchrow(
+            "SELECT revoked_at, last_seen_at FROM user_sessions WHERE id = $1", sid)
+        if not sess or sess["revoked_at"] is not None:
+            raise HTTPException(401, "تم إنهاء هذه الجلسة من شاشة الأجهزة — سجّل الدخول من جديد")
+        # تحديث آخر ظهور — مُقيّد كل 5 دقايق بس عشان ما يبقاش كتابة على كل طلب
+        try:
+            await execute(
+                "UPDATE user_sessions SET last_seen_at = now() "
+                "WHERE id = $1 AND last_seen_at < now() - interval '5 minutes'", sid)
+        except Exception:
+            pass
 
     row = await fetchrow(
         """SELECT id, company_id, branch_id, email, full_name, role, permissions, is_active

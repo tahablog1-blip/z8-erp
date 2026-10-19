@@ -32,13 +32,16 @@ function canAccess(u: any, path: string): boolean {
 }
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, completeTotp } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [conn, setConn] = useState<ConnState>("checking");
+  // الخطوة الثانية: المصادقة الثنائية (2FA) — تظهر بس لو الحساب مفعّلها
+  const [tempToken, setTempToken] = useState<string | null>(null);
+  const [totpCode, setTotpCode] = useState("");
 
   // فحص الاتصال بالباك اند عند فتح الشاشة وكل 5 ثواني لو واقع
   useEffect(() => {
@@ -61,8 +64,12 @@ export default function LoginPage() {
     e.preventDefault();
     setErr(""); setBusy(true);
     try {
-      const { user: u, landingPath } = await login(email, password);
-      const dest = landingPath && canAccess(u, landingPath) ? landingPath : autoLandingPath(u);
+      const r = await login(email, password);
+      if (r.requiresTotp) {
+        setTempToken(r.tempToken);
+        return;
+      }
+      const dest = r.landingPath && canAccess(r.user, r.landingPath) ? r.landingPath : autoLandingPath(r.user);
       router.replace(dest);
     } catch (e: any) {
       // فشل fetch نفسه (مش رد من السيرفر) = مشكلة اتصال مش بيانات
@@ -73,6 +80,21 @@ export default function LoginPage() {
       } else {
         setErr(msg);
       }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitTotp(e: React.FormEvent) {
+    e.preventDefault();
+    if (!tempToken) return;
+    setErr(""); setBusy(true);
+    try {
+      const { user: u, landingPath } = await completeTotp(tempToken, totpCode.trim());
+      const dest = landingPath && canAccess(u, landingPath) ? landingPath : autoLandingPath(u);
+      router.replace(dest);
+    } catch (e: any) {
+      setErr(e?.message || "كود غير صحيح");
     } finally {
       setBusy(false);
     }
@@ -93,6 +115,31 @@ export default function LoginPage() {
           </div>
         </div>
 
+        {tempToken ? (
+          <form onSubmit={submitTotp}
+                className="space-y-4 rounded-card border border-line bg-ink-2 p-6 shadow-panel">
+            <div className="text-center">
+              <div className="text-[14px] font-extrabold">التحقق بخطوتين</div>
+              <p className="mt-1 text-[11.5px] text-text-dim">
+                افتح تطبيق المصادقة واكتب الكود المكوّن من 6 أرقام — أو أحد أكواد الاسترجاع الاحتياطية
+              </p>
+            </div>
+            <Field label="كود التحقق">
+              <Input dir="ltr" value={totpCode} required autoFocus maxLength={11}
+                     placeholder="000000"
+                     className="text-center text-[18px] tracking-[0.3em]"
+                     onChange={(e) => setTotpCode(e.target.value)} />
+            </Field>
+            <ErrorNote msg={err} />
+            <Button type="submit" disabled={busy} className="w-full justify-center">
+              {busy ? "جارِ التحقق..." : "تأكيد"}
+            </Button>
+            <button type="button" onClick={() => { setTempToken(null); setTotpCode(""); setErr(""); }}
+                    className="w-full text-center text-[11.5px] font-bold text-text-dim hover:text-text">
+              ← رجوع لتسجيل الدخول
+            </button>
+          </form>
+        ) : (
         <form onSubmit={submit}
               className="space-y-4 rounded-card border border-line bg-ink-2 p-6 shadow-panel">
           {/* مؤشر حالة الاتصال بالخادم */}
@@ -126,6 +173,7 @@ export default function LoginPage() {
             نفس حسابك الحالي — كلمات المرور لم تتغير
           </p>
         </form>
+        )}
       </div>
     </div>
   );

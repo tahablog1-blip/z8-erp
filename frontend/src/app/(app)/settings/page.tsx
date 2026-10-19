@@ -51,6 +51,8 @@ export default function SettingsDashboard() {
     { path: "/settings/roles", label: "الأدوار والصلاحيات", icon: "shield_person", perm: "settings.users" },
     { path: "/settings/printing", label: "الطباعة", icon: "print", perm: "" },
     { path: "/settings/cameras", label: "كاميرات المحطات", icon: "videocam", perm: "settings.company" },
+    { path: "/settings/security", label: "الأمان", icon: "verified_user", perm: "" },
+    { path: "/settings/audit-log", label: "سجل المراجعة", icon: "history", perm: "audit.view" },
   ].filter((l) => !l.perm || isAdmin || hasPerm(l.perm));
 
   const doneCount = data?.setup.filter((s) => s.ok).length || 0;

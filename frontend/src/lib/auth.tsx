@@ -11,10 +11,15 @@ export type User = {
   permissions: string[];
 };
 
+export type LoginResult =
+  | { requiresTotp: true; tempToken: string }
+  | { requiresTotp?: false; user: User; landingPath: string | null };
+
 type AuthCtx = {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ user: User; landingPath: string | null }>;
+  login: (email: string, password: string) => Promise<LoginResult>;
+  completeTotp: (tempToken: string, code: string) => Promise<{ user: User; landingPath: string | null }>;
   logout: () => void;
   hasPerm: (...keys: string[]) => boolean;
 };
@@ -34,14 +39,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  async function login(email: string, password: string) {
+  async function login(email: string, password: string): Promise<LoginResult> {
     // ملاحظة: كانت login() القديمة بلا return صريح (بترجع undefined دايماً) —
     // وده كان بيكسر وجهة ما بعد الدخول المخصّصة لصفحة login (landingPath(u) كان
     // يستقبل undefined دايماً فيرجّع "/dashboard" بصرف النظر عن الدور الحقيقي).
-    // بقى بيرجّع المستخدم + وجهة الدخول المحسوبة من السيرفر (إعداد 8).
-    const d = await api<{ token: string; user: User; landingPath: string | null }>("/auth/login", {
+    // بقى بيرجّع المستخدم + وجهة الدخول المحسوبة من السيرفر (إعداد 8) —
+    // أو requiresTotp+tempToken لو الحساب مفعّل عليه مصادقة ثنائية (خطوة ثانية).
+    const d = await api<{ token?: string; user?: User; landingPath?: string | null;
+                          requiresTotp?: boolean; tempToken?: string }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
+    });
+    if (d.requiresTotp) return { requiresTotp: true, tempToken: d.tempToken! };
+    setToken(d.token!);
+    setUser(d.user!);
+    return { user: d.user!, landingPath: d.landingPath ?? null };
+  }
+
+  async function completeTotp(tempToken: string, code: string) {
+    const d = await api<{ token: string; user: User; landingPath: string | null }>("/auth/2fa/verify-login", {
+      method: "POST",
+      body: JSON.stringify({ tempToken, code }),
     });
     setToken(d.token);
     setUser(d.user);
@@ -56,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return keys.some((k) => user.permissions.includes(k));
   }
 
-  return <Ctx.Provider value={{ user, loading, login, logout, hasPerm }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ user, loading, login, completeTotp, logout, hasPerm }}>{children}</Ctx.Provider>;
 }
 
 export const useAuth = () => useContext(Ctx);

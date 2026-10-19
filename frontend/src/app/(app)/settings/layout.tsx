@@ -28,6 +28,13 @@ const GROUPS: SettingsGroup[] = [
     ],
   },
   {
+    title: "الأمان",
+    items: [
+      { path: "/settings/security", label: "الأمان وتسجيل الدخول", icon: "verified_user", perms: [] },
+      { path: "/settings/audit-log", label: "سجل المراجعة", icon: "history", perms: ["audit.view"] },
+    ],
+  },
+  {
     title: "الأجهزة",
     items: [
       { path: "/settings/cameras", label: "كاميرات المحطات", icon: "videocam", perms: ["settings.company"] },

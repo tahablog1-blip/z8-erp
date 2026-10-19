@@ -529,3 +529,58 @@ async def update_user(company_id: str, current_user_id: str, user_id: str, full_
     if not row:
         raise HTTPException(404, "المستخدم غير موجود")
     return _user_row(row)
+
+
+# ══════════════════ سجل المراجعة (Audit Log) ══════════════════
+
+async def list_audit_log(company_id: str, page: int = 1, page_size: int = 50,
+                          user_id: str | None = None, entity: str | None = None,
+                          q: str | None = None, date_from: str | None = None,
+                          date_to: str | None = None) -> dict:
+    """عرض/تصفية سجل التدقيق — البيانات بتُكتب فعلاً من كل الموديولات (log_action/log)
+    من زمان، لكن ما كانش فيه شاشة لعرضها قبل كده."""
+    page = max(1, page)
+    page_size = max(1, min(page_size, 200))
+    where = ["company_id = $1"]
+    args: list = [company_id]
+
+    def _add(cond: str, val):
+        args.append(val)
+        where.append(cond.format(n=len(args)))
+
+    if user_id:
+        _add("user_id = ${n}", user_id)
+    if entity:
+        _add("entity = ${n}", entity)
+    if date_from:
+        _add("created_at >= ${n}::timestamptz", date_from)
+    if date_to:
+        _add("created_at < (${n}::date + interval '1 day')", date_to)
+    if q:
+        _add("(user_email ILIKE ${n} OR action ILIKE ${n} OR entity ILIKE ${n} "
+             "OR COALESCE(new_value,'') ILIKE ${n} OR COALESCE(reason,'') ILIKE ${n})", f"%{q}%")
+
+    where_sql = " AND ".join(where)
+    total_row = await fetchrow(f"SELECT count(*) AS c FROM audit_log WHERE {where_sql}", *args)
+    offset = (page - 1) * page_size
+    rows = await fetch(
+        f"""SELECT id, branch_id, user_id, user_email, action, entity, entity_id,
+                   old_value, new_value, reason, created_at
+            FROM audit_log WHERE {where_sql}
+            ORDER BY created_at DESC LIMIT {page_size} OFFSET {offset}""",
+        *args)
+    return {
+        "items": [dict(r) | {"id": str(r["id"]),
+                              "user_id": str(r["user_id"]) if r["user_id"] else None,
+                              "branch_id": str(r["branch_id"]) if r["branch_id"] else None}
+                  for r in rows],
+        "total": total_row["c"] if total_row else 0,
+        "page": page, "pageSize": page_size,
+    }
+
+
+async def audit_log_entities(company_id: str) -> list[str]:
+    """قيم entity المميّزة — تُستخدم في فلتر "النوع" بالواجهة."""
+    rows = await fetch(
+        "SELECT DISTINCT entity FROM audit_log WHERE company_id=$1 ORDER BY entity", company_id)
+    return [r["entity"] for r in rows]

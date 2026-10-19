@@ -261,6 +261,23 @@ async def undo_design_settings(user: CurrentUser = Depends(require_permission("s
     return row
 
 
+# ══════════════════ سجل المراجعة (Audit Log) ══════════════════
+
+@router.get("/audit-log")
+async def get_audit_log(page: int = 1, pageSize: int = 50,
+                        userId: str | None = None, entity: str | None = None,
+                        q: str | None = None, dateFrom: str | None = None, dateTo: str | None = None,
+                        user: CurrentUser = Depends(require_permission("audit.view"))):
+    return await service.list_audit_log(
+        user.company_id, page=page, page_size=pageSize, user_id=userId,
+        entity=entity, q=q, date_from=dateFrom, date_to=dateTo)
+
+
+@router.get("/audit-log/entities")
+async def get_audit_log_entities(user: CurrentUser = Depends(require_permission("audit.view"))):
+    return await service.audit_log_entities(user.company_id)
+
+
 # ══════════════════ مفتاح المراقبة الذكية بالكاميرات ══════════════════
 class AiSupervisorIn(BaseModel):
     enabled: bool
