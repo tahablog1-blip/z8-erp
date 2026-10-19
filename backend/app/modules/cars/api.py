@@ -996,7 +996,7 @@ async def public_booking_invoices(branch_id: str, body: _MyInvoicesIn):
     digits = "".join(ch for ch in phone if ch.isdigit())
     rows = await _f(
         """SELECT i.id, i.invoice_no, i.issued_at, i.total_inc, i.payment_status,
-                  c.odometer_current
+                  c.odometer_current, c.plate, c.brand, c.name, c.model_year
            FROM invoices i LEFT JOIN cars c ON c.id = i.car_id
            WHERE i.company_id=$1 AND i.is_returned=FALSE
              AND (regexp_replace(COALESCE(i.customer_phone,''), '[^0-9]', '', 'g') = $2
@@ -1009,7 +1009,8 @@ async def public_booking_invoices(branch_id: str, body: _MyInvoicesIn):
     return {"invoices": [
         {"id": str(r["id"]), "invoiceNo": r["invoice_no"], "issuedAt": r["issued_at"].isoformat(),
          "total": float(r["total_inc"] or 0), "status": r["payment_status"] or "",
-         "odometer": r["odometer_current"]}
+         "odometer": r["odometer_current"], "plate": r["plate"],
+         "carLabel": " ".join(x for x in [r["brand"], r["name"], r["model_year"]] if x) or None}
         for r in rows]}
 
 

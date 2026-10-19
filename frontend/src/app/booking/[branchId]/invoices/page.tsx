@@ -15,6 +15,7 @@ const LINE = "#E3E8EF";
 type Inv = {
   id: string; invoiceNo: string; issuedAt: string; total: number;
   odometer: number | null; status: string;
+  plate: string | null; carLabel: string | null;
 };
 async function call<T>(path: string): Promise<T> {
   const r = await fetch(`/api/cars/public/${path}`, { cache: "no-store" });
@@ -95,6 +96,18 @@ export default function MyInvoicesPage() {
           const st = STATUS_META[inv.status] || null;
           return (
             <div key={inv.id} className="kiosk-pop space-y-3 rounded-2xl bg-white p-4 shadow-lg">
+              {(inv.plate || inv.carLabel) && (
+                <div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: "#F3F6FA" }}>
+                  {inv.plate && (
+                    <span className="tnum rounded-lg px-2.5 py-1 text-[12px] font-black text-white" style={{ background: NAVY }}>
+                      {inv.plate}
+                    </span>
+                  )}
+                  {inv.carLabel && (
+                    <span className="truncate text-[12px] font-bold" style={{ color: NAVY }}>{inv.carLabel}</span>
+                  )}
+                </div>
+              )}
               <div className="flex items-start justify-between">
                 <div>
                   <div className="tnum text-[15px] font-black" style={{ color: NAVY }}>{inv.invoiceNo}</div>
