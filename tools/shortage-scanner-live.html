@@ -365,7 +365,8 @@ td.num,th.num{text-align:center}
     var qDigits = digitsOnly(q);
     return catalog.filter(function(x){
       var nameHit = x.name && x.name.toLowerCase().indexOf(q) > -1;
-      var codeHit = qDigits && digitsOnly(x.barcode).indexOf(qDigits) > -1;
+      // progressive barcode narrowing: match from the start of the barcode as it's typed
+      var codeHit = qDigits && digitsOnly(x.barcode).indexOf(qDigits) === 0;
       return nameHit || codeHit;
     }).slice(0, 8);
   }
@@ -388,7 +389,7 @@ td.num,th.num{text-align:center}
     }
     area.innerHTML = '<div class="search-results">' + results.map(function(x,i){
       return '<button type="button" class="row" data-i="'+i+'">' +
-        '<span class="sr-name">'+esc(x.name)+'</span>' +
+        '<span class="sr-name">'+esc(x.name)+'<br><span class="mono muted" style="font-size:.74rem">'+esc(x.barcode)+'</span></span>' +
         '<span class="sr-price mono">'+(x.price||0).toFixed(2)+' ر.س</span>' +
       '</button>';
     }).join('') + '</div>';
@@ -402,15 +403,28 @@ td.num,th.num{text-align:center}
   function submitManual(){
     var v = el('manualInput').value;
     if(!v.trim()) return;
-    if(isBarcodeLike(v)){
+    var norm = normalizeCode(v);
+    var barcodeLike = isBarcodeLike(v);
+    if(barcodeLike && findInCatalog(norm)){
+      lookupBarcode(v, false);
+      el('manualInput').value='';
+      clearSearchResults();
+      el('manualInput').focus();
+      return;
+    }
+    var results = searchCatalogByText(v);
+    if(results.length===1){
+      selectCatalogItem(results[0]);
+    } else if(results.length>1){
+      renderSearchResults(v);
+    } else if(barcodeLike){
+      // a full code typed that isn't in the catalog at all - add as unmatched
       lookupBarcode(v, false);
       el('manualInput').value='';
       clearSearchResults();
       el('manualInput').focus();
     } else {
-      var results = searchCatalogByText(v);
-      if(results.length===1){ selectCatalogItem(results[0]); }
-      else { renderSearchResults(v); }
+      renderSearchResults(v);
     }
   }
   el('manualAddBtn').addEventListener('click', submitManual);
@@ -422,7 +436,7 @@ td.num,th.num{text-align:center}
   });
   el('manualInput').addEventListener('input', function(){
     var v = el('manualInput').value;
-    if(v.trim().length >= 2 && !isBarcodeLike(v)){ renderSearchResults(v); }
+    if(v.trim().length >= 2){ renderSearchResults(v); }
     else { clearSearchResults(); }
   });
 
