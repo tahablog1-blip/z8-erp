@@ -19,6 +19,7 @@ from fastapi import HTTPException
 
 from ...core import accounting
 from ...core.db import fetch, fetchrow, transaction
+from ...core.integration_log import log_event
 
 WEBHOOK_SECRET_ENV = "PAYMENTS_WEBHOOK_SECRET"
 
@@ -189,4 +190,7 @@ async def handle_webhook(raw_body: bytes, signature: str | None, payload: dict) 
                     ])
 
             updated = await conn.fetchrow("SELECT * FROM payment_transactions WHERE id=$1", tx["id"])
+
+    await log_event(str(updated["company_id"]), "payment_gateway", "webhook", status,
+                    detail=f"reference={reference} providerRef={provider_ref or '—'}")
     return _out(dict(updated))

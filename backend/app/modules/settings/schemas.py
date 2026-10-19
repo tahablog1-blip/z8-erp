@@ -1,5 +1,6 @@
 # modules/settings/schemas.py — عقود مركز الإعدادات (Pydantic)
 import re
+from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -391,3 +392,30 @@ class EmailSettingsIn(BaseModel):
         if not _EMAIL_RE.match(v):
             raise ValueError("بريد إلكتروني غير صالح")
         return v
+
+
+# ══════════════════ واتساب (UltraMsg) ══════════════════
+
+class WhatsAppSettingsOut(BaseModel):
+    waInstance: str | None = None
+    hasToken: bool = False
+
+
+class WhatsAppSettingsIn(BaseModel):
+    waInstance: str | None = None
+    waToken: str | None = None   # فاضي = يسيب التوكن المحفوظ كما هو
+
+
+class WhatsAppTestIn(BaseModel):
+    phone: str = Field(min_length=5)
+
+
+# ══════════════════ سجل التكاملات الخارجية ══════════════════
+
+class IntegrationLogOut(BaseModel):
+    id: str
+    provider: str
+    event: str
+    status: str
+    detail: str | None = None
+    created_at: datetime

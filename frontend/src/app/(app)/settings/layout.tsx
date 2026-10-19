@@ -42,6 +42,12 @@ const GROUPS: SettingsGroup[] = [
       { path: "/settings/printing", label: "الطباعة", icon: "print", perms: [], adminOnly: true },
     ],
   },
+  {
+    title: "التكاملات",
+    items: [
+      { path: "/settings/integrations", label: "واتساب وسجل التكاملات", icon: "hub", perms: ["settings.whatsapp"] },
+    ],
+  },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

@@ -652,3 +652,52 @@ async def send_test_email(company_id: str, to_address: str) -> None:
                                  "لو وصلتك هذه الرسالة فإعدادات البريد الإلكتروني سليمة. ✅")
     if not ok:
         raise HTTPException(422, "تعذّر إرسال الرسالة — تأكد من إعدادات SMTP وأن الإرسال مفعّل")
+
+
+# ══════════════════ واتساب (UltraMsg) — شاشة إعداد بدل الضبط اليدوي في قاعدة البيانات ══════════════════
+# التخزين الفعلي كان أصلاً في عمودي companies.wa_instance / wa_token (راجع core/wa.py) —
+# هنا فقط واجهة GET/PUT عليهما، بدون جدول أو مخزن جديد.
+
+async def get_whatsapp_settings(company_id: str) -> dict:
+    row = await fetchrow("SELECT wa_instance, wa_token FROM companies WHERE id=$1", company_id)
+    return {
+        "waInstance": (row["wa_instance"] if row else None) or None,
+        "hasToken": bool(row and row["wa_token"]),
+    }
+
+
+async def update_whatsapp_settings(company_id: str, body) -> dict:
+    # فاضي لتوكن الواتساب = نسيبه محفوظاً كما هو (نفس منطق كلمة سر SMTP) — ما نمسحهوش
+    # بالخطأ بمجرد حفظ اسم الـ instance فقط. مسح فعلي للتوكن لازم نص فاضٍ صريح + لا تغيير = تجاهل.
+    if body.waToken:
+        await execute("UPDATE companies SET wa_instance=$1, wa_token=$2 WHERE id=$3",
+                      (body.waInstance or "").strip() or None, body.waToken.strip(), company_id)
+    else:
+        await execute("UPDATE companies SET wa_instance=$1 WHERE id=$2",
+                      (body.waInstance or "").strip() or None, company_id)
+    return await get_whatsapp_settings(company_id)
+
+
+async def send_test_whatsapp(company_id: str, phone: str) -> None:
+    from ...core import wa as _wa
+    ok = await _wa.send_text(company_id, phone, "رسالة اختبار من نظام Z8 — لو وصلتك فإعدادات واتساب سليمة. ✅")
+    if not ok:
+        raise HTTPException(422, "تعذّر الإرسال — تأكد من رقم الـ instance والتوكن، وأن الرقم بصيغة سعودية صحيحة")
+
+
+# ══════════════════ سجل التكاملات الخارجية ══════════════════
+
+async def list_integration_log(company_id: str, provider: str | None, limit: int = 100) -> list[dict]:
+    params: list = [company_id]
+    provider_filter = ""
+    if provider:
+        params.append(provider)
+        provider_filter = f" AND provider = ${len(params)}"
+    params.append(min(max(limit, 1), 500))
+    rows = await fetch(
+        f"""SELECT id, provider, event, status, detail, created_at FROM integration_log
+            WHERE company_id = $1{provider_filter}
+            ORDER BY created_at DESC LIMIT ${len(params)}""",
+        *params,
+    )
+    return [{**dict(r), "id": str(r["id"])} for r in rows]

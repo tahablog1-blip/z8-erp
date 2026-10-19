@@ -4,6 +4,7 @@
 from __future__ import annotations
 import asyncio, json, urllib.request, urllib.parse
 from .db import fetchrow
+from .integration_log import log_event
 
 
 def normalize_phone(phone: str | None) -> str | None:
@@ -41,6 +42,8 @@ async def send_text(company_id: str, phone: str | None, message: str) -> bool:
     to = normalize_phone(phone)
     cfg = await _settings(company_id)
     if not to or not cfg:
+        await log_event(company_id, "whatsapp", "send_text", "skipped",
+                        detail=("رقم غير صالح" if not to else "لم تُضبط مفاتيح واتساب"))
         return False
     instance, token = cfg
     try:
@@ -49,9 +52,12 @@ async def send_text(company_id: str, phone: str | None, message: str) -> bool:
             {"token": token, "to": to, "body": message})
         ok = str(res.get("sent", "")).lower() == "true" or res.get("message") == "ok"
         print(f"📲 واتساب → {to}: {'✅' if ok else '⚠ ' + str(res)[:120]}")
+        await log_event(company_id, "whatsapp", "send_text", "success" if ok else "failed",
+                        detail=f"إلى {to}" + ("" if ok else f" — {str(res)[:200]}"))
         return ok
     except Exception as e:
         print(f"⚠ واتساب فشل ({to}): {type(e).__name__}: {e}")
+        await log_event(company_id, "whatsapp", "send_text", "failed", detail=f"إلى {to} — {e}")
         return False
 
 
@@ -61,6 +67,8 @@ async def send_document(company_id: str, phone: str | None,
     to = normalize_phone(phone)
     cfg = await _settings(company_id)
     if not to or not cfg:
+        await log_event(company_id, "whatsapp", "send_document", "skipped",
+                        detail=("رقم غير صالح" if not to else "لم تُضبط مفاتيح واتساب"))
         return False
     instance, token = cfg
     try:
@@ -70,7 +78,10 @@ async def send_document(company_id: str, phone: str | None,
              "document": b64, "caption": caption})
         ok = str(res.get("sent", "")).lower() == "true" or res.get("message") == "ok"
         print(f"📲 واتساب مستند → {to}: {'✅' if ok else '⚠ ' + str(res)[:120]}")
+        await log_event(company_id, "whatsapp", "send_document", "success" if ok else "failed",
+                        detail=f"إلى {to} ({filename})" + ("" if ok else f" — {str(res)[:200]}"))
         return ok
     except Exception as e:
         print(f"⚠ واتساب مستند فشل ({to}): {type(e).__name__}: {e}")
+        await log_event(company_id, "whatsapp", "send_document", "failed", detail=f"إلى {to} ({filename}) — {e}")
         return False

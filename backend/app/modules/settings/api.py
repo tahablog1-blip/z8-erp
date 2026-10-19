@@ -1,5 +1,5 @@
 # modules/settings/api.py — طبقة الـ HTTP لمركز الإعدادات: مسارات + صلاحيات + تدقيق فقط
-from fastapi import APIRouter, Depends, HTTPException, Response as _Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response as _Response
 from pydantic import BaseModel
 
 from ...core.db import execute, fetchrow
@@ -12,6 +12,7 @@ from .schemas import (
     BackgroundOut, BackgroundCreateIn, BackgroundSettingsOut, BackgroundSettingsIn,
     DesignSettingsOut, DesignSettingsIn, LoyaltySettingsOut, LoyaltySettingsIn,
     EmailSettingsOut, EmailSettingsIn,
+    WhatsAppSettingsOut, WhatsAppSettingsIn, WhatsAppTestIn, IntegrationLogOut,
 )
 
 router = APIRouter()
@@ -233,6 +234,36 @@ async def send_test_email(body: TestEmailIn,
                           user: CurrentUser = Depends(require_permission("settings.company"))):
     await service.send_test_email(user.company_id, body.to)
     return {"success": True}
+
+
+# ══════════════════ واتساب (UltraMsg) ══════════════════
+
+@router.get("/whatsapp", response_model=WhatsAppSettingsOut)
+async def get_whatsapp_settings(user: CurrentUser = Depends(require_permission("settings.whatsapp"))):
+    return await service.get_whatsapp_settings(user.company_id)
+
+
+@router.put("/whatsapp", response_model=WhatsAppSettingsOut)
+async def update_whatsapp_settings(body: WhatsAppSettingsIn,
+                                   user: CurrentUser = Depends(require_permission("settings.whatsapp"))):
+    row = await service.update_whatsapp_settings(user.company_id, body)
+    await log_action(user, "edit", "settings", details="تحديث إعدادات واتساب")
+    return row
+
+
+@router.post("/whatsapp/test")
+async def send_test_whatsapp(body: WhatsAppTestIn,
+                             user: CurrentUser = Depends(require_permission("settings.whatsapp"))):
+    await service.send_test_whatsapp(user.company_id, body.phone)
+    return {"success": True}
+
+
+# ══════════════════ سجل التكاملات الخارجية ══════════════════
+
+@router.get("/integration-log", response_model=list[IntegrationLogOut])
+async def list_integration_log(provider: str | None = Query(default=None), limit: int = Query(default=100, ge=1, le=500),
+                               user: CurrentUser = Depends(require_permission("settings.whatsapp"))):
+    return await service.list_integration_log(user.company_id, provider, limit)
 
 
 # ══════════════════ الخلفية الموحدة للنظام (معرض متعدد) ══════════════════

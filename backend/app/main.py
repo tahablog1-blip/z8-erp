@@ -983,6 +983,18 @@ async def lifespan(app: FastAPI):
            )""",
         "CREATE INDEX IF NOT EXISTS idx_hr_requests_employee ON hr_employee_requests(company_id, employee_id)",
         "CREATE INDEX IF NOT EXISTS idx_hr_requests_status ON hr_employee_requests(company_id, status)",
+
+        # ── المرحلة 10: سجل التكاملات الخارجية (واتساب، بوابة الدفع...) ──
+        """CREATE TABLE IF NOT EXISTS integration_log (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             provider text NOT NULL,
+             event text NOT NULL,
+             status text NOT NULL,
+             detail text,
+             created_at timestamptz NOT NULL DEFAULT now()
+           )""",
+        "CREATE INDEX IF NOT EXISTS idx_integration_log ON integration_log(company_id, created_at DESC)",
     ):
         try:
             await execute(stmt)
