@@ -24,6 +24,8 @@ type Dash = {
   newCustomers?: { today: number; week: number; latest: { name: string; phone: string | null }[] };
   topSuppliers?: { name: string; total: number; count: number }[];
   topCustomers?: { name: string; phone: string | null; visits: number; total: number }[];
+  lowStockItems?: { locName: string; name: string; qty: number; minQty: number; deficit: number; outOfStock: boolean }[];
+  arAging?: { current: number; d31_60: number; d61_90: number; d90plus: number; total: number };
 };
 type ShiftReport = { shift: { branch_name: string | null }; sales: { totalInc: number; invoiceCount: number } } | null;
 type MiniInvoice = { id: string; invoice_no: string; customer_name: string | null; total_inc: number; issued_at: string; is_returned: boolean };
@@ -560,6 +562,48 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ))}
+            </Card>
+          )}
+
+          {/* ── ⚠ نواقص المخزون حسب الموقع ── */}
+          {dash.lowStockItems && dash.lowStockItems.length > 0 && (
+            <Card>
+              <h2 className="mb-2 flex items-center gap-1.5 text-[13px] font-black text-ember">
+                <MIcon name="warning" className="!text-[18px] text-ember" /> {t("dash.lowStockDetail", "أبرز نواقص المخزون")}
+              </h2>
+              {dash.lowStockItems.map((it, i) => (
+                <div key={i} className="flex items-center gap-2 border-t border-line/60 py-1.5 first:border-t-0">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[12px] font-bold">{it.name}</div>
+                    <div className="tnum text-[10px] text-text-dim">{it.locName}</div>
+                  </div>
+                  <div className={`tnum text-[12.5px] font-black ${it.outOfStock ? "text-ember" : "text-brass"}`}>
+                    {it.qty} / {it.minQty}
+                  </div>
+                </div>
+              ))}
+              <Link href="/inventory" className="mt-2 block text-center text-[11px] font-bold text-petrol hover:underline">
+                {t("dash.viewAllInventory", "عرض المخزون كاملاً ←")}
+              </Link>
+            </Card>
+          )}
+
+          {/* ── 📅 أعمار ذمم العملاء ── */}
+          {dash.arAging && dash.arAging.total > 0 && (
+            <Card>
+              <h2 className="mb-2 flex items-center gap-1.5 text-[13px] font-black">
+                <MIcon name="schedule" className="!text-[18px] text-brass" /> {t("dash.arAging", "أعمار ذمم العملاء")}
+              </h2>
+              <div className="space-y-1.5 text-[12px]">
+                <div className="flex justify-between"><span className="text-text-dim">{t("dash.arCurrent", "حتى 30 يوم")}</span><span className="tnum font-bold">{money(dash.arAging.current)}</span></div>
+                <div className="flex justify-between"><span className="text-text-dim">31–60 {t("dash.days", "يوم")}</span><span className="tnum font-bold">{money(dash.arAging.d31_60)}</span></div>
+                <div className="flex justify-between"><span className="text-ember">61–90 {t("dash.days", "يوم")}</span><span className="tnum font-black text-ember">{money(dash.arAging.d61_90)}</span></div>
+                <div className="flex justify-between"><span className="text-ember">{t("dash.ar90plus", "أكثر من 90 يوم")}</span><span className="tnum font-black text-ember">{money(dash.arAging.d90plus)}</span></div>
+                <div className="flex justify-between border-t border-line pt-1.5 font-black"><span>{t("dash.total", "الإجمالي")}</span><span className="tnum">{money(dash.arAging.total)}</span></div>
+              </div>
+              <Link href="/reports" className="mt-2 block text-center text-[11px] font-bold text-petrol hover:underline">
+                {t("dash.viewArReport", "تفاصيل حسب العميل ←")}
+              </Link>
             </Card>
           )}
         </div>

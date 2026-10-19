@@ -23,6 +23,17 @@ EXPENSE_ACCOUNTS: dict[str, tuple[str, str]] = {
 }
 OTHER_INCOME = ("4020", "إيرادات أخرى")
 
+# ── حسابات قيد الرواتب الشامل (راجع hr/service.py finalize_payroll_run) ──
+GOSI_PAYABLE_ACCOUNT = ("2030", "التأمينات الاجتماعية (GOSI) مستحقة")
+GOSI_EXPENSE_ACCOUNT = ("5255", "اشتراكات التأمينات الاجتماعية — حصة الشركة")
+NET_SALARIES_PAYABLE_ACCOUNT = ("2040", "رواتب مستحقة الدفع")
+
+# ── حسابات دورة الشراء الرسمية (راجع purchases/service.py — استلام مقابل أمر شراء
+# ثم مطابقة فاتورة المورد): الاستلام يسجّل الالتزام هنا قبل وصول الفاتورة، والفاتورة
+# تُصفّي هذا الحساب + تسجّل أي فرق سعر بين أمر الشراء والفاتورة الفعلية ──
+GRIR_CLEARING_ACCOUNT = ("2050", "بضاعة مستلمة غير مفوترة (GR/IR)")
+PURCHASE_VARIANCE_ACCOUNT = ("5295", "فروق أسعار الشراء")
+
 
 async def _get_or_create_account(conn, company_id: str, code: str, name: str, acc_type: str) -> str:
     row = await conn.fetchrow(

@@ -59,6 +59,8 @@ PERMISSIONS = [
         {"key": "accounting.view_vat",     "label": "الإقرار الضريبي"},
         {"key": "treasury.view",           "label": "عرض سندات الخزينة"},
         {"key": "treasury.create",         "label": "إنشاء سندات قبض وصرف"},
+        {"key": "payments.view",           "label": "عرض عمليات الدفع الإلكتروني"},
+        {"key": "payments.create",         "label": "إنشاء عمليات دفع إلكتروني"},
     ]},
     {"group": "التقارير", "items": [
         {"key": "reports.sales",    "label": "تقرير المبيعات"},

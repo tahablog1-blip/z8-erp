@@ -466,6 +466,12 @@ async def get_payslips(company_id: str, run_id: str) -> list[dict]:
 
 
 async def finalize_payroll_run(company_id: str, run_id: str) -> dict:
+    """اعتماد مسير الرواتب: يسجّل قيد يومية شامل واحد —
+      مدين: مصروف الرواتب (الإجمالي) + مصروف اشتراكات التأمينات (حصة الشركة)
+      دائن: التأمينات المستحقة (حصة الموظف + الشركة) + إيرادات أخرى (خصم مخالفات)
+            + سلف الموظفين (تسوية السلف المخصومة) + رواتب مستحقة الدفع (الصافي)
+    رواتب مستحقة الدفع تُسوَّى لاحقاً نقداً/بنكاً عبر pay_payroll_run — فالمصروف
+    يُعترف به وقت الاعتماد بصرف النظر عن وقت الدفع الفعلي للموظفين."""
     from ...core import accounting
     from ...core.db import transaction
     async with transaction() as conn:
@@ -476,24 +482,93 @@ async def finalize_payroll_run(company_id: str, run_id: str) -> dict:
                 run_id, company_id)
             if not row:
                 raise HTTPException(404, "الدورة غير موجودة أو مُعتمدة بالفعل")
+
             slips = await conn.fetch(
-                "SELECT employee_id, advance_deduction FROM hr_payslips "
-                "WHERE payroll_run_id=$1 AND advance_deduction > 0", run_id)
-            total = Decimal("0.00")
+                """SELECT employee_id, basic_salary, allowances, violations_deduction,
+                          gosi_employee, gosi_employer, net_pay, advance_deduction
+                   FROM hr_payslips WHERE payroll_run_id=$1""", run_id)
+            if not slips:
+                return _row_id(row)
+
+            # تسوية السلف أولاً (سجل السداد لكل موظف — القيد المحاسبي يُدمَج تحت بالكلي)
+            adv_total = Decimal("0.00")
             for sl in slips:
-                total += await _treasury.apply_repayment(
-                    conn, company_id, str(sl["employee_id"]), sl["advance_deduction"],
-                    "payroll", run_id=row["id"], strict=False)
-            if total > 0:
-                exp_code, exp_name = _treasury.EXPENSE_ACCOUNTS["رواتب وأجور"]
-                exp_acc = await _treasury._get_or_create_account(conn, company_id, exp_code, exp_name, "expense")
+                if sl["advance_deduction"] and sl["advance_deduction"] > 0:
+                    adv_total += await _treasury.apply_repayment(
+                        conn, company_id, str(sl["employee_id"]), sl["advance_deduction"],
+                        "payroll", run_id=row["id"], strict=False)
+
+            gross = sum((accounting.dec(sl["basic_salary"]) + accounting.dec(sl["allowances"])) for sl in slips)
+            gosi_employee_total = sum(accounting.dec(sl["gosi_employee"]) for sl in slips)
+            gosi_employer_total = sum(accounting.dec(sl["gosi_employer"]) for sl in slips)
+            violations_total = sum(accounting.dec(sl["violations_deduction"]) for sl in slips)
+            net_pay_total = sum(accounting.dec(sl["net_pay"]) for sl in slips)
+            gosi_total = gosi_employee_total + gosi_employer_total
+
+            exp_code, exp_name = _treasury.EXPENSE_ACCOUNTS["رواتب وأجور"]
+            salary_exp_acc = await _treasury._get_or_create_account(conn, company_id, exp_code, exp_name, "expense")
+            net_payable_acc = await _treasury._get_or_create_account(
+                conn, company_id, _treasury.NET_SALARIES_PAYABLE_ACCOUNT[0],
+                _treasury.NET_SALARIES_PAYABLE_ACCOUNT[1], "liability")
+
+            lines = [{"account_id": salary_exp_acc, "debit": gross,
+                      "description": f"إجمالي رواتب وبدلات {row['period_month']}/{row['period_year']}"}]
+            if gosi_employer_total > 0:
+                gosi_exp_acc = await _treasury._get_or_create_account(
+                    conn, company_id, _treasury.GOSI_EXPENSE_ACCOUNT[0],
+                    _treasury.GOSI_EXPENSE_ACCOUNT[1], "expense")
+                lines.append({"account_id": gosi_exp_acc, "debit": gosi_employer_total,
+                              "description": "اشتراكات التأمينات — حصة الشركة"})
+            if gosi_total > 0:
+                gosi_pay_acc = await _treasury._get_or_create_account(
+                    conn, company_id, _treasury.GOSI_PAYABLE_ACCOUNT[0],
+                    _treasury.GOSI_PAYABLE_ACCOUNT[1], "liability")
+                lines.append({"account_id": gosi_pay_acc, "credit": gosi_total,
+                              "description": "تأمينات مستحقة (حصة الموظف والشركة)"})
+            if violations_total > 0:
+                inc_acc = await _treasury._get_or_create_account(
+                    conn, company_id, _treasury.OTHER_INCOME[0], _treasury.OTHER_INCOME[1], "revenue")
+                lines.append({"account_id": inc_acc, "credit": violations_total,
+                              "description": "خصم مخالفات من الرواتب"})
+            if adv_total > 0:
                 adv_acc = await _treasury._get_or_create_account(
                     conn, company_id, _treasury.ADVANCE_ACCOUNT[0], _treasury.ADVANCE_ACCOUNT[1], "asset")
+                lines.append({"account_id": adv_acc, "credit": adv_total,
+                              "description": "تسوية سلف الموظفين من الراتب"})
+            lines.append({"account_id": net_payable_acc, "credit": net_pay_total,
+                         "description": "صافي رواتب مستحقة الدفع للموظفين"})
+
+            await accounting.post_journal_entry(
+                conn, company_id=company_id, source_type="payroll_run", source_id=str(row["id"]),
+                description=f"قيد رواتب {row['period_month']}/{row['period_year']}", lines=lines)
+    return _row_id(row)
+
+
+async def pay_payroll_run(company_id: str, user_id: str, run_id: str, method: str) -> dict:
+    """تسوية صافي الرواتب المستحقة فعلياً (بعد الاعتماد) — مدين رواتب مستحقة الدفع،
+    دائن النقد/الشبكة/التحويل. منفصل عن الاعتماد لأن الدفع الفعلي غالباً يتأخر أيام."""
+    from ...core import accounting
+    from ...core.db import transaction
+    async with transaction() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                """UPDATE hr_payroll_runs SET status='paid', paid_at=now(), paid_by=$3, payment_method=$4
+                   WHERE id=$1 AND company_id=$2 AND status='finalized' RETURNING *""",
+                run_id, company_id, user_id, method)
+            if not row:
+                raise HTTPException(404, "الدورة غير موجودة أو غير معتمدة بعد أو مدفوعة بالفعل")
+            total = await conn.fetchval(
+                "SELECT COALESCE(SUM(net_pay),0) FROM hr_payslips WHERE payroll_run_id=$1", run_id)
+            total = accounting.dec(total)
+            if total > 0:
+                net_payable_acc = await _treasury._get_or_create_account(
+                    conn, company_id, _treasury.NET_SALARIES_PAYABLE_ACCOUNT[0],
+                    _treasury.NET_SALARIES_PAYABLE_ACCOUNT[1], "liability")
+                cash_acc = await accounting.get_account_id(conn, company_id, accounting.PAYMENT_ACCOUNT_CODES[method])
                 await accounting.post_journal_entry(
-                    conn, company_id=company_id, source_type="payroll_advance_deduction",
-                    source_id=str(row["id"]),
-                    description=f"خصم سلف من رواتب {row['period_month']}/{row['period_year']}",
-                    lines=[{"account_id": exp_acc, "debit": total, "description": "رواتب — خصم سلف"},
-                           {"account_id": adv_acc, "credit": total, "description": "تسوية سلف الموظفين"}])
+                    conn, company_id=company_id, source_type="payroll_run_payment", source_id=str(row["id"]),
+                    description=f"صرف رواتب {row['period_month']}/{row['period_year']} ({method})",
+                    lines=[{"account_id": net_payable_acc, "debit": total, "description": "تسوية رواتب مستحقة"},
+                           {"account_id": cash_acc, "credit": total, "description": f"صرف ({method})"}])
     return _row_id(row)
 

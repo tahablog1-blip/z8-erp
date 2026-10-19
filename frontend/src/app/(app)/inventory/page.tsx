@@ -214,7 +214,12 @@ export default function InventoryPage() {
     (!locFilter || `${l.loc_type}:${l.loc_id}` === locFilter)
   ), [levels, onlyLow, locFilter]);
 
-  const lowCount = useMemo(() => levels.filter((l) => l.is_low).length, [levels]);
+  const lowItems = useMemo(
+    () => levels.filter((l) => l.is_low).sort((a, b) => (a.min_qty - a.qty < b.min_qty - b.qty ? 1 : -1)),
+    [levels],
+  );
+  const lowCount = lowItems.length;
+  const [showLowPanel, setShowLowPanel] = useState(false);
 
   // ── فتح النماذج ──
   function openReceive() {
@@ -472,8 +477,38 @@ export default function InventoryPage() {
       <ErrorNote msg={pageErr} />
 
       {lowCount > 0 && (
-        <div className="rounded-lg border border-ember/30 bg-ember-bg px-4 py-2.5 text-[12.5px] font-bold text-ember">
-          {lowCount} رصيد وصل حد الانخفاض أو أقل — راجع تبويب الأرصدة وفلتر «الناقص فقط».
+        <div className="rounded-lg border border-ember/30 bg-ember-bg px-4 py-2.5 text-[12.5px]">
+          <button
+            onClick={() => setShowLowPanel((v) => !v)}
+            className="flex w-full items-center justify-between font-bold text-ember"
+          >
+            <span>⚠ {lowCount} رصيد وصل حد الانخفاض أو أقل — موزّعة على المواقع أدناه</span>
+            <span className="text-[11px]">{showLowPanel ? "إخفاء ▲" : "عرض التفاصيل ▼"}</span>
+          </button>
+          {showLowPanel && (
+            <div className="mt-2.5 max-h-64 overflow-y-auto rounded-lg bg-ink-1/40">
+              <table className="w-full text-[12px]">
+                <thead className="sticky top-0 bg-ink-1/80 text-[11px] font-black text-text-dim">
+                  <tr>
+                    <th className="px-2 py-1.5 text-right">الصنف</th>
+                    <th className="px-2 py-1.5 text-right">الموقع</th>
+                    <th className="px-2 py-1.5 text-center">الرصيد</th>
+                    <th className="px-2 py-1.5 text-center">الحد الأدنى</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lowItems.map((l) => (
+                    <tr key={`${l.loc_type}:${l.loc_id}:${l.product_id}`} className="border-t border-line/40">
+                      <td className="px-2 py-1.5 font-bold">{l.name}</td>
+                      <td className="px-2 py-1.5 text-text-dim">{l.loc_name}</td>
+                      <td className={`tnum px-2 py-1.5 text-center font-black ${l.qty <= 0 ? "text-ember" : ""}`}>{l.qty}</td>
+                      <td className="tnum px-2 py-1.5 text-center text-text-dim">{l.min_qty}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

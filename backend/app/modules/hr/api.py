@@ -6,7 +6,7 @@ from . import service
 from .schemas import (
     AttendanceOut, CheckInBody, EmployeeCreate, EmployeeOut, EmployeeUpdate,
     IqamaAlertOut, LeaveBalanceOut, LeaveCreate, LeaveDecisionBody, LeaveOut,
-    PayrollRunCreate, PayrollRunOut, PayrollRunResultOut, PayslipOut,
+    PayrollPayIn, PayrollRunCreate, PayrollRunOut, PayrollRunResultOut, PayslipOut,
     TerminateBody, TerminateOut, ViolationCreate, ViolationOut,
 )
 
@@ -126,4 +126,12 @@ async def get_payslips(run_id: str, user: CurrentUser = Depends(require_permissi
 
 @router.post("/payroll-runs/{run_id}/finalize", response_model=PayrollRunOut)
 async def finalize_payroll_run(run_id: str, user: CurrentUser = Depends(require_permission("hr.payroll"))):
+    """اعتماد المسير — يسجّل قيد الرواتب الشامل في دفتر اليومية (مصروف + تأمينات + صافي مستحق)"""
     return await service.finalize_payroll_run(user.company_id, run_id)
+
+
+@router.post("/payroll-runs/{run_id}/pay", response_model=PayrollRunOut)
+async def pay_payroll_run(run_id: str, body: PayrollPayIn,
+                          user: CurrentUser = Depends(require_permission("hr.payroll"))):
+    """تسجيل الصرف الفعلي لصافي الرواتب (بعد الاعتماد) — مدين رواتب مستحقة، دائن النقد/البنك"""
+    return await service.pay_payroll_run(user.company_id, user.user_id, run_id, body.method)

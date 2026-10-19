@@ -88,9 +88,11 @@ export type PayrollRun = {
   id: string;
   period_month: number;
   period_year: number;
-  status: "draft" | "finalized";
+  status: "draft" | "finalized" | "paid";
   payslip_count: number | null;
   total_net: number | null;
+  paid_at?: string | null;
+  payment_method?: string | null;
 };
 
 export type Payslip = {

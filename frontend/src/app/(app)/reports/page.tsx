@@ -7,7 +7,34 @@ import { Badge, Button, Card, ErrorNote, Field, Input, Select, Tabs } from "@/co
 import { SalesSummary, VatReturn, money } from "@/modules/accounting/types";
 import { printReport, tableHTML, kpisHTML } from "@/lib/print";
 
-type Tab = "vat" | "sales" | "techs";
+type Tab = "vat" | "sales" | "techs" | "inventory" | "profit" | "ar";
+
+// ── تقييم وأعمار المخزون ──
+type InventoryValuation = {
+  asOf: string; totalValue: number;
+  agingBuckets: { fresh: number; d30: number; d60: number; d90: number; unknown: number };
+  byCategory: { category: string; qty: number; value: number }[];
+  byProduct: { productId: string; name: string; category: string; qty: number;
+               costPrice: number; value: number; daysSinceReceive: number | null; ageBucket: string }[];
+};
+const AGE_LABEL: Record<string, string> = {
+  fresh: "طازج (≤30 يوم)", d30: "31–60 يوم", d60: "61–90 يوم", d90: "راكد (90+ يوم)", unknown: "غير معروف",
+};
+
+// ── الربحية ──
+type Profitability = {
+  from: string; to: string; groupBy: string;
+  rows: { key: string; label: string; qty: number; revenueEx: number; cogs: number;
+          grossProfit: number; marginPct: number }[];
+  totals: { qty: number; revenueEx: number; cogs: number; grossProfit: number; marginPct: number };
+};
+
+// ── أعمار ذمم العملاء ──
+type ArAging = {
+  rows: { customerId: string; name: string; phone: string | null; current: number;
+          d31_60: number; d61_90: number; d90plus: number; total: number }[];
+  totals: { current: number; d31_60: number; d61_90: number; d90plus: number; total: number };
+};
 
 // ── تقرير إنتاجية الفنيين ──
 type TechReport = {
@@ -46,12 +73,17 @@ export default function ReportsPage() {
   const { hasPerm } = useAuth();
   const canVat = hasPerm("accounting.view_vat");
   const canSales = hasPerm("reports.sales");
+  const canMgmt = hasPerm("accounting.view_reports");
 
-  const [tab, setTab] = useState<Tab>(canVat ? "vat" : "sales");
+  const [tab, setTab] = useState<Tab>(canVat ? "vat" : canSales ? "sales" : "inventory");
   const [vat, setVat] = useState<VatReturn | null>(null);
   const [sales, setSales] = useState<SalesSummary | null>(null);
   const [techs, setTechs] = useState<TechReport | null>(null);
   const [techBranch, setTechBranch] = useState("");
+  const [inv, setInv] = useState<InventoryValuation | null>(null);
+  const [profit, setProfit] = useState<Profitability | null>(null);
+  const [profitGroupBy, setProfitGroupBy] = useState<"product" | "category" | "branch">("category");
+  const [ar, setAr] = useState<ArAging | null>(null);
   const [branchList, setBranchList] = useState<{ id: string; name: string }[]>([]);
   useEffect(() => {
     api<{ id: string; name: string }[]>("/branches").then(setBranchList).catch(() => {});
@@ -92,18 +124,38 @@ export default function ReportsPage() {
       setPageErr("");
     } catch (e: any) { setPageErr(e.message); }
   }
+  async function loadInventory() {
+    try { setInv(await api<InventoryValuation>(`/reports/inventory-valuation`)); setPageErr(""); }
+    catch (e: any) { setPageErr(e.message); }
+  }
+  async function loadProfit() {
+    try {
+      setProfit(await api<Profitability>(`/reports/profitability?from=${from}&to=${to}&groupBy=${profitGroupBy}`));
+      setPageErr("");
+    } catch (e: any) { setPageErr(e.message); }
+  }
+  async function loadAr() {
+    try { setAr(await api<ArAging>(`/reports/ar-aging`)); setPageErr(""); }
+    catch (e: any) { setPageErr(e.message); }
+  }
 
   useEffect(() => {
     if (tab === "vat" && canVat) loadVat();
     if (tab === "sales" && canSales) loadSales();
     if (tab === "techs" && canSales) loadTechs();
+    if (tab === "inventory" && canMgmt) loadInventory();
+    if (tab === "profit" && canMgmt) loadProfit();
+    if (tab === "ar" && canMgmt) loadAr();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, techBranch]);
+  }, [tab, techBranch, profitGroupBy]);
 
   function refresh() {
     if (tab === "vat") loadVat();
     else if (tab === "sales") loadSales();
-    else loadTechs();
+    else if (tab === "techs") loadTechs();
+    else if (tab === "inventory") loadInventory();
+    else if (tab === "profit") loadProfit();
+    else loadAr();
   }
 
   // ══════════ الطباعة ══════════
@@ -178,6 +230,44 @@ export default function ReportsPage() {
             r.filling, r.fitting, r.checking, r.totalCars,
           ]), { numericCols: [2, 3, 4, 5] });
       printReport("تقرير إنتاجية الفنيين", period, body);
+    }
+    if (tab === "inventory" && inv) {
+      const body =
+        kpisHTML([
+          { label: "قيمة المخزون الحالية", value: money(inv.totalValue) },
+          { label: "راكد (90+ يوم)", value: money(inv.agingBuckets.d90) },
+        ]) +
+        `<h2 class="sec">حسب الفئة</h2>` +
+        tableHTML(["الفئة", "الكمية", "القيمة"],
+          inv.byCategory.map((c) => [c.category, c.qty, money(c.value)]), { numericCols: [1, 2] }) +
+        `<h2 class="sec">تفصيل الأصناف</h2>` +
+        tableHTML(["الصنف", "الفئة", "الكمية", "التكلفة", "القيمة", "العمر (يوم)"],
+          inv.byProduct.map((p) => [p.name, p.category, p.qty, money(p.costPrice), money(p.value), p.daysSinceReceive ?? "—"]),
+          { numericCols: [2, 3, 4, 5] });
+      printReport("تقييم وأعمار المخزون", `كما في ${inv.asOf}`, body);
+    }
+    if (tab === "profit" && profit) {
+      const body =
+        kpisHTML([
+          { label: "المبيعات", value: money(profit.totals.revenueEx) },
+          { label: "التكلفة", value: money(profit.totals.cogs) },
+          { label: "مجمل الربح", value: `${money(profit.totals.grossProfit)} (${profit.totals.marginPct}%)` },
+        ]) +
+        tableHTML(["البند", "الكمية", "المبيعات", "التكلفة", "مجمل الربح", "الهامش"],
+          profit.rows.map((r) => [r.label, r.qty, money(r.revenueEx), money(r.cogs), money(r.grossProfit), `${r.marginPct}%`]),
+          { numericCols: [1, 2, 3, 4, 5] });
+      printReport("تقرير الربحية", period, body);
+    }
+    if (tab === "ar" && ar) {
+      const body =
+        kpisHTML([
+          { label: "إجمالي الذمم المستحقة", value: money(ar.totals.total) },
+          { label: "أكثر من 90 يوم", value: money(ar.totals.d90plus) },
+        ]) +
+        tableHTML(["العميل", "حتى 30", "31–60", "61–90", "90+", "الإجمالي"],
+          ar.rows.map((r) => [r.name, money(r.current), money(r.d31_60), money(r.d61_90), money(r.d90plus), money(r.total)]),
+          { numericCols: [1, 2, 3, 4, 5] });
+      printReport("أعمار ذمم العملاء", "كما في اليوم", body);
     }
   }
 
@@ -286,14 +376,21 @@ export default function ReportsPage() {
             ...(canVat ? [{ key: "vat" as Tab, label: "الإقرار الضريبي" }] : []),
             ...(canSales ? [{ key: "sales" as Tab, label: "ملخّص المبيعات" }] : []),
             ...(canSales ? [{ key: "techs" as Tab, label: "إنتاجية الفنيين" }] : []),
+            ...(canMgmt ? [{ key: "profit" as Tab, label: "الربحية" }] : []),
+            ...(canMgmt ? [{ key: "inventory" as Tab, label: "تقييم المخزون" }] : []),
+            ...(canMgmt ? [{ key: "ar" as Tab, label: "أعمار ذمم العملاء" }] : []),
           ]} />
         </div>
 
         <div className="space-y-4 p-5">
           <div className="flex flex-wrap items-end gap-2">
-            <Field label="من"><Input type="date" className="tnum" value={from} onChange={(e) => setFrom(e.target.value)} /></Field>
-            <Field label="إلى"><Input type="date" className="tnum" value={to} onChange={(e) => setTo(e.target.value)} /></Field>
-            <Button variant="outline" className="!text-[11.5px]" onClick={applyFiscalYear}>السنة المالية الحالية</Button>
+            {(tab === "vat" || tab === "sales" || tab === "techs" || tab === "profit") && (
+              <>
+                <Field label="من"><Input type="date" className="tnum" value={from} onChange={(e) => setFrom(e.target.value)} /></Field>
+                <Field label="إلى"><Input type="date" className="tnum" value={to} onChange={(e) => setTo(e.target.value)} /></Field>
+                <Button variant="outline" className="!text-[11.5px]" onClick={applyFiscalYear}>السنة المالية الحالية</Button>
+              </>
+            )}
             {tab === "sales" && (
               <Field label="التجميع">
                 <Select value={groupBy} onChange={(e) => setGroupBy(e.target.value as any)}>
@@ -310,12 +407,22 @@ export default function ReportsPage() {
                 </Select>
               </Field>
             )}
+            {tab === "profit" && (
+              <Field label="التجميع">
+                <Select value={profitGroupBy} onChange={(e) => setProfitGroupBy(e.target.value as any)}>
+                  <option value="category">حسب الفئة</option>
+                  <option value="product">حسب الصنف</option>
+                  <option value="branch">حسب الفرع</option>
+                </Select>
+              </Field>
+            )}
             <button onClick={refresh}
                     className="rounded-lg bg-petrol px-4 py-2 text-[13px] font-bold text-white hover:bg-petrol-deep">
               تحديث
             </button>
             <button onClick={printCurrent}
-                    disabled={tab === "vat" ? !vat : tab === "sales" ? !sales : !techs}
+                    disabled={tab === "vat" ? !vat : tab === "sales" ? !sales : tab === "techs" ? !techs
+                             : tab === "inventory" ? !inv : tab === "profit" ? !profit : !ar}
                     className="rounded-lg border border-line bg-ink-2 px-4 py-2 text-[13px] font-bold text-text hover:border-petrol hover:text-petrol disabled:opacity-50">
               طباعة التقرير
             </button>
@@ -462,7 +569,181 @@ export default function ReportsPage() {
             </div>
           )}
 
-          {!canVat && !canSales && (
+          {tab === "inventory" && inv && (
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex items-center justify-between rounded-lg bg-petrol-soft p-4">
+                  <div>
+                    <div className="text-[12px] font-bold text-text-dim">قيمة المخزون الحالية (كلفة)</div>
+                    <div className="tnum text-[22px] font-black text-petrol">{money(inv.totalValue)} ر.س</div>
+                  </div>
+                  <div className="text-[11px] text-text-dim">كما في {inv.asOf}</div>
+                </div>
+                <div className="rounded-lg border border-line p-4">
+                  <h3 className="mb-2 text-[12.5px] font-extrabold">قيمة المخزون بعمره منذ آخر استلام</h3>
+                  <div className="space-y-1 text-[12px]">
+                    {(["fresh", "d30", "d60", "d90", "unknown"] as const).map((k) => (
+                      <div key={k} className="flex justify-between">
+                        <span className={k === "d90" ? "font-bold text-ember" : "text-text-dim"}>{AGE_LABEL[k]}</span>
+                        <span className="tnum font-bold">{money(inv.agingBuckets[k])}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-line p-4">
+                <h3 className="mb-2 text-[13px] font-extrabold">حسب الفئة</h3>
+                <div className="space-y-1 text-[12.5px]">
+                  {inv.byCategory.map((c) => (
+                    <div key={c.category} className="flex justify-between">
+                      <span>{c.category}</span>
+                      <span className="tnum font-bold">{c.qty} قطعة — {money(c.value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-lg border border-line">
+                <table className="w-full text-[12.5px]">
+                  <thead className="bg-ink-3 text-[11.5px] font-black text-text-dim">
+                    <tr>
+                      <th className="px-3 py-2.5 text-right">الصنف</th>
+                      <th className="px-3 py-2.5 text-right">الفئة</th>
+                      <th className="px-3 py-2.5 text-center">الكمية</th>
+                      <th className="px-3 py-2.5 text-center">التكلفة</th>
+                      <th className="px-3 py-2.5 text-center">القيمة</th>
+                      <th className="px-3 py-2.5 text-center">العمر</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inv.byProduct.slice(0, 200).map((p) => (
+                      <tr key={p.productId} className="border-t border-line">
+                        <td className="px-3 py-2.5 font-bold">{p.name}</td>
+                        <td className="px-3 py-2.5 text-text-dim">{p.category}</td>
+                        <td className="tnum px-3 py-2.5 text-center">{p.qty}</td>
+                        <td className="tnum px-3 py-2.5 text-center">{money(p.costPrice)}</td>
+                        <td className="tnum px-3 py-2.5 text-center font-bold">{money(p.value)}</td>
+                        <td className="px-3 py-2.5 text-center">
+                          <Badge tone={p.ageBucket === "d90" || p.ageBucket === "d60" ? "warn" : "neutral"}>
+                            {p.daysSinceReceive == null ? "—" : `${p.daysSinceReceive} يوم`}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {tab === "profit" && profit && (
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg bg-petrol-soft p-4">
+                  <div className="text-[12px] font-bold text-text-dim">المبيعات (قبل الضريبة)</div>
+                  <div className="tnum text-[18px] font-black text-petrol">{money(profit.totals.revenueEx)}</div>
+                </div>
+                <div className="rounded-lg border border-line p-4">
+                  <div className="text-[12px] font-bold text-text-dim">تكلفة البضاعة المباعة</div>
+                  <div className="tnum text-[18px] font-black">{money(profit.totals.cogs)}</div>
+                </div>
+                <div className={`rounded-lg p-4 ${profit.totals.grossProfit >= 0 ? "bg-emerald-bg" : "bg-ember-bg"}`}>
+                  <div className="text-[12px] font-bold text-text-dim">مجمل الربح</div>
+                  <div className={`tnum text-[18px] font-black ${profit.totals.grossProfit >= 0 ? "text-emerald" : "text-ember"}`}>
+                    {money(profit.totals.grossProfit)} <span className="text-[12px]">({profit.totals.marginPct}%)</span>
+                  </div>
+                </div>
+              </div>
+              <div className="overflow-hidden rounded-lg border border-line">
+                <table className="w-full text-[12.5px]">
+                  <thead className="bg-ink-3 text-[11.5px] font-black text-text-dim">
+                    <tr>
+                      <th className="px-3 py-2.5 text-right">
+                        {profit.groupBy === "category" ? "الفئة" : profit.groupBy === "branch" ? "الفرع" : "الصنف"}
+                      </th>
+                      <th className="px-3 py-2.5 text-center">الكمية</th>
+                      <th className="px-3 py-2.5 text-center">المبيعات</th>
+                      <th className="px-3 py-2.5 text-center">التكلفة</th>
+                      <th className="px-3 py-2.5 text-center">مجمل الربح</th>
+                      <th className="px-3 py-2.5 text-center">الهامش</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {profit.rows.slice(0, 200).map((r) => (
+                      <tr key={r.key} className="border-t border-line">
+                        <td className="px-3 py-2.5 font-bold">{r.label}</td>
+                        <td className="tnum px-3 py-2.5 text-center">{r.qty}</td>
+                        <td className="tnum px-3 py-2.5 text-center">{money(r.revenueEx)}</td>
+                        <td className="tnum px-3 py-2.5 text-center">{money(r.cogs)}</td>
+                        <td className={`tnum px-3 py-2.5 text-center font-bold ${r.grossProfit >= 0 ? "text-emerald" : "text-ember"}`}>
+                          {money(r.grossProfit)}
+                        </td>
+                        <td className="tnum px-3 py-2.5 text-center">{r.marginPct}%</td>
+                      </tr>
+                    ))}
+                    {profit.rows.length === 0 && (
+                      <tr><td colSpan={6} className="py-8 text-center text-text-dim">لا توجد مبيعات في هذه الفترة</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {tab === "ar" && ar && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="rounded-lg border border-line p-3 text-center">
+                  <div className="text-[11px] font-bold text-text-dim">حتى 30 يوم</div>
+                  <div className="tnum text-[16px] font-black">{money(ar.totals.current)}</div>
+                </div>
+                <div className="rounded-lg border border-line p-3 text-center">
+                  <div className="text-[11px] font-bold text-text-dim">31–60 يوم</div>
+                  <div className="tnum text-[16px] font-black">{money(ar.totals.d31_60)}</div>
+                </div>
+                <div className="rounded-lg bg-ember-bg p-3 text-center">
+                  <div className="text-[11px] font-bold text-text-dim">61–90 يوم</div>
+                  <div className="tnum text-[16px] font-black text-ember">{money(ar.totals.d61_90)}</div>
+                </div>
+                <div className="rounded-lg bg-ember-bg p-3 text-center">
+                  <div className="text-[11px] font-bold text-text-dim">أكثر من 90 يوم</div>
+                  <div className="tnum text-[16px] font-black text-ember">{money(ar.totals.d90plus)}</div>
+                </div>
+              </div>
+              <div className="overflow-hidden rounded-lg border border-line">
+                <table className="w-full text-[12.5px]">
+                  <thead className="bg-ink-3 text-[11.5px] font-black text-text-dim">
+                    <tr>
+                      <th className="px-3 py-2.5 text-right">العميل</th>
+                      <th className="px-3 py-2.5 text-center">حتى 30</th>
+                      <th className="px-3 py-2.5 text-center">31–60</th>
+                      <th className="px-3 py-2.5 text-center">61–90</th>
+                      <th className="px-3 py-2.5 text-center">90+</th>
+                      <th className="px-3 py-2.5 text-center">الإجمالي</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ar.rows.map((r) => (
+                      <tr key={r.customerId} className="border-t border-line">
+                        <td className="px-3 py-2.5 font-bold">{r.name}{r.phone ? <span className="mr-1 text-text-dim"> · {r.phone}</span> : null}</td>
+                        <td className="tnum px-3 py-2.5 text-center">{r.current ? money(r.current) : "—"}</td>
+                        <td className="tnum px-3 py-2.5 text-center">{r.d31_60 ? money(r.d31_60) : "—"}</td>
+                        <td className={`tnum px-3 py-2.5 text-center ${r.d61_90 ? "font-bold text-ember" : ""}`}>{r.d61_90 ? money(r.d61_90) : "—"}</td>
+                        <td className={`tnum px-3 py-2.5 text-center ${r.d90plus ? "font-bold text-ember" : ""}`}>{r.d90plus ? money(r.d90plus) : "—"}</td>
+                        <td className="tnum px-3 py-2.5 text-center font-black">{money(r.total)}</td>
+                      </tr>
+                    ))}
+                    {ar.rows.length === 0 && (
+                      <tr><td colSpan={6} className="py-8 text-center text-text-dim">لا توجد ذمم مستحقة على عملاء حالياً</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {!canVat && !canSales && !canMgmt && (
             <p className="py-8 text-center text-text-dim">لا تملك صلاحية عرض أي من هذه التقارير</p>
           )}
         </div>

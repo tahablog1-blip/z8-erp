@@ -194,6 +194,12 @@ class PayrollRunOut(BaseModel):
     total_net: float | None = None
     created_at: datetime
     finalized_at: datetime | None = None
+    paid_at: datetime | None = None
+    payment_method: str | None = None
+
+
+class PayrollPayIn(BaseModel):
+    method: Literal["cash", "card", "transfer"] = "transfer"
 
 
 class PayslipOut(BaseModel):

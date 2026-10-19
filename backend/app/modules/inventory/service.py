@@ -73,6 +73,35 @@ async def list_levels(company_id: str) -> list[dict]:
     return out
 
 
+async def low_stock_alerts(company_id: str) -> list[dict]:
+    """تنبيهات النواقص — لكل موقع على حدة (مستودع أو فرع)، لا الرصيد الكلي
+    المجمّع (راجع reorder_suggestions لذلك): فرع رصيده صفر بينما المستودع
+    ممتلئ لازم يظهر هنا، وده ما يظهرش في اقتراحات إعادة الطلب المجمّعة."""
+    rows = await fetch(
+        """SELECT i.loc_type, i.loc_id, i.qty, p.id AS product_id, p.name, p.category,
+                  p.barcode, p.min_qty, b.name AS branch_name
+           FROM inventory i
+           JOIN products p ON p.id = i.product_id
+           LEFT JOIN branches b ON b.id::text = i.loc_id AND i.loc_type = 'branch'
+           WHERE i.company_id = $1 AND p.is_active = TRUE AND p.is_service = FALSE
+             AND COALESCE(p.min_qty, 0) > 0 AND i.qty <= p.min_qty
+           ORDER BY (p.min_qty - i.qty) DESC""",
+        company_id,
+    )
+    out = []
+    for r in rows:
+        loc_name = (WAREHOUSE_LABEL if r["loc_type"] == "warehouse"
+                   else (f"فرع {r['branch_name']}" if r["branch_name"] else "موقع محذوف"))
+        qty = float(r["qty"]); min_q = float(r["min_qty"])
+        out.append({
+            "locType": r["loc_type"], "locId": str(r["loc_id"]), "locName": loc_name,
+            "productId": str(r["product_id"]), "name": r["name"], "category": r["category"],
+            "barcode": r["barcode"], "qty": qty, "minQty": min_q,
+            "deficit": round(min_q - qty, 2), "outOfStock": qty <= 0,
+        })
+    return out
+
+
 async def get_qty(company_id: str, loc_type: str, loc_id: str, product_id: str) -> int:
     row = await fetchrow(
         """SELECT qty FROM inventory

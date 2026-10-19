@@ -30,6 +30,31 @@ async def dashboard(user: CurrentUser = Depends(get_current_user)):
     return await service.dashboard(user.company_id)
 
 
+# ══════════════════ تقارير إضافية: مخزون، ربحية، أعمار ذمم ══════════════════
+_REPORTS_PERM = "accounting.view_reports"
+
+
+@router.get("/inventory-valuation")
+async def inventory_valuation(user: CurrentUser = Depends(require_permission(_REPORTS_PERM))):
+    """قيمة المخزون الحالية وعمره منذ آخر استلام — لرصد الأصناف الراكدة"""
+    return await service.inventory_valuation(user.company_id)
+
+
+@router.get("/profitability")
+async def profitability(date_from: str | None = Query(default=None, alias="from"),
+                        date_to: str | None = Query(default=None, alias="to"),
+                        groupBy: str = Query(default="product"),
+                        user: CurrentUser = Depends(require_permission(_REPORTS_PERM))):
+    group_by = groupBy if groupBy in ("product", "category", "branch") else "product"
+    return await service.profitability(user.company_id, date_from, date_to, group_by)
+
+
+@router.get("/ar-aging")
+async def ar_aging(user: CurrentUser = Depends(require_permission(_REPORTS_PERM))):
+    """أعمار ذمم العملاء — من يستحق التحصيل ومنذ متى"""
+    return await service.ar_aging(user.company_id)
+
+
 # ══════════════════ الذكاء الاصطناعي: المساعد + الملخص الصباحي + كشف الشذوذ ══════════════════
 from pydantic import BaseModel as _AIBM
 

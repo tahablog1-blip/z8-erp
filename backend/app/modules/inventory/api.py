@@ -30,6 +30,12 @@ async def get_qty(locType: str = Query(...), locId: str = Query(...),
     return {"qty": await service.get_qty(user.company_id, locType, locId, productId)}
 
 
+@router.get("/low-stock-alerts")
+async def low_stock_alerts(user: CurrentUser = Depends(require_permission("products.view_stock"))):
+    """تنبيهات النواقص بتفصيل كل موقع (مستودع/فرع) — لا الرصيد الكلي المجمّع"""
+    return await service.low_stock_alerts(user.company_id)
+
+
 @router.get("/suppliers", response_model=list[str])
 async def list_suppliers(user: CurrentUser = Depends(get_current_user)):
     """أسماء الموردين المستخدمة سابقاً — اقتراحات لحقل المورد"""

@@ -323,6 +323,15 @@ async def dashboard(company_id: str) -> dict:
              AND date_trunc('month', pi.invoice_date) = date_trunc('month', CURRENT_DATE)
            GROUP BY s.name ORDER BY total DESC LIMIT 4""", company_id), [])
 
+    # ── لوحة المؤشرات التنفيذية: أبرز نواقص المخزون + ملخّص أعمار ذمم العملاء ──
+    # (نفس منطق /inventory/low-stock-alerts و /reports/ar-aging لكن بأعلى N بس،
+    # وبصلابة _safe لأن أي خطأ فيهما ما يكسرش الداشبورد الأساسية)
+    async def _low_stock_top():
+        from ..inventory.service import low_stock_alerts
+        return (await low_stock_alerts(company_id))[:8]
+    low_stock_items = await _safe(_low_stock_top(), [])
+    ar_summary = await _safe(ar_aging(company_id, summary_only=True), {"totals": {"current": 0, "d31_60": 0, "d61_90": 0, "d90plus": 0, "total": 0}})
+
     def n(v):
         from decimal import Decimal
         return float(v) if isinstance(v, Decimal) else (v or 0)
@@ -343,7 +352,9 @@ async def dashboard(company_id: str) -> dict:
                           "visits": r["visits"], "total": n(r["total"])} for r in top_customers],
         "todayBySource": {r["source"]: r["cnt"] for r in today_src},
         "lowStock": low_stock["cnt"],
+        "lowStockItems": low_stock_items,
         "creditOutstanding": n(credit["total"]),
+        "arAging": ar_summary["totals"],
         "series":  [{"date": str(r["d"]), "total": n(r["total"]), "count": r["cnt"]} for r in series],
         "payMethods": [{"method": r["method"], "total": n(r["total"])} for r in pay],
     }
@@ -396,3 +407,186 @@ async def branches_compare(company_id: str, days: int = 30,
         "grossProfit": n(r["gross_profit"]),
         "carsServed": served.get(str(r["id"]), 0),
     } for r in rows]}
+
+
+# ══════════════════ تقييم وأعمار المخزون ══════════════════
+
+async def inventory_valuation(company_id: str) -> dict:
+    """قيمة المخزون الحالية (كمية × تكلفة) مجمّعة بالصنف، مع عمر كل صنف منذ
+    آخر استلام (يفيد في رصد الأصناف الراكدة). الخدمات مستبعدة لأنها بلا مخزون."""
+    rows = await fetch(
+        """SELECT p.id, p.name, p.category, COALESCE(p.cost_price,0)::numeric(12,2) AS cost_price,
+                  COALESCE(SUM(inv.qty),0)::numeric(12,2) AS qty,
+                  (SELECT MAX(sm.created_at) FROM stock_moves sm
+                    WHERE sm.product_id = p.id AND sm.move_type='receive') AS last_received_at
+           FROM products p
+           LEFT JOIN inventory inv ON inv.product_id = p.id AND inv.company_id = p.company_id
+           WHERE p.company_id=$1 AND p.is_active=TRUE AND p.is_service=FALSE
+           GROUP BY p.id, p.name, p.category, p.cost_price
+           HAVING COALESCE(SUM(inv.qty),0) != 0
+           ORDER BY (COALESCE(SUM(inv.qty),0) * COALESCE(p.cost_price,0)) DESC""",
+        company_id,
+    )
+
+    def bucket_of(days: float | None) -> str:
+        if days is None:
+            return "unknown"      # دخل المخزون قبل تسجيل حركات الاستلام — عمره غير معروف
+        if days <= 30:
+            return "fresh"
+        if days <= 60:
+            return "d30"
+        if days <= 90:
+            return "d60"
+        return "d90"
+
+    today_ts = __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
+    by_product = []
+    buckets = {"fresh": 0.0, "d30": 0.0, "d60": 0.0, "d90": 0.0, "unknown": 0.0}
+    by_category: dict[str, dict] = {}
+    total_value = 0.0
+    for r in rows:
+        qty = _num(r["qty"]); cost = _num(r["cost_price"]); value = round(qty * cost, 2)
+        days = (today_ts - r["last_received_at"]).days if r["last_received_at"] else None
+        b = bucket_of(days)
+        buckets[b] = round(buckets[b] + value, 2)
+        total_value = round(total_value + value, 2)
+        cat = r["category"] or "غير مصنّف"
+        cs = by_category.setdefault(cat, {"category": cat, "qty": 0.0, "value": 0.0})
+        cs["qty"] = round(cs["qty"] + qty, 2); cs["value"] = round(cs["value"] + value, 2)
+        by_product.append({
+            "productId": str(r["id"]), "name": r["name"], "category": cat,
+            "qty": qty, "costPrice": cost, "value": value,
+            "daysSinceReceive": days, "ageBucket": b,
+        })
+
+    return {
+        "asOf": today_ts.date().isoformat(), "totalValue": total_value,
+        "agingBuckets": buckets, "byCategory": sorted(by_category.values(), key=lambda c: -c["value"]),
+        "byProduct": by_product,
+    }
+
+
+# ══════════════════ تقرير الربحية ══════════════════
+
+async def profitability(company_id: str, date_from: str | None, date_to: str | None,
+                        group_by: str) -> dict:
+    """ربحية مجمّعة بالصنف أو الفئة أو الفرع خلال فترة — نفس منطق هامش ملخص المبيعات
+    لكن بتفصيل أعمق من مجرد خدمة/بيع بالقطعة."""
+    f, t, t_end = _period(date_from, date_to)
+    if group_by == "category":
+        key_expr, label_expr, join_products = "p.category", "COALESCE(p.category,'غير مصنّف')", True
+    elif group_by == "branch":
+        key_expr, label_expr, join_products = "i.branch_id::text", "COALESCE(b.name,'بلا فرع')", False
+    else:
+        group_by = "product"
+        key_expr, label_expr, join_products = "ii.label", "ii.label", True
+
+    branch_join = "LEFT JOIN branches b ON b.id = i.branch_id" if group_by == "branch" else ""
+    products_join = "LEFT JOIN products p ON p.id = ii.product_id" if join_products else ""
+
+    rows = await fetch(
+        f"""SELECT {key_expr} AS grp_key, {label_expr} AS label,
+                   SUM(ii.qty)::numeric(12,2) AS qty,
+                   COALESCE(SUM(ii.line_ex),0)::numeric(12,2) AS revenue_ex,
+                   COALESCE(SUM(ii.qty * COALESCE(p2.cost_price,0)),0)::numeric(12,2) AS cogs
+            FROM invoice_items ii
+            JOIN invoices i ON i.id = ii.invoice_id
+            {branch_join}
+            {products_join}
+            LEFT JOIN products p2 ON p2.id = ii.product_id
+            WHERE i.company_id=$1 AND i.is_returned=FALSE
+              AND i.issued_at BETWEEN $2::text::timestamptz AND $3::text::timestamptz
+            GROUP BY {key_expr}, {label_expr}
+            ORDER BY revenue_ex DESC""",
+        company_id, f, t_end,
+    )
+    out = []
+    tot_rev = tot_cogs = tot_qty = 0.0
+    for r in rows:
+        qty = _num(r["qty"]); rev = _num(r["revenue_ex"]); cogs = _num(r["cogs"])
+        profit = round(rev - cogs, 2)
+        margin = round((profit / rev) * 100, 1) if rev > 0 else 0
+        tot_rev += rev; tot_cogs += cogs; tot_qty += qty
+        out.append({
+            "key": r["grp_key"], "label": r["label"] or "—", "qty": qty,
+            "revenueEx": rev, "cogs": cogs, "grossProfit": profit, "marginPct": margin,
+        })
+    tot_profit = round(tot_rev - tot_cogs, 2)
+    return {
+        "from": f, "to": t, "groupBy": group_by, "rows": out,
+        "totals": {
+            "qty": round(tot_qty, 2), "revenueEx": round(tot_rev, 2), "cogs": round(tot_cogs, 2),
+            "grossProfit": tot_profit,
+            "marginPct": round((tot_profit / tot_rev) * 100, 1) if tot_rev > 0 else 0,
+        },
+    }
+
+
+# ══════════════════ أعمار ذمم العملاء (AR Aging) ══════════════════
+
+async def ar_aging(company_id: str, summary_only: bool = False) -> dict:
+    """عمر كل ريال مستحق على العميل منذ تاريخ فاتورته — السداد يُطبَّق على الأقدم
+    أولاً (FIFO) لأن النظام الحالي يسجّل السداد على مستوى العميل لا الفاتورة."""
+    import datetime as _dt
+
+    rows = await fetch(
+        """SELECT cl.customer_id, c.name AS customer_name, c.phone AS customer_phone,
+                  cl.entry_type, cl.amount, cl.created_at,
+                  i.issued_at
+           FROM customer_ledger cl
+           JOIN customers c ON c.id = cl.customer_id
+           LEFT JOIN invoices i ON i.id = cl.invoice_id
+           WHERE cl.company_id=$1
+           ORDER BY cl.customer_id, COALESCE(i.issued_at, cl.created_at)""",
+        company_id,
+    )
+
+    by_customer: dict[str, dict] = {}
+    for r in rows:
+        cid = str(r["customer_id"])
+        c = by_customer.setdefault(cid, {
+            "customerId": cid, "name": r["customer_name"], "phone": r["customer_phone"],
+            "invoices": [], "reduction": Decimal("0.00"),
+        })
+        if r["entry_type"] == "invoice" and r["amount"] and r["amount"] > 0:
+            d = (r["issued_at"] or r["created_at"])
+            d = d.date() if hasattr(d, "date") else d
+            c["invoices"].append({"date": d, "remaining": Decimal(str(r["amount"]))})
+        else:
+            # سداد أو مرتجع: يخفّض الرصيد — يُطبَّق على أقدم فاتورة أولاً
+            c["reduction"] += Decimal(str(-r["amount"])) if r["amount"] < 0 else Decimal("0.00")
+
+    today = _dt.date.today()
+    out = []
+    totals = {"current": 0.0, "d31_60": 0.0, "d61_90": 0.0, "d90plus": 0.0, "total": 0.0}
+    for cid, c in by_customer.items():
+        left = c["reduction"]
+        for inv in c["invoices"]:
+            if left <= 0:
+                break
+            consume = min(left, inv["remaining"])
+            inv["remaining"] -= consume
+            left -= consume
+        buckets = {"current": Decimal("0.00"), "d31_60": Decimal("0.00"),
+                  "d61_90": Decimal("0.00"), "d90plus": Decimal("0.00")}
+        for inv in c["invoices"]:
+            if inv["remaining"] <= 0:
+                continue
+            age = (today - inv["date"]).days
+            key = "current" if age <= 30 else "d31_60" if age <= 60 else "d61_90" if age <= 90 else "d90plus"
+            buckets[key] += inv["remaining"]
+        total = sum(buckets.values())
+        if total <= 0:
+            continue
+        row = {"customerId": cid, "name": c["name"], "phone": c["phone"],
+               "current": _num(buckets["current"]), "d31_60": _num(buckets["d31_60"]),
+               "d61_90": _num(buckets["d61_90"]), "d90plus": _num(buckets["d90plus"]),
+               "total": _num(total)}
+        out.append(row)
+        for k in ("current", "d31_60", "d61_90", "d90plus"):
+            totals[k] = round(totals[k] + row[k], 2)
+        totals["total"] = round(totals["total"] + row["total"], 2)
+    out.sort(key=lambda r: -r["total"])
+    if summary_only:
+        return {"totals": totals}
+    return {"rows": out, "totals": totals}

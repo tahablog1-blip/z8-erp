@@ -500,6 +500,108 @@ async def lifespan(app: FastAPI):
         "ALTER TABLE companies ADD COLUMN IF NOT EXISTS gosi_saudi_employee_pct numeric(5,2) NOT NULL DEFAULT 9.75",
         "ALTER TABLE companies ADD COLUMN IF NOT EXISTS gosi_saudi_employer_pct numeric(5,2) NOT NULL DEFAULT 11.75",
         "ALTER TABLE companies ADD COLUMN IF NOT EXISTS gosi_nonsaudi_employer_pct numeric(5,2) NOT NULL DEFAULT 2.00",
+        # ── ربط الرواتب بالمحاسبة: حالة الدفع الفعلي لمسير الرواتب (بعد الاعتماد) ──
+        "ALTER TABLE hr_payroll_runs ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'draft'",
+        "ALTER TABLE hr_payroll_runs ADD COLUMN IF NOT EXISTS finalized_at timestamptz",
+        "ALTER TABLE hr_payroll_runs ADD COLUMN IF NOT EXISTS paid_at timestamptz",
+        "ALTER TABLE hr_payroll_runs ADD COLUMN IF NOT EXISTS paid_by uuid",
+        "ALTER TABLE hr_payroll_runs ADD COLUMN IF NOT EXISTS payment_method text",
+        "ALTER TABLE hr_payslips ADD COLUMN IF NOT EXISTS advance_deduction numeric(12,2) NOT NULL DEFAULT 0",
+        # ── دورة الشراء الرسمية: عروض أسعار ← أمر شراء معتمد ← استلام مخزني ← مطابقة فاتورة المورد ──
+        """CREATE TABLE IF NOT EXISTS purchase_quotations (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             quotation_no text NOT NULL,
+             supplier_id uuid NOT NULL,
+             valid_until date,
+             note text,
+             status text NOT NULL DEFAULT 'received',
+             created_by uuid,
+             created_at timestamptz NOT NULL DEFAULT now(),
+             UNIQUE (company_id, quotation_no)
+           )""",
+        """CREATE TABLE IF NOT EXISTS purchase_quotation_items (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             quotation_id uuid NOT NULL,
+             product_id uuid,
+             product_label text NOT NULL,
+             qty int NOT NULL CHECK (qty > 0),
+             unit_cost numeric(12,2) NOT NULL DEFAULT 0
+           )""",
+        """CREATE TABLE IF NOT EXISTS purchase_orders (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             po_no text NOT NULL,
+             supplier_id uuid NOT NULL,
+             quotation_id uuid,
+             status text NOT NULL DEFAULT 'pending_approval',
+             expected_date date,
+             note text,
+             subtotal numeric(12,2) NOT NULL DEFAULT 0,
+             vat_total numeric(12,2) NOT NULL DEFAULT 0,
+             total numeric(12,2) NOT NULL DEFAULT 0,
+             approved_by uuid,
+             approved_by_name text,
+             approved_at timestamptz,
+             rejected_reason text,
+             created_by uuid,
+             created_at timestamptz NOT NULL DEFAULT now(),
+             UNIQUE (company_id, po_no)
+           )""",
+        """CREATE TABLE IF NOT EXISTS purchase_order_items (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             po_id uuid NOT NULL,
+             product_id uuid,
+             product_label text NOT NULL,
+             qty int NOT NULL CHECK (qty > 0),
+             unit_cost numeric(12,2) NOT NULL DEFAULT 0,
+             line_total numeric(12,2) NOT NULL DEFAULT 0,
+             qty_received int NOT NULL DEFAULT 0,
+             qty_invoiced int NOT NULL DEFAULT 0
+           )""",
+        """CREATE TABLE IF NOT EXISTS purchase_order_receipts (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             po_id uuid NOT NULL,
+             receipt_no text NOT NULL,
+             note text,
+             received_by uuid,
+             received_by_name text,
+             created_at timestamptz NOT NULL DEFAULT now(),
+             UNIQUE (company_id, receipt_no)
+           )""",
+        """CREATE TABLE IF NOT EXISTS purchase_order_receipt_items (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             receipt_id uuid NOT NULL,
+             po_item_id uuid NOT NULL,
+             qty_received int NOT NULL CHECK (qty_received > 0)
+           )""",
+        "ALTER TABLE purchase_invoices ADD COLUMN IF NOT EXISTS po_id uuid",
+
+        # ── المدفوعات الإلكترونية: بنية هيكلية جاهزة لتفعيل مزوّد حقيقي (راجع modules/payments) ──
+        """CREATE TABLE IF NOT EXISTS payment_transactions (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             invoice_id uuid,
+             customer_id uuid,
+             amount numeric(12,2) NOT NULL,
+             currency text NOT NULL DEFAULT 'SAR',
+             provider text,
+             status text NOT NULL DEFAULT 'pending',
+             reference text NOT NULL UNIQUE,
+             provider_ref text,
+             checkout_url text,
+             note text,
+             created_by uuid,
+             created_at timestamptz NOT NULL DEFAULT now(),
+             paid_at timestamptz
+           )""",
+        "CREATE INDEX IF NOT EXISTS idx_payment_tx_company ON payment_transactions(company_id)",
+        "CREATE INDEX IF NOT EXISTS idx_payment_tx_invoice ON payment_transactions(invoice_id)",
+        # تحصيل إلكتروني تلقائي (ويبهوك خارجي بلا مستخدم مسجَّل) يحتاج created_by قابلاً للفراغ
+        "ALTER TABLE customer_ledger ALTER COLUMN created_by DROP NOT NULL",
+        "ALTER TABLE journal_entries ALTER COLUMN created_by DROP NOT NULL",
+
         # ── خطوط السير المتعددة لكل فرع (الحفرة والرافعات ثابتة كسعات) ──
         "ALTER TABLE branches ADD COLUMN IF NOT EXISTS lines jsonb NOT NULL DEFAULT '[]'::jsonb",
         """CREATE TABLE IF NOT EXISTS treasury_vouchers (

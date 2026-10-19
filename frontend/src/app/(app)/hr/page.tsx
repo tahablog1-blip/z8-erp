@@ -236,9 +236,19 @@ export default function HrPage() {
   }
   async function finalizeRun() {
     if (!viewPayslips) return;
-    if (!await appConfirm("اعتماد دورة الرواتب دي نهائياً؟ مش هينفع تتعدّل بعد كده.")) return;
+    if (!await appConfirm("اعتماد دورة الرواتب دي نهائياً؟ مش هينفع تتعدّل بعد كده — هيُسجَّل قيد الرواتب في دفتر اليومية.")) return;
     try {
       await api(`/hr/payroll-runs/${viewPayslips.run.id}/finalize`, { method: "POST" });
+      setViewPayslips(null);
+      await loadPayroll();
+    } catch (e: any) { await appAlert(e.message); }
+  }
+  const [payMethod, setPayMethod] = useState<"cash" | "card" | "transfer">("transfer");
+  async function payRun() {
+    if (!viewPayslips) return;
+    if (!await appConfirm(`تسجيل صرف صافي الرواتب فعلياً (${money(viewPayslips.run.total_net || 0)} ر.س) عبر ${payMethod === "cash" ? "النقد" : payMethod === "card" ? "الشبكة" : "التحويل البنكي"}؟`)) return;
+    try {
+      await api(`/hr/payroll-runs/${viewPayslips.run.id}/pay`, { method: "POST", body: JSON.stringify({ method: payMethod }) });
       setViewPayslips(null);
       await loadPayroll();
     } catch (e: any) { await appAlert(e.message); }
@@ -306,7 +316,10 @@ export default function HrPage() {
 
   const payrollCols: Column<PayrollRun>[] = [
     { key: "period_month", title: "الشهر", width: "100px", render: (r) => <span className="tnum">{r.period_month}/{r.period_year}</span> },
-    { key: "status", title: "الحالة", width: "100px", render: (r) => r.status === "finalized" ? <Badge tone="good">معتمدة</Badge> : <Badge tone="warn">مسودة</Badge> },
+    { key: "status", title: "الحالة", width: "100px", render: (r) =>
+      r.status === "paid" ? <Badge tone="good">مدفوعة</Badge>
+      : r.status === "finalized" ? <Badge tone="info">معتمدة</Badge>
+      : <Badge tone="warn">مسودة</Badge> },
     { key: "payslip_count", title: "عدد القسائم", width: "100px", render: (r) => <span className="tnum">{r.payslip_count}</span> },
     { key: "total_net", title: "إجمالي الصافي", width: "130px", render: (r) => <span className="tnum font-bold">{money(r.total_net || 0)}</span> },
     { key: "actions", title: "", width: "90px", render: (r) => <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => openPayslips(r)}>عرض</Button> },
@@ -577,11 +590,23 @@ export default function HrPage() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[12.5px] font-bold text-text-dim">
-                {viewPayslips.run.status === "finalized" ? <Badge tone="good">معتمدة نهائياً</Badge> : <Badge tone="warn">مسودة</Badge>}
+                {viewPayslips.run.status === "paid" ? <Badge tone="good">مدفوعة {viewPayslips.run.payment_method ? `(${viewPayslips.run.payment_method === "cash" ? "نقد" : viewPayslips.run.payment_method === "card" ? "شبكة" : "تحويل"})` : ""}</Badge>
+                 : viewPayslips.run.status === "finalized" ? <Badge tone="info">معتمدة — بانتظار الصرف</Badge>
+                 : <Badge tone="warn">مسودة</Badge>}
               </span>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <Button variant="ghost" onClick={() => setViewPayslips(null)}>إغلاق</Button>
                 {canPayroll && viewPayslips.run.status === "draft" && <Button onClick={finalizeRun}>اعتماد نهائي</Button>}
+                {canPayroll && viewPayslips.run.status === "finalized" && (
+                  <>
+                    <Select value={payMethod} onChange={(e) => setPayMethod(e.target.value as any)} className="!w-auto">
+                      <option value="transfer">تحويل بنكي</option>
+                      <option value="cash">نقد</option>
+                      <option value="card">شبكة</option>
+                    </Select>
+                    <Button onClick={payRun}>تسجيل صرف الرواتب</Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
