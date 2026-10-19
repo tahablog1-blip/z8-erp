@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Badge, Button, Card, ErrorNote, Field, Input, Select } from "@/components/ui";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { MIcon } from "@/components/m-icon";
 import { appConfirm } from "@/components/dialog";
 import { StockItemsEditor, StockLine } from "@/components/StockItemsEditor";
@@ -150,7 +151,7 @@ export default function BranchRequestForm({ id }: { id?: string }) {
     </button>
   );
 
-  if (loading) return <div className="space-y-3">{back}<p className="text-[13px] text-text-dim">جارِ التحميل...</p></div>;
+  if (loading) return <div className="space-y-3">{back}<LoadingScreen compact /></div>;
   if (id && !req) return <div className="space-y-3">{back}<ErrorNote msg={err || "الطلب غير موجود"} /></div>;
 
   const ui = STATUS_UI[req?.status || "draft"];

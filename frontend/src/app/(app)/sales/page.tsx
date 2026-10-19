@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { MIcon } from "@/components/m-icon";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import type { PrintFormat } from "@/lib/print-invoice";
 import { getPrinting, cachePrinting } from "@/lib/printing";
 import { DataTable, Column } from "@/components/DataTable";
@@ -785,7 +786,7 @@ export default function SalesPage() {
     },
   ];
 
-  if (loading) return <div className="text-text-dim">جارِ التحميل...</div>;
+  if (loading) return <LoadingScreen />;
 
   // ── لا توجد وردية مفتوحة: شاشة فتح وردية فقط ──
   if (!shift) {

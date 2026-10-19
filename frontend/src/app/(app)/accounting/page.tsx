@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { printReport, tableHTML, kpisHTML } from "@/lib/print";
 import { useAuth } from "@/lib/auth";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Tabs } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import {
@@ -204,7 +205,7 @@ export default function AccountingPage() {
     }
   }
 
-  if (loading) return <div className="text-text-dim">جارِ التحميل...</div>;
+  if (loading) return <LoadingScreen />;
 
   return (
     <div className="space-y-4">

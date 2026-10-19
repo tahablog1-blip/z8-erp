@@ -11,6 +11,7 @@ import { appAlert, appConfirm } from "@/components/dialog";
 import { Car, carStatus } from "@/modules/cars/types";
 import { Product, productLabel } from "@/modules/products/types";
 import { MIcon } from "@/components/m-icon";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { STAGES, CHECKPOINTS, CK_LABEL, FINISHED, stageOf, type CkStatus, type CkItem } from "@/lib/service-line";
 import dynamic from "next/dynamic";
 
@@ -206,7 +207,7 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
 
   return (
     <div className="text-center">
-      {step === "loading" && <p className="py-10 text-[13px] text-text-dim">جارِ التحميل...</p>}
+      {step === "loading" && <LoadingScreen compact />}
 
       {step === "error" && (
         <div className="kiosk-step space-y-3 py-6">

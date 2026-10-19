@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { MIcon } from "@/components/m-icon";
 import { Badge, Button, Card, ErrorNote, Field, Input, Switch } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
@@ -208,7 +209,7 @@ export default function ProductPage() {
     </Link>
   );
 
-  if (loading && !d) return <div className="space-y-3">{back}<p className="text-[13px] text-text-dim">جارِ التحميل...</p></div>;
+  if (loading && !d) return <div className="space-y-3">{back}<LoadingScreen compact /></div>;
   if (!d || !form) return <div className="space-y-3">{back}<ErrorNote msg={err || "الصنف غير موجود"} /></div>;
 
   const p = d.product;

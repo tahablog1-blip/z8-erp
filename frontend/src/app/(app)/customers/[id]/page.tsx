@@ -5,6 +5,7 @@ import { api, getToken } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { MIcon } from "@/components/m-icon";
 import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Textarea } from "@/components/ui";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { Customer, Vehicle, Statement, money } from "@/modules/customers/types";
 import { PriceList } from "@/modules/price-lists/types";
 
@@ -171,7 +172,7 @@ export default function CustomerDetailPage() {
   }, [valid]);
   const maxMonth = Math.max(1, ...months.map(([, v]) => v));
 
-  if (loading) return <div className="p-6 text-text-dim">جارٍ التحميل...</div>;
+  if (loading) return <LoadingScreen />;
   if (!customer) return (
     <div className="space-y-3 p-2">
       <ErrorNote msg={err} />

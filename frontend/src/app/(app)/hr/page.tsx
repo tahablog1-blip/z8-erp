@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { DataTable, Column } from "@/components/DataTable";
 import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch, Tabs, Textarea } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
@@ -462,7 +463,7 @@ export default function HrPage() {
     } satisfies Column<EmployeeRequest>] : []),
   ];
 
-  if (loading) return <div className="text-text-dim">جارِ التحميل...</div>;
+  if (loading) return <LoadingScreen />;
 
   return (
     <div className="space-y-4">
