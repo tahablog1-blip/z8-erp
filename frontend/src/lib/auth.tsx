@@ -3,6 +3,17 @@
 // نفس قاعدة النظام القديم: الأدمن يملك كل الصلاحيات ضمنياً
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { api, setToken, clearToken, getToken } from "./api";
+import { setFormatSettings } from "./format";
+
+// تحميل إعدادي التاريخ الهجري/تنسيق الأرقام مرة واحدة فور معرفة هوية المستخدم —
+// بلا صلاحية خاصة (كل مستخدم مسجّل دخول يقرأها)، وبصمت لو فشل (القيم الافتراضية تكفي)
+function loadFormatSettings() {
+  api<{ dateCalendar?: "gregorian" | "hijri"; numberFormat?: "latin" | "arabic" }>("/settings/system")
+    .then((s) => setFormatSettings({
+      dateCalendar: s.dateCalendar || "gregorian", numberFormat: s.numberFormat || "latin",
+    }))
+    .catch(() => {});
+}
 
 export type User = {
   id: string; email: string; fullName: string;
@@ -34,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // استعادة الجلسة بعد الريفريش — التوكن شايل الهوية والباقي بييجي Live من /me
     if (!getToken()) { setLoading(false); return; }
     api<{ user: User }>("/auth/me")
-      .then((d) => setUser(d.user))
+      .then((d) => { setUser(d.user); loadFormatSettings(); })
       .catch(() => clearToken())
       .finally(() => setLoading(false));
   }, []);
@@ -53,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (d.requiresTotp) return { requiresTotp: true, tempToken: d.tempToken! };
     setToken(d.token!);
     setUser(d.user!);
+    loadFormatSettings();
     return { user: d.user!, landingPath: d.landingPath ?? null };
   }
 
@@ -63,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     setToken(d.token);
     setUser(d.user);
+    loadFormatSettings();
     return { user: d.user, landingPath: d.landingPath ?? null };
   }
 

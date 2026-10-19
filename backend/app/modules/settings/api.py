@@ -13,6 +13,7 @@ from .schemas import (
     DesignSettingsOut, DesignSettingsIn, LoyaltySettingsOut, LoyaltySettingsIn,
     EmailSettingsOut, EmailSettingsIn,
     WhatsAppSettingsOut, WhatsAppSettingsIn, WhatsAppTestIn, IntegrationLogOut,
+    BackupFileOut,
 )
 
 router = APIRouter()
@@ -264,6 +265,34 @@ async def send_test_whatsapp(body: WhatsAppTestIn,
 async def list_integration_log(provider: str | None = Query(default=None), limit: int = Query(default=100, ge=1, le=500),
                                user: CurrentUser = Depends(require_permission("settings.whatsapp"))):
     return await service.list_integration_log(user.company_id, provider, limit)
+
+
+# ══════════════════ النسخ الاحتياطي ══════════════════
+
+@router.get("/backup", response_model=list[BackupFileOut])
+async def list_backups(user: CurrentUser = Depends(require_permission("settings.company"))):
+    return await service.list_backups(user.company_id)
+
+
+@router.post("/backup", response_model=BackupFileOut, status_code=201)
+async def create_backup(user: CurrentUser = Depends(require_permission("settings.company"))):
+    row = await service.create_backup(user.company_id)
+    await log_action(user, "create", "backup", details=f"نسخة احتياطية جديدة: {row['filename']}")
+    return row
+
+
+@router.get("/backup/{filename}/download")
+async def download_backup(filename: str, user: CurrentUser = Depends(require_permission("settings.company"))):
+    from fastapi.responses import FileResponse
+    path = service.get_backup_path(user.company_id, filename)
+    return FileResponse(path, media_type="application/gzip", filename=filename)
+
+
+@router.delete("/backup/{filename}")
+async def delete_backup(filename: str, user: CurrentUser = Depends(require_permission("settings.company"))):
+    await service.delete_backup(user.company_id, filename)
+    await log_action(user, "delete", "backup", details=f"حذف نسخة احتياطية: {filename}")
+    return {"success": True}
 
 
 # ══════════════════ الخلفية الموحدة للنظام (معرض متعدد) ══════════════════

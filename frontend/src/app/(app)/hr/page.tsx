@@ -12,14 +12,13 @@ import {
   IqamaAlert, LEAVE_TYPE_LABELS, LeaveBalance,
   LeaveRequest, LeaveType, PayrollRun, Payslip, RequestType, REQUEST_TYPE_LABELS, Violation, money,
 } from "@/modules/hr/types";
+import { formatDate, formatTime } from "@/lib/format";
 
 type Branch = { id: string; name: string };
 type Tab = "employees" | "attendance" | "leave" | "violations" | "payroll" | "custody" | "requests";
 
-const dateFmt = (s: string) =>
-  new Date(s).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { year: "numeric", month: "2-digit", day: "2-digit" });
-const timeFmt = (s: string | null) =>
-  s ? new Date(s).toLocaleTimeString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { hour: "2-digit", minute: "2-digit" }) : "—";
+const dateFmt = (s: string) => formatDate(s);
+const timeFmt = (s: string | null) => (s ? formatTime(s) : "—");
 
 const EMPTY_EMP = {
   branchId: "", fullName: "", nationalId: "", nationality: "", isSaudi: false, phone: "",

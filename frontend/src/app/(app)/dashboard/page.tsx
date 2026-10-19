@@ -9,6 +9,7 @@ import { useLang } from "@/lib/i18n";
 import { Button, Card, ErrorNote, Input } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 import { money } from "@/modules/invoices/types";
+import { formatDateLong } from "@/lib/format";
 
 type Dash = {
   today: { total: number; count: number; profit: number };
@@ -329,7 +330,7 @@ export default function DashboardPage() {
     finally { setAnomBusy(false); }
   }
 
-  const dateAr = new Date().toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA"), { weekday: "long", day: "numeric", month: "long" });
+  const dateAr = formatDateLong(new Date().toISOString());
   console.log({
 
     todaySales: t("dash.todaySales", "مبيعات اليوم"),

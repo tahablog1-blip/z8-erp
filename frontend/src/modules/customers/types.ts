@@ -59,5 +59,5 @@ export type Statement = {
   balance: number;
 };
 
-export const money = (n: number) =>
-  Number(n || 0).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// تنسيق الأرقام يحترم إعداد "تنسيق الأرقام" بالنظام (لاتينية/عربية هندية) — راجع lib/format.ts
+export { money } from "@/lib/format";

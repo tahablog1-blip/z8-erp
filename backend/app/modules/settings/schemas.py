@@ -196,6 +196,8 @@ class SystemSettingsOut(BaseModel):
     timeFormat: str = "24"           # 24 | 12
     fiscalYearStartMonth: int = 1    # 1..12
     maintenanceMode: bool = False    # لا يحجب حساب admin أبداً
+    dateCalendar: str = "gregorian"  # gregorian | hijri — يُطبَّق على عرض التواريخ بالواجهة
+    numberFormat: str = "latin"      # latin (٠..٩ إنجليزية) | arabic (٠..٩ عربية هندية)
 
 
 class SystemSettingsIn(BaseModel):
@@ -208,6 +210,22 @@ class SystemSettingsIn(BaseModel):
     timeFormat: str = "24"
     fiscalYearStartMonth: int = Field(default=1, ge=1, le=12)
     maintenanceMode: bool = False
+    dateCalendar: str = "gregorian"
+    numberFormat: str = "latin"
+
+    @field_validator("dateCalendar")
+    @classmethod
+    def _dc(cls, v: str) -> str:
+        if v not in ("gregorian", "hijri"):
+            raise ValueError("نظام تاريخ غير صالح")
+        return v
+
+    @field_validator("numberFormat")
+    @classmethod
+    def _nf(cls, v: str) -> str:
+        if v not in ("latin", "arabic"):
+            raise ValueError("تنسيق أرقام غير صالح")
+        return v
 
     @field_validator("landingAdmin", "landingEmployee")
     @classmethod
@@ -419,3 +437,13 @@ class IntegrationLogOut(BaseModel):
     status: str
     detail: str | None = None
     created_at: datetime
+
+
+# ══════════════════ النسخ الاحتياطي ══════════════════
+
+class BackupFileOut(BaseModel):
+    filename: str
+    sizeBytes: int
+    createdAt: datetime
+    tableCount: int
+    rowCount: int

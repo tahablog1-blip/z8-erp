@@ -2,9 +2,11 @@
 // الإعدادات ← النظام — صفحة كاملة، DB-backed بالكامل — 7 إعدادات جديدة
 // + حالة الخادم (كانت موجودة من قبل، محتفظ بيها)
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api, getToken } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { setFormatSettings } from "@/lib/format";
 import { Button, Card, ErrorNote, Field, Input, Select, Switch } from "@/components/ui";
+import { appAlert, appConfirm } from "@/components/dialog";
 import { NAV_MODULES } from "@/modules/registry";
 
 type SystemSettings = {
@@ -12,6 +14,7 @@ type SystemSettings = {
   sessionHours: number; minPasswordLength: number;
   maxLoginAttempts: number; lockoutMinutes: number;
   timeFormat: "24" | "12"; fiscalYearStartMonth: number; maintenanceMode: boolean;
+  dateCalendar: "gregorian" | "hijri"; numberFormat: "latin" | "arabic";
 };
 
 const DEFAULT: SystemSettings = {
@@ -19,7 +22,16 @@ const DEFAULT: SystemSettings = {
   sessionHours: 0, minPasswordLength: 8,
   maxLoginAttempts: 0, lockoutMinutes: 15,
   timeFormat: "24", fiscalYearStartMonth: 1, maintenanceMode: false,
+  dateCalendar: "gregorian", numberFormat: "latin",
 };
+
+type BackupFile = { filename: string; sizeBytes: number; createdAt: string; tableCount: number; rowCount: number };
+
+function fmtSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 const MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
   "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
@@ -89,11 +101,52 @@ export default function SystemSettingsPage() {
     finally { setTestBusy(false); }
   }
 
+  // ── النسخ الاحتياطي ──
+  const [backups, setBackups] = useState<BackupFile[]>([]);
+  const [backupsLoaded, setBackupsLoaded] = useState(false);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [backupErr, setBackupErr] = useState("");
+
+  function loadBackups() {
+    api<BackupFile[]>("/settings/backup").then((r) => { setBackups(r); setBackupsLoaded(true); })
+      .catch((e) => { setBackupErr(e.message); setBackupsLoaded(true); });
+  }
+  useEffect(loadBackups, []);
+
+  async function createBackup() {
+    setBackupErr(""); setBackupBusy(true);
+    try { await api("/settings/backup", { method: "POST" }); loadBackups(); }
+    catch (e: any) { setBackupErr(e.message); }
+    finally { setBackupBusy(false); }
+  }
+
+  async function downloadBackup(b: BackupFile) {
+    try {
+      const token = getToken();
+      const res = await fetch(`/api/settings/backup/${b.filename}/download`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error(`تعذّر تحميل النسخة (${res.status})`);
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a");
+      a.href = url; a.download = b.filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (e: any) { await appAlert(e.message); }
+  }
+
+  async function deleteBackup(b: BackupFile) {
+    if (!await appConfirm(`حذف النسخة الاحتياطية «${b.filename}» نهائياً؟`)) return;
+    try { await api(`/settings/backup/${b.filename}`, { method: "DELETE" }); loadBackups(); }
+    catch (e: any) { await appAlert(e.message); }
+  }
+
   async function save() {
     setErr(""); setOk(""); setBusy(true);
     try {
       const saved = await api<SystemSettings>("/settings/system", { method: "PUT", body: JSON.stringify(form) });
       setForm(saved);
+      setFormatSettings({ dateCalendar: saved.dateCalendar, numberFormat: saved.numberFormat });
       setOk("تم الحفظ");
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
@@ -184,9 +237,22 @@ export default function SystemSettingsPage() {
               {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
             </Select>
           </Field>
+          <Field label="نظام عرض التاريخ بالواجهة">
+            <Select value={form.dateCalendar} onChange={(e) => setForm({ ...form, dateCalendar: e.target.value as "gregorian" | "hijri" })}>
+              <option value="gregorian">ميلادي</option>
+              <option value="hijri">هجري (أم القرى)</option>
+            </Select>
+          </Field>
+          <Field label="تنسيق الأرقام بالواجهة">
+            <Select value={form.numberFormat} onChange={(e) => setForm({ ...form, numberFormat: e.target.value as "latin" | "arabic" })}>
+              <option value="latin">أرقام إنجليزية (0123456789)</option>
+              <option value="arabic">أرقام عربية هندية (٠١٢٣٤٥٦٧٨٩)</option>
+            </Select>
+          </Field>
         </div>
         <p className="mt-2 text-[11px] text-text-dim">
           بداية السنة المالية بتُستخدم في زر «السنة المالية الحالية» بشاشة التقارير لحساب نطاق التاريخ تلقائياً.
+          التاريخ الهجري وتنسيق الأرقام يُطبَّقان فوراً على كل شاشات النظام لجميع المستخدمين بعد الحفظ.
         </p>
       </Card>
 
@@ -264,6 +330,41 @@ export default function SystemSettingsPage() {
           </div>
           <Switch checked={form.maintenanceMode} onChange={(v) => setForm({ ...form, maintenanceMode: v })} tone="ember" />
         </label>
+      </Card>
+
+      <Card>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-[14px] font-extrabold">النسخ الاحتياطي</div>
+          <Button onClick={createBackup} disabled={backupBusy}>{backupBusy ? "جارِ إنشاء النسخة..." : "+ نسخة احتياطية جديدة"}</Button>
+        </div>
+        <p className="mb-3 text-[11px] text-text-dim">
+          تصدير فوري لكل بيانات شركتك (كل الجداول) كملف واحد مضغوط — يمكن تنزيله أو حذفه من هنا.
+          التصدير لا يشمل الصور والملفات المرفوعة (الشعار، صور المنتجات...).
+        </p>
+        <ErrorNote msg={backupErr} />
+        {!backupsLoaded ? (
+          <div className="text-[12px] text-text-dim">جارِ التحميل...</div>
+        ) : backups.length === 0 ? (
+          <div className="rounded-lg border border-line p-4 text-center text-[12px] text-text-dim">لا توجد نسخ احتياطية بعد</div>
+        ) : (
+          <div className="space-y-1.5">
+            {backups.map((b) => (
+              <div key={b.filename} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line p-2.5">
+                <div className="text-[12px]">
+                  <div className="font-bold tnum" dir="ltr">{b.filename}</div>
+                  <div className="text-[11px] text-text-dim">
+                    {new Date(b.createdAt).toLocaleString("ar-SA", { dateStyle: "medium", timeStyle: "short" })}
+                    {" — "}{b.tableCount} جدول، {b.rowCount.toLocaleString()} سجل، {fmtSize(b.sizeBytes)}
+                  </div>
+                </div>
+                <div className="flex gap-1.5">
+                  <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => downloadBackup(b)}>تنزيل</Button>
+                  <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => deleteBackup(b)}>حذف</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       <ErrorNote msg={err} />

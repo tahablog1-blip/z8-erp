@@ -1,5 +1,13 @@
 # modules/settings/service.py — منطق مركز الإعدادات معزول عن طبقة الـ HTTP
 import base64 as _b64
+import gzip
+import json
+import os
+import re as _re
+from datetime import date, datetime
+from decimal import Decimal
+from uuid import UUID
+
 from fastapi import HTTPException
 from ...core.db import execute, fetch, fetchrow
 from ...core.security import hash_password
@@ -279,6 +287,8 @@ _SYS_DEFAULTS = {
     "timeFormat": "24",
     "fiscalYearStartMonth": "1",
     "maintenanceMode": "0",
+    "dateCalendar": "gregorian",
+    "numberFormat": "latin",
 }
 _SYS_BOOL = {"maintenanceMode"}
 _SYS_INT = {"sessionHours", "minPasswordLength", "maxLoginAttempts", "lockoutMinutes", "fiscalYearStartMonth"}
@@ -309,6 +319,8 @@ async def update_system_settings(company_id: str, body) -> dict:
         "sys.timeFormat": body.timeFormat,
         "sys.fiscalYearStartMonth": str(body.fiscalYearStartMonth),
         "sys.maintenanceMode": "1" if body.maintenanceMode else "0",
+        "sys.dateCalendar": body.dateCalendar,
+        "sys.numberFormat": body.numberFormat,
     }
     await _set_kv(company_id, kv)
     return await get_system_settings(company_id)
@@ -701,3 +713,108 @@ async def list_integration_log(company_id: str, provider: str | None, limit: int
         *params,
     )
     return [{**dict(r), "id": str(r["id"])} for r in rows]
+
+
+# ══════════════════ النسخ الاحتياطي ══════════════════
+# تصدير منطقي حقيقي لكل بيانات الشركة (ليس شكلياً): نكتشف تلقائياً كل جدول فيه
+# عمود company_id عبر information_schema وننسخ صفوفه — فالنسخة تبقى شاملة بلا
+# أي تحديث يدوي للكود كل ما يُضاف جدول جديد بالنظام. الملف JSON مضغوط gzip
+# محفوظ على القرص لكل شركة في مجلد مستقل تحت BACKUP_DIR، وقابل للتنزيل أو الحذف
+# من الشاشة. الحقول الثنائية (شعار الشركة...) مُستثناة عمداً لتفادي تضخّم الملف.
+
+BACKUP_DIR = os.environ.get("BACKUP_DIR", "storage/backups")
+_BACKUP_NAME_RE = _re.compile(r"^backup_\d{8}_\d{6}\.json\.gz$")
+
+
+def _backup_json_default(o):
+    if isinstance(o, (datetime, date)):
+        return o.isoformat()
+    if isinstance(o, Decimal):
+        return float(o)
+    if isinstance(o, UUID):
+        return str(o)
+    if isinstance(o, (bytes, bytearray)):
+        return None
+    return str(o)
+
+
+async def _company_scoped_tables() -> list[str]:
+    rows = await fetch(
+        """SELECT DISTINCT table_name FROM information_schema.columns
+           WHERE table_schema='public' AND column_name='company_id'
+           ORDER BY table_name""")
+    return [r["table_name"] for r in rows]
+
+
+def _company_backup_dir(company_id: str) -> str:
+    path = os.path.join(BACKUP_DIR, company_id)
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+async def create_backup(company_id: str) -> dict:
+    tables = await _company_scoped_tables()
+    data: dict[str, list[dict]] = {}
+    row_count = 0
+    for t in tables:
+        rows = await fetch(f'SELECT * FROM "{t}" WHERE company_id=$1', company_id)
+        data[t] = [dict(r) for r in rows]
+        row_count += len(rows)
+
+    now = datetime.utcnow()
+    stamp = now.strftime("%Y%m%d_%H%M%S")
+    filename = f"backup_{stamp}.json.gz"
+    dir_path = _company_backup_dir(company_id)
+    path = os.path.join(dir_path, filename)
+    payload = json.dumps({"companyId": company_id, "createdAt": now.isoformat(), "tables": data},
+                         default=_backup_json_default, ensure_ascii=False)
+    with gzip.open(path, "wt", encoding="utf-8") as f:
+        f.write(payload)
+
+    meta = {"createdAt": now.isoformat(), "tableCount": len(tables), "rowCount": row_count}
+    with open(os.path.join(dir_path, f"backup_{stamp}.meta.json"), "w", encoding="utf-8") as f:
+        json.dump(meta, f)
+
+    return {"filename": filename, "sizeBytes": os.path.getsize(path), **meta}
+
+
+async def list_backups(company_id: str) -> list[dict]:
+    dir_path = _company_backup_dir(company_id)
+    out = []
+    for name in sorted(os.listdir(dir_path), reverse=True):
+        if not name.endswith(".json.gz"):
+            continue
+        full = os.path.join(dir_path, name)
+        stat = os.stat(full)
+        meta_path = full[: -len(".json.gz")] + ".meta.json"
+        meta: dict = {}
+        if os.path.exists(meta_path):
+            try:
+                with open(meta_path, encoding="utf-8") as f:
+                    meta = json.load(f)
+            except Exception:
+                meta = {}
+        out.append({
+            "filename": name, "sizeBytes": stat.st_size,
+            "createdAt": meta.get("createdAt") or datetime.utcfromtimestamp(stat.st_mtime).isoformat(),
+            "tableCount": meta.get("tableCount", 0), "rowCount": meta.get("rowCount", 0),
+        })
+    return out
+
+
+def get_backup_path(company_id: str, filename: str) -> str:
+    """يتحقّق من صحة الاسم (يمنع path traversal) ووجود الملف فعلاً قبل إرجاع مساره."""
+    if not _BACKUP_NAME_RE.match(filename):
+        raise HTTPException(400, "اسم ملف غير صالح")
+    path = os.path.join(_company_backup_dir(company_id), filename)
+    if not os.path.isfile(path):
+        raise HTTPException(404, "النسخة الاحتياطية غير موجودة")
+    return path
+
+
+async def delete_backup(company_id: str, filename: str) -> None:
+    path = get_backup_path(company_id, filename)
+    os.remove(path)
+    meta_path = path[: -len(".json.gz")] + ".meta.json"
+    if os.path.exists(meta_path):
+        os.remove(meta_path)

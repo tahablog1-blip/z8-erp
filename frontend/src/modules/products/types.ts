@@ -48,9 +48,5 @@ export function productLabel(p: Pick<Product, "category" | "name" | "spec">) {
   return [p.category, p.name, p.spec].filter(Boolean).join(" — ");
 }
 
-/** تنسيق المبالغ — خانتين عشريتين دايماً عشان أعمدة الأرقام تتراص */
-export const money = (n: number) =>
-  Number(n || 0).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+// تنسيق الأرقام يحترم إعداد "تنسيق الأرقام" بالنظام (لاتينية/عربية هندية) — راجع lib/format.ts
+export { money } from "@/lib/format";
