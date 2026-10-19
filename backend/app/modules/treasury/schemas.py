@@ -21,6 +21,66 @@ class VoucherCreate(BaseModel):
     voucherDate: str | None = None     # ISO — الافتراضي اليوم
 
 
+class BankAccountCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=150)
+    bankName: str | None = None
+    accountNumber: str | None = None
+    iban: str | None = None
+    openingBalance: float = 0
+
+
+class BankAccountOut(BaseModel):
+    id: str
+    name: str
+    bank_name: str | None = None
+    account_number: str | None = None
+    iban: str | None = None
+    account_code: str
+    opening_balance: float
+    balance: float          # الرصيد الحالي = الافتتاحي + الإيداعات − السحوبات
+    is_active: bool
+    created_at: object
+
+
+class BankTxnIn(BaseModel):
+    bankAccountId: str
+    amount: float = Field(gt=0)
+    method: PayMethod = "cash"   # من/إلى أي حساب نقدية (الصندوق عادة)
+    description: str | None = None
+    txnDate: str | None = None
+
+
+class BankTxnOut(BaseModel):
+    id: str
+    bank_account_id: str
+    txn_type: Literal["deposit", "withdrawal"]
+    amount: float
+    description: str | None = None
+    reconciled: bool
+    created_at: object
+
+
+class StatementLineIn(BaseModel):
+    bankAccountId: str
+    stmtDate: str
+    amount: float          # موجب = إيداع في كشف البنك، سالب = سحب
+    description: str | None = None
+
+
+class StatementLineOut(BaseModel):
+    id: str
+    bank_account_id: str
+    stmt_date: object
+    amount: float
+    description: str | None = None
+    matched_txn_id: str | None = None
+    created_at: object
+
+
+class MatchIn(BaseModel):
+    txnId: str
+
+
 class VoucherOut(BaseModel):
     id: str
     voucher_no: str

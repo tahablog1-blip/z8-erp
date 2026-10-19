@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch } from "@/components/ui";
+import { appAlert, appConfirm } from "@/components/dialog";
 import { money } from "@/modules/invoices/types";
 import { Customer } from "@/modules/customers/types";
 import { MIcon } from "@/components/m-icon";
@@ -20,6 +21,24 @@ type Voucher = {
 type Summary = { receipts: number; payments: number; receiptCount: number; paymentCount: number; net: number };
 type Branch = { id: string; name: string };
 type Employee = { id: string; name: string; advanceBalance: number };
+
+type BankAccount = {
+  id: string; name: string; bank_name: string | null; account_number: string | null;
+  iban: string | null; account_code: string; opening_balance: number; balance: number;
+  is_active: boolean; created_at: string;
+};
+type BankTxn = {
+  id: string; bank_account_id: string; txn_type: "deposit" | "withdrawal";
+  amount: number; description: string | null; reconciled: boolean; created_at: string;
+};
+type StatementLine = {
+  id: string; bank_account_id: string; stmt_date: string; amount: number;
+  description: string | null; matched_txn_id: string | null; created_at: string;
+};
+type ReconSummary = {
+  bookBalance: number; unreconciledSystemTxns: number;
+  unmatchedStatementLines: number; unmatchedStatementTotal: number;
+};
 
 const METHODS: Record<string, string> = { cash: "نقدي", card: "شبكة", transfer: "تحويل" };
 const REASONS: Record<string, string> = { advance: "سلفة", advance_repay: "سداد سلفة", salary: "راتب / أجر" };
@@ -57,6 +76,121 @@ export default function TreasuryPage() {
   const [allCust, setAllCust] = useState<Customer[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+
+  // ══════════ البنوك: حسابات حقيقية + إيداع/سحب + تسوية ══════════
+  const [tab, setTab] = useState<"vouchers" | "banks">("vouchers");
+  const [banks, setBanks] = useState<BankAccount[]>([]);
+  const [banksErr, setBanksErr] = useState("");
+  const [selectedBankId, setSelectedBankId] = useState<string>("");
+  const [bankTxns, setBankTxns] = useState<BankTxn[]>([]);
+  const [stmtLines, setStmtLines] = useState<StatementLine[]>([]);
+  const [recon, setRecon] = useState<ReconSummary | null>(null);
+  const [bankModal, setBankModal] = useState(false);
+  const [bankForm, setBankForm] = useState({ name: "", bankName: "", accountNumber: "", iban: "", openingBalance: 0 });
+  const [txnModal, setTxnModal] = useState<null | "deposit" | "withdrawal">(null);
+  const [txnForm, setTxnForm] = useState({ amount: "", method: "cash", description: "", txnDate: todayISO() });
+  const [stmtModal, setStmtModal] = useState(false);
+  const [stmtForm, setStmtForm] = useState({ stmtDate: todayISO(), amount: "", description: "" });
+  const [matchFor, setMatchFor] = useState<StatementLine | null>(null);
+  const [matchTxnId, setMatchTxnId] = useState("");
+  const [bankBusy, setBankBusy] = useState(false);
+
+  async function loadBanks() {
+    try { setBanks(await api<BankAccount[]>("/treasury/bank-accounts")); setBanksErr(""); }
+    catch (e: any) { setBanksErr(e.message); }
+  }
+  useEffect(() => { if (tab === "banks") loadBanks(); }, [tab]);
+
+  async function loadBankDetail(bankAccountId: string) {
+    try {
+      const [txns, lines, sm] = await Promise.all([
+        api<BankTxn[]>(`/treasury/bank-accounts/${bankAccountId}/transactions`),
+        api<StatementLine[]>(`/treasury/bank-accounts/${bankAccountId}/statement-lines`),
+        api<ReconSummary>(`/treasury/bank-accounts/${bankAccountId}/reconciliation`),
+      ]);
+      setBankTxns(txns); setStmtLines(lines); setRecon(sm); setBanksErr("");
+    } catch (e: any) { setBanksErr(e.message); }
+  }
+  useEffect(() => { if (selectedBankId) loadBankDetail(selectedBankId); }, [selectedBankId]);
+
+  async function saveBankAccount() {
+    setBankBusy(true); setBanksErr("");
+    try {
+      await api("/treasury/bank-accounts", { method: "POST", body: JSON.stringify(bankForm) });
+      setBankModal(false);
+      setBankForm({ name: "", bankName: "", accountNumber: "", iban: "", openingBalance: 0 });
+      await loadBanks();
+    } catch (e: any) { setBanksErr(e.message); }
+    finally { setBankBusy(false); }
+  }
+
+  async function removeBankAccount(b: BankAccount) {
+    if (!await appConfirm(`إلغاء تفعيل الحساب البنكي «${b.name}»؟`)) return;
+    try {
+      await api(`/treasury/bank-accounts/${b.id}`, { method: "DELETE" });
+      if (selectedBankId === b.id) setSelectedBankId("");
+      await loadBanks();
+    } catch (e: any) { await appAlert(e.message); }
+  }
+
+  async function saveBankTxn() {
+    if (!selectedBankId || !txnModal) return;
+    setBankBusy(true); setBanksErr("");
+    try {
+      await api(`/treasury/bank-accounts/${txnModal === "deposit" ? "deposit" : "withdraw"}`, {
+        method: "POST",
+        body: JSON.stringify({
+          bankAccountId: selectedBankId, amount: Number(txnForm.amount), method: txnForm.method,
+          description: txnForm.description.trim() || null, txnDate: txnForm.txnDate || null,
+        }),
+      });
+      setTxnModal(null);
+      setTxnForm({ amount: "", method: "cash", description: "", txnDate: todayISO() });
+      await Promise.all([loadBanks(), loadBankDetail(selectedBankId)]);
+    } catch (e: any) { setBanksErr(e.message); }
+    finally { setBankBusy(false); }
+  }
+
+  async function saveStatementLine() {
+    if (!selectedBankId) return;
+    setBankBusy(true); setBanksErr("");
+    try {
+      await api("/treasury/statement-lines", {
+        method: "POST",
+        body: JSON.stringify({
+          bankAccountId: selectedBankId, stmtDate: stmtForm.stmtDate,
+          amount: Number(stmtForm.amount), description: stmtForm.description.trim() || null,
+        }),
+      });
+      setStmtModal(false);
+      setStmtForm({ stmtDate: todayISO(), amount: "", description: "" });
+      await loadBankDetail(selectedBankId);
+    } catch (e: any) { setBanksErr(e.message); }
+    finally { setBankBusy(false); }
+  }
+
+  async function doMatch() {
+    if (!matchFor || !matchTxnId) return;
+    setBankBusy(true);
+    try {
+      await api(`/treasury/statement-lines/${matchFor.id}/match`, {
+        method: "POST", body: JSON.stringify({ txnId: matchTxnId }),
+      });
+      setMatchFor(null); setMatchTxnId("");
+      await loadBankDetail(selectedBankId);
+    } catch (e: any) { setBanksErr(e.message); }
+    finally { setBankBusy(false); }
+  }
+
+  async function doUnmatch(line: StatementLine) {
+    try {
+      await api(`/treasury/statement-lines/${line.id}/unmatch`, { method: "POST" });
+      await loadBankDetail(selectedBankId);
+    } catch (e: any) { setBanksErr(e.message); }
+  }
+
+  const selectedBank = banks.find((b) => b.id === selectedBankId) || null;
+  const unmatchedTxnsForBank = bankTxns.filter((t) => !t.reconciled);
 
   async function load() {
     setLoading(true);
@@ -187,7 +321,7 @@ export default function TreasuryPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-[19px] font-extrabold">الخزينة</h1>
-        {canCreate && (
+        {canCreate && tab === "vouchers" && (
           <div className="flex gap-2">
             <button onClick={() => openModal("receipt")}
                     className="flex items-center gap-1 rounded-xl bg-emerald px-5 py-2.5 text-[13.5px] font-black text-white shadow-card transition hover:brightness-110 active:scale-[.98]">
@@ -199,11 +333,24 @@ export default function TreasuryPage() {
             </button>
           </div>
         )}
+        {tab === "banks" && canCreate && (
+          <Button onClick={() => setBankModal(true)}>+ حساب بنكي جديد</Button>
+        )}
       </div>
 
-      <ErrorNote msg={pageErr} />
+      <div className="flex gap-1.5 border-b border-line">
+        {([["vouchers", "السندات"], ["banks", "البنوك"]] as const).map(([k, label]) => (
+          <button key={k} onClick={() => setTab(k)}
+                  className={`px-3 py-2 text-[13px] font-bold ${tab === k
+                    ? "border-b-2 border-petrol text-petrol" : "text-text-dim hover:text-text"}`}>
+            {label}
+          </button>
+        ))}
+      </div>
 
-      {summary && (
+      {tab === "vouchers" && <ErrorNote msg={pageErr} />}
+
+      {tab === "vouchers" && summary && (
         <div className="grid gap-3 sm:grid-cols-3">
           <Card><div className="text-[11.5px] font-bold text-text-dim">مقبوضات اليوم ({summary.receiptCount})</div>
             <div className="mt-1 tnum text-[19px] font-black text-emerald">{money(summary.receipts)} ر.س</div></Card>
@@ -214,6 +361,7 @@ export default function TreasuryPage() {
         </div>
       )}
 
+      {tab === "vouchers" && (
       <Card className="!p-0">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5">
           <div className="flex flex-wrap items-center gap-2 text-[12.5px]">
@@ -285,6 +433,131 @@ export default function TreasuryPage() {
           </table>
         </div>
       </Card>
+      )}
+
+      {/* ══════════ البنوك: حسابات + إيداع/سحب + تسوية ══════════ */}
+      {tab === "banks" && (
+        <div className="space-y-3">
+          <ErrorNote msg={banksErr} />
+          <div className="grid gap-3 md:grid-cols-[280px_1fr]">
+            <Card className="!p-0">
+              <div className="divide-y divide-line">
+                {banks.length === 0 && (
+                  <div className="p-4 text-center text-[12px] text-text-dim">لا توجد حسابات بنكية بعد</div>
+                )}
+                {banks.map((b) => (
+                  <button key={b.id} onClick={() => setSelectedBankId(b.id)}
+                          className={`block w-full px-3 py-2.5 text-right transition ${selectedBankId === b.id ? "bg-petrol-soft" : "hover:bg-ink-3"}`}>
+                    <div className="font-extrabold text-[13px]">{b.name}</div>
+                    <div className="text-[11px] text-text-dim">{b.bank_name || "—"}</div>
+                    <div className="tnum mt-0.5 text-[13px] font-black text-petrol">{money(b.balance)} ر.س</div>
+                  </button>
+                ))}
+              </div>
+            </Card>
+
+            <div className="space-y-3">
+              {!selectedBank ? (
+                <Card><div className="p-3 text-center text-[12.5px] text-text-dim">اختر حساباً بنكياً من القائمة</div></Card>
+              ) : (
+                <>
+                  <Card>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <div className="text-[14px] font-extrabold">{selectedBank.name}</div>
+                        <div className="text-[11.5px] text-text-dim tnum">
+                          {selectedBank.bank_name} {selectedBank.iban ? `— ${selectedBank.iban}` : ""} {selectedBank.account_number ? `— ${selectedBank.account_number}` : ""}
+                        </div>
+                      </div>
+                      {canCreate && (
+                        <div className="flex gap-1.5">
+                          <Button className="!text-[12px]" onClick={() => setTxnModal("deposit")}>إيداع</Button>
+                          <Button variant="ghost" className="!text-[12px]" onClick={() => setTxnModal("withdrawal")}>سحب</Button>
+                          <Button variant="danger" className="!text-[12px]" onClick={() => removeBankAccount(selectedBank)}>إلغاء الحساب</Button>
+                        </div>
+                      )}
+                    </div>
+                    {recon && (
+                      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                        <div className="rounded-lg border border-line p-2.5">
+                          <div className="text-[11px] text-text-dim">الرصيد الدفتري</div>
+                          <div className="tnum text-[15px] font-black">{money(recon.bookBalance)}</div>
+                        </div>
+                        <div className="rounded-lg border border-line p-2.5">
+                          <div className="text-[11px] text-text-dim">حركات غير مسوّاة</div>
+                          <div className="tnum text-[15px] font-black">{recon.unreconciledSystemTxns}</div>
+                        </div>
+                        <div className="rounded-lg border border-line p-2.5">
+                          <div className="text-[11px] text-text-dim">سطور كشف غير مطابَقة</div>
+                          <div className="tnum text-[15px] font-black">
+                            {recon.unmatchedStatementLines} <span className="text-text-dim">({money(recon.unmatchedStatementTotal)})</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+
+                  <Card className="!p-0">
+                    <div className="flex items-center justify-between border-b border-line px-3 py-2">
+                      <div className="text-[12.5px] font-bold">حركات النظام</div>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto divide-y divide-line">
+                      {bankTxns.length === 0 && <div className="p-3 text-center text-[12px] text-text-dim">لا حركات بعد</div>}
+                      {bankTxns.map((t) => (
+                        <div key={t.id} className="flex items-center justify-between px-3 py-2 text-[12.5px]">
+                          <div>
+                            <span className={t.txn_type === "deposit" ? "text-emerald" : "text-ember"}>
+                              {t.txn_type === "deposit" ? "إيداع" : "سحب"}
+                            </span>
+                            {t.description && <span className="text-text-dim"> — {t.description}</span>}
+                            <div className="text-[10.5px] text-text-dim">{dtFmt(t.created_at)}</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="tnum font-bold">{money(t.amount)}</span>
+                            {t.reconciled
+                              ? <Badge tone="good">مسوّى</Badge>
+                              : <Badge tone="warn">غير مسوّى</Badge>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+
+                  <Card className="!p-0">
+                    <div className="flex items-center justify-between border-b border-line px-3 py-2">
+                      <div className="text-[12.5px] font-bold">كشف حساب البنك (للتسوية)</div>
+                      {canCreate && (
+                        <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => setStmtModal(true)}>
+                          + سطر من الكشف
+                        </Button>
+                      )}
+                    </div>
+                    <div className="max-h-72 overflow-y-auto divide-y divide-line">
+                      {stmtLines.length === 0 && <div className="p-3 text-center text-[12px] text-text-dim">لا سطور كشف بعد</div>}
+                      {stmtLines.map((l) => (
+                        <div key={l.id} className="flex items-center justify-between px-3 py-2 text-[12.5px]">
+                          <div>
+                            <span className="tnum">{l.stmt_date}</span>
+                            {l.description && <span className="text-text-dim"> — {l.description}</span>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`tnum font-bold ${l.amount >= 0 ? "text-emerald" : "text-ember"}`}>{money(l.amount)}</span>
+                            {l.matched_txn_id ? (
+                              <Button variant="ghost" className="!px-2 !py-0.5 !text-[11px]" onClick={() => doUnmatch(l)}>فك المطابقة</Button>
+                            ) : (
+                              <Button className="!px-2 !py-0.5 !text-[11px]" onClick={() => { setMatchFor(l); setMatchTxnId(""); }}>مطابقة</Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══════════ سند جديد ══════════ */}
       <Modal open={!!modal} onClose={() => setModal(null)}
@@ -417,6 +690,126 @@ export default function TreasuryPage() {
                     ${modal === "receipt" ? "bg-emerald" : "bg-ember"}`}>
             {busy ? "جارِ الحفظ..." : <><MIcon name="check" className="!text-[16px]" /> {modal === "receipt" ? "حفظ وطباعة سند القبض" : "حفظ وطباعة سند الصرف"}</>}
           </button>
+        </div>
+      </Modal>
+
+      {/* ══════════ حساب بنكي جديد ══════════ */}
+      <Modal open={bankModal} onClose={() => setBankModal(false)} title="حساب بنكي جديد">
+        <div className="space-y-3">
+          <Field label="اسم الحساب (للعرض)">
+            <Input value={bankForm.name} autoFocus onChange={(e) => setBankForm({ ...bankForm, name: e.target.value })} />
+          </Field>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Field label="اسم البنك">
+              <Input value={bankForm.bankName} onChange={(e) => setBankForm({ ...bankForm, bankName: e.target.value })} />
+            </Field>
+            <Field label="رقم الحساب">
+              <Input className="tnum" value={bankForm.accountNumber} onChange={(e) => setBankForm({ ...bankForm, accountNumber: e.target.value })} />
+            </Field>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Field label="IBAN">
+              <Input className="tnum" value={bankForm.iban} onChange={(e) => setBankForm({ ...bankForm, iban: e.target.value })} />
+            </Field>
+            <Field label="الرصيد الافتتاحي (ر.س)">
+              <Input type="number" step="0.01" className="tnum" value={bankForm.openingBalance}
+                     onChange={(e) => setBankForm({ ...bankForm, openingBalance: +e.target.value || 0 })} />
+            </Field>
+          </div>
+          <ErrorNote msg={banksErr} />
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="ghost" onClick={() => setBankModal(false)}>إلغاء</Button>
+            <Button onClick={saveBankAccount} disabled={bankBusy || bankForm.name.trim().length < 2}>
+              {bankBusy ? "جارِ الحفظ..." : "حفظ"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ══════════ إيداع / سحب ══════════ */}
+      <Modal open={!!txnModal} onClose={() => setTxnModal(null)}
+             title={txnModal === "deposit" ? "إيداع إلى الحساب البنكي" : "سحب من الحساب البنكي"}>
+        <div className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Field label="المبلغ (ر.س)">
+              <Input type="number" min={0.01} step="0.01" className="tnum font-bold" autoFocus
+                     value={txnForm.amount} onChange={(e) => setTxnForm({ ...txnForm, amount: e.target.value })} />
+            </Field>
+            <Field label={txnModal === "deposit" ? "من حساب" : "إلى حساب"}>
+              <Select value={txnForm.method} onChange={(e) => setTxnForm({ ...txnForm, method: e.target.value })}>
+                <option value="cash">الصندوق (نقدي)</option>
+                <option value="card">حساب الشبكة</option>
+              </Select>
+            </Field>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Field label="التاريخ">
+              <Input type="date" className="tnum" value={txnForm.txnDate} onChange={(e) => setTxnForm({ ...txnForm, txnDate: e.target.value })} />
+            </Field>
+            <Field label="بيان (اختياري)">
+              <Input value={txnForm.description} onChange={(e) => setTxnForm({ ...txnForm, description: e.target.value })} />
+            </Field>
+          </div>
+          <ErrorNote msg={banksErr} />
+          <button onClick={saveBankTxn} disabled={bankBusy || Number(txnForm.amount) <= 0}
+                  className={`flex w-full items-center justify-center gap-1 rounded-xl py-3 text-[14px] font-black text-white transition hover:brightness-110 disabled:opacity-40
+                    ${txnModal === "deposit" ? "bg-emerald" : "bg-ember"}`}>
+            {bankBusy ? "جارِ الحفظ..." : txnModal === "deposit" ? "تأكيد الإيداع" : "تأكيد السحب"}
+          </button>
+        </div>
+      </Modal>
+
+      {/* ══════════ سطر كشف حساب جديد ══════════ */}
+      <Modal open={stmtModal} onClose={() => setStmtModal(false)} title="سطر من كشف حساب البنك">
+        <div className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Field label="التاريخ">
+              <Input type="date" className="tnum" value={stmtForm.stmtDate} onChange={(e) => setStmtForm({ ...stmtForm, stmtDate: e.target.value })} />
+            </Field>
+            <Field label="المبلغ" hint="موجب = إيداع، سالب = سحب">
+              <Input type="number" step="0.01" className="tnum" value={stmtForm.amount}
+                     onChange={(e) => setStmtForm({ ...stmtForm, amount: e.target.value })} />
+            </Field>
+          </div>
+          <Field label="بيان">
+            <Input value={stmtForm.description} onChange={(e) => setStmtForm({ ...stmtForm, description: e.target.value })} />
+          </Field>
+          <ErrorNote msg={banksErr} />
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="ghost" onClick={() => setStmtModal(false)}>إلغاء</Button>
+            <Button onClick={saveStatementLine} disabled={bankBusy || !stmtForm.amount}>
+              {bankBusy ? "جارِ الحفظ..." : "حفظ"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ══════════ مطابقة سطر كشف بحركة نظام ══════════ */}
+      <Modal open={!!matchFor} onClose={() => setMatchFor(null)} title="مطابقة سطر الكشف">
+        <div className="space-y-3">
+          {matchFor && (
+            <div className="rounded-lg border border-line p-2.5 text-[12.5px]">
+              <div className="tnum">{matchFor.stmt_date}</div>
+              <div className="tnum font-bold">{money(matchFor.amount)}</div>
+              {matchFor.description && <div className="text-text-dim">{matchFor.description}</div>}
+            </div>
+          )}
+          <Field label="حركة النظام المطابقة">
+            <Select value={matchTxnId} onChange={(e) => setMatchTxnId(e.target.value)}>
+              <option value="">— اختر —</option>
+              {unmatchedTxnsForBank.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.txn_type === "deposit" ? "إيداع" : "سحب"} — {money(t.amount)} — {dtFmt(t.created_at)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="ghost" onClick={() => setMatchFor(null)}>إلغاء</Button>
+            <Button onClick={doMatch} disabled={bankBusy || !matchTxnId}>
+              {bankBusy ? "جارِ المطابقة..." : "تأكيد المطابقة"}
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>

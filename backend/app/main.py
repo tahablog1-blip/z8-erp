@@ -893,6 +893,45 @@ async def lifespan(app: FastAPI):
              last_number  bigint NOT NULL DEFAULT 0,
              PRIMARY KEY (company_id, branch_id)
            )""",
+
+        # ── المرحلة 7: حسابات بنكية حقيقية + إيداع/سحب بين الصندوق والبنك + تسوية بنكية ──
+        """CREATE TABLE IF NOT EXISTS bank_accounts (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             name text NOT NULL,
+             bank_name text,
+             account_number text,
+             iban text,
+             account_code text NOT NULL,
+             opening_balance numeric(14,2) NOT NULL DEFAULT 0,
+             is_active boolean NOT NULL DEFAULT TRUE,
+             created_at timestamptz NOT NULL DEFAULT now()
+           )""",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_bank_accounts_code ON bank_accounts(company_id, account_code)",
+        """CREATE TABLE IF NOT EXISTS bank_transactions (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             bank_account_id uuid NOT NULL REFERENCES bank_accounts(id),
+             txn_type text NOT NULL,
+             amount numeric(14,2) NOT NULL,
+             description text,
+             reconciled boolean NOT NULL DEFAULT FALSE,
+             reconciled_at timestamptz,
+             created_by uuid,
+             created_at timestamptz NOT NULL DEFAULT now()
+           )""",
+        "CREATE INDEX IF NOT EXISTS idx_bank_txn_account ON bank_transactions(bank_account_id)",
+        """CREATE TABLE IF NOT EXISTS bank_statement_lines (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             bank_account_id uuid NOT NULL REFERENCES bank_accounts(id),
+             stmt_date date NOT NULL,
+             amount numeric(14,2) NOT NULL,
+             description text,
+             matched_txn_id uuid REFERENCES bank_transactions(id),
+             created_at timestamptz NOT NULL DEFAULT now()
+           )""",
+        "CREATE INDEX IF NOT EXISTS idx_bank_stmt_account ON bank_statement_lines(bank_account_id)",
     ):
         try:
             await execute(stmt)
