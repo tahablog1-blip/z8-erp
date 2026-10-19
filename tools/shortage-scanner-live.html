@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ماسح النواقص</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap">
+<style>
+:root{
+  --bg:#FAF7F2; --surface:#FFFFFF; --surface-2:#F1EBE0; --fg:#231F1A; --muted:#8A7F6D;
+  --accent:#C8792A; --accent-fg:#FFFFFF; --success:#2F7D52; --success-bg:#E6F2EB;
+  --danger:#B23A3A; --danger-bg:#FBEAEA; --border:#E4DDD0;
+  --font-ui:'IBM Plex Sans Arabic',system-ui,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#1C1814; --surface:#272019; --surface-2:#332A20; --fg:#F3EDE2; --muted:#B2A58E;
+    --accent:#E2A355; --accent-fg:#241B0E; --success:#5FBE88; --success-bg:#1E3327;
+    --danger:#E07A7A; --danger-bg:#3A2222; --border:#3A3024; color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; direction:rtl; background:var(--bg); color:var(--fg); font-family:var(--font-ui);
+  padding:20px max(16px,env(safe-area-inset-right,0px)) 90px max(16px,env(safe-area-inset-left,0px));
+  line-height:1.5;
+}
+h1{font-size:1.25rem;font-weight:700;margin:0}
+.lede{color:var(--muted);font-size:.85rem;margin:4px 0 0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:14px}
+.row{display:flex;align-items:center;gap:10px;min-width:0}
+.row.wrap{flex-wrap:wrap}
+.between{justify-content:space-between}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.icon{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;font-size:22px;line-height:1;display:inline-block;vertical-align:middle;}
+button{font-family:inherit;font-size:.92rem;border:none;border-radius:10px;padding:11px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;justify-content:center}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn-primary{background:var(--accent);color:var(--accent-fg);font-weight:600}
+.btn-secondary{background:var(--surface-2);color:var(--fg)}
+.btn-danger{background:var(--danger-bg);color:var(--danger)}
+.btn-ghost{background:transparent;color:var(--muted);padding:8px}
+button:disabled{opacity:.45;cursor:not-allowed}
+input[type=text],input[type=number]{
+  font-family:inherit;background:var(--surface-2);border:1px solid var(--border);color:var(--fg);
+  border-radius:10px;padding:11px 12px;font-size:.95rem;min-width:0;width:100%;
+}
+select{font-family:inherit;background:var(--surface-2);border:1px solid var(--border);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:.85rem}
+.status-pill{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border-radius:999px;padding:6px 12px;font-size:.82rem;color:var(--muted)}
+.empty{text-align:center;padding:28px 12px}
+.empty .icon{font-size:40px;color:var(--muted);margin-bottom:8px}
+.empty h2{font-size:1rem;margin:0 0 6px}
+.empty ol{text-align:right;display:inline-block;color:var(--muted);font-size:.86rem;margin:10px 0 0;padding-right:18px;line-height:1.9}
+.result-card{border-radius:14px;padding:16px;margin-top:14px;border:1px solid}
+.result-card.found{background:var(--success-bg);border-color:var(--success)}
+.result-card.notfound{background:var(--danger-bg);border-color:var(--danger)}
+.result-card .tag{font-size:.78rem;font-weight:600;display:flex;align-items:center;gap:6px}
+.result-card.found .tag{color:var(--success)}
+.result-card.notfound .tag{color:var(--danger)}
+.result-name{font-size:1.1rem;font-weight:700;margin-top:6px}
+.result-price{font-size:1.3rem;font-weight:700;margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th{text-align:right;color:var(--muted);font-weight:600;font-size:.78rem;padding:0 6px 8px;white-space:nowrap}
+td{padding:10px 6px;border-top:1px solid var(--border);vertical-align:middle;min-width:0}
+td.num,th.num{text-align:center}
+.table-wrap{overflow-x:auto;margin-top:4px}
+.qty-input{width:56px;text-align:center;padding:7px 4px}
+.name-input{min-width:110px}
+.price-input{width:76px;text-align:center}
+.row-del{background:transparent;color:var(--danger);padding:6px}
+.hidden-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.footer-bar{
+  position:sticky;bottom:0;margin-top:18px;background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding-bottom:max(12px,env(safe-area-inset-bottom,0px));box-shadow:0 -6px 18px -12px rgba(0,0,0,.25)
+}
+.footer-totals{font-size:.84rem;color:var(--muted)}
+.footer-totals b{color:var(--fg);font-family:var(--font-mono)}
+.mapping-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
+.mapping-field{display:flex;flex-direction:column;gap:4px}
+.mapping-field label{font-size:.8rem;color:var(--muted)}
+.mapping-preview{font-size:.78rem;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:8px}
+.msg{font-size:.82rem;margin-top:8px}
+.msg.err{color:var(--danger)}
+
+/* live scanner */
+.scanner-wrap{position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:4/3}
+.scanner-wrap video{width:100%;height:100%;object-fit:cover;display:block}
+.scanner-frame{position:absolute;inset:14% 10%;border:3px solid rgba(255,255,255,.85);border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.35);pointer-events:none}
+.scanner-frame::before,.scanner-frame::after{content:"";position:absolute;width:26px;height:26px;border-color:var(--accent)}
+.scan-line{position:absolute;left:8%;right:8%;top:14%;height:2px;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:scanmove 2s ease-in-out infinite}
+@keyframes scanmove{0%{top:14%}50%{top:86%}100%{top:14%}}
+@media (prefers-reduced-motion:reduce){.scan-line{animation:none;top:50%}}
+.scanner-status{position:absolute;bottom:10px;left:0;right:0;text-align:center;color:#fff;font-size:.78rem;background:linear-gradient(transparent,rgba(0,0,0,.55));padding:14px 8px 8px}
+.scanner-off{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;height:100%;color:var(--muted)}
+.scanner-off .icon{font-size:36px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ماسح النواقص</h1>
+  <p class="lede">وجّه الكاميرا على الباركود — تنقرأ تلقائي بدون ما تضغط أي زر</p>
+</header>
+
+<section class="card" id="catalogCard">
+  <div class="row between wrap">
+    <span class="status-pill" id="catalogStatus"><span class="icon" aria-hidden="true">inventory_2</span><span id="catalogStatusText">لا يوجد ملف أصناف محمّل</span></span>
+    <div class="row">
+      <button class="btn-primary" id="importBtn" type="button"><span class="icon" aria-hidden="true">upload_file</span>استيراد ملف الأصناف</button>
+    </div>
+  </div>
+  <div id="importMsg"></div>
+  <div id="mappingPanel" hidden></div>
+  <input class="hidden-input" type="file" id="fileInput" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+</section>
+
+<section class="card">
+  <div class="scanner-wrap" id="scannerWrap">
+    <div class="scanner-off" id="scannerOff">
+      <span class="icon" aria-hidden="true">photo_camera</span>
+      <button class="btn-primary" id="startScanBtn" type="button">تشغيل الكاميرا</button>
+    </div>
+    <video id="video" playsinline muted hidden></video>
+    <div class="scanner-frame" id="scannerFrame" hidden></div>
+    <div class="scan-line" id="scanLine" hidden></div>
+    <div class="scanner-status" id="scannerStatus" hidden>جاري البحث عن باركود...</div>
+  </div>
+  <div class="row wrap" style="margin-top:10px">
+    <button class="btn-secondary" id="stopScanBtn" type="button" hidden style="flex:1"><span class="icon" aria-hidden="true">videocam_off</span>إيقاف الكاميرا</button>
+    <input type="text" id="manualInput" placeholder="أو اكتب رقم الباركود يدويًا واضغط Enter" inputmode="numeric" style="flex:2;min-width:180px">
+  </div>
+  <div id="resultArea"></div>
+</section>
+
+<section class="card">
+  <div class="row between" style="margin-bottom:6px">
+    <h2 style="font-size:.95rem;margin:0">قائمة الطلبية</h2>
+    <button class="btn-ghost" id="clearListBtn" type="button" style="font-size:.78rem"><span class="icon" aria-hidden="true">delete_sweep</span>مسح القائمة</button>
+  </div>
+  <div id="listArea"></div>
+</section>
+
+<div class="footer-bar" id="footerBar" hidden>
+  <div class="footer-totals"><span id="footerCount">0</span> صنف · الإجمالي <b id="footerTotal">0.00</b> ر.س</div>
+  <button class="btn-primary" id="exportBtn" type="button"><span class="icon" aria-hidden="true">download</span>تصدير CSV</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
+<script>
+(function(){
+  "use strict";
+  var catalog = [];
+  var catalogMap = new Map();
+  var scanList = [];
+  var pendingRows = null;
+  var codeReader = null;
+  var scanning = false;
+  var lastCode = null, lastCodeAt = 0;
+  var audioCtx = null;
+
+  function safeGet(key){ try{ return localStorage.getItem(key); }catch(e){ return null; } }
+  function safeSet(key,val){ try{ localStorage.setItem(key,val); }catch(e){} }
+
+  function loadState(){
+    try{
+      var c = safeGet('shortage_catalog_v1');
+      if(c){ catalog = JSON.parse(c); catalogMap = new Map(catalog.map(function(x){return [x.barcode,x];})); }
+    }catch(e){ catalog=[]; catalogMap=new Map(); }
+    try{
+      var s = safeGet('shortage_scanlist_v1');
+      if(s){ scanList = JSON.parse(s); }
+    }catch(e){ scanList=[]; }
+  }
+  function saveCatalog(){ safeSet('shortage_catalog_v1', JSON.stringify(catalog)); }
+  function saveScanList(){ safeSet('shortage_scanlist_v1', JSON.stringify(scanList)); }
+
+  function el(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){return {'&':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c];}); }
+
+  function renderCatalogStatus(){
+    el('catalogStatusText').textContent = catalog.length
+      ? ('تم تحميل ' + catalog.length.toLocaleString('ar') + ' صنف')
+      : 'لا يوجد ملف أصناف محمّل';
+  }
+
+  function renderResult(last){
+    var area = el('resultArea');
+    if(!last){ area.innerHTML=''; return; }
+    var cls = last.found ? 'found' : 'notfound';
+    var icon = last.found ? 'check_circle' : 'error';
+    var tag = last.found ? 'تم العثور عليه' : 'غير موجود في القائمة';
+    area.innerHTML =
+      '<div class="result-card ' + cls + '">' +
+        '<div class="tag"><span class="icon" aria-hidden="true">' + icon + '</span>' + tag + '</div>' +
+        '<div class="result-name">' + esc(last.name) + '</div>' +
+        '<div class="result-price mono">' + (last.price||0).toFixed(2) + ' ر.س</div>' +
+        '<div class="muted" style="font-size:.78rem;margin-top:4px">باركود: <span class="mono">' + esc(last.barcode) + '</span> · الكمية الآن: ' + last.qty + '</div>' +
+      '</div>';
+  }
+
+  function computeTotals(){
+    var count=0, total=0;
+    scanList.forEach(function(it){ count+=it.qty; total += (it.price||0)*it.qty; });
+    return {count:count, total:total};
+  }
+
+  function renderList(){
+    var area = el('listArea');
+    var footer = el('footerBar');
+    if(scanList.length===0){
+      area.innerHTML =
+        '<div class="empty">' +
+          '<div class="icon" aria-hidden="true">barcode_scanner</div>' +
+          '<h2>لم تُضف أي أصناف بعد</h2>' +
+          '<ol>' +
+            '<li>استورد ملف الأصناف (مرة واحدة)</li>' +
+            '<li>شغّل الكاميرا ووجّهها على الباركود</li>' +
+            '<li>صدّر القائمة النهائية كملف CSV</li>' +
+          '</ol>' +
+        '</div>';
+      footer.hidden = true;
+      return;
+    }
+    var rows = scanList.map(function(it, idx){
+      return '<tr>' +
+        '<td class="mono">' + esc(it.barcode) + '</td>' +
+        '<td><input class="name-input" data-idx="'+idx+'" data-field="name" value="'+esc(it.name)+'" '+(it.found?'readonly':'')+'></td>' +
+        '<td class="num"><input class="price-input mono" data-idx="'+idx+'" data-field="price" type="number" step="0.01" min="0" value="'+(it.price||0)+'" '+(it.found?'readonly':'')+'></td>' +
+        '<td class="num"><input class="qty-input mono" data-idx="'+idx+'" data-field="qty" type="number" step="1" min="1" value="'+it.qty+'"></td>' +
+        '<td class="num mono">' + ((it.price||0)*it.qty).toFixed(2) + '</td>' +
+        '<td class="num"><button class="row-del" data-idx="'+idx+'" type="button" aria-label="حذف"><span class="icon" aria-hidden="true">delete</span></button></td>' +
+      '</tr>';
+    }).join('');
+    area.innerHTML =
+      '<div class="table-wrap"><table>' +
+      '<thead><tr><th>الباركود</th><th>الصنف</th><th class="num">السعر</th><th class="num">الكمية</th><th class="num">الإجمالي</th><th></th></tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+      '</table></div>';
+    var t = computeTotals();
+    el('footerCount').textContent = scanList.length.toLocaleString('ar');
+    el('footerTotal').textContent = t.total.toFixed(2);
+    footer.hidden = false;
+
+    area.querySelectorAll('input').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        var idx = parseInt(inp.getAttribute('data-idx'),10);
+        var field = inp.getAttribute('data-field');
+        var item = scanList[idx];
+        if(!item) return;
+        if(field==='qty'){ item.qty = Math.max(1, parseInt(inp.value,10)||1); }
+        else if(field==='price'){ item.price = Math.max(0, parseFloat(inp.value)||0); }
+        else if(field==='name'){ item.name = inp.value; }
+        saveScanList();
+        renderList();
+      });
+    });
+    area.querySelectorAll('.row-del').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var idx = parseInt(btn.getAttribute('data-idx'),10);
+        scanList.splice(idx,1);
+        saveScanList();
+        renderList();
+      });
+    });
+  }
+
+  function beep(){
+    try{
+      audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.value = 1300;
+      g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.14);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start();
+      o.stop(audioCtx.currentTime + 0.15);
+    }catch(e){}
+    if(navigator.vibrate){ try{ navigator.vibrate(80); }catch(e){} }
+  }
+
+  function lookupBarcode(raw, fromCamera){
+    var code = String(raw||'').trim();
+    if(!code) return;
+    if(fromCamera){
+      var now = Date.now();
+      if(code===lastCode && (now-lastCodeAt)<1800) return; // debounce repeated reads of same code
+      lastCode = code; lastCodeAt = now;
+      beep();
+    }
+    var match = catalogMap.get(code);
+    var existing = scanList.find(function(it){ return it.barcode===code; });
+    if(existing){
+      existing.qty += 1;
+      renderResult({found: existing.found, name: existing.name, price: existing.price, barcode: code, qty: existing.qty});
+    } else if(match){
+      var item = {barcode: code, name: match.name, price: match.price, qty: 1, found:true};
+      scanList.unshift(item);
+      renderResult(item);
+    } else {
+      var item2 = {barcode: code, name: '(غير موجود - أدخل الاسم والسعر)', price: 0, qty: 1, found:false};
+      scanList.unshift(item2);
+      renderResult(item2);
+    }
+    saveScanList();
+    renderList();
+  }
+
+  // ---- manual entry ----
+  el('manualInput').addEventListener('keydown', function(e){
+    if(e.key==='Enter'){
+      lookupBarcode(el('manualInput').value, false);
+      el('manualInput').value='';
+    }
+  });
+
+  // ---- live camera scanning ----
+  function setScannerUI(on){
+    el('scannerOff').hidden = on;
+    el('video').hidden = !on;
+    el('scannerFrame').hidden = !on;
+    el('scanLine').hidden = !on;
+    el('scannerStatus').hidden = !on;
+    el('stopScanBtn').hidden = !on;
+  }
+
+  function startScanning(){
+    if(scanning) return;
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      el('scannerStatus').hidden = false;
+      el('scannerStatus').textContent = 'هذا المتصفح لا يدعم الكاميرا الحية.';
+      return;
+    }
+    var hints = new Map();
+    var fmts = ZXing.BarcodeFormat;
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+      fmts.EAN_13, fmts.EAN_8, fmts.UPC_A, fmts.UPC_E, fmts.CODE_128, fmts.CODE_39, fmts.ITF, fmts.QR_CODE
+    ]);
+    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+    codeReader = new ZXing.BrowserMultiFormatReader(hints);
+    scanning = true;
+    setScannerUI(true);
+    var constraints = { video: { facingMode: { ideal: 'environment' }, width:{ideal:1280}, height:{ideal:720} } };
+    codeReader.decodeFromConstraints(constraints, 'video', function(result, err){
+      if(result){
+        lookupBarcode(result.getText(), true);
+      }
+      // NotFoundException fires continuously while no code is in view; ignore it.
+    }).catch(function(err){
+      scanning = false;
+      setScannerUI(false);
+      var msg = 'تعذر فتح الكاميرا.';
+      if(err && err.name==='NotAllowedError') msg = 'ما تم السماح بالكاميرا. فعّل صلاحية الكاميرا لهذه الصفحة من إعدادات المتصفح.';
+      else if(err && err.name==='NotFoundError') msg = 'ما تم العثور على كاميرا بالجهاز.';
+      el('importMsg').innerHTML = '';
+      var area = el('resultArea');
+      area.insertAdjacentHTML('afterbegin','<p class="msg err">'+esc(msg)+'</p>');
+    });
+  }
+
+  function stopScanning(){
+    scanning = false;
+    try{ codeReader && codeReader.reset(); }catch(e){}
+    setScannerUI(false);
+  }
+
+  el('startScanBtn').addEventListener('click', startScanning);
+  el('stopScanBtn').addEventListener('click', stopScanning);
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden && scanning) stopScanning();
+  });
+
+  // ---- clear list ----
+  var clearArmed = false, clearTimer=null;
+  el('clearListBtn').addEventListener('click', function(){
+    var b = el('clearListBtn');
+    if(!clearArmed){
+      clearArmed = true;
+      b.classList.add('btn-danger');
+      b.lastChild.textContent = 'اضغط للتأكيد';
+      clearTimer = setTimeout(function(){ clearArmed=false; b.classList.remove('btn-danger'); b.lastChild.textContent='مسح القائمة'; }, 3000);
+    } else {
+      clearTimeout(clearTimer);
+      clearArmed=false;
+      b.classList.remove('btn-danger');
+      b.lastChild.textContent='مسح القائمة';
+      scanList=[];
+      saveScanList();
+      renderList();
+      renderResult(null);
+    }
+  });
+
+  // ---- import ----
+  el('importBtn').addEventListener('click', function(){ el('fileInput').click(); });
+  el('fileInput').addEventListener('change', function(){
+    var file = el('fileInput').files[0];
+    el('fileInput').value='';
+    if(!file) return;
+    el('importMsg').innerHTML='';
+    var reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        var data = new Uint8Array(e.target.result);
+        var wb = XLSX.read(data, {type:'array'});
+        var sheet = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(sheet, {header:1, raw:false, defval:''});
+        rows = rows.filter(function(r){ return r && r.length && r.some(function(c){return String(c).trim()!=='';}); });
+        if(!rows.length){ showImportError('الملف فارغ.'); return; }
+        pendingRows = rows;
+        tryAutoMap(rows[0]);
+      }catch(err){
+        showImportError('تعذر قراءة الملف. تأكد أنه بصيغة Excel أو CSV صحيحة.');
+      }
+    };
+    reader.onerror = function(){ showImportError('تعذر قراءة الملف.'); };
+    reader.readAsArrayBuffer(file);
+  });
+
+  function showImportError(msg){
+    el('importMsg').innerHTML = '<p class="msg err">'+esc(msg)+'</p>';
+  }
+
+  function findCol(headers, keywords){
+    var norm = headers.map(function(h){ return String(h).trim().toLowerCase(); });
+    for(var i=0;i<norm.length;i++){
+      for(var k=0;k<keywords.length;k++){
+        if(norm[i].indexOf(keywords[k])>-1) return i;
+      }
+    }
+    return -1;
+  }
+
+  function tryAutoMap(headers){
+    var b = findCol(headers,['باركود','bar code','barcode','code']);
+    var n = findCol(headers,['اسم','الصنف','name','product','وصف']);
+    var p = findCol(headers,['سعر','price','تكلفة']);
+    if(b>-1 && n>-1 && p>-1){
+      finalizeImport(b,n,p);
+    } else {
+      showMappingUI(headers,b,n,p);
+    }
+  }
+
+  function showMappingUI(headers,b,n,p){
+    var panel = el('mappingPanel');
+    panel.hidden = false;
+    function opts(sel){
+      return headers.map(function(h,i){ return '<option value="'+i+'" '+(i===sel?'selected':'')+'>'+(i+1)+'. '+esc(String(h).trim()||'(بدون عنوان)')+'</option>'; }).join('');
+    }
+    panel.innerHTML =
+      '<p class="msg">لم أتعرف تلقائيًا على كل الأعمدة، حدد الأعمدة الصحيحة:</p>' +
+      '<div class="mapping-grid">' +
+        '<div class="mapping-field"><label>عمود الباركود</label><select id="mapBarcode">'+opts(b>-1?b:0)+'</select></div>' +
+        '<div class="mapping-field"><label>عمود اسم الصنف</label><select id="mapName">'+opts(n>-1?n:0)+'</select></div>' +
+        '<div class="mapping-field"><label>عمود السعر</label><select id="mapPrice">'+opts(p>-1?p:0)+'</select></div>' +
+      '</div>' +
+      '<div class="mapping-preview" id="mapPreview"></div>' +
+      '<div class="row" style="margin-top:10px"><button class="btn-primary" id="mapConfirm" type="button">تأكيد واستيراد</button></div>';
+    function updatePreview(){
+      var bi=+el('mapBarcode').value, ni=+el('mapName').value, pi=+el('mapPrice').value;
+      var sample = pendingRows[1]||[];
+      el('mapPreview').textContent = 'مثال من أول صف: باركود «'+(sample[bi]||'')+'» — اسم «'+(sample[ni]||'')+'» — سعر «'+(sample[pi]||'')+'»';
+    }
+    ['mapBarcode','mapName','mapPrice'].forEach(function(id){ el(id).addEventListener('change', updatePreview); });
+    updatePreview();
+    el('mapConfirm').addEventListener('click', function(){
+      finalizeImport(+el('mapBarcode').value, +el('mapName').value, +el('mapPrice').value);
+    });
+  }
+
+  function finalizeImport(bIdx,nIdx,pIdx){
+    var rows = pendingRows;
+    var newCatalog = [];
+    for(var i=1;i<rows.length;i++){
+      var row = rows[i];
+      if(!row) continue;
+      var barcode = String(row[bIdx]==null?'':row[bIdx]).trim();
+      if(!barcode) continue;
+      var name = String(row[nIdx]==null?'':row[nIdx]).trim() || '(بدون اسم)';
+      var priceRaw = row[pIdx];
+      var price = parseFloat(String(priceRaw==null?'':priceRaw).replace(/[^0-9.\-]/g,''));
+      if(isNaN(price)) price = 0;
+      newCatalog.push({barcode:barcode, name:name, price:price});
+    }
+    catalog = newCatalog;
+    catalogMap = new Map(catalog.map(function(x){ return [x.barcode,x]; }));
+    saveCatalog();
+    pendingRows = null;
+    el('mappingPanel').hidden = true;
+    el('mappingPanel').innerHTML = '';
+    el('importMsg').innerHTML = '<p class="msg">تم تحميل '+catalog.length.toLocaleString('ar')+' صنف بنجاح.</p>';
+    renderCatalogStatus();
+  }
+
+  // ---- export ----
+  function buildCSV(){
+    var rows = [['الباركود','الصنف','السعر','الكمية','الإجمالي']];
+    var total = 0;
+    scanList.forEach(function(it){
+      var lineTotal = (it.price||0)*it.qty;
+      total += lineTotal;
+      rows.push([it.barcode, it.name, (it.price||0).toFixed(2), it.qty, lineTotal.toFixed(2)]);
+    });
+    rows.push(['','','','الإجمالي', total.toFixed(2)]);
+    var csv = rows.map(function(r){
+      return r.map(function(cell){
+        var s = String(cell==null?'':cell);
+        return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+      }).join(',');
+    }).join('\r\n');
+    return '﻿' + csv;
+  }
+
+  el('exportBtn').addEventListener('click', function(){
+    if(scanList.length===0) return;
+    var csv = buildCSV();
+    var filename = 'نواقص_' + new Date().toISOString().slice(0,10) + '.csv';
+    var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+  });
+
+  // ---- init ----
+  loadState();
+  renderCatalogStatus();
+  renderList();
+})();
+</script>
+</body>
+</html>
