@@ -6,7 +6,7 @@ from decimal import Decimal
 import asyncpg
 from fastapi import HTTPException
 
-from ...core.db import fetch, fetchrow
+from ...core.db import execute, fetch, fetchrow
 
 
 def _num(v) -> float:
@@ -226,3 +226,29 @@ async def balance_sheet(company_id: str, as_of: str | None) -> dict:
         "totalEquity": total_equity, "currentEarnings": net_income_to_date,
         "balanced": abs(total_assets - (total_liabilities + total_equity)) < 0.01,
     }
+
+
+# ══════════════════ إقفال الفترات المحاسبية ══════════════════
+# التخزين في company_settings (نفس مخزن print.*/sys.*/bg.* الموجود من قبل) —
+# مفتاح واحد تراكمي (accounting.closed_until): كل تاريخ <= القيمة ده مقفول،
+# بدل جدول "فترات" منفصل لكل شهر — أبسط ويغطي نفس الغرض (core/accounting.py
+# بيرفض أي قيد جديد أو حذف/إلغاء قيد قديم بتاريخ داخل النطاق المقفول).
+
+async def get_period_lock(company_id: str) -> dict:
+    row = await fetchrow(
+        "SELECT value FROM company_settings WHERE company_id=$1 AND key='accounting.closed_until'",
+        company_id)
+    return {"closedUntil": (row["value"] or None) if row else None}
+
+
+async def set_period_lock(company_id: str, closed_until: str | None) -> dict:
+    if closed_until:
+        await execute(
+            """INSERT INTO company_settings (company_id, key, value) VALUES ($1,'accounting.closed_until',$2)
+               ON CONFLICT (company_id, key) DO UPDATE SET value=$2""",
+            company_id, closed_until)
+    else:
+        await execute(
+            "DELETE FROM company_settings WHERE company_id=$1 AND key='accounting.closed_until'",
+            company_id)
+    return {"closedUntil": closed_until}

@@ -4,6 +4,7 @@
 #
 # ⚠ تنبيه asyncpg مهم: أعمدة NUMERIC بتطلب Decimal مش float —
 # لو بعتّ float بيرمي "a Decimal is expected". عشان كده كل التحويلات بتعدّي على _dec().
+from datetime import date as _date
 from decimal import Decimal, ROUND_HALF_UP
 
 import asyncpg
@@ -34,6 +35,23 @@ def dec(value) -> Decimal:
     if value is None:
         return Decimal("0.00")
     return Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+async def closed_until(conn: asyncpg.Connection, company_id: str) -> str | None:
+    """تاريخ آخر فترة محاسبية مُقفلة (شامل) — None يعني مفيش إقفال، كل التواريخ مفتوحة.
+    مخزّن في company_settings (نفس مخزن print.*/sys.*/bg.* الموجود، مفتاح accounting.closed_until)."""
+    row = await conn.fetchrow(
+        "SELECT value FROM company_settings WHERE company_id=$1 AND key='accounting.closed_until'",
+        company_id)
+    return (row["value"] or None) if row else None
+
+
+def _assert_period_open(closed: str | None, entry_date: str, context: str) -> None:
+    if closed and entry_date <= closed:
+        raise RuntimeError(
+            f"الفترة المحاسبية مقفلة حتى {closed} — لا يمكن {context} بتاريخ {entry_date}. "
+            "لإجراء تصحيح، افتح الفترة مؤقتاً من الحسابات ← الإقفال المحاسبي (صلاحية مدير النظام)."
+        )
 
 
 async def get_account_id(conn: asyncpg.Connection, company_id: str, code: str) -> str:
@@ -76,6 +94,9 @@ async def post_journal_entry(
     if total_debit == 0 and total_credit == 0:
         return None  # لا داعي لقيد فارغ
 
+    eff_date = str(entry_date) if entry_date else _date.today().isoformat()
+    _assert_period_open(await closed_until(conn, company_id), eff_date, "إضافة قيد")
+
     entry = await conn.fetchrow(
         """INSERT INTO journal_entries
              (company_id, branch_id, entry_date, source_type, source_id, description, created_by)
@@ -101,7 +122,16 @@ async def reverse_journal_entries(
     conn: asyncpg.Connection, company_id: str, source_type: str, source_id: str
 ) -> None:
     """يحذف أي قيود سابقة مرتبطة بنفس المصدر — نمط \"استبدال\" متوافق مع بقية النظام.
-    ⚠ يعني السجل المحاسبي قابل للتعديل، مش immutable ledger بالمعنى الصارم."""
+    ⚠ يعني السجل المحاسبي قابل للتعديل، مش immutable ledger بالمعنى الصارم.
+    لكن ممنوع يمس قيداً بتاريخ داخل فترة مقفولة — نفس حماية post_journal_entry."""
+    rows = await conn.fetch(
+        "SELECT entry_date FROM journal_entries WHERE company_id = $1 AND source_type = $2 AND source_id = $3",
+        company_id, source_type, str(source_id),
+    )
+    if rows:
+        closed = await closed_until(conn, company_id)
+        for r in rows:
+            _assert_period_open(closed, str(r["entry_date"]), "إلغاء/تعديل قيد")
     await conn.execute(
         "DELETE FROM journal_entries WHERE company_id = $1 AND source_type = $2 AND source_id = $3",
         company_id, source_type, str(source_id),

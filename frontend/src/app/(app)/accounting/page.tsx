@@ -10,7 +10,7 @@ import {
   Account, ACCOUNT_TYPE_LABELS, BalanceSheet, IncomeStatement, JournalEntry, TrialBalance, money,
 } from "@/modules/accounting/types";
 
-type Tab = "accounts" | "journal" | "trial-balance" | "income-statement" | "balance-sheet";
+type Tab = "accounts" | "journal" | "trial-balance" | "income-statement" | "balance-sheet" | "period-lock";
 
 const dateFmt = (s: string) =>
   new Date(s).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { year: "numeric", month: "2-digit", day: "2-digit" });
@@ -36,6 +36,12 @@ export default function AccountingPage() {
   const [accountModal, setAccountModal] = useState(false);
   const [accForm, setAccForm] = useState({ code: "", name: "", type: "expense" as Account["type"] });
   const [accErr, setAccErr] = useState("");
+
+  // ── إقفال الفترات المحاسبية ──
+  const [closedUntil, setClosedUntil] = useState<string | null>(null);
+  const [lockDate, setLockDate] = useState(today);
+  const [lockErr, setLockErr] = useState("");
+  const [lockBusy, setLockBusy] = useState(false);
 
   async function loadAll() {
     setLoading(true);
@@ -72,6 +78,38 @@ export default function AccountingPage() {
     if (t === "journal" && journal.length === 0) loadJournal();
     if (t === "income-statement" && !incomeStatement) loadIncomeStatement();
     if (t === "balance-sheet" && !balanceSheet) loadBalanceSheet();
+    if (t === "period-lock") loadPeriodLock();
+  }
+
+  async function loadPeriodLock() {
+    try {
+      const r = await api<{ closedUntil: string | null }>("/accounting/period-lock");
+      setClosedUntil(r.closedUntil);
+    } catch (e: any) { setLockErr(e.message); }
+  }
+
+  async function closePeriod() {
+    if (!await appConfirm(`إقفال كل القيود حتى ${lockDate}؟ لن يمكن تعديلها إلا بإعادة فتح الفترة مؤقتاً.`)) return;
+    setLockErr(""); setLockBusy(true);
+    try {
+      const r = await api<{ closedUntil: string | null }>("/accounting/period-lock", {
+        method: "PUT", body: JSON.stringify({ closedUntil: lockDate }),
+      });
+      setClosedUntil(r.closedUntil);
+    } catch (e: any) { setLockErr(e.message); }
+    finally { setLockBusy(false); }
+  }
+
+  async function reopenPeriod() {
+    if (!await appConfirm("رفع الإقفال المحاسبي بالكامل؟ كل التواريخ هتصبح قابلة للتعديل من جديد.")) return;
+    setLockErr(""); setLockBusy(true);
+    try {
+      const r = await api<{ closedUntil: string | null }>("/accounting/period-lock", {
+        method: "PUT", body: JSON.stringify({ closedUntil: null }),
+      });
+      setClosedUntil(r.closedUntil);
+    } catch (e: any) { setLockErr(e.message); }
+    finally { setLockBusy(false); }
   }
 
   async function createAccount() {
@@ -186,6 +224,7 @@ export default function AccountingPage() {
             { key: "balance-sheet", label: "الميزانية العمومية" },
             { key: "journal", label: "سجل القيود" },
             { key: "accounts", label: "شجرة الحسابات" },
+            ...(isAdmin ? [{ key: "period-lock", label: "الإقفال المحاسبي" }] : []),
           ]} />
         </div>
 
@@ -370,6 +409,31 @@ export default function AccountingPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {tab === "period-lock" && isAdmin && (
+            <div className="max-w-md space-y-4">
+              <div className={`rounded-lg px-3 py-2.5 text-[12.5px] font-bold ${
+                closedUntil ? "bg-emerald-bg text-emerald" : "bg-brass-soft text-brass"}`}>
+                {closedUntil
+                  ? `الفترة مقفولة حتى ${closedUntil} — أي قيد بتاريخ أقدم أو يساويه ممنوع إضافته أو تعديله.`
+                  : "لا توجد فترة مقفولة حالياً — كل التواريخ قابلة للتعديل."}
+              </div>
+              <p className="text-[12px] text-text-dim">
+                إقفال فترة يمنع أي موديول (فواتير، مشتريات، خزينة، رواتب...) من إضافة أو حذف قيد بتاريخ
+                داخل الفترة المقفولة. لتصحيح خطأ قديم: رفع الإقفال مؤقتاً، نفّذ التصحيح، ثم أقفل تاني.
+              </p>
+              <ErrorNote msg={lockErr} />
+              <div className="flex items-end gap-2">
+                <Field label="إقفال حتى تاريخ">
+                  <Input type="date" className="tnum" value={lockDate} onChange={(e) => setLockDate(e.target.value)} />
+                </Field>
+                <Button disabled={lockBusy} onClick={closePeriod}>إقفال</Button>
+              </div>
+              {closedUntil && (
+                <Button variant="danger" disabled={lockBusy} onClick={reopenPeriod}>رفع الإقفال بالكامل</Button>
+              )}
             </div>
           )}
         </div>

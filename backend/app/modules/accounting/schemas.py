@@ -100,3 +100,11 @@ class BalanceSheetOut(BaseModel):
     totalEquity: float
     currentEarnings: float
     balanced: bool
+
+
+class PeriodLockOut(BaseModel):
+    closedUntil: str | None = None   # None = لا توجد فترة مقفولة
+
+
+class PeriodLockIn(BaseModel):
+    closedUntil: str | None = None

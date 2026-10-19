@@ -1,11 +1,12 @@
 # modules/accounting/api.py — طبقة الـ HTTP: مسارات + صلاحيات فقط
 from fastapi import APIRouter, Depends, Query
 
+from ...core.audit import log_action
 from ...core.deps import CurrentUser, require_permission, require_role
 from . import service
 from .schemas import (
     AccountCreate, AccountOut, BalanceSheetOut, IncomeStatementOut,
-    JournalEntryOut, TrialBalanceOut,
+    JournalEntryOut, PeriodLockIn, PeriodLockOut, TrialBalanceOut,
 )
 
 router = APIRouter()
@@ -57,3 +58,20 @@ async def income_statement(date_from: str | None = Query(default=None, alias="fr
 async def balance_sheet(asOf: str | None = Query(default=None),
                         user: CurrentUser = Depends(require_permission(_VIEW))):
     return await service.balance_sheet(user.company_id, asOf)
+
+
+# ══════════════════ إقفال الفترات المحاسبية — مقصور على مدير النظام ══════════════════
+
+@router.get("/period-lock", response_model=PeriodLockOut)
+async def get_period_lock(user: CurrentUser = Depends(require_permission(_VIEW))):
+    return await service.get_period_lock(user.company_id)
+
+
+@router.put("/period-lock", response_model=PeriodLockOut)
+async def set_period_lock(body: PeriodLockIn, user: CurrentUser = Depends(require_role("admin"))):
+    """إقفال فترة (تاريخ) أو رفع الإقفال تماماً (closedUntil=null) — مقصور على مدير النظام
+    لأن ده بالضبط \"الإجراء المعتمد\" لتصحيح قيد في فترة مقفولة: تفتح، تصحّح، تقفل تاني."""
+    row = await service.set_period_lock(user.company_id, body.closedUntil)
+    details = f"إقفال حتى {body.closedUntil}" if body.closedUntil else "رفع الإقفال المحاسبي بالكامل"
+    await log_action(user, "edit", "accounting_period_lock", details=details)
+    return row
