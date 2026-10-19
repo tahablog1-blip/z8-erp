@@ -318,12 +318,16 @@ function a4CopyHTML(inv: InvoiceDetail, CO: ReturnType<typeof getCompany>, PR: P
   return `
 <div style="margin:20px${isLast ? "" : ";page-break-after:always"}">
   <div class="head">
-    <img src="${location.origin}${CO.logoUrl || "/logo-navy.png"}" alt="" style="width:44px;height:44px;object-fit:contain;display:block;margin:0 auto 4px" />
-    <div>
-      <h1>${esc(CO.name)}</h1>
-      <div class="sub">الرقم الضريبي: <span class="tnum">${esc(CO.vat)}</span></div>
-      <div class="sub">السجل التجاري: <span class="tnum">${esc(CO.cr)}</span></div>
-      <div class="sub">${esc(CO.address)}${CO.phone ? ` — هاتف: <span class="tnum">${esc(CO.phone)}</span>` : ""}</div>
+    <div class="brand">
+      <div class="logo-box">
+        <img src="${location.origin}${CO.logoUrl || "/logo-navy.png"}" alt="" />
+      </div>
+      <div class="brand-text">
+        <h1>${esc(CO.name)}</h1>
+        <div class="sub">الرقم الضريبي <span class="tnum">${esc(CO.vat)}</span></div>
+        <div class="sub">السجل التجاري <span class="tnum">${esc(CO.cr)}</span></div>
+        <div class="sub muted">${esc(CO.address)}${CO.phone ? ` · هاتف <span class="tnum">${esc(CO.phone)}</span>` : ""}</div>
+      </div>
     </div>
     <div class="badge">${title}</div>
   </div>
@@ -425,10 +429,22 @@ function a4HTML(inv: InvoiceDetail): string {
   body { font-family:"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif; color:#111; font-size:12px; }
   .tnum { font-variant-numeric:tabular-nums; direction:ltr; unicode-bidi:embed; }
   .c { text-align:center; } .r { text-align:right; } .b { font-weight:700; }
-  .head { display:flex; justify-content:space-between; border-bottom:3px solid #0C5E66; padding-bottom:10px; }
-  .head h1 { font-size:19px; color:#0C5E66; }
-  .head .sub { font-size:10.5px; color:#445; margin-top:2px; }
-  .badge { border:2px solid #0C5E66; color:#0C5E66; border-radius:8px; padding:6px 14px; font-size:14px; font-weight:800; align-self:center; }
+  .head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; border-bottom:3px solid #0C5E66; padding-bottom:12px; }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .logo-box {
+    flex:0 0 58px; width:58px; height:58px; border-radius:10px;
+    background:#eef3f3; border:1px solid #d7e2e2;
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+  }
+  .logo-box img { width:100%; height:100%; object-fit:contain; padding:6px; }
+  .head h1 { font-size:18px; color:#0C5E66; font-weight:800; line-height:1.3; }
+  .head .sub { font-size:11px; color:#334; font-weight:600; margin-top:3px; line-height:1.5; }
+  .head .sub.muted { color:#667; font-weight:500; }
+  .badge {
+    flex:0 0 auto; border:1.5px solid #0C5E66; color:#0C5E66; background:#fff;
+    border-radius:8px; padding:7px 14px; font-size:12.5px; font-weight:800;
+    white-space:nowrap; margin-top:2px;
+  }
   .meta { display:grid; grid-template-columns:1fr 1fr; gap:4px 24px; margin:10px 0; font-size:11.5px; }
   .meta .row { display:flex; justify-content:space-between; border-bottom:1px dotted #ccd; padding:3px 0; }
   table { width:100%; border-collapse:collapse; margin:8px 0; }
