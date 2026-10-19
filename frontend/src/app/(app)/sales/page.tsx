@@ -430,6 +430,19 @@ export default function SalesPage() {
       .then(setProducts).catch(() => {});
   }, [activePriceListId]);
 
+  // عقد/اتفاقية تسعير: نسبة خصم ثابتة سارية اليوم — زر اختياري يملأ حقل الخصم
+  // بالمبلغ المحسوب من إجمالي السلة الحالي؛ الحد الفعلي المسموح يفرضه الباك اند
+  // كالعادة حسب دور الكاشير، فمجرد تعبئة لا تجاوز لأي سقف
+  const activeContract = useMemo(() => {
+    if (!customerId || !allCustomers) return null;
+    const c = allCustomers.find((x) => x.id === customerId);
+    if (!c || c.contract_discount_pct == null) return null;
+    const today = new Date().toISOString().slice(0, 10);
+    if (c.contract_valid_from && today < c.contract_valid_from) return null;
+    if (c.contract_valid_until && today > c.contract_valid_until) return null;
+    return c;
+  }, [customerId, allCustomers]);
+
   const totalInc = useMemo(() => cart.reduce((s, l) => s + l.unitPriceVat * l.qty, 0), [cart]);
   const paidSum = useMemo(() => payments.reduce((s, p) => s + (Number(p.amount) || 0), 0), [payments]);
   const discountAmount = Math.max(0, Number(discountInput) || 0);
@@ -1210,6 +1223,17 @@ export default function SalesPage() {
                     <Input placeholder="سبب الخصم (اختياري)"
                            value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} />
                   </div>
+                  {activeContract && (
+                    <button type="button"
+                      className="mt-2 w-full rounded-lg bg-petrol/10 px-3 py-1.5 text-[11.5px] font-bold text-petrol hover:bg-petrol/20"
+                      onClick={() => {
+                        const amt = +(totalInc * (activeContract.contract_discount_pct! / 100)).toFixed(2);
+                        setDiscountInput(String(amt));
+                        if (!discountReason.trim()) setDiscountReason("اتفاقية عميل");
+                      }}>
+                      تطبيق خصم اتفاقية العميل ({activeContract.contract_discount_pct}%)
+                    </button>
+                  )}
                 </details>
 
                 <Field label="العميل" hint={carId ? "من طابور الفوترة" : "فارغ = بيع نقدي"}>

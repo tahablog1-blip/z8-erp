@@ -24,7 +24,7 @@ def _customer_out(r: dict) -> dict:
     r["id"] = str(r["id"])
     if r.get("price_list_id") is not None:
         r["price_list_id"] = str(r["price_list_id"])
-    for k in ("balance", "credit_limit"):
+    for k in ("balance", "credit_limit", "contract_discount_pct"):
         if isinstance(r.get(k), Decimal):
             r[k] = float(r[k])
     return r
@@ -36,6 +36,8 @@ _COL_MAP = {
     "buildingNo": "building_no", "street": "street", "district": "district",
     "city": "city", "postalCode": "postal_code", "additionalNo": "additional_no",
     "creditLimit": "credit_limit", "priceListId": "price_list_id",
+    "contractDiscountPct": "contract_discount_pct", "contractValidFrom": "contract_valid_from",
+    "contractValidUntil": "contract_valid_until", "contractNotes": "contract_notes",
 }
 
 
@@ -130,13 +132,16 @@ async def create_customer(company_id: str, d: dict) -> dict:
         """INSERT INTO customers
              (company_id, name, customer_type, phone, email, vat_number, cr_number, address,
               building_no, street, district, city, postal_code, additional_no, credit_limit,
-              price_list_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+              price_list_id, contract_discount_pct, contract_valid_from, contract_valid_until,
+              contract_notes)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
            RETURNING *, 0::numeric(12,2) AS balance, 0::int AS vehicle_count""",
         company_id, d["name"], d.get("customerType", "individual"), d.get("phone"),
         d.get("email") or None, d.get("vatNumber"), d.get("crNumber"), d.get("address"),
         d.get("buildingNo"), d.get("street"), d.get("district"), d.get("city"),
         d.get("postalCode"), d.get("additionalNo"), d.get("creditLimit"), d.get("priceListId"),
+        d.get("contractDiscountPct"), d.get("contractValidFrom"), d.get("contractValidUntil"),
+        d.get("contractNotes"),
     )
     return _customer_out(row)
 

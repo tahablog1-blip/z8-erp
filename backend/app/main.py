@@ -731,6 +731,11 @@ async def lifespan(app: FastAPI):
              created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
            )""",
         "CREATE INDEX IF NOT EXISTS idx_qty_discount_rules_product ON quantity_discount_rules (product_id)",
+        # ══ عقود/اتفاقيات تسعير للعملاء الكبار — فاضية = عميل عادي بلا اتفاقية (بلا أي تغيير) ══
+        "ALTER TABLE customers ADD COLUMN IF NOT EXISTS contract_discount_pct NUMERIC(5,2)",
+        "ALTER TABLE customers ADD COLUMN IF NOT EXISTS contract_valid_from DATE",
+        "ALTER TABLE customers ADD COLUMN IF NOT EXISTS contract_valid_until DATE",
+        "ALTER TABLE customers ADD COLUMN IF NOT EXISTS contract_notes TEXT",
     ):
         try:
             await execute(stmt)

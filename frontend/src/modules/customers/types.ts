@@ -16,6 +16,10 @@ export type Customer = {
   additional_no: string | null;
   credit_limit: number | null;
   price_list_id: string | null;
+  contract_discount_pct: number | null;
+  contract_valid_from: string | null;
+  contract_valid_until: string | null;
+  contract_notes: string | null;
   balance: number;
   vehicle_count: number;
   created_at?: string | null;

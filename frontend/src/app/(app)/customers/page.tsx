@@ -17,6 +17,7 @@ const EMPTY_CUSTOMER = {
   vatNumber: "", crNumber: "", address: "",
   buildingNo: "", street: "", district: "", city: "", postalCode: "", additionalNo: "",
   creditLimit: "", priceListId: "",
+  contractDiscountPct: "", contractValidFrom: "", contractValidUntil: "", contractNotes: "",
 };
 
 const EMPTY_VEHICLE = {
@@ -82,6 +83,9 @@ export default function CustomersPage() {
       city: c.city || "", postalCode: c.postal_code || "", additionalNo: c.additional_no || "",
       creditLimit: c.credit_limit != null ? String(c.credit_limit) : "",
       priceListId: c.price_list_id || "",
+      contractDiscountPct: c.contract_discount_pct != null ? String(c.contract_discount_pct) : "",
+      contractValidFrom: c.contract_valid_from || "", contractValidUntil: c.contract_valid_until || "",
+      contractNotes: c.contract_notes || "",
     });
     setErr(""); setModal({ mode: "edit", id: c.id });
   }
@@ -90,7 +94,11 @@ export default function CustomersPage() {
     setErr(""); setBusy(true);
     const body = { ...form, email: form.email.trim() || null,
                    creditLimit: form.creditLimit.trim() === "" ? null : Number(form.creditLimit),
-                   priceListId: form.priceListId || null };
+                   priceListId: form.priceListId || null,
+                   contractDiscountPct: form.contractDiscountPct.trim() === "" ? null : Number(form.contractDiscountPct),
+                   contractValidFrom: form.contractValidFrom || null,
+                   contractValidUntil: form.contractValidUntil || null,
+                   contractNotes: form.contractNotes.trim() || null };
     try {
       if (modal?.mode === "create") {
         await api("/customers", { method: "POST", body: JSON.stringify(body) });
@@ -178,6 +186,17 @@ export default function CustomersPage() {
               {priceLists.find((pl) => pl.id === c.price_list_id)?.name || "قائمة أسعار خاصة"}
             </div>
           )}
+          {c.contract_discount_pct != null && (() => {
+            const today = new Date().toISOString().slice(0, 10);
+            const expired = c.contract_valid_until && today > c.contract_valid_until;
+            const notStarted = c.contract_valid_from && today < c.contract_valid_from;
+            const label = expired ? "عقد منتهٍ" : notStarted ? "عقد لم يبدأ" : "عقد نشط";
+            return (
+              <div className={`mt-0.5 text-[10.5px] font-bold ${expired || notStarted ? "text-text-dim" : "text-emerald"}`}>
+                {label} — خصم {c.contract_discount_pct}%
+              </div>
+            );
+          })()}
         </div>
       ),
     },
@@ -331,6 +350,29 @@ export default function CustomersPage() {
                   <option key={pl.id} value={pl.id}>{pl.name}</option>
                 ))}
               </Select>
+            </Field>
+          </div>
+
+          <div className="rounded-lg border border-line bg-ink-3 p-3">
+            <p className="mb-2 text-[12px] font-bold text-text-dim">عقد/اتفاقية تسعير (اختياري — للعملاء الكبار والشركات)</p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Field label="نسبة خصم العقد (%)" hint="فاضي = بلا اتفاقية">
+                <Input type="number" min={0} max={100} step={0.01} className="tnum" value={form.contractDiscountPct}
+                       placeholder="مثال: 10"
+                       onChange={(e) => setForm({ ...form, contractDiscountPct: e.target.value })} />
+              </Field>
+              <Field label="سارية من" hint="فاضي = بدون بداية محددة">
+                <Input type="date" value={form.contractValidFrom}
+                       onChange={(e) => setForm({ ...form, contractValidFrom: e.target.value })} />
+              </Field>
+              <Field label="سارية حتى" hint="فاضي = بلا تاريخ انتهاء">
+                <Input type="date" value={form.contractValidUntil}
+                       onChange={(e) => setForm({ ...form, contractValidUntil: e.target.value })} />
+              </Field>
+            </div>
+            <Field label="ملاحظات العقد" hint="اختياري">
+              <Textarea rows={2} value={form.contractNotes}
+                        onChange={(e) => setForm({ ...form, contractNotes: e.target.value })} />
             </Field>
           </div>
 

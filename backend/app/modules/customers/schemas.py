@@ -1,5 +1,5 @@
 # modules/customers/schemas.py — عقود الإدخال والإخراج (Pydantic)
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
@@ -25,6 +25,11 @@ class CustomerCreate(BaseModel):
     additionalNo: str | None = None
     creditLimit: float | None = None   # None = بلا حد ائتمان (الافتراضي — بلا تغيير في السلوك الحالي)
     priceListId: str | None = None     # None = السعر العادي (الافتراضي — بلا تغيير في السلوك الحالي)
+    # عقد/اتفاقية تسعير (عملاء كبار/شركات) — فاضي = عميل عادي بلا اتفاقية
+    contractDiscountPct: float | None = None
+    contractValidFrom: date | None = None
+    contractValidUntil: date | None = None
+    contractNotes: str | None = None
 
 
 class CustomerUpdate(BaseModel):
@@ -43,6 +48,10 @@ class CustomerUpdate(BaseModel):
     additionalNo: str | None = None
     creditLimit: float | None = None
     priceListId: str | None = None
+    contractDiscountPct: float | None = None
+    contractValidFrom: date | None = None
+    contractValidUntil: date | None = None
+    contractNotes: str | None = None
 
 
 class CustomerOut(BaseModel):
@@ -62,6 +71,10 @@ class CustomerOut(BaseModel):
     additional_no: str | None = None
     credit_limit: float | None = None
     price_list_id: str | None = None
+    contract_discount_pct: float | None = None
+    contract_valid_from: date | None = None
+    contract_valid_until: date | None = None
+    contract_notes: str | None = None
     balance: float = 0
     vehicle_count: int = 0
     created_at: datetime | None = None
