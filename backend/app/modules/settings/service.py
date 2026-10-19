@@ -16,7 +16,7 @@ from ...core.permissions import ALL_KEYS
 _COMPANY_COLS = """name, name_en, trade_name, vat_number, cr_number, unified_number,
                    establishment_number, phone, mobile, email, website, address,
                    building_no, street, district, city, postal_code, additional_no,
-                   country, currency, default_lang,
+                   country, currency, default_lang, logo_version,
                    (logo_base64 IS NOT NULL AND logo_base64 <> '') AS has_logo"""
 
 
@@ -24,7 +24,12 @@ _COMPANY_COLS = """name, name_en, trade_name, vat_number, cr_number, unified_num
 
 def _with_logo_url(row: dict, company_id: str) -> dict:
     row = dict(row)
-    row["logo_url"] = f"/api/settings/company/logo/{company_id}" if row.get("has_logo") else None
+    # رقم الإصدار جزء من الرابط نفسه (cache-buster حقيقي): الرابط يتغيّر فقط لما الشعار
+    # يتغيّر فعلاً، فنقدر نخلي المتصفح يكاش النتيجة لفترة طويلة من غير ما يعرض نسخة قديمة
+    row["logo_url"] = (
+        f"/api/settings/company/logo/{company_id}?v={row.get('logo_version', 0)}"
+        if row.get("has_logo") else None
+    )
     return row
 
 
@@ -61,8 +66,15 @@ async def set_logo(company_id: str, logo_b64: str | None) -> dict:
     clean = (logo_b64 or "").strip() or None
     if clean and len(clean) > 2_000_000:  # ~1.5MB بعد فك التشفير — يكفي لشعار فاتورة
         raise HTTPException(400, "حجم الشعار كبير جداً — استخدم صورة أصغر (أقل من 1.5 ميجابايت)")
-    await execute("UPDATE companies SET logo_base64=$1 WHERE id=$2", clean, company_id)
-    return {"has_logo": clean is not None}
+    # logo_version بيتزايد مع كل تغيير (رفع أو إزالة) — هو الـ cache-buster الحقيقي في رابط الشعار
+    row = await fetchrow(
+        "UPDATE companies SET logo_base64=$1, logo_version = logo_version + 1 WHERE id=$2 RETURNING logo_version",
+        clean, company_id)
+    version = row["logo_version"] if row else 0
+    return {
+        "has_logo": clean is not None,
+        "logo_url": f"/api/settings/company/logo/{company_id}?v={version}" if clean is not None else None,
+    }
 
 
 async def get_logo_bytes(company_id: str) -> dict | None:

@@ -221,6 +221,10 @@ async def lifespan(app: FastAPI):
         # ════════ الترقيات الأصلية ════════
         "ALTER TABLE cars ADD COLUMN IF NOT EXISTS checklist jsonb NOT NULL DEFAULT '[]'::jsonb",
         "ALTER TABLE companies ADD COLUMN IF NOT EXISTS phone text",
+        # عدّاد يتزايد مع كل تغيير للشعار — يُستخدم كـ cache-buster حقيقي في رابط الشعار
+        # (قبل كده الرابط كان ثابت دايمًا، فالمتصفح يفضّل يعرض نسخة قديمة مخزّنة ساعة كاملة
+        # من الكاش بعد أي تغيير — "شعار عشوائي قديم" اللي بلّغ عنه المالك)
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS logo_version integer NOT NULL DEFAULT 0",
         "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_service boolean NOT NULL DEFAULT FALSE",
         "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_oil boolean NOT NULL DEFAULT FALSE",
         "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_oil_filter boolean NOT NULL DEFAULT FALSE",

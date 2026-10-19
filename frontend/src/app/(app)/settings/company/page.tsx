@@ -27,7 +27,7 @@ const EMPTY: Company = {
 };
 
 export default function CompanySettingsPage() {
-  const { hasPerm, user } = useAuth();
+  const { hasPerm } = useAuth();
   const canCompany = hasPerm("settings.company");
 
   const [form, setForm] = useState<Company>(EMPTY);
@@ -39,7 +39,6 @@ export default function CompanySettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [logoBusy, setLogoBusy] = useState(false);
   const [logoErr, setLogoErr] = useState("");
-  const [logoVer, setLogoVer] = useState(0);
 
   // ── 📲 إعداد واتساب (UltraMsg) ──
   const [waInstance, setWaInstance] = useState("");
@@ -107,10 +106,10 @@ export default function CompanySettingsPage() {
         r.onerror = reject;
         r.readAsDataURL(file);
       });
-      await api("/settings/company/logo", { method: "PUT", body: JSON.stringify({ logoBase64: b64 }) });
-      setForm((f) => ({ ...f, has_logo: true }));
-      setLogoVer((v) => v + 1);
-      if (user?.companyId) cacheCompany({ logoUrl: `/api/settings/company/logo/${user.companyId}?v=${Date.now()}` });
+      const r = await api<{ has_logo: boolean; logo_url: string | null }>(
+        "/settings/company/logo", { method: "PUT", body: JSON.stringify({ logoBase64: b64 }) });
+      setForm((f) => ({ ...f, has_logo: r.has_logo, logo_url: r.logo_url }));
+      cacheCompany({ logoUrl: r.logo_url || "" });
     } catch (err: any) { setLogoErr(err.message || "تعذر رفع الشعار"); }
     finally { setLogoBusy(false); }
   }
@@ -119,8 +118,7 @@ export default function CompanySettingsPage() {
     setLogoBusy(true); setLogoErr("");
     try {
       await api("/settings/company/logo", { method: "PUT", body: JSON.stringify({ logoBase64: null }) });
-      setForm((f) => ({ ...f, has_logo: false }));
-      setLogoVer((v) => v + 1);
+      setForm((f) => ({ ...f, has_logo: false, logo_url: null }));
       cacheCompany({ logoUrl: "" });
     } catch (err: any) { setLogoErr(err.message || "تعذر حذف الشعار"); }
     finally { setLogoBusy(false); }
@@ -135,8 +133,6 @@ export default function CompanySettingsPage() {
 
   if (!canCompany) return <Card>لا تملك صلاحية «بيانات الشركة والمظهر».</Card>;
 
-  const logoUrl = user?.companyId ? `/api/settings/company/logo/${user.companyId}?v=${logoVer}` : "";
-
   return (
     <div className="space-y-4">
       <h1 className="text-[19px] font-extrabold">الإعدادات — المنشأة</h1>
@@ -146,8 +142,8 @@ export default function CompanySettingsPage() {
         <p className="mb-3 text-[12px] text-text-dim">يظهر في ترويسة الفواتير المطبوعة (حراري وA4) بدل الشعار الافتراضي.</p>
         <div className="flex flex-wrap items-center gap-4">
           <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-ink-3">
-            {form.has_logo
-              ? <img src={logoUrl} alt="شعار المنشأة" className="h-full w-full object-contain" />
+            {form.has_logo && form.logo_url
+              ? <img src={form.logo_url} alt="شعار المنشأة" className="h-full w-full object-contain" />
               : <MIcon name="apartment" className="!text-[28px] text-text-dim" />}
           </div>
           <div className="space-y-1.5">

@@ -49,8 +49,10 @@ async def get_company_logo(company_id: str):
     img = await service.get_logo_bytes(company_id)
     if not img:
         raise HTTPException(404, "لا يوجد شعار")
+    # الرابط بقى فيه ?v=<logo_version> بيتغيّر فعليًا مع كل تحديث للشعار — فآمن نكاشه لفترة
+    # طويلة جداً (المتصفح أصلاً مش هيطلب نفس الرابط القديم تاني بعد أي تغيير)
     return _Response(content=img["bytes"], media_type=img["mime"],
-                     headers={"Cache-Control": "public, max-age=3600"})
+                     headers={"Cache-Control": "public, max-age=31536000, immutable"})
 
 
 # ══════════════════ الأدوار والصلاحيات ══════════════════

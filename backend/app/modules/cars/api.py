@@ -1215,13 +1215,14 @@ async def public_booking_invoice_full(invoice_id: str, phone: str = ""):
     out["payments"] = [{k: _ser(v) for k, v in p.items()} for p in payments]
     out["car"] = {k: _ser(v) for k, v in car.items()} if car else None
     has_logo = bool(co.get("logo_base64"))
+    logo_ver = co.get("logo_version", 0)
     out["company"] = {
         "name": _pick("name", "company_name") or "مصدر الزيوت",
         "vat": _pick("vat_number", "vat", "tax_number"),
         "cr": _pick("cr_number", "cr", "commercial_register"),
         "address": _pick("address"),
         "phone": _pick("phone", "mobile"),
-        "logoUrl": f"/api/settings/company/logo/{out['company_id']}" if has_logo else "",
+        "logoUrl": f"/api/settings/company/logo/{out['company_id']}?v={logo_ver}" if has_logo else "",
     }
     return out
 
