@@ -220,6 +220,24 @@ td.num,th.num{text-align:center}
       if(s){ scanList = JSON.parse(s); }
     }catch(e){ scanList=[]; }
   }
+
+  var CATALOG_URL = 'https://cdn.jsdelivr.net/gh/tahablog1-blip/z8-erp@main/tools/catalog.json';
+  function loadCatalogFromCDN(){
+    if(!catalog.length){ el('catalogStatusText').textContent = 'جاري تحميل ملف الأصناف...'; }
+    fetch(CATALOG_URL, {cache:'no-store'}).then(function(r){
+      if(!r.ok) throw new Error('bad response');
+      return r.json();
+    }).then(function(data){
+      if(Array.isArray(data) && data.length){
+        catalog = data;
+        catalogMap = buildCatalogMap(catalog);
+        saveCatalog();
+        renderCatalogStatus();
+      }
+    }).catch(function(){
+      // offline or blocked - keep whatever is already cached locally
+    });
+  }
   function saveCatalog(){ safeSet('shortage_catalog_v1', JSON.stringify(catalog)); }
   function saveScanList(){ if(orderId) safeSet('shortage_scanlist_' + orderId, JSON.stringify(scanList)); }
 
@@ -719,6 +737,7 @@ td.num,th.num{text-align:center}
   // ---- init ----
   loadState();
   renderCatalogStatus();
+  loadCatalogFromCDN();
   if(orderId){
     el('orderIdLabel').textContent = orderId;
     el('startScreen').hidden = true;
