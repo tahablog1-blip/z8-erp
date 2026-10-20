@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "http://localhost:3000"
     # مفتاح Claude Vision — لقراءة اللوحات بدقة قصوى وتحليل الكاميرات (اختياري)
     ANTHROPIC_API_KEY: str = ""
+    # مفتاح حماية نقطة /api/shortage-overrides العامة (بدون تسجيل دخول موظفين) —
+    # يستخدمه تطبيق ماسح النواقص على الموبايل عبر هيدر X-API-Key. لو تُرك فاضي
+    # تبقى النقطة مفتوحة بدون حماية (غير مستحسن في الإنتاج).
+    SHORTAGE_API_KEY: str = ""
 
     class Config:
         env_file = ".env"
