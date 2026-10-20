@@ -52,6 +52,18 @@ input[type=text],input[type=number]{
 }
 select{font-family:inherit;background:var(--surface-2);border:1px solid var(--border);color:var(--fg);border-radius:8px;padding:8px 10px;font-size:.85rem}
 .status-pill{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border-radius:999px;padding:6px 12px;font-size:.82rem;color:var(--muted)}
+.section-title{display:flex;align-items:center;gap:8px;font-size:.85rem;font-weight:700;margin-bottom:10px}
+.section-title.between{justify-content:space-between}
+.section-title .icon{font-size:20px;color:var(--accent)}
+.appbar{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:10px}
+.appbar-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.appbar-id{display:flex;align-items:center;gap:10px;min-width:0}
+.appbar-id>.icon{font-size:26px;color:var(--accent);flex-shrink:0}
+.appbar-label{font-size:.68rem;color:var(--muted)}
+.appbar-order{font-size:.98rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.appbar-actions{display:flex;gap:2px;flex-shrink:0}
+.appbar-catalog{display:flex;align-items:center;gap:6px;font-size:.78rem;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.appbar-catalog .icon{font-size:18px;color:var(--muted)}
 .empty{text-align:center;padding:18px 12px}
 .empty .icon{font-size:32px;color:var(--muted);margin-bottom:6px}
 .empty h2{font-size:.92rem;margin:0 0 4px}
@@ -128,22 +140,31 @@ td.num,th.num{text-align:center}
 
 <div id="appContent" hidden>
 
-<div class="card row between" id="orderBar">
-  <span class="status-pill"><span class="icon" aria-hidden="true">receipt_long</span>طلبية رقم <b class="mono" id="orderIdLabel" style="color:var(--fg)"></b></span>
-  <button class="btn-ghost" id="newOrderBtn2" type="button" style="font-size:.78rem"><span class="icon" aria-hidden="true">add_circle</span>طلبية جديدة</button>
-</div>
-
-<section class="card" id="catalogCard">
-  <div class="row between">
-    <span class="status-pill" id="catalogStatus"><span class="icon" aria-hidden="true">inventory_2</span><span id="catalogStatusText">لا يوجد ملف أصناف محمّل</span></span>
-    <button class="btn-primary btn-icon" id="importBtn" type="button" aria-label="استيراد ملف الأصناف" title="استيراد ملف الأصناف"><span class="icon" aria-hidden="true">add</span></button>
+<div class="appbar">
+  <div class="appbar-top">
+    <div class="appbar-id">
+      <span class="icon" aria-hidden="true">receipt_long</span>
+      <div>
+        <div class="appbar-label">الطلبية الحالية</div>
+        <div class="mono appbar-order" id="orderIdLabel"></div>
+      </div>
+    </div>
+    <div class="appbar-actions">
+      <button class="btn-icon btn-ghost" id="importBtn" type="button" aria-label="استيراد ملف الأصناف يدويًا" title="استيراد ملف الأصناف يدويًا"><span class="icon" aria-hidden="true">upload_file</span></button>
+      <button class="btn-icon btn-ghost" id="newOrderBtn2" type="button" aria-label="طلبية جديدة" title="طلبية جديدة"><span class="icon" aria-hidden="true">add_circle</span></button>
+    </div>
+  </div>
+  <div class="appbar-catalog">
+    <span class="icon" aria-hidden="true">inventory_2</span>
+    <span id="catalogStatusText" class="muted">لا يوجد ملف أصناف محمّل</span>
   </div>
   <div id="importMsg"></div>
   <div id="mappingPanel" hidden></div>
   <input class="hidden-input" type="file" id="fileInput" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
-</section>
+</div>
 
 <section class="card">
+  <div class="section-title"><span class="icon" aria-hidden="true">barcode_scanner</span>مسح المنتج</div>
   <div class="scanner-wrap" id="scannerWrap">
     <div class="scanner-off" id="scannerOff">
       <span class="icon" aria-hidden="true">photo_camera</span>
@@ -164,8 +185,8 @@ td.num,th.num{text-align:center}
 </section>
 
 <section class="card">
-  <div class="row between" style="margin-bottom:6px">
-    <h2 style="font-size:.95rem;margin:0">قائمة الطلبية</h2>
+  <div class="section-title between">
+    <span class="row" style="gap:8px"><span class="icon" aria-hidden="true">list_alt</span>عناصر الطلبية</span>
     <button class="btn-ghost" id="clearListBtn" type="button" style="font-size:.78rem"><span class="icon" aria-hidden="true">delete_sweep</span>مسح القائمة</button>
   </div>
   <div id="listArea"></div>
