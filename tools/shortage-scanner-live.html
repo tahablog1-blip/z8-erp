@@ -117,6 +117,22 @@ td.num,th.num{text-align:center}
   <p class="lede">وجّه الكاميرا على الباركود — تنقرأ تلقائي بدون ما تضغط أي زر</p>
 </header>
 
+<section class="card" id="startScreen">
+  <div class="empty">
+    <div class="icon" aria-hidden="true">receipt_long</div>
+    <h2>ما فيه طلبية مفتوحة بهذا الجهاز</h2>
+    <p class="muted" style="font-size:.8rem;margin:2px 0 14px">كل طلبية تاخذ رقم مستقل عشان ما تتداخل مع فروع أو أجهزة ثانية</p>
+    <button class="btn-primary" id="newOrderBtn" type="button"><span class="icon" aria-hidden="true">add_circle</span>إضافة طلبية جديدة</button>
+  </div>
+</section>
+
+<div id="appContent" hidden>
+
+<div class="card row between" id="orderBar">
+  <span class="status-pill"><span class="icon" aria-hidden="true">receipt_long</span>طلبية رقم <b class="mono" id="orderIdLabel" style="color:var(--fg)"></b></span>
+  <button class="btn-ghost" id="newOrderBtn2" type="button" style="font-size:.78rem"><span class="icon" aria-hidden="true">add_circle</span>طلبية جديدة</button>
+</div>
+
 <section class="card" id="catalogCard">
   <div class="row between">
     <span class="status-pill" id="catalogStatus"><span class="icon" aria-hidden="true">inventory_2</span><span id="catalogStatusText">لا يوجد ملف أصناف محمّل</span></span>
@@ -160,6 +176,8 @@ td.num,th.num{text-align:center}
   <button class="btn-primary" id="exportBtn" type="button"><span class="icon" aria-hidden="true">download</span>تصدير CSV</button>
 </div>
 
+</div><!-- /appContent -->
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
 <script>
@@ -168,6 +186,7 @@ td.num,th.num{text-align:center}
   var catalog = [];
   var catalogMap = new Map();
   var scanList = [];
+  var orderId = null;
   var pendingRows = null;
   var codeReader = null;
   var scanning = false;
@@ -176,19 +195,48 @@ td.num,th.num{text-align:center}
 
   function safeGet(key){ try{ return localStorage.getItem(key); }catch(e){ return null; } }
   function safeSet(key,val){ try{ localStorage.setItem(key,val); }catch(e){} }
+  function safeRemove(key){ try{ localStorage.removeItem(key); }catch(e){} }
+
+  function generateOrderId(){
+    var d = new Date();
+    var stamp = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+    var rand = Math.random().toString(36).slice(2,6).toUpperCase();
+    return 'ORD-' + stamp + '-' + rand;
+  }
 
   function loadState(){
     try{
       var c = safeGet('shortage_catalog_v1');
       if(c){ catalog = JSON.parse(c); catalogMap = buildCatalogMap(catalog); }
     }catch(e){ catalog=[]; catalogMap=new Map(); }
+    orderId = safeGet('shortage_current_order_id') || null;
+    loadScanListForOrder();
+  }
+  function loadScanListForOrder(){
+    scanList = [];
+    if(!orderId) return;
     try{
-      var s = safeGet('shortage_scanlist_v1');
+      var s = safeGet('shortage_scanlist_' + orderId);
       if(s){ scanList = JSON.parse(s); }
     }catch(e){ scanList=[]; }
   }
   function saveCatalog(){ safeSet('shortage_catalog_v1', JSON.stringify(catalog)); }
-  function saveScanList(){ safeSet('shortage_scanlist_v1', JSON.stringify(scanList)); }
+  function saveScanList(){ if(orderId) safeSet('shortage_scanlist_' + orderId, JSON.stringify(scanList)); }
+
+  function startNewOrder(){
+    orderId = generateOrderId();
+    scanList = [];
+    safeSet('shortage_current_order_id', orderId);
+    saveScanList();
+    el('orderIdLabel').textContent = orderId;
+    el('startScreen').hidden = true;
+    el('appContent').hidden = false;
+    renderCatalogStatus();
+    renderList();
+    renderResult(null);
+    clearSearchResults();
+    el('manualInput').value='';
+  }
 
   function el(id){ return document.getElementById(id); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){return {'&':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c];}); }
@@ -621,7 +669,8 @@ td.num,th.num{text-align:center}
 
   // ---- export ----
   function buildCSV(){
-    var rows = [['الباركود','الصنف','السعر','الكمية','الإجمالي']];
+    var rows = [['رقم الطلبية:', orderId || ''], []];
+    rows.push(['الباركود','الصنف','السعر','الكمية','الإجمالي']);
     var total = 0;
     scanList.forEach(function(it){
       var lineTotal = (it.price||0)*it.qty;
@@ -641,7 +690,7 @@ td.num,th.num{text-align:center}
   el('exportBtn').addEventListener('click', function(){
     if(scanList.length===0) return;
     var csv = buildCSV();
-    var filename = 'نواقص_' + new Date().toISOString().slice(0,10) + '.csv';
+    var filename = 'نواقص_' + (orderId || new Date().toISOString().slice(0,10)) + '.csv';
     var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
@@ -650,10 +699,35 @@ td.num,th.num{text-align:center}
     setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
   });
 
+  // ---- order controls ----
+  el('newOrderBtn').addEventListener('click', startNewOrder);
+  var newOrder2Armed = false, newOrder2Timer=null;
+  el('newOrderBtn2').addEventListener('click', function(){
+    var b = el('newOrderBtn2');
+    if(!newOrder2Armed){
+      newOrder2Armed = true;
+      b.lastChild.textContent = 'اضغط للتأكيد (تبدأ طلبية جديدة)';
+      newOrder2Timer = setTimeout(function(){ newOrder2Armed=false; b.lastChild.textContent='طلبية جديدة'; }, 3000);
+    } else {
+      clearTimeout(newOrder2Timer);
+      newOrder2Armed = false;
+      b.lastChild.textContent = 'طلبية جديدة';
+      startNewOrder();
+    }
+  });
+
   // ---- init ----
   loadState();
   renderCatalogStatus();
-  renderList();
+  if(orderId){
+    el('orderIdLabel').textContent = orderId;
+    el('startScreen').hidden = true;
+    el('appContent').hidden = false;
+    renderList();
+  } else {
+    el('startScreen').hidden = false;
+    el('appContent').hidden = true;
+  }
 })();
 </script>
 </body>
