@@ -3,7 +3,10 @@
 # دور المستخدم: الإدمن يشوف كل شيء على مستوى الشركة، والموظف يشوف طلبياته فقط.
 from fastapi import APIRouter, Depends
 from ...core.deps import get_current_user, require_role, CurrentUser
-from .schemas import OrderUpsertIn, OrderOut, AnnouncementIn, AnnouncementOut, DeviceStatusOut
+from .schemas import (
+    OrderUpsertIn, OrderOut, AnnouncementIn, AnnouncementOut, DeviceStatusOut,
+    CatalogUploadIn, CatalogOut, CatalogVersionOut,
+)
 from . import service
 
 router = APIRouter()
@@ -23,6 +26,21 @@ async def list_orders(user: CurrentUser = Depends(get_current_user)):
     # يمكّن موظفًا من رؤية طلبيات موظف آخر.
     scoped_user_id = None if user.role == "admin" else user.user_id
     return await service.list_orders(user.company_id, scoped_user_id)
+
+
+@router.post("/catalog", response_model=CatalogVersionOut)
+async def upload_catalog(body: CatalogUploadIn, user: CurrentUser = Depends(require_role("admin"))):
+    return await service.upload_catalog(user.company_id, user.user_id, [i.model_dump() for i in body.items])
+
+
+@router.get("/catalog", response_model=CatalogOut)
+async def get_catalog(user: CurrentUser = Depends(get_current_user)):
+    return await service.get_catalog(user.company_id)
+
+
+@router.get("/catalog/version", response_model=CatalogVersionOut)
+async def get_catalog_version(user: CurrentUser = Depends(get_current_user)):
+    return await service.get_catalog_version(user.company_id)
 
 
 @router.get("/devices", response_model=list[DeviceStatusOut])

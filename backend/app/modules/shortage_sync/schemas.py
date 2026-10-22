@@ -42,6 +42,28 @@ class AnnouncementOut(BaseModel):
     active: bool
 
 
+class CatalogItemIn(BaseModel):
+    barcode: str
+    name: str
+    price: float = 0
+    internalRef: str = ""
+
+
+class CatalogUploadIn(BaseModel):
+    items: list[CatalogItemIn] = []
+
+
+class CatalogOut(BaseModel):
+    items: list[CatalogItemIn]
+    itemCount: int
+    updatedAt: datetime | None = None
+
+
+class CatalogVersionOut(BaseModel):
+    itemCount: int
+    updatedAt: datetime | None = None
+
+
 class DeviceStatusOut(BaseModel):
     userId: str
     fullName: str

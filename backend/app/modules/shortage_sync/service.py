@@ -123,6 +123,48 @@ async def list_device_status(company_id: str) -> list[dict]:
     ]
 
 
+async def upload_catalog(company_id: str, user_id: str, items: list[dict]) -> dict:
+    """الإدمن بيستبدل الكتالوج المشترك بالكامل بالنسخة اللي استورد عمودها من إكسل على
+    جهازه - نفس منطق الاستيراد اليدوي الموجود فعلاً (CsvImporter)، بس بيتبعت هنا كمان
+    عشان باقي الأجهزة تاخده. تحديث كامل (استبدال) مش دمج، زي أي استيراد كتالوج تاني."""
+    row = await fetchrow(
+        """INSERT INTO shortage_catalog (company_id, products, item_count, updated_by, updated_at)
+           VALUES ($1, $2::jsonb, $3, $4, now())
+           ON CONFLICT (company_id) DO UPDATE
+               SET products = EXCLUDED.products, item_count = EXCLUDED.item_count,
+                   updated_by = EXCLUDED.updated_by, updated_at = now()
+           RETURNING item_count, updated_at""",
+        company_id, json.dumps(items), len(items), user_id,
+    )
+    return {"itemCount": row["item_count"], "updatedAt": row["updated_at"]}
+
+
+async def get_catalog(company_id: str) -> dict:
+    row = await fetchrow(
+        "SELECT products, item_count, updated_at FROM shortage_catalog WHERE company_id = $1",
+        company_id,
+    )
+    if not row:
+        return {"items": [], "itemCount": 0, "updatedAt": None}
+    products = row["products"]
+    if isinstance(products, str):
+        products = json.loads(products)
+    return {"items": products or [], "itemCount": row["item_count"], "updatedAt": row["updated_at"]}
+
+
+async def get_catalog_version(company_id: str) -> dict:
+    """نسخة خفيفة (من غير كل الأصناف) تُستخدم في البولينج الدوري على كل الأجهزة -
+    بس توقيت آخر تحديث وعدد الأصناف، عشان نعرف لو فيه نسخة أحدث من غير ما نجيب
+    آلاف الأصناف كل 20 ثانية."""
+    row = await fetchrow(
+        "SELECT item_count, updated_at FROM shortage_catalog WHERE company_id = $1",
+        company_id,
+    )
+    if not row:
+        return {"itemCount": 0, "updatedAt": None}
+    return {"itemCount": row["item_count"], "updatedAt": row["updated_at"]}
+
+
 async def create_announcement(company_id: str, created_by: str, message: str) -> dict:
     row = await fetchrow(
         """INSERT INTO shortage_announcements (company_id, message, created_by)
