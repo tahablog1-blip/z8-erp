@@ -15,6 +15,12 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
+    volumes:
+      # Firebase relay key (خطة بديلة لما السيرفر يقع - شوف FIREBASE_SERVICE_ACCOUNT_PATH
+      # في .env). Mounted بدل ما يتنسخ جوا صورة الـ image نفسها، عشان ملف سري زي ده
+      # ميتخزنش داخل طبقات Docker. الملف اختياري: لو مش موجود عند حدا، الميزة بتتجاهل
+      # بهدوء وباقي السيرفر بيشتغل عادي.
+      - ./backend/serviceAccountKey.json:/app/serviceAccountKey.json:ro
 
   web:
     build: ./frontend
