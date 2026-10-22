@@ -28,12 +28,13 @@ class CurrentUser:
         """موظف مربوط بفرع → استعلاماته تتقيّد به. الأدمن/غير المربوط → None (كل الفروع)"""
         return None if self.role == "admin" else self.branch_id
 
-async def get_current_user(request: Request) -> CurrentUser:
-    auth = request.headers.get("authorization", "")
-    if not auth.startswith("Bearer "):
-        raise HTTPException(401, "غير مسجّل الدخول")
+async def resolve_user_from_token(token: str) -> CurrentUser:
+    """المنطق الفعلي خلف get_current_user، منفصل عن FastAPI Request - عشان نفس
+    التحقق (توقيع + جلسة + تفعيل) يُستخدم من أي مكان عنده توكن خام، مش بس من
+    هيدر HTTP. المستهلك الحالي: مزامنة فايربيز (الطلبيات اللي اتبعتت من الموبايل
+    وقت ما السيرفر كان واقع، وبتتسحب من فايربيز بتوكن الموظف المخزّن معاها)."""
     try:
-        payload = decode_token(auth[7:])
+        payload = decode_token(token)
     except pyjwt.ExpiredSignatureError:
         raise HTTPException(401, "انتهت الجلسة — سجّل الدخول من جديد")
     except pyjwt.PyJWTError:
@@ -76,6 +77,12 @@ async def get_current_user(request: Request) -> CurrentUser:
         email=row["email"], full_name=row["full_name"],
         role=row["role"], permissions=perms,
     )
+
+async def get_current_user(request: Request) -> CurrentUser:
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(401, "غير مسجّل الدخول")
+    return await resolve_user_from_token(auth[7:])
 
 def require_permission(*keys: str):
     """مصنع تبعية: المقابل لـ requirePermission('branches.manage') — أي مفتاح يكفي"""

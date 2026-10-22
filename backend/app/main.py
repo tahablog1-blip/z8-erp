@@ -1017,8 +1017,11 @@ async def lifespan(app: FastAPI):
             print(f"⚠ ensure-schema: {e}")
     import asyncio as _aio0
     _sup_task = _aio0.create_task(_auto_supervisor())
+    from .modules.shortage_sync.firestore_relay import start_relay_loop as _start_relay_loop
+    _relay_task = _aio0.create_task(_start_relay_loop())
     yield
     _sup_task.cancel()
+    _relay_task.cancel()
     await close_pool()
 
 app = FastAPI(
