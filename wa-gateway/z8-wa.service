@@ -1,0 +1,17 @@
+[Unit]
+Description=Z8 WhatsApp Gateway (whatsapp-web.js)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/z8-erp/wa-gateway
+EnvironmentFile=/opt/z8-erp/wa-gateway/.env
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=10
+# حماية السيرفر لو كروم تضخّم
+MemoryMax=1500M
+
+[Install]
+WantedBy=multi-user.target

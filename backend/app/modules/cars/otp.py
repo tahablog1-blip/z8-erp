@@ -64,8 +64,11 @@ def _token_key() -> str:
 
 async def channels(company_id: str) -> dict:
     """القنوات المتاحة فعلياً حسب إعدادات الشركة"""
-    row = await fetchrow("SELECT wa_instance, wa_token FROM companies WHERE id=$1", company_id)
-    phone_ok = bool(row and (row["wa_instance"] or "").strip() and (row["wa_token"] or "").strip())
+    if wa.gateway_enabled():     # البوابة المحلية: القناة متاحة بس لو الرقم مربوط فعلاً
+        phone_ok = (await wa.gateway_status()).get("state") == "ready"
+    else:
+        row = await fetchrow("SELECT wa_instance, wa_token FROM companies WHERE id=$1", company_id)
+        phone_ok = bool(row and (row["wa_instance"] or "").strip() and (row["wa_token"] or "").strip())
     cfg = {r["key"].removeprefix("email."): r["value"] for r in await fetch(
         "SELECT key, value FROM company_settings WHERE company_id=$1 AND key LIKE 'email.%'", company_id)}
     email_ok = cfg.get("enabled") == "1" and bool(cfg.get("smtpHost")) and bool(cfg.get("fromAddress") or cfg.get("smtpUser"))
