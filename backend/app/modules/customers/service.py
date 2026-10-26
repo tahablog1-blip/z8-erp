@@ -9,6 +9,7 @@ from fastapi import HTTPException
 
 from ...core import accounting
 from ...core.db import fetch, fetchrow, transaction
+from ...core.plate_utils import DIGIT_MAP, plate_identity
 
 # منظّف مدخل رقم اللوحة: حروف/أرقام عربي أو إنجليزي فقط — يمنع أي محارف
 # LIKE خاصة زي % و _ من التسبب في مطابقات غريبة
@@ -252,7 +253,40 @@ async def list_vehicles(company_id: str, customer_id: str) -> list[dict]:
     return out
 
 
+async def find_vehicle_by_plate(company_id: str, plate: str | None, plate_type: str = "saudi", conn=None) -> dict | None:
+    """يبحث عن سيارة مسجّلة بنفس اللوحة بأي صيغة (حالة الأحرف/الترتيب/عربي-إنجليزي/أرقام هندية/مسافات).
+    يُستخدم من إضافة سيارة بملف العميل ومن الحجز العام عشان نفس المنطق يمنع التكرار في كل المسارات."""
+    key, _, _ = plate_identity(plate, plate_type)
+    if not key:
+        return None
+    digits = "".join(ch for ch in key if ch.isdigit()) if plate_type == "saudi" else ""
+    sql = """SELECT cv.id, cv.plate, cv.plate_type, cv.customer_id, c.name AS customer_name
+             FROM customer_vehicles cv LEFT JOIN customers c ON c.id = cv.customer_id
+             WHERE cv.company_id = $1 AND ($2 = '' OR
+                   regexp_replace(translate(cv.plate, '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹', '01234567890123456789'), '\\D', '', 'g') LIKE $2 || '%')"""
+    rows = await (conn.fetch(sql, company_id, digits) if conn else fetch(sql, company_id, digits))
+    for r in rows:
+        r = dict(r)
+        k2, _, _ = plate_identity(r["plate"], r.get("plate_type") or "saudi")
+        if k2 and k2 == key:
+            return r
+    return None
+
+
 async def add_vehicle(company_id: str, customer_id: str, d: dict) -> dict:
+    # منع تكرار اللوحة بأي صيغة: حالة الأحرف/الترتيب/العربي-الإنجليزي/الأرقام الهندية/المسافات لا تصنع لوحة جديدة
+    ptype = d.get("plateType", "saudi")
+    key, display, valid = plate_identity(d.get("plate"), ptype)
+    if ptype == "saudi" and sum(ch.isdigit() for ch in (d.get("plate") or "").translate(DIGIT_MAP)) > 4:
+        valid = False        # normalize_plate يقصّ الزائد بصمت — هنا نرفضه بدل ما نسجّل لوحة غير التي كتبها المستخدم
+    if not valid:
+        raise HTTPException(422, "اللوحة السعودية = 3 حروف + من 1 إلى 4 أرقام" if ptype == "saudi" else "أدخل رقم لوحة صحيح")
+    dup = await find_vehicle_by_plate(company_id, d.get("plate"), ptype)
+    if dup:
+        own = str(dup["customer_id"]) == str(customer_id)
+        raise HTTPException(409, "هذه اللوحة مسجّلة بالفعل لهذا العميل" if own
+                            else f"هذه اللوحة مسجّلة بالفعل لعميل آخر ({dup['customer_name'] or '—'})")
+    d = {**d, "plate": display}
     try:
         row = await fetchrow(
             """INSERT INTO customer_vehicles

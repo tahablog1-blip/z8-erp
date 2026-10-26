@@ -1731,19 +1731,32 @@ async def public_register_and_book(branch_id: str, d: dict) -> dict:
                 customer_id = row["id"]
 
             # ── الجراج: حفظ/تحديث السيارة (اللوحة مفتاح دائم) ──
-            await conn.execute(
-                """INSERT INTO customer_vehicles
-                     (company_id, customer_id, plate, plate_norm, brand, name, model_year, fuel_type,
-                      car_category, cylinders, color, chassis_number, last_odometer, service_type)
-                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-                   ON CONFLICT (company_id, plate_norm) DO UPDATE SET
-                     customer_id=$2, brand=$5, name=$6, model_year=$7, fuel_type=$3,
-                     car_category=$8, cylinders=$9, color=$10, chassis_number=$11,
-                     last_odometer=$12, service_type=$13""",
-                company_id, customer_id, plate, plate_norm,
-                v.get("brand"), v.get("carName"), v.get("modelYear"), v.get("fuelType"),
-                v.get("carCategory"), v.get("cylinders"), v.get("color"), v.get("chassisNumber"),
-                odometer, ctype)
+            # لو اللوحة مسجّلة بصيغة مختلفة ("aaa 111" / "111 AAA") نحدّث نفس السجل بدل ما نكرّرها
+            from ..customers.service import find_vehicle_by_plate
+            same = await find_vehicle_by_plate(str(company_id), plate, "saudi", conn)
+            if same:
+                await conn.execute(
+                    """UPDATE customer_vehicles SET customer_id=$2, plate=$3, plate_norm=$4, brand=$5, name=$6,
+                         model_year=$7, fuel_type=$8, car_category=$9, cylinders=$10, color=$11,
+                         chassis_number=$12, last_odometer=$13, service_type=$14
+                       WHERE id=$1""",
+                    same["id"], customer_id, plate, plate_norm, v.get("brand"), v.get("carName"), v.get("modelYear"),
+                    v.get("fuelType"), v.get("carCategory"), v.get("cylinders"), v.get("color"),
+                    v.get("chassisNumber"), odometer, ctype)
+            else:
+                await conn.execute(
+                    """INSERT INTO customer_vehicles
+                         (company_id, customer_id, plate, plate_norm, brand, name, model_year, fuel_type,
+                          car_category, cylinders, color, chassis_number, last_odometer, service_type)
+                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+                       ON CONFLICT (company_id, plate_norm) DO UPDATE SET
+                         customer_id=$2, brand=$5, name=$6, model_year=$7, fuel_type=$8,
+                         car_category=$9, cylinders=$10, color=$11, chassis_number=$12,
+                         last_odometer=$13, service_type=$14""",
+                    company_id, customer_id, plate, plate_norm,
+                    v.get("brand"), v.get("carName"), v.get("modelYear"), v.get("fuelType"),
+                    v.get("carCategory"), v.get("cylinders"), v.get("color"), v.get("chassisNumber"),
+                    odometer, ctype)
 
     return await _book_from_data(branch_id, company_id, customer_id, name, phone,
                                  plate, plate_norm, v, odometer)
