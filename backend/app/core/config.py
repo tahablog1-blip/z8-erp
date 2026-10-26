@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     FIREBASE_SERVICE_ACCOUNT_PATH: str = ""
     # بوابة واتساب المحلية (whatsapp-web.js) — مجانية بدون اشتراك. لو الاتنين متعبّيين،
     # كل رسائل واتساب (OTP، فواتير، إشعارات) بتروح من خلالها بدل UltraMsg.
+    # رابط الموقع العام (مثال: https://z8masdr.duckdns.org) — بيتحط في رسائل واتساب للعملاء
+    PUBLIC_BASE_URL: str = ""
     WA_GATEWAY_URL: str = ""      # مثال: http://127.0.0.1:4100
     WA_GATEWAY_KEY: str = ""
 

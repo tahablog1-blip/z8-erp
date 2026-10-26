@@ -1564,6 +1564,10 @@ async def public_create_booking(branch_id: str, d: dict) -> dict:
         name, phone, cust["id"], odo, service_type)
     if d.get("items"):
         await _save_booking_items(str(row["id"]), d)
+    # 📲 رسالة تأكيد الحجز للعميل — في الخلفية، فشلها ما بيأثرش على الحجز
+    import asyncio
+    from .booking_notify import notify_booking_confirmed
+    asyncio.create_task(notify_booking_confirmed(str(row["id"])))
     return await public_booking_status(str(row["id"]))
 
 
