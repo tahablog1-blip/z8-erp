@@ -101,9 +101,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-dvh place-items-center bg-ink p-4">
+    <div className="grid min-h-dvh content-start justify-items-center bg-ink p-4 pt-8 sm:pt-14">
       {/* خلفية بترولية هادئة أعلى الشاشة — استمرارية بصرية مع قضيب التطبيق */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-56 bg-petrol-deep" />
+      <div className="pointer-events-none fixed inset-x-0 top-0 h-32 bg-petrol-deep sm:h-44" />
       <div className="relative w-full max-w-sm">
         <div className="mb-5 flex items-center justify-center gap-3 text-white">
           <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white/10 p-2">
