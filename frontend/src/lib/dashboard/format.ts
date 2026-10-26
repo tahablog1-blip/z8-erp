@@ -33,4 +33,4 @@ export function growth(curr: number, prev: number): number | null {
 // عزل اتجاه التاريخ (LRI…PDI) عشان "27/09" ما ينقلبش داخل نص عربي RTL
 const isolate = (s: string) => `\u2066${s}\u2069`;
 export const fmtDay = (iso: string) => isolate(`${iso.slice(8, 10)}/${iso.slice(5, 7)}`);
-export const fmtDate = (iso: string) => isolate(formatDate(iso));
+export const fmtDate = (iso: string) => isolate(`${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`);

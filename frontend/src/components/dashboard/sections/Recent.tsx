@@ -8,8 +8,10 @@ import { MIcon } from "@/components/m-icon";
 
 const STATUS_TONE: Record<string, string> = { paid: "bg-emerald-bg text-emerald", partial: "bg-brass-bg text-brass", credit: "bg-brass-bg text-brass", refunded: "bg-ember-bg text-ember" };
 
-function when(iso: string, isEn: boolean) {
-  try { return `\u2066${new Date(iso).toLocaleString(isEn ? "en-US" : "ar-SA-u-nu-latn", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}\u2069`; } catch { return iso; }
+function when(iso: string, _isEn?: boolean) {
+  const d = new Date(iso); if (isNaN(+d)) return iso;
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `\u2066${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}\u2069`;
 }
 
 export function RecentTransactions({ data, loading }: { data: Executive | null; loading: boolean }) {

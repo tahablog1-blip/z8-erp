@@ -37,7 +37,7 @@ export function Widget({ title, icon, href, hrefLabel, actions, loading, failed,
 }) {
   const { d } = useDx();
   return (
-    <section className={`flex min-w-0 flex-col rounded-card border border-line bg-ink-2 shadow-card ${className}`} aria-busy={loading || undefined}>
+    <section className={`flex h-full min-w-0 flex-col rounded-card border border-line bg-ink-2 shadow-card ${className}`} aria-busy={loading || undefined}>
       <header className="flex items-center justify-between gap-2 px-4 pb-1 pt-3.5 sm:px-5">
         <h2 className="flex min-w-0 items-center gap-1.5 text-t-md font-black">
           {icon && <MIcon name={icon} className="!text-[19px] text-petrol" />}
