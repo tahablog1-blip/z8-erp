@@ -474,13 +474,25 @@ function VehiclesTab({ customerId, vehicles, canEdit, onChange }: { customerId: 
       reset(); setOpen(false); await onChange();
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
   }
+  async function removeDuplicates() {
+    const seen = new Set<string>(); const extras: Vehicle[] = [];
+    for (const x of vehicles) { const k = plateKey(x.plate, x.plate_type); if (!k) continue; if (seen.has(k)) extras.push(x); else seen.add(k); }
+    if (!extras.length || !await appConfirm(`سيتم حذف ${extras.length} نسخة مكرّرة والإبقاء على الأقدم من كل لوحة. متابعة؟`)) return;
+    setBusy(true);
+    try { for (const x of extras) await api(`/customers/vehicles/${x.id}`, { method: "DELETE" }); await onChange(); }
+    catch (e) { appAlert(e instanceof Error ? e.message : String(e)); await onChange(); } finally { setBusy(false); }
+  }
   async function remove(x: Vehicle) {
     if (!await appConfirm(`حذف سيارة اللوحة «${x.plate}»؟`)) return;
     try { await api(`/customers/vehicles/${x.id}`, { method: "DELETE" }); await onChange(); } catch (e) { appAlert(e instanceof Error ? e.message : String(e)); }
   }
   return (
     <Card title="سيارات العميل" icon="directions_car" actions={canEdit && <Button size="sm" onClick={() => { reset(); setOpen(true); }}><MIcon name="add" className="!text-[16px]" />إضافة سيارة</Button>}>
-      {dupKeys.size > 0 && <div role="alert" className="mb-3 rounded-xl border border-brass/40 bg-brass-bg px-3 py-2 text-t-sm font-bold text-brass">توجد لوحات مكرّرة (نفس الأرقام والحروف) — احذف النسخ الزائدة. لن يُسمح بتسجيل لوحة مكرّرة بعد الآن.</div>}
+      {dupKeys.size > 0 && (
+        <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brass/40 bg-brass-bg px-3 py-2 text-t-sm font-bold text-brass">
+          <span>توجد لوحات مكرّرة (نفس الأرقام والحروف). لن يُسمح بتسجيل لوحة مكرّرة بعد الآن.</span>
+          {canEdit && <Button size="sm" variant="outline" loading={busy} onClick={removeDuplicates}>حذف النسخ المكرّرة (إبقاء الأقدم)</Button>}
+        </div>)}
       {vehicles.length === 0 ? <EmptyState icon="directions_car" title="لا توجد سيارات مسجّلة" description="أضف سيارة العميل لتسهيل التعرف عليه في نقطة البيع." action={canEdit ? <Button onClick={() => { reset(); setOpen(true); }}>إضافة سيارة</Button> : undefined} /> : (
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {vehicles.map((x) => (
