@@ -1,23 +1,30 @@
-// components/PlateBadge.tsx — لوحة السيارة بشكل لوحة سعودية (أرقام | حروف): العلامة البصرية لعرض السيارات
-/** لوحة السيارة — أرقام | حروف. تبقى بيضاء بنص داكن في الوضعين (زي اللوحة الحقيقية) */
+// components/PlateBadge.tsx — لوحة السيارة السعودية: صورة اللوحة (شعار المملكة + شريط KSA) والرقم والحروف فوقها.
+// الأرقام يسار الشعار والحروف يمينه (نفس ترتيب اللوحة الحقيقية). الصورة في public/plate-ksa.png (186×43، مكبّرة 4×).
+const RATIO = 186 / 43;          // نسبة أبعاد صورة اللوحة
+const SIZES = { sm: 112, md: 140, lg: 216 } as const;   // العرض بالبكسل
+
+/** لوحة السيارة — تبقى بيضاء بنص داكن في الوضعين (زي اللوحة الحقيقية) */
 export function PlateBadge({ plate, size = "md" }: { plate: string | null; size?: "sm" | "md" | "lg" }) {
   const raw = (plate || "").trim();
-  const m = raw.match(/^(\d+)\s*([A-Za-z\u0600-\u06FF\s]+)$/);
-  const text = size === "lg" ? "text-[22px] sm:text-[26px]" : size === "md" ? "text-[16px]" : "text-[14px]";
-  const pad = size === "lg" ? "px-3 py-1" : "px-2 py-0.5";
+  const m = raw.match(/^(\d+)\s*([A-Za-z؀-ۿ\s]+)$/);
+  const width = SIZES[size];
+  const height = width / RATIO;
+  const font = Math.round(height * 0.56);     // حجم الخط نسبةً لارتفاع اللوحة
+  const zone = "absolute inset-y-0 flex items-center justify-center font-black leading-none text-slate-900";
   return (
     <span dir="ltr" role="img" aria-label={raw ? `لوحة ${raw}` : "بدون لوحة"}
-      className="inline-flex shrink-0 items-stretch overflow-hidden rounded-md border-2 border-slate-800 bg-white text-slate-900 shadow-sm">
-      <span className="w-2 bg-blue-700" aria-hidden />
+      className="relative inline-block shrink-0 select-none align-middle"
+      style={{ width, height, fontSize: font }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/plate-ksa.png" alt="" draggable={false} className="absolute inset-0 h-full w-full" />
       {m ? (
         <>
-          <span className={`${pad} ${text} tnum font-black leading-tight tracking-wider`}>{m[1]}</span>
-          <span className="w-px bg-slate-400" aria-hidden />
-          <span className={`${pad} ${text} font-black uppercase leading-tight tracking-widest`}>{m[2].replace(/\s+/g, " ")}</span>
+          <span className={`${zone} tnum tracking-wider`} style={{ left: "6%", width: "36%" }}>{m[1]}</span>
+          <span className={`${zone} uppercase tracking-widest`} style={{ left: "57%", width: "34%" }}>{m[2].replace(/\s+/g, " ")}</span>
         </>
-      ) : (
-        <span className={`${pad} ${text} font-black leading-tight`}>{raw || "بدون لوحة"}</span>
-      )}
+      ) : raw ? (
+        <span className={`${zone} px-[6%]`} style={{ left: 0, width: "92%", fontSize: font * 0.8 }}>{raw}</span>
+      ) : null}
     </span>
   );
 }
