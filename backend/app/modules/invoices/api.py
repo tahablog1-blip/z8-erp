@@ -69,9 +69,15 @@ async def create_invoice(body: InvoiceCreate,
             reason=body.discountReason, branch_id=body.branchId))
     # 📲 بعد إتمام الدفع: إرسال الفاتورة PDF للعميل واتساب (تلقائي — لا يعطل الإصدار)
     try:
-        if inv.get("customer_id") and not any(p.get("method") == "credit" for p in (body.payments or [])):
+        is_credit = any(p.get("method") == "credit" for p in (body.payments or []))
+        if inv.get("customer_id") and not is_credit:
             import asyncio as _aio
             _aio.create_task(_send_invoice_wa(user.company_id, inv["id"]))
+        elif not inv.get("customer_id"):
+            # بدون عميل مربوط ما فيش رقم نبعتله — نسجّل السبب بدل ما يتخطّى بصمت
+            from ...core.integration_log import log_event as _log
+            await _log(user.company_id, "whatsapp", "send_invoice", "skipped",
+                       detail=f"فاتورة {inv.get('invoice_no')}: غير مربوطة بعميل — اختر العميل قبل إصدار الفاتورة ليصله PDF")
     except Exception as _e:
         print(f"⚠ جدولة واتساب الفاتورة: {_e}")
     return inv
@@ -86,6 +92,9 @@ async def _send_invoice_wa(company_id: str, invoice_id: str):
            FROM invoices i LEFT JOIN customers cu ON cu.id = i.customer_id
            WHERE i.id=$1::uuid""", invoice_id)
     if not row or not row["phone"]:
+        from ...core.integration_log import log_event as _log
+        await _log(company_id, "whatsapp", "send_invoice", "skipped",
+                   detail=f"فاتورة {row['invoice_no'] if row else invoice_id}: العميل ليس له رقم جوال")
         return
     caption = (f"فاتورتكم من شركة مصدر الزيوت\nرقم الفاتورة: {row['invoice_no']}"
                f"\nالإجمالي: {float(row['total_inc']):.2f} ر.س شاملاً ضريبة القيمة المضافة\nنشكركم على تعاملكم معنا.")
