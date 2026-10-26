@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
-  cacheDesign, FONT_LABELS_AR, FONT_LABELS_EN, FONT_STACKS_AR, FONT_STACKS_EN, BUTTON_SHAPE_LABELS,
+  cacheDesign, ensureFontLoaded, FONT_LABELS_AR, FONT_LABELS_EN, FONT_STACKS_AR, FONT_STACKS_EN, BUTTON_SHAPE_LABELS,
   FONT_SCALE_LABELS, FONT_SCALE_PERCENT,
   type DesignInfo, type ArFontKey, type EnFontKey, type ButtonShape, type FontScale,
 } from "@/lib/design";
@@ -35,6 +35,11 @@ export default function DesignSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
+  useEffect(() => {
+    if (!settings) return;
+    ensureFontLoaded(settings.fontFamilyAr);
+    ensureFontLoaded(settings.fontFamilyEn);
+  }, [settings?.fontFamilyAr, settings?.fontFamilyEn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!canManage) return;

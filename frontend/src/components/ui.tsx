@@ -1,7 +1,7 @@
 "use client";
 // components/ui.tsx — لبنات الواجهة الأساسية بهوية Z8
 import {
-  ReactNode, InputHTMLAttributes, ButtonHTMLAttributes,
+  useEffect, ReactNode, InputHTMLAttributes, ButtonHTMLAttributes,
   SelectHTMLAttributes, TextareaHTMLAttributes,
 } from "react";
 
@@ -148,12 +148,12 @@ export function Badge({ tone = "neutral", children }:
 export function Tabs<T extends string>({ value, onChange, items }:
   { value: T; onChange: (v: T) => void; items: { key: T; label: string }[] }) {
   return (
-    <div className="flex gap-1 border-b border-line" role="tablist">
+    <div className="no-scrollbar flex gap-1 overflow-x-auto border-b border-line" role="tablist">
       {items.map((t) => (
         <button
           key={t.key} role="tab" aria-selected={value === t.key}
           onClick={() => onChange(t.key)}
-          className={`-mb-px border-b-2 px-4 py-2 text-[13px] font-bold transition
+          className={`-mb-px shrink-0 whitespace-nowrap border-b-2 px-4 py-2 text-[13px] font-bold transition
             ${value === t.key
               ? "border-petrol text-petrol"
               : "border-transparent text-text-dim hover:text-text"}`}>
@@ -168,12 +168,19 @@ import FullScreenModal from "@/components/FullScreenModal";
 
 export function Modal({ open, title, children, onClose, size = "md" }:
   { open: boolean; title: string; children: ReactNode; onClose: () => void; size?: "md" | "lg" | "full" }) {
+  useEffect(() => {
+    if (!open || size === "full") return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, size, onClose]);
   if (!open) return null;
   if (size === "full") return <FullScreenModal title={title} onClose={onClose}>{children}</FullScreenModal>;
   const width = size === "lg" ? "max-w-3xl" : "max-w-md";
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-[3px]" onClick={onClose}>
-      <div className={`z8-pop w-full ${width} max-h-[90vh] overflow-y-auto rounded-[28px] border border-line bg-ink-2 p-6 shadow-panel`}
+      <div role="dialog" aria-modal="true" aria-label={title}
+           className={`z8-pop w-full ${width} max-h-[90dvh] overflow-y-auto rounded-2xl border border-line bg-ink-2 p-4 shadow-panel sm:rounded-[28px] sm:p-6`}
            onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-[15px] font-extrabold text-text">{title}</h3>

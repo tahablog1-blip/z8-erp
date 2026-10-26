@@ -36,7 +36,16 @@
 
 /* تقليل الحركة لمن يفضّل ذلك — التزام جودة أساسي */
 @media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; transition: none !important; }
+  *:not(.animate-spin):not(.animate-pulse) { animation: none !important; transition: none !important; }
+}
+
+/* حلقة تركيز واضحة للتنقل بالكيبورد على الروابط والعناصر القابلة للضغط */
+a:focus-visible, [role="tab"]:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--petrol); outline-offset: 2px;
+}
+/* أهداف لمس مريحة (44px) على الشاشات اللمسية بدون ما نغيّر شكل سطح المكتب */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px; } /* يمنع تكبير iOS التلقائي عند التركيز */
 }
 
 /* شريط تصنيفات قابل للتمرير بدون شريط تمرير ظاهر */
