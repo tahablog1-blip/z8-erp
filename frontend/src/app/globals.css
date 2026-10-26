@@ -196,3 +196,25 @@ a:focus-visible, [role="tab"]:focus-visible, summary:focus-visible {
 .z8-printer-body { animation: z8-print-shake 90ms linear 250ms 19; }
 .z8-printer-led { box-shadow: 0 0 8px rgba(52,211,153,.8); }
 .z8-print-done { animation: z8-print-done 320ms cubic-bezier(.2,.7,.3,1) 2.05s both; }
+
+
+/* ═══════ Design tokens — لوحة القيادة التنفيذية ═══════
+   سلم خطوط موحّد + ألوان رسوم بمعنى ثابت: الإيراد = الأساسي، المصروف = كهرماني، الربح = أخضر، السالب = أحمر. */
+:root {
+  --font-xs: 11.5px; --font-sm: 12.5px; --font-md: 13.5px; --font-lg: 15px;
+  --font-xl: 18px; --font-2xl: 22px; --font-3xl: 28px;
+  --chart-revenue: var(--petrol);
+  --chart-expense: var(--brass);
+  --chart-profit: var(--emerald);
+  --chart-negative: var(--ember);
+  --chart-neutral: var(--text-dim);
+  --chart-grid: var(--line);
+  --surface-raised: var(--ink2);
+}
+[data-theme="dark"] {
+  --chart-grid: rgba(147, 165, 196, 0.16);
+  --surface-raised: var(--ink3);
+}
+/* تحديد موضع الرسم البياني أثناء التحميل — بلا قفزة تخطيط */
+.dash-skeleton { min-height: 12px; background: linear-gradient(90deg, var(--ink3) 25%, var(--ink4) 37%, var(--ink3) 63%); background-size: 400% 100%; animation: dash-shimmer 1.4s ease infinite; }
+@keyframes dash-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }

@@ -1,721 +1,136 @@
 "use client";
-// لوحة القيادة — مركز قيادة ERP بطراز عالمي: تيكر بورصة + مؤشرات بسباركلاين +
-// رسم هندسي بمحاور وشبكة ومتوسط متحرك + عداد تشغيل دائري. رسوم SVG يدوية بلا مكتبات.
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+// لوحة القيادة التنفيذية — طلب واحد /reports/executive يغذّي كل الأقسام، والأقسام تظهر حسب صلاحيات المستخدم
+// (data.access). التصميم: فلتر شامل → مؤشرات → رسوم وتحليلات → جداول → تنبيهات/إجراءات. RTL أولاً والإنجليزية جاهزة.
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useLang } from "@/lib/i18n";
-import { Button, Card, ErrorNote, Input } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
-import { money } from "@/modules/invoices/types";
+import { useDx } from "@/lib/dashboard/i18n";
+import { useExecutive } from "@/lib/dashboard/useExecutive";
+import { PERIODS, rangeFor, type PeriodKey } from "@/lib/dashboard/periods";
 import { formatDateLong } from "@/lib/format";
+import { GlobalFilters, type FilterState } from "@/components/dashboard/GlobalFilters";
+import { Kpis } from "@/components/dashboard/sections/Kpis";
+import { FinancialOverview, PnlSnapshot, ExpenseAnalytics } from "@/components/dashboard/sections/Financial";
+import { SalesPerformance, PaymentMethods } from "@/components/dashboard/sections/Sales";
+import { BranchPerformance } from "@/components/dashboard/sections/Branches";
+import { CashFlow, Receivables, Payables } from "@/components/dashboard/sections/CashAging";
+import { InventoryCenter } from "@/components/dashboard/sections/Inventory";
+import { TopProducts, TopCustomers } from "@/components/dashboard/sections/Tops";
+import { RecentTransactions } from "@/components/dashboard/sections/Recent";
+import { SmartAlerts } from "@/components/dashboard/sections/Alerts";
+import { QuickActions } from "@/components/dashboard/sections/QuickActions";
+import { OpsStrip } from "@/components/dashboard/sections/Ops";
+import { AiPanel } from "@/components/dashboard/sections/AiPanel";
 
-type Dash = {
-  today: { total: number; count: number; profit: number };
-  month: { total: number; count: number; vat: number; profit: number };
-  cars: { queued: number; inService: number; doneToday?: number };
-  lowStock: number;
-  creditOutstanding: number;
-  series: { date: string; total: number; count: number }[];
-  payMethods: { method: string; total: number }[];
-  counts?: { customers: number; suppliers: number; products: number };
-  topProducts?: { label: string; qty: number; total: number }[];
-  recentInvoices?: { no: string; customer: string; total: number; source: string; onCredit: boolean; at: string }[];
-  newCustomers?: { today: number; week: number; latest: { name: string; phone: string | null }[] };
-  topSuppliers?: { name: string; total: number; count: number }[];
-  topCustomers?: { name: string; phone: string | null; visits: number; total: number }[];
-  lowStockItems?: { locName: string; name: string; qty: number; minQty: number; deficit: number; outOfStock: boolean }[];
-  arAging?: { current: number; d31_60: number; d61_90: number; d90plus: number; total: number };
-};
-type ShiftReport = { shift: { branch_name: string | null }; sales: { totalInc: number; invoiceCount: number } } | null;
-type MiniInvoice = { id: string; invoice_no: string; customer_name: string | null; total_inc: number; issued_at: string; is_returned: boolean };
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
-const PAY_AR: Record<string, string> = { cash: "نقدي", card: "شبكة", transfer: "تحويل", credit: "آجل" };
-const PAY_COLOR: Record<string, string> = { cash: "#22C55E", card: "#3B82F6", transfer: "#8B5CF6", credit: "#F59E0B" };
-
-/* تنسيق أرقام مضغوط بأسلوب لوحات البورصة: 12.4k */
-const compact = (v: number) =>
-  v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}م` : v >= 1000 ? `${(v / 1000).toFixed(1)}ك` : money(v);
-
-/* Δ% — سهم صاعد/هابط بأسلوب شاشات الأسهم */
-function Delta({ curr, prev }: { curr: number; prev: number }) {
-  const { t } = useLang();
-  if (!prev) return <span className="tnum text-[10.5px] font-bold text-text-dim">{t("dash.new", "جديد")}</span>;
-  const pct = Math.round(((curr - prev) / prev) * 100);
-  const up = pct >= 0;
-  return (
-    <span className={`tnum inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10.5px] font-black
-        ${up ? "bg-emerald-bg text-emerald" : "bg-ember-bg text-ember"}`}>
-      <svg viewBox="0 0 8 8" className={`h-2 w-2 ${up ? "" : "rotate-180"}`}>
-        <path d="M4 0 L8 6 L0 6 Z" fill="currentColor" />
-      </svg>
-      {Math.abs(pct)}%
-    </span>
-  );
-}
-
-/* ── سباركلاين مصغر — جوه بطاقات المؤشرات ── */
-function Spark({ data, color = "var(--petrol)", id }: { data: number[]; color?: string; id: string }) {
-  if (data.length < 2) return null;
-  const W = 120, H = 34, P = 2;
-  const max = Math.max(...data, 1), min = Math.min(...data, 0);
-  const span = max - min || 1;
-  const pts = data.map((v, i) => [
-    P + (i * (W - P * 2)) / (data.length - 1),
-    H - P - ((v - min) / span) * (H - P * 2),
-  ]);
-  const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-  const area = `${line} L${pts[pts.length - 1][0]},${H} L${pts[0][0]},${H} Z`;
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="h-9 w-full">
-      <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill={`url(#${id})`} />
-      <path d={line} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
-      <circle cx={pts[pts.length - 1][0]} cy={pts[pts.length - 1][1]} r="2.3" fill={color} />
-    </svg>
-  );
-}
-
-/* ── الرسم الرئيسي الهندسي: محاور + شبكة + مساحة + متوسط متحرك 7 أيام + تعليق القمة ── */
-function EngineChart({ series }: { series: Dash["series"] }) {
-  const { t } = useLang();
-  if (!series.length) return <p className="py-10 text-center text-[12px] text-text-dim">{t("dash.noData", "لا توجد بيانات بعد")}</p>;
-  const W = 640, H = 220, L = 46, R = 10, T = 14, B = 24;
-  const iw = W - L - R, ih = H - T - B;
-  const max = Math.max(...series.map((s) => s.total), 1) * 1.08;
-  const X = (i: number) => L + (i * iw) / Math.max(series.length - 1, 1);
-  const Y = (v: number) => T + ih - (v / max) * ih;
-  const pts = series.map((s, i) => [X(i), Y(s.total)] as const);
-  const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-  const area = `${line} L${X(series.length - 1)},${T + ih} L${X(0)},${T + ih} Z`;
-  // متوسط متحرك 7 أيام
-  const ma = series.map((_, i) => {
-    const win = series.slice(Math.max(0, i - 6), i + 1);
-    return win.reduce((s, d) => s + d.total, 0) / win.length;
-  });
-  const maLine = ma.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
-  const peak = series.reduce((b, s, i) => (s.total > series[b].total ? i : b), 0);
-  const grid = [0.25, 0.5, 0.75, 1];
-
-  // ── التتبع اللحظي بالماوس: أقرب نقطة لموضع المؤشر ──
-  const [hov, setHov] = useState<number | null>(null);
-  function onMove(e: React.MouseEvent<SVGSVGElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const vx = ((e.clientX - rect.left) / rect.width) * W;
-    const idx = Math.round(((vx - L) / iw) * Math.max(series.length - 1, 1));
-    setHov(Math.max(0, Math.min(series.length - 1, idx)));
-  }
-  const tipW = 118;
-  const tipX = hov === null ? 0 : Math.max(L, Math.min(X(hov) - tipW / 2, W - R - tipW));
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full cursor-crosshair" role="img"
-      aria-label="الإيراد اليومي بمحاور"
-      onMouseMove={onMove} onMouseLeave={() => setHov(null)}>
-      <defs>
-        <linearGradient id="eng-area" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--petrol)" stopOpacity="0.20" />
-          <stop offset="100%" stopColor="var(--petrol)" stopOpacity="0.01" />
-        </linearGradient>
-      </defs>
-      {/* الشبكة والمحور الرأسي */}
-      {grid.map((g) => (
-        <g key={g}>
-          <line x1={L} x2={W - R} y1={Y(max * g)} y2={Y(max * g)}
-            stroke="var(--line)" strokeWidth="1" strokeDasharray={g === 1 ? "" : "3 4"} />
-          <text x={L - 6} y={Y(max * g) + 3} textAnchor="end" fontSize="8.5" fill="var(--text-dim)" className="tnum">
-            {compact(max * g)}
-          </text>
-        </g>
-      ))}
-      <line x1={L} x2={W - R} y1={T + ih} y2={T + ih} stroke="var(--line)" strokeWidth="1.2" />
-      {/* المساحة والخط الرئيسي */}
-      <path d={area} fill="url(#eng-area)" />
-      <path d={line} fill="none" stroke="var(--petrol)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-      {/* المتوسط المتحرك */}
-      <path d={maLine} fill="none" stroke="var(--brass)" strokeWidth="1.6" strokeDasharray="5 4" opacity="0.9" />
-      {/* النقاط + تواريخ */}
-      {pts.map(([x, y], i) => (
-        <g key={i}>
-          <circle cx={x} cy={y} r="2.6" fill="var(--ink2)" stroke="var(--petrol)" strokeWidth="1.8">
-            <title>{`${series[i].date} — ${money(series[i].total)} ${t("dash.sar", " ر.س")} (${series[i].count} فاتورة)`}</title>
-          </circle>
-          {i % 2 === 0 && (
-            <text x={x} y={H - 8} textAnchor="middle" fontSize="8" fill="var(--text-dim)" className="tnum">
-              {series[i].date.slice(8)}/{series[i].date.slice(5, 7)}
-            </text>
-          )}
-        </g>
-      ))}
-      {/* تعليق القمة */}
-      {series[peak].total > 0 && (
-        <g>
-          <line x1={X(peak)} x2={X(peak)} y1={Y(series[peak].total)} y2={T} stroke="var(--emerald)" strokeWidth="1" strokeDasharray="2 3" opacity="0.6" />
-          <rect x={Math.min(X(peak) - 34, W - R - 68)} y={T - 12} width="68" height="15" rx="7.5" fill="var(--emerald)" opacity="0.14" />
-          <text x={Math.min(X(peak), W - R - 34)} y={T - 1} textAnchor="middle" fontSize="8.5" fill="var(--emerald)" fontWeight="bold" className="tnum">
-            ⬆ قمة {compact(series[peak].total)}
-          </text>
-        </g>
-      )}
-      {/* نبض آخر نقطة */}
-      <circle cx={pts[pts.length - 1][0]} cy={pts[pts.length - 1][1]} r="5" fill="var(--petrol)" opacity="0.25">
-        <animate attributeName="r" values="4;9;4" dur="2s" repeatCount="indefinite" />
-        <animate attributeName="opacity" values="0.3;0;0.3" dur="2s" repeatCount="indefinite" />
-      </circle>
-
-      {/* ══ التتبع اللحظي: خط متعامد + نقطة مضيئة + بطاقة قيم ══ */}
-      {hov !== null && (
-        <g pointerEvents="none">
-          <line x1={X(hov)} x2={X(hov)} y1={T} y2={T + ih}
-            stroke="var(--petrol)" strokeWidth="1.2" strokeDasharray="4 3" opacity="0.55" />
-          <circle cx={X(hov)} cy={Y(series[hov].total)} r="5"
-            fill="var(--petrol)" stroke="var(--ink2)" strokeWidth="2" />
-          <circle cx={X(hov)} cy={Y(ma[hov])} r="3.5"
-            fill="var(--brass)" stroke="var(--ink2)" strokeWidth="1.5" />
-          <g>
-            <rect x={tipX} y={T + 2} width={tipW} height="40" rx="8"
-              fill="var(--ink2)" stroke="var(--line)" strokeWidth="1"
-              style={{ filter: "drop-shadow(0 2px 6px rgba(15,23,42,.18))" }} />
-            <text x={tipX + tipW / 2} y={T + 14} textAnchor="middle" fontSize="8.5"
-              fill="var(--text-dim)" fontWeight="bold" className="tnum">
-              {series[hov].date.slice(8)}/{series[hov].date.slice(5, 7)} — {series[hov].count} فاتورة
-            </text>
-            <text x={tipX + tipW / 2} y={T + 26} textAnchor="middle" fontSize="10.5"
-              fill="var(--petrol)" fontWeight="900" className="tnum">
-              {money(series[hov].total)} {t("dash.sar", " ر.س")}
-            </text>
-            <text x={tipX + tipW / 2} y={T + 37} textAnchor="middle" fontSize="8"
-              fill="var(--brass)" fontWeight="bold" className="tnum">
-              متوسط 7ي: {money(ma[hov])}
-            </text>
-          </g>
-        </g>
-      )}
-    </svg>
-  );
-}
-
-/* ── عداد دائري (Gauge) — طاقة تشغيل اليوم ── */
-function Gauge({ value, total, label }: { value: number; total: number; label: string }) {
-  const pct = total > 0 ? Math.min(1, value / total) : 0;
-  const R2 = 46, C = Math.PI * R2; // نصف دائرة
-  return (
-    <div className="flex flex-col items-center">
-      <svg viewBox="0 0 120 70" className="w-40">
-        <path d={`M14,64 A${R2},${R2} 0 0 1 106,64`} fill="none" stroke="var(--ink4)" strokeWidth="11" strokeLinecap="round" />
-        <path d={`M14,64 A${R2},${R2} 0 0 1 106,64`} fill="none" stroke="var(--petrol)" strokeWidth="11" strokeLinecap="round"
-          strokeDasharray={`${pct * C} ${C}`} className="transition-all duration-700" />
-        <text x="60" y="52" textAnchor="middle" fontSize="19" fontWeight="900" fill="var(--text)" className="tnum">
-          {Math.round(pct * 100)}%
-        </text>
-        <text x="60" y="65" textAnchor="middle" fontSize="7.5" fill="var(--text-dim)">{value} من {total}</text>
-      </svg>
-      <span className="mt-1 text-[11px] font-bold text-text-dim">{label}</span>
-    </div>
-  );
-}
-
-/* ── دائرة طرق الدفع ── */
-function PayDonut({ methods }: { methods: Dash["payMethods"] }) {
-  const total = methods.reduce((s, m) => s + m.total, 0);
-  const { t } = useLang();
-  if (!total) return <p className="py-6 text-center text-[12px] text-text-dim">
-    {t("dash.noPayments", "لا توجد مدفوعات بعد")}
-  </p>;
-  const R2 = 42, C = 2 * Math.PI * R2;
-  let acc = 0;
-  return (
-    <div className="flex items-center gap-4">
-      <div className="relative">
-        <svg viewBox="0 0 110 110" className="h-28 w-28 -rotate-90">
-          {methods.map((m) => {
-            const frac = m.total / total, dash = frac * C, off = -acc * C; acc += frac;
-            return <circle key={m.method} cx="55" cy="55" r={R2} fill="none" stroke={PAY_COLOR[m.method] || "#94A3B8"}
-              strokeWidth="13" strokeDasharray={`${dash} ${C - dash}`} strokeDashoffset={off}
-              className="transition-all duration-500" />;
-          })}
-        </svg>
-        <div className="absolute inset-0 grid place-items-center">
-          <span className="tnum text-[11px] font-black text-text-dim">{compact(total)}</span>
-        </div>
-      </div>
-      <div className="min-w-0 flex-1 space-y-1.5">
-        {methods.map((m) => (
-          <div key={m.method} className="flex items-center justify-between gap-2 text-[11.5px] font-bold">
-            <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: PAY_COLOR[m.method] || "#94A3B8" }} />
-              {PAY_AR[m.method] || m.method}
-            </span>
-            <span className="tnum text-text-dim">{money(m.total)} · {Math.round((m.total / total) * 100)}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+/** الحالة الابتدائية من الرابط (?p=&from=&to=&branch=) — تدعم المشاركة والرجوع من صفحات التفاصيل */
+function initialFilter(): FilterState {
+  const base: FilterState = { period: "month", ...rangeFor("month"), branchId: null };
+  if (typeof window === "undefined") return base;
+  const sp = new URLSearchParams(window.location.search);
+  const p = sp.get("p") as PeriodKey | null;
+  const branchId = sp.get("branch") || null;
+  if (p === "custom" && ISO.test(sp.get("from") ?? "") && ISO.test(sp.get("to") ?? "")) return { period: "custom", from: sp.get("from")!, to: sp.get("to")!, branchId };
+  if (p && PERIODS.some((x) => x.key === p)) return { period: p as Exclude<PeriodKey, "custom">, ...rangeFor(p as Exclude<PeriodKey, "custom">), branchId };
+  return { ...base, branchId };
 }
 
 export default function DashboardPage() {
   const { user, hasPerm } = useAuth();
-  const { t } = useLang();
-  const canSeeShift = hasPerm("shifts.manage_own");
-  const canSeeInvoices = hasPerm("invoices.view_today", "invoices.view_all");
+  const { d } = useDx();
+  const [filter, setFilter] = useState<FilterState>(initialFilter);
+  const { data, loading, refreshing, error, reload } = useExecutive(filter.from, filter.to, filter.branchId);
+  const [branches, setBranches] = useState<{ id: string; name: string }[] | null>(null);
+  const [updated, setUpdated] = useState<Date | null>(null);
 
-  const [dash, setDash] = useState<Dash | null>(null);
-  const [shift, setShift] = useState<ShiftReport>(null);
-  const [recent, setRecent] = useState<MiniInvoice[]>([]);
-  const [apiOk, setApiOk] = useState<boolean | null>(null);
-  const [lastSync, setLastSync] = useState<Date | null>(null);
+  useEffect(() => { if (data) setUpdated(new Date()); }, [data]);
+  useEffect(() => {                       // قائمة الفروع للفلتر (للأدوار اللي ترى مقارنة الفروع فقط)
+    if (data?.access.branches && !branches) api<{ id: string; name: string }[]>("/branches").then(setBranches).catch(() => setBranches([]));
+  }, [data?.access.branches, branches]);
 
-  // ── مركز قيادة حي: تحديث تلقائي كل 15 ثانية ──
-  useEffect(() => {
-    let stop = false;
-    async function sync() {
-      api<{ status: string }>("/health").then(() => !stop && setApiOk(true)).catch(() => !stop && setApiOk(false));
-      api<Dash>("/reports/dashboard").then((d) => { if (!stop) { setDash(d); setLastSync(new Date()); } }).catch(() => { });
-      if (canSeeShift) api<ShiftReport>("/shifts/current").then((r) => !stop && setShift(r)).catch(() => { });
-      if (canSeeInvoices) api<MiniInvoice[]>("/invoices?limit=7").then((r) => !stop && setRecent(r)).catch(() => { });
-    }
-    sync();
-    const t = setInterval(sync, 15000);
-    return () => { stop = true; clearInterval(t); };
-  }, [canSeeShift, canSeeInvoices]);
+  const change = useCallback((v: FilterState) => {
+    const next = v.period === "custom" ? v : { ...v, ...rangeFor(v.period) };
+    setFilter(next);
+    const qs = new URLSearchParams();
+    qs.set("p", next.period);
+    if (next.period === "custom") { qs.set("from", next.from); qs.set("to", next.to); }
+    if (next.branchId) qs.set("branch", next.branchId);
+    window.history.replaceState(null, "", `?${qs}`);
+  }, []);
 
-  // مشتقات التيكر والمؤشرات
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const yesterdayTotal = dash?.series?.filter((s) => s.date !== todayStr).slice(-1)[0]?.total ?? 0;
-  const week = useMemo(() => (dash?.series ?? []).slice(-7), [dash]);
-  const weekTotal = week.reduce((s, d) => s + d.total, 0);
-  const prevWeekTotal = (dash?.series ?? []).slice(-14, -7).reduce((s, d) => s + d.total, 0);
-  const avgInvoice = dash && dash.today.count > 0 ? dash.today.total / dash.today.count : 0;
-  const revSpark = (dash?.series ?? []).map((s) => s.total);
-  const cntSpark = (dash?.series ?? []).map((s) => s.count);
+  const access = data?.access;
+  const nothing = !!access && !access.sales && !access.finance && !access.inventory && !access.ops;
+  const branchName = useMemo(() => branches?.find((b) => b.id === filter.branchId)?.name, [branches, filter.branchId]);
+  const L = loading;
 
-  // ══════════ مركز الذكاء ══════════
-  const [aiQ, setAiQ] = useState("");
-  const [aiBusy, setAiBusy] = useState(false);
-  const [aiErr, setAiErr] = useState("");
-  const [aiAns, setAiAns] = useState<null | { answer: string; rows: any[]; columns: string[] }>(null);
-  const [brief, setBrief] = useState<string>("");
-  const [briefBusy, setBriefBusy] = useState(false);
-  const [anom, setAnom] = useState<string>("");
-  const [anomBusy, setAnomBusy] = useState(false);
-  const canAi = hasPerm("reports.view");
-  useEffect(() => {
-    if (canAi) api<{ brief: string }>("/reports/daily-brief")
-      .then((r) => setBrief(r.brief))
-      .catch((e: any) => setBrief(e.message || "تعذّر تحميل الملخص الصباحي"));
-  }, [canAi]);
-
-  async function askAi() {
-    if (aiQ.trim().length < 3) return;
-    setAiErr(""); setAiBusy(true); setAiAns(null);
-    try {
-      setAiAns(await api("/reports/ask", { method: "POST", body: JSON.stringify({ question: aiQ }) }));
-    } catch (e: any) { setAiErr(e.message); }
-    finally { setAiBusy(false); }
+  if (error && !data) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center" role="alert">
+        <MIcon name="cloud_off" className="!text-[44px] text-ember" />
+        <h1 className="mt-2 text-t-xl font-black">{d("loadFail")}</h1>
+        <p className="mt-1 text-t-sm text-text-dim">{error}</p>
+        <button onClick={reload} className="mt-4 rounded-lg bg-petrol px-5 py-2 text-t-sm font-bold text-white">{d("retry")}</button>
+      </div>
+    );
   }
-  async function refreshBrief() {
-    setBriefBusy(true);
-    try { const r = await api<{ brief: string }>("/reports/daily-brief?force=true"); setBrief(r.brief); }
-    catch (e: any) { setBrief(e.message); }
-    finally { setBriefBusy(false); }
-  }
-  async function runAnomalies() {
-    setAnomBusy(true); setAnom("");
-    try { const r = await api<{ report: string }>("/reports/anomalies"); setAnom(r.report); }
-    catch (e: any) { setAnom(e.message); }
-    finally { setAnomBusy(false); }
+  if (nothing) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center">
+        <MIcon name="lock" className="!text-[44px] text-text-dim" />
+        <h1 className="mt-2 text-t-xl font-black">{d("noPerm")}</h1>
+        <p className="mt-1 text-t-sm text-text-dim">{d("noPermHint")}</p>
+      </div>
+    );
   }
 
-  const dateAr = formatDateLong(new Date().toISOString());
-  console.log({
-
-    todaySales: t("dash.todaySales", "مبيعات اليوم"),
-    todayInvoices: t("dash.todayInvoices", "فواتير اليوم"),
-    avgInvoice: t("dash.avgInvoice", "متوسط الفاتورة"),
-  });
+  const a = access;
+  // ترتيب الجوال: مؤشرات ← تنبيهات ← مبيعات ← نقدية ← ذمم ← تحليلات ← جداول؛ على الشاشات الكبيرة الترتيب الطبيعي
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-[1600px] space-y-4 pb-8">
+      <header className="flex flex-wrap items-end justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-t-2xl font-black tracking-tight">{d("title")}</h1>
+          <p className="mt-0.5 text-t-sm text-text-dim">
+            {user?.fullName ? `${user.fullName} · ` : ""}{branchName ? `${branchName} · ` : ""}{formatDateLong(new Date().toISOString())}
+          </p>
+        </div>
+      </header>
 
-      {/* ══════════ رأس القيادة ══════════ */}
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-[21px] font-black"> {t("dash.welcome", "أهلاً")} {user?.fullName?.split(" ")[0] || t("dash.manager", "المدير")} 👋</h1>
-          <p className="text-[11.5px] font-bold text-text-dim">{dateAr} — {t("dash.liveDashboard", "لوحة القيادة الحية")}</p>
+      <GlobalFilters value={filter} branches={branches} onChange={change} onRefresh={reload} refreshing={refreshing} lastUpdated={updated} />
+
+      {error && data && (
+        <div role="alert" className="flex items-center justify-between gap-2 rounded-xl border border-ember/30 bg-ember-bg px-3 py-2 text-t-sm text-ember">
+          <span>{d("loadFail")}</span><button onClick={reload} className="font-bold underline">{d("retry")}</button>
         </div>
-        <div className="flex items-center gap-3">
-          {canSeeShift && (shift ? (
-            <Link href="/sales" className="flex items-center gap-2 rounded-xl border border-line bg-ink-2 px-3 py-1.5 text-[11.5px] font-bold shadow-card transition hover:border-petrol">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald" />
-              {t("dash.openShift", "وردية مفتوحة")} —
-              <b className="tnum">{money(shift.sales.totalInc)}</b> ({shift.sales.invoiceCount})
-            </Link>
-          ) : (
-            <Link href="/sales" className="rounded-xl bg-brass-soft px-3 py-1.5 text-[11.5px] font-black text-brass">
-              {t("dash.openShiftAction", "افتح وردية")} ←
-            </Link>
-          ))}
-          {apiOk !== null && (
-            <span className={`flex items-center gap-1.5 text-[11px] font-bold ${apiOk ? "text-emerald" : "text-ember"}`}>
-              <span className={`h-2 w-2 animate-pulse rounded-full ${apiOk ? "bg-emerald" : "bg-ember"}`} />
-              {apiOk ? t("dash.connected", "متصل") : t("dash.disconnected", "منقطع")}
-              {lastSync && <span className="tnum text-text-dim">· {lastSync.toLocaleTimeString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA"), { hour: "2-digit", minute: "2-digit" })}</span>}
-            </span>
-          )}
-        </div>
+      )}
+
+      <OpsStrip data={data} />
+
+      <section aria-label={d("title")} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Kpis data={data} loading={L} />
+      </section>
+
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
+        {(L || a?.sales || a?.finance || a?.inventory) && <div className="order-1 xl:order-none xl:col-span-4"><SmartAlerts data={data} loading={L} /></div>}
+        {(L || a?.finance) && <div className="order-3 xl:order-none xl:col-span-8"><FinancialOverview data={data} loading={L} /></div>}
+        {(L || a?.sales) && <div className="order-2 xl:order-none xl:col-span-8"><SalesPerformance data={data} loading={L} /></div>}
+        {(L || a?.finance) && <div className="order-4 xl:order-none xl:col-span-4"><PnlSnapshot data={data} loading={L} /></div>}
+        {(L || a?.finance) && <div className="order-5 xl:order-none xl:col-span-6"><CashFlow data={data} loading={L} /></div>}
+        {(L || a?.finance) && <div className="order-6 xl:order-none xl:col-span-3"><Receivables data={data} loading={L} /></div>}
+        {(L || a?.finance) && <div className="order-7 xl:order-none xl:col-span-3"><Payables data={data} loading={L} /></div>}
+        {(L || a?.branches) && <div className="order-8 xl:order-none xl:col-span-12"><BranchPerformance data={data} loading={L} activeId={filter.branchId} onPick={(id) => change({ ...filter, branchId: id })} /></div>}
+        {(L || a?.inventory) && <div className="order-9 xl:order-none xl:col-span-7"><InventoryCenter data={data} loading={L} /></div>}
+        {(L || a?.sales) && <div className="order-10 xl:order-none xl:col-span-5"><PaymentMethods data={data} loading={L} /></div>}
+        {(L || a?.sales) && <div className="order-11 xl:order-none xl:col-span-6"><TopProducts data={data} loading={L} /></div>}
+        {(L || a?.sales) && <div className="order-12 xl:order-none xl:col-span-6"><TopCustomers data={data} loading={L} /></div>}
+        {(L || a?.finance) && <div className="order-[13] xl:order-none xl:col-span-5"><ExpenseAnalytics data={data} loading={L} /></div>}
+        {(L || a?.sales) && <div className="order-[14] xl:order-none xl:col-span-7"><RecentTransactions data={data} loading={L} /></div>}
+        <div className="order-[15] xl:order-none xl:col-span-12"><QuickActions /></div>
       </div>
 
-      {/* ══════════ شريط التيكر — أسلوب شاشات البورصة ══════════ */}
-      {dash && (
-        <div className="no-scrollbar flex items-stretch gap-0 overflow-x-auto rounded-card bg-[#0F172A] px-1 py-2.5 shadow-panel">
-          {[
-            { l: t("dashboard.salesToday", "مبيعات اليوم"), v: `${money(dash.today.total)}`, d: <Delta curr={dash.today.total} prev={yesterdayTotal} /> },
-            { l: t("dashboard.invoicesToday", "فواتير اليوم"), v: `${dash.today.count}`, d: null },
-            { l: t("dash.avgInvoice", "متوسط الفاتورة"), v: money(avgInvoice), d: null },
-            { l: t("dash.week", "أسبوع"), v: compact(weekTotal), d: <Delta curr={weekTotal} prev={prevWeekTotal} /> },
-            { l: t("dash.month", "الشهر"), v: compact(dash.month.total), d: null },
-            { l: t("dash.monthVat", "ضريبة الشهر"), v: compact(dash.month.vat), d: null },
-            { l: t("dash.creditOutstanding", "آجل قائم"), v: compact(dash.creditOutstanding), d: null, warn: dash.creditOutstanding > 0 },
-            { l: t("dash.lowStock", "نواقص مخزون"), v: `${dash.lowStock}`, d: null, warn: dash.lowStock > 0 },
-          ].map((t, i) => (
-            <div key={i} className="flex min-w-fit items-center gap-2.5 border-l border-white/10 px-4 last:border-l-0">
-              <span className="text-[10px] font-bold text-white/50">{t.l}</span>
-              <span className={`tnum text-[14px] font-black ${t.warn ? "text-brass" : "text-white"}`}>{t.v}</span>
-              {t.d}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ══════════ يحتاج انتباهك ══════════ */}
-      {dash && (() => {
-        const alerts: { icon: string; tone: string; text: string; href: string }[] = [];
-        if (dash.lowStock > 0) alerts.push({ icon: "warning", tone: "text-ember", text: `${dash.lowStock} ${t("dash.lowStock", "صنف تحت الحد الأدنى")}`, href: "/inventory" });
-        if (dash.creditOutstanding > 0) alerts.push({ icon: "schedule", tone: "text-brass", text: `${money(dash.creditOutstanding)} ${t("dash.creditOutstanding", "آجل غير محصل")}`, href: "/sales/history" });
-        if (dash.cars.queued > 0) alerts.push({ icon: "directions_car", tone: "text-petrol", text: `${dash.cars.queued} ${t("dash.carsQueued", "سيارة في الطابور")}`, href: "/cars" });
-        if ((dash.newCustomers?.today ?? 0) > 0) alerts.push({ icon: "person_add", tone: "text-emerald", text: `${dash.newCustomers!.today} ${t("dash.newCustomer", "عميل جديد اليوم")}`, href: "/customers" });
-        if (!alerts.length) return null;
-        return (
-          <div className="flex flex-wrap gap-2">
-            {alerts.map((a, i) => (
-              <Link key={i} href={a.href}
-                className="flex items-center gap-1.5 rounded-full border border-line bg-ink-2 px-3 py-1.5 text-[11.5px] font-bold shadow-card transition-all duration-200 hover:-translate-y-px hover:border-petrol">
-                <MIcon name={a.icon} className={`!text-[15px] ${a.tone}`} /> {a.text}
-              </Link>
-            ))}
-          </div>
-        );
-      })()}
-
-      {/* ══════════ مؤشرات KPI بسباركلاين مدمج ══════════ */}
-      {dash ? (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {[
-            { l: t("dash.todaySales", "مبيعات اليوم"), v: money(dash.today.total), unit: t("dash.sar", " ر.س"), d: <Delta curr={dash.today.total} prev={yesterdayTotal} />, spark: revSpark, color: "var(--petrol)", id: "sp1" },
-            { l: t("dash.profitToday", "ربح اليوم (قبل المصاريف)"), v: money(dash.today.profit ?? 0), unit: t("dash.sar", " ر.س"), d: <></>, spark: [] as number[], color: "var(--emerald)", id: "spProfit" },
-            { l: t("dash.todayInvoices", "فواتير اليوم"), v: String(dash.today.count), unit: t("dash.invoices", " فاتورة"), d: <Delta curr={dash.today.count} prev={dash.series.filter((s) => s.date !== todayStr).slice(-1)[0]?.count ?? 0} />, spark: cntSpark, color: "#8B5CF6", id: "sp2" },
-            { l: t("dash.avgInvoice", "متوسط الفاتورة"), v: money(avgInvoice), unit: t("dash.sar", " ر.س"), d: null, spark: revSpark.map((v, i) => (cntSpark[i] ? v / cntSpark[i] : 0)), color: "#22C55E", id: "sp3" },
-            { l: t("dash.monthRevenue", "إيراد الشهر"), v: money(dash.month.total), unit: `${t("dash.invoices", " فاتورة")} ${dash.month.count}`, d: null, spark: revSpark, color: "#F59E0B", id: "sp4" },
-          ].map((k) => (
-            <div key={k.id}
-              className="rounded-card border border-line bg-ink-2 p-4 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-text-dim">{k.l}</span>
-                {k.d}
-              </div>
-              <div className="tnum mt-1 text-[20px] font-black leading-none" style={{ color: k.color }}>
-                {k.v} <span className="text-[10px] font-bold text-text-dim">{k.unit}</span>
-              </div>
-              <div className="mt-2"><Spark data={k.spark} color={k.color} id={k.id} /></div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-28 animate-pulse rounded-card border border-line bg-ink-2" />
-          ))}
-        </div>
-      )}
-
-      {/* ══════════ الرسم الرئيسي + عمود التشغيل ══════════ */}
-      {dash && (
-        <div className="grid gap-3 lg:grid-cols-[1.9fr_1fr]">
-          <Card>
-            <div className="mb-1 flex items-center justify-between">
-              <h2 className="flex items-center gap-1.5 text-[13.5px] font-black">
-                <MIcon name="monitoring" className="!text-[19px] text-petrol" /> {t("dash.dailyRevenue14", "الإيراد اليومي — 14 يوم")}
-              </h2>
-              <div className="flex items-center gap-3 text-[10px] font-bold text-text-dim">
-                <span className="flex items-center gap-1"><span className="h-0.5 w-4 rounded bg-petrol" /> {t("dash.revenue", "الإيراد")}</span>
-                <span className="flex items-center gap-1"><span className="h-0.5 w-4 rounded border-t-2 border-dashed border-brass" /> {t("dash.average7Days", "متوسط 7 أيام")}</span>
-              </div>
-            </div>
-            <EngineChart series={dash.series} />
-          </Card>
-          <div className="space-y-3">
-            <Card className="!py-4">
-              <h2 className="mb-1 text-center text-[12.5px] font-black">{t("dash.operatingCapacity", "طاقة التشغيل اليوم")}</h2>
-              <Gauge value={dash.cars.doneToday ?? 0}
-                total={(dash.cars.doneToday ?? 0) + dash.cars.inService + dash.cars.queued}
-                label={`${dash.cars.queued} ${t("dash.waiting", "انتظار")} · ${dash.cars.inService} ${t("dash.inService", "خدمة")} · ${dash.cars.doneToday ?? 0} ${t("dash.completed", "اكتملت")}`} />
-            </Card>
-            <Card>
-              <h2 className="mb-2 text-[12.5px] font-black">{t("dash.paymentMethodsMonth", "طرق الدفع — الشهر")}</h2>
-              <PayDonut methods={dash.payMethods} />
-            </Card>
-          </div>
-        </div>
-      )}
-
-      {/* ══════════ الأكثر مبيعاً + أفضل الموردين + العملاء الجدد ══════════ */}
-      {dash && (
-        <div className="grid gap-3 lg:grid-cols-3">
-          {dash.topProducts && dash.topProducts.length > 0 && (
-            <Card>
-              <h2 className="mb-2 flex items-center gap-1.5 text-[13px] font-black">
-                <MIcon name="trophy" className="!text-[18px] text-brass" /> {t("dash.bestSellingMonth", "الأكثر مبيعاً — الشهر")}
-              </h2>
-              {dash.topProducts.map((tp, i) => {
-                const max = dash.topProducts![0].total || 1;
-                return (
-                  <div key={i} className="py-1.5">
-                    <div className="flex items-center justify-between text-[11.5px] font-bold">
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        <span className="tnum grid h-5 w-5 shrink-0 place-items-center rounded-md bg-ink-3 text-[10px] font-black text-text-dim">{i + 1}</span>
-                        <span className="truncate">{tp.label}</span>
-                      </span>
-                      <span className="tnum shrink-0 text-text-dim">{money(tp.total)}</span>
-                    </div>
-                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-ink-3">
-                      <div className="h-full rounded-full bg-petrol transition-all duration-500" style={{ width: `${(tp.total / max) * 100}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </Card>
-          )}
-          {dash.topSuppliers && dash.topSuppliers.length > 0 && (
-            <Card>
-              <h2 className="mb-2 flex items-center gap-1.5 text-[13px] font-black">
-                <MIcon name="local_shipping" className="!text-[18px] text-petrol" /> {t("dash.topSuppliersMonth", "أفضل الموردين — الشهر")}
-              </h2>
-              {dash.topSuppliers.map((s, i) => {
-                const max = dash.topSuppliers![0].total || 1;
-                return (
-                  <div key={i} className="py-1.5">
-                    <div className="flex items-center justify-between text-[11.5px] font-bold">
-                      <span className="truncate">{s.name}</span>
-                      <span className="tnum shrink-0 text-text-dim">{money(s.total)}</span>
-                    </div>
-                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-ink-3">
-                      <div className="h-full rounded-full bg-brass transition-all duration-500" style={{ width: `${(s.total / max) * 100}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </Card>
-          )}
-          {dash.newCustomers && (
-            <Card>
-              <div className="mb-2 flex items-center justify-between">
-                <h2 className="flex items-center gap-1.5 text-[13px] font-black">
-                  <MIcon name="person_add" className="!text-[18px] text-emerald" /> {t("dash.newCustomers", "العملاء الجدد")}
-                </h2>
-                <span className="tnum rounded-full bg-emerald-bg px-2 py-0.5 text-[10.5px] font-black text-emerald">+{dash.newCustomers.week} {t("dash.week", "أسبوع")}</span>
-              </div>
-              {dash.newCustomers.latest.length === 0 ? (
-                <p className="py-3 text-center text-[11.5px] text-text-dim">{t("dash.noCustomersYet", "لا يوجد بعد")}</p>
-              ) : dash.newCustomers.latest.map((c, i) => (
-                <div key={i} className="flex items-center gap-2 border-t border-line/60 py-1.5 first:border-t-0">
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-petrol-soft text-[11px] font-black text-petrol">
-                    {c.name.trim().charAt(0)}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-[12px] font-bold">{c.name}</span>
-                  <span className="tnum text-[10.5px] text-text-dim">{c.phone || "—"}</span>
-                </div>
-              ))}
-            </Card>
-          )}
-
-          {/* ── 👑 العملاء الأكثر زيارة ── */}
-          {dash.topCustomers && dash.topCustomers.length > 0 && (
-            <Card>
-              <h2 className="mb-2 flex items-center gap-1.5 text-[13px] font-black">
-                <MIcon name="loyalty" className="!text-[18px] text-petrol" />{t("dash.topCustomers", "العملاء الأكثر زيارة")}
-              </h2>
-              {dash.topCustomers.map((c, i) => (
-                <div key={i} className="flex items-center gap-2 border-t border-line/60 py-1.5 first:border-t-0">
-                  <span className={`tnum grid h-6 w-6 place-items-center rounded-md text-[10px] font-black
-                      ${i === 0 ? "bg-brass-soft text-brass" : "bg-ink-3 text-text-dim"}`}>
-                    {i + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[12px] font-bold">{c.name}</div>
-                    <div className="tnum text-[10px] text-text-dim">{c.phone || "—"}</div>
-                  </div>
-                  <div className="text-left">
-                    <div className="tnum text-[12.5px] font-black text-petrol">{c.visits} {t("dash.visits", "زيارة")}</div>
-                    <div className="tnum text-[10px] text-text-dim">{money(c.total)}{t("dash.sar", " ر.س")}</div>
-                  </div>
-                </div>
-              ))}
-            </Card>
-          )}
-
-          {/* ── ⚠ نواقص المخزون حسب الموقع ── */}
-          {dash.lowStockItems && dash.lowStockItems.length > 0 && (
-            <Card>
-              <h2 className="mb-2 flex items-center gap-1.5 text-[13px] font-black text-ember">
-                <MIcon name="warning" className="!text-[18px] text-ember" /> {t("dash.lowStockDetail", "أبرز نواقص المخزون")}
-              </h2>
-              {dash.lowStockItems.map((it, i) => (
-                <div key={i} className="flex items-center gap-2 border-t border-line/60 py-1.5 first:border-t-0">
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[12px] font-bold">{it.name}</div>
-                    <div className="tnum text-[10px] text-text-dim">{it.locName}</div>
-                  </div>
-                  <div className={`tnum text-[12.5px] font-black ${it.outOfStock ? "text-ember" : "text-brass"}`}>
-                    {it.qty} / {it.minQty}
-                  </div>
-                </div>
-              ))}
-              <Link href="/inventory" className="mt-2 block text-center text-[11px] font-bold text-petrol hover:underline">
-                {t("dash.viewAllInventory", "عرض المخزون كاملاً ←")}
-              </Link>
-            </Card>
-          )}
-
-          {/* ── 📅 أعمار ذمم العملاء ── */}
-          {dash.arAging && dash.arAging.total > 0 && (
-            <Card>
-              <h2 className="mb-2 flex items-center gap-1.5 text-[13px] font-black">
-                <MIcon name="schedule" className="!text-[18px] text-brass" /> {t("dash.arAging", "أعمار ذمم العملاء")}
-              </h2>
-              <div className="space-y-1.5 text-[12px]">
-                <div className="flex justify-between"><span className="text-text-dim">{t("dash.arCurrent", "حتى 30 يوم")}</span><span className="tnum font-bold">{money(dash.arAging.current)}</span></div>
-                <div className="flex justify-between"><span className="text-text-dim">31–60 {t("dash.days", "يوم")}</span><span className="tnum font-bold">{money(dash.arAging.d31_60)}</span></div>
-                <div className="flex justify-between"><span className="text-ember">61–90 {t("dash.days", "يوم")}</span><span className="tnum font-black text-ember">{money(dash.arAging.d61_90)}</span></div>
-                <div className="flex justify-between"><span className="text-ember">{t("dash.ar90plus", "أكثر من 90 يوم")}</span><span className="tnum font-black text-ember">{money(dash.arAging.d90plus)}</span></div>
-                <div className="flex justify-between border-t border-line pt-1.5 font-black"><span>{t("dash.total", "الإجمالي")}</span><span className="tnum">{money(dash.arAging.total)}</span></div>
-              </div>
-              <Link href="/reports" className="mt-2 block text-center text-[11px] font-bold text-petrol hover:underline">
-                {t("dash.viewArReport", "تفاصيل حسب العميل ←")}
-              </Link>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* ══════════ آخر الفواتير — مباشر ══════════ */}
-      {canSeeInvoices && recent.length > 0 && (
-        <Card className="!p-0 overflow-hidden">
-          <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
-            <h2 className="text-[13px] font-extrabold">{t("dash.recentInvoices", "آخر الفواتير — مباشر")}</h2>
-            <Link href="/sales/history" className="text-[11.5px] font-bold text-petrol hover:underline">{t("dash.fullHistory", "السجل الكامل")} ←</Link>
-          </div>
-          <div className="divide-y divide-line/60">
-            {recent.map((i) => (
-              <div key={i.id} className="flex items-center gap-3 px-4 py-2 text-[12px] transition-colors hover:bg-ink-3/40">
-                <span className="tnum font-black text-petrol">#{i.invoice_no}</span>
-                <span className="min-w-0 flex-1 truncate font-bold">{i.customer_name || t("dash.cashSale", "بيع نقدي")}</span>
-                {i.is_returned && <span className="rounded-full bg-ember-bg px-2 py-0.5 text-[10px] font-black text-ember">{t("dash.returned", "مرتجعة")}</span>}
-                <span className="tnum font-black">{money(i.total_inc)}</span>
-                <span className="tnum text-[10.5px] text-text-dim">
-                  {new Date(i.issued_at).toLocaleTimeString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA"), { hour: "2-digit", minute: "2-digit" })}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {/* ══════════ إجراءات سريعة ══════════ */}
-      <div className="flex flex-wrap gap-2">
-        {[
-          { href: "/sales/direct", icon: "point_of_sale", label: t("dash.directSale", "بيع مباشر") },
-          { href: "/sales", icon: "receipt_long", label: t("dash.serviceInvoice", "فاتورة خدمة") },
-          { href: "/cars", icon: "directions_car", label: t("dash.registerCar", "تسجيل سيارة") },
-          { href: "/products", icon: "inventory_2", label: t("dash.newProduct", "صنف جديد") },
-          { href: "/customers", icon: "person_add", label: t("dash.newCustomer", "عميل جديد") },
-          { href: "/reports", icon: "monitoring", label: t("dash.reports", "التقارير") },
-        ].map((a) => (
-          <Link key={a.href} href={a.href}
-            className="flex items-center gap-1.5 rounded-xl border border-line bg-ink-2 px-3.5 py-2 text-[12.5px] font-bold text-text shadow-card transition-all duration-200 hover:-translate-y-px hover:border-petrol hover:text-petrol hover:shadow-md">
-            <MIcon name={a.icon} className="!text-[17px]" /> {a.label}
-          </Link>
-        ))}
-      </div>
-
-      {/* ══════════ مركز الذكاء — في القاع ══════════ */}
-      {canAi && (
-        <div className="grid gap-3 lg:grid-cols-2">
-          <Card className="space-y-2.5">
-            <h2 className="flex items-center gap-1.5 text-[13.5px] font-black">
-              <MIcon name="auto_awesome" className="!text-[19px] text-petrol" /> {t("dash.askYourData", "اسأل بياناتك")}
-            </h2>
-            <div className="flex gap-2">
-              <Input value={aiQ} placeholder={t("dash.aiPlaceholder", "مثال: أكتر 5 أصناف مبيعاً الشهر ده؟")}
-                onChange={(e) => setAiQ(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && askAi()} />
-              <Button onClick={askAi} disabled={aiBusy}>{aiBusy
-                ? t("dash.preparing", "جارِ التحضير...")
-                : t("dash.ask", "اسأل")}</Button>
-            </div>
-            <ErrorNote msg={aiErr} />
-            {aiAns && (
-              <div className="space-y-2">
-                {aiAns.answer && <p className="rounded-xl bg-petrol-soft px-3 py-2.5 text-[13px] font-bold leading-relaxed">{aiAns.answer}</p>}
-                {aiAns.rows.length > 0 && (
-                  <div className="max-h-56 overflow-auto rounded-lg border border-line">
-                    <table className="w-full text-[11.5px]">
-                      <thead><tr className="bg-ink-3 text-text-dim">
-                        {aiAns.columns.map((c) => <th key={c} className="px-2.5 py-1.5 text-right font-extrabold">{c}</th>)}
-                      </tr></thead>
-                      <tbody>
-                        {aiAns.rows.map((r, i) => (
-                          <tr key={i} className="border-t border-line/60">
-                            {aiAns.columns.map((c) => <td key={c} className="tnum px-2.5 py-1.5">{String(r[c] ?? "—")}</td>)}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )}
-          </Card>
-          <div className="space-y-3">
-            <Card className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h2 className="flex items-center gap-1.5 text-[13.5px] font-black">
-                  <MIcon name="wb_sunny" className="!text-[19px] text-brass" />{t("dash.morningBrief", "الملخص الصباحي")}
-                </h2>
-                <Button variant="ghost" className="!px-2 !py-1 !text-[10.5px]" disabled={briefBusy} onClick={refreshBrief}>
-                  {briefBusy ? t("dash.preparing", "جارِ التحضير...") : t("dash.refresh", "تحديث")}
-                </Button>
-              </div>
-              <p className="whitespace-pre-line text-[12.5px] leading-relaxed">{brief || t("dash.preparing", "جارِ التحضير...")}</p>
-            </Card>
-            <Card className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h2 className="flex items-center gap-1.5 text-[13.5px] font-black">
-                  <MIcon name="policy" className="!text-[19px] text-ember" />{t("dash.anomalyDetection", "كشف الشذوذ المالي")}
-                </h2>
-                <Button variant="ghost" className="!px-2 !py-1 !text-[10.5px]" disabled={anomBusy} onClick={runAnomalies}>
-                  {anomBusy ? t("dash.checking", "جارِ الفحص...") : t("dash.checkNow", "افحص الآن")}
-                </Button>
-              </div>
-              {anom && <p className="whitespace-pre-line text-[12.5px] leading-relaxed">{anom}</p>}
-            </Card>
-          </div>
-        </div>
-      )}
+      <AiPanel />
     </div>
   );
 }

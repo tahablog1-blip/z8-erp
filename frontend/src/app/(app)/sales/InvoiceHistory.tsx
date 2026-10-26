@@ -86,6 +86,20 @@ export function InvoiceHistory({ onOpen, onPrint, refreshKey }: {
 }) {
   const [f, setF] = useState<Filters>(EMPTY);
   const [draft, setDraft] = useState<Filters>(EMPTY);     // حقول لوحة البحث المتقدم قبل التطبيق
+  // فتح السجل بفلاتر جاهزة من لوحة القيادة (?from=&to=&status=&source=)
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const from = sp.get("from") ?? "", to = sp.get("to") ?? "";
+    const status = sp.get("status") ?? "", source = sp.get("source") ?? "";
+    const invoiceNo = sp.get("invoiceNo") ?? "";
+    if (!from && !to && !status && !source && !invoiceNo) return;
+    const next: Filters = {
+      ...EMPTY, invoiceNo: invoiceNo.slice(0, 40), from: /^\d{4}-\d{2}-\d{2}$/.test(from) ? from : "", to: /^\d{4}-\d{2}-\d{2}$/.test(to) ? to : "",
+      status: (["active", "returned", "credit"].includes(status) ? status : "") as Filters["status"],
+      source: (["pos", "car"].includes(source) ? source : "") as Filters["source"],
+    };
+    setF(next); setDraft(next);
+  }, []);
   const [rows, setRows] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [more, setMore] = useState(false);                // فيه صفحات تانية؟
