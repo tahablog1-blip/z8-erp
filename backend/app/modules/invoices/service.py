@@ -447,6 +447,7 @@ async def get_invoice(company_id: str, invoice_id: str) -> dict:
         "id": str(it["id"]), "product_id": str(it["product_id"]) if it["product_id"] else None,
         "label": it["label"], "qty": it["qty"], "returned_qty": it.get("returned_qty", 0) or 0,
         "unit_price": _num(it["unit_price"]), "unit_price_vat": _num(it["unit_price_vat"]),
+        "discount_amount": _num(it.get("discount_amount")),   # كان ناقصاً من الاستجابة → الخصم ما كانش بيظهر في الطباعة
         "line_ex": _num(it["line_ex"]), "line_vat": _num(it["line_vat"]), "line_inc": _num(it["line_inc"]),
     } for it in items]
     out["payments"] = [{

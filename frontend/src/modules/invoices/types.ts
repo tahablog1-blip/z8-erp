@@ -24,6 +24,7 @@ export type Invoice = {
   total_ex: number;
   total_vat: number;
   total_inc: number;
+  discount_total?: number;
   paid_total: number;
   credit_total: number;
   is_returned: boolean;
