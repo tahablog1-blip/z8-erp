@@ -26,7 +26,11 @@ async def _settings(company_id: str) -> tuple[str, str] | None:
         "SELECT wa_instance, wa_token FROM companies WHERE id=$1", company_id)
     if not row or not row["wa_instance"] or not row["wa_token"]:
         return None
-    return row["wa_instance"].strip(), row["wa_token"].strip()
+    instance = row["wa_instance"].strip().strip("/")
+    # اسم الـ instance في UltraMsg بيبدأ بكلمة instance — لو اتخزّنت الأرقام بس نكمّلها
+    if instance.isdigit():
+        instance = "instance" + instance
+    return instance, row["wa_token"].strip()
 
 
 def _post(url: str, data: dict) -> dict:
