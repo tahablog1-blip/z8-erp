@@ -32,6 +32,7 @@ function RippleSeed() {
 }
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { CommandPalette } from "@/components/CommandPalette";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { refreshCompany } from "@/lib/company";
@@ -62,6 +63,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useEffect(() => {                 // Ctrl/⌘+K يفتح البحث الشامل من أي صفحة
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setPaletteOpen((o) => !o); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   // أي انتقال لصفحة جديدة يقفل الدرج تلقائياً على الموبايل
   useEffect(() => { setMobileNavOpen(false); }, [pathname]);
 
@@ -234,6 +243,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <BackgroundLayer />
       <DialogHost />
       <ToastHost />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} titleOf={(m) => t(NAV_TITLE_KEYS[m.title] || "", m.title)} />
       <RippleSeed />
       {/* ── القضيب الجانبي — التوقيع البصري ── */}
       {/* خلفية معتمة خلف الدرج — الشاشات الضيقة بس، بتقفله لو ضغط عليها */}
@@ -371,6 +381,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
               {sectionTitle && <div className="hidden sm:block"><Breadcrumb items={[{ label: sectionTitle }, { label: pageTitle }]} /></div>}
               <div className="truncate text-[16px] font-extrabold leading-6 text-text sm:text-page-title">{pageTitle}</div>
             </div>
+
+            {/* البحث الشامل (Ctrl+K) */}
+            <button onClick={() => setPaletteOpen(true)} aria-label="بحث شامل"
+              className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-line px-2.5 text-text-dim transition hover:border-petrol hover:text-petrol">
+              <MIcon name="search" className="!text-[19px]" />
+              <kbd className="hidden text-t-xs lg:block">Ctrl K</kbd>
+            </button>
 
             {/* مركز الإشعارات الداخلي */}
             <div className="relative">

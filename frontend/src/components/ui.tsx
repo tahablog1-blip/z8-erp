@@ -100,7 +100,7 @@ export function Field({ label, children, hint }: { label: string; children: Reac
   );
 }
 
-export function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement>) {
+export function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement> & { ref?: React.Ref<HTMLInputElement> }) {
   return (
     <input
       className={`w-full rounded-xl border border-line bg-ink-2 px-3.5 py-2.5 text-[13px] transition-all duration-200 text-text placeholder:text-text-dim/60 focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15 disabled:bg-ink-3 disabled:text-text-dim ${className}`}

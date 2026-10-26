@@ -30,6 +30,30 @@ async def dashboard(user: CurrentUser = Depends(get_current_user)):
     return await service.dashboard(user.company_id)
 
 
+_exec_cache: dict = {}      # (مفتاح) → (وقت الحفظ, الرد) — تخزين مؤقت قصير يمنع تكرار الاستعلامات الثقيلة
+
+
+@router.get("/executive")
+async def executive_dashboard(date_from: str | None = Query(default=None, alias="from"),
+                              date_to: str | None = Query(default=None, alias="to"),
+                              branchId: str | None = Query(default=None),
+                              user: CurrentUser = Depends(get_current_user)):
+    """لوحة القيادة التنفيذية: مبيعات/أرباح/مصروفات/نقدية/ذمم/مخزون/فروع بفترة وفرع محددين.
+    كل قسم بيرجع بس لو المستخدم يملك صلاحيته، ومقارنة بالفترة السابقة المساوية."""
+    import time as _t
+    from . import executive
+    perms = tuple(sorted(user.permissions)) if user.role != "admin" else ("*",)
+    key = (user.company_id, user.user_id, user.branch_scope, branchId, date_from, date_to, perms)
+    hit = _exec_cache.get(key)
+    if hit and _t.time() - hit[0] < 15:
+        return hit[1]
+    out = await executive.build(user, date_from, date_to, branchId)
+    if len(_exec_cache) > 200:
+        _exec_cache.clear()
+    _exec_cache[key] = (_t.time(), out)
+    return out
+
+
 # ══════════════════ تقارير إضافية: مخزون، ربحية، أعمار ذمم ══════════════════
 _REPORTS_PERM = "accounting.view_reports"
 

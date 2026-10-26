@@ -39,6 +39,14 @@ const config: Config = {
         "card-title": ["13.5px", { lineHeight: "20px", fontWeight: "800" }],
         body: ["13px", { lineHeight: "20px", fontWeight: "500" }],
         small: ["11.5px", { lineHeight: "16px", fontWeight: "600" }],
+        // سلم خطوط لوحة القيادة (القيم من متغيرات CSS في globals.css)
+        "t-xs": ["var(--font-xs)", { lineHeight: "1.45" }],
+        "t-sm": ["var(--font-sm)", { lineHeight: "1.5" }],
+        "t-md": ["var(--font-md)", { lineHeight: "1.5" }],
+        "t-lg": ["var(--font-lg)", { lineHeight: "1.45" }],
+        "t-xl": ["var(--font-xl)", { lineHeight: "1.35" }],
+        "t-2xl": ["var(--font-2xl)", { lineHeight: "1.25" }],
+        "t-3xl": ["var(--font-3xl)", { lineHeight: "1.15" }],
       },
       transitionDuration: {
         "150": "150ms",

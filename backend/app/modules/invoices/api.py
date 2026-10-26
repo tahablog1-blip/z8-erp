@@ -69,9 +69,15 @@ async def create_invoice(body: InvoiceCreate,
             reason=body.discountReason, branch_id=body.branchId))
     # 📲 بعد إتمام الدفع: إرسال الفاتورة PDF للعميل واتساب (تلقائي — لا يعطل الإصدار)
     try:
-        if inv.get("customer_id") and not any(p.get("method") == "credit" for p in (body.payments or [])):
+        is_credit = any(p.method == "credit" for p in (body.payments or []))   # PaymentIn كائن Pydantic — مش dict
+        if inv.get("customer_id") and not is_credit:
             import asyncio as _aio
             _aio.create_task(_send_invoice_wa(user.company_id, inv["id"]))
+        elif not inv.get("customer_id"):
+            # بدون عميل مربوط ما فيش رقم نبعتله — نسجّل السبب بدل ما يتخطّى بصمت
+            from ...core.integration_log import log_event as _log
+            await _log(user.company_id, "whatsapp", "send_invoice", "skipped",
+                       detail=f"فاتورة {inv.get('invoice_no')}: غير مربوطة بعميل — اختر العميل قبل إصدار الفاتورة ليصله PDF")
     except Exception as _e:
         print(f"⚠ جدولة واتساب الفاتورة: {_e}")
     return inv
@@ -86,24 +92,39 @@ async def _send_invoice_wa(company_id: str, invoice_id: str):
            FROM invoices i LEFT JOIN customers cu ON cu.id = i.customer_id
            WHERE i.id=$1::uuid""", invoice_id)
     if not row or not row["phone"]:
+        from ...core.integration_log import log_event as _log
+        await _log(company_id, "whatsapp", "send_invoice", "skipped",
+                   detail=f"فاتورة {row['invoice_no'] if row else invoice_id}: العميل ليس له رقم جوال")
         return
-    caption = (f"🧾 فاتورتكم من مصدر الزيوت\nرقم: {row['invoice_no']}"
-               f"\nالإجمالي: {float(row['total_inc']):.2f} ر.س شامل الضريبة\nشكراً لتعاملكم معنا 🌟")
+    caption = (f"فاتورتكم من شركة مصدر الزيوت\nرقم الفاتورة: {row['invoice_no']}"
+               f"\nالإجمالي: {float(row['total_inc']):.2f} ر.س شاملاً ضريبة القيمة المضافة\nنشكركم على تعاملكم معنا.")
+    import base64
+    from ...core.integration_log import log_event as _log
     try:
-        from .pdf import build_invoice_pdf
-        import base64
-        pdf_bytes = await build_invoice_pdf(company_id, invoice_id)
-        b64 = base64.b64encode(pdf_bytes).decode()
-        ok = await wa.send_document(company_id, row["phone"],
-                                    f"{row['invoice_no']}.pdf", b64, caption)
-        if not ok:
-            await wa.send_text(company_id, row["phone"], caption)
-    except ImportError:
-        print("⚠ محرك PDF غير مثبت (شغّل INSTALL-Z8) — إرسال نصي بديل")
-        await wa.send_text(company_id, row["phone"], caption)
+        pdf_bytes = await _invoice_pdf_bytes(company_id, invoice_id)
     except Exception as e:
+        # ما قدرناش نبني الـ PDF: نبعت الملخص النصي بدل ما العميل يفضل من غير حاجة، ونسجّل السبب
         print(f"⚠ PDF واتساب: {type(e).__name__}: {e}")
+        await _log(company_id, "whatsapp", "send_invoice", "failed",
+                   detail=f"فاتورة {row['invoice_no']}: تعذّر إنشاء PDF ({type(e).__name__}: {str(e)[:150]}) — أُرسل ملخص نصي")
         await wa.send_text(company_id, row["phone"], caption)
+        return
+    b64 = base64.b64encode(pdf_bytes).decode()
+    ok = await wa.send_document(company_id, row["phone"], f"{row['invoice_no']}.pdf", b64, caption)
+    if not ok:
+        await wa.send_text(company_id, row["phone"], caption)
+
+
+async def _invoice_pdf_bytes(company_id: str, invoice_id: str) -> bytes:
+    """الفاتورة الرسمية (pdf_v2: لوجو + QR زكاة + تصميم الشركة)؛ لو فشلت نرجع للمولّد القديم"""
+    try:
+        from .pdf_v2 import build_invoice_pdf_v2
+        return await build_invoice_pdf_v2(company_id, invoice_id)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("pdf_v2 failed, falling back to legacy pdf")
+        from .pdf import build_invoice_pdf
+        return await build_invoice_pdf(company_id, invoice_id)
 
 
 @router.get("", response_model=list[InvoiceOut])
@@ -112,9 +133,20 @@ async def list_invoices(customerId: str | None = Query(default=None),
                         date_from: str | None = Query(default=None, alias="from"),
                         date_to: str | None = Query(default=None, alias="to"),
                         limit: int = Query(default=100, ge=1, le=500),
+                        offset: int = Query(default=0, ge=0),
+                        q: str | None = Query(default=None, max_length=80),
+                        invoiceNo: str | None = Query(default=None, max_length=40),
+                        customer: str | None = Query(default=None, max_length=80),
+                        plate: str | None = Query(default=None, max_length=20),
+                        source: str | None = Query(default=None, pattern="^(pos|car)$"),
+                        status: str | None = Query(default=None, pattern="^(active|returned|credit)$"),
+                        minTotal: float | None = Query(default=None, ge=0),
+                        maxTotal: float | None = Query(default=None, ge=0),
                         user: CurrentUser = Depends(require_permission(*_VIEW_PERMS))):
     return await service.list_invoices(
-        user.company_id, user.branch_scope, branchId, customerId, date_from, date_to, limit
+        user.company_id, user.branch_scope, branchId, customerId, date_from, date_to, limit,
+        q=q, invoice_no=invoiceNo, customer=customer, plate=plate, source=source, status=status,
+        min_total=minTotal, max_total=maxTotal, offset=offset,
     )
 
 
@@ -158,18 +190,11 @@ async def invoice_returns(invoice_id: str, user: CurrentUser = Depends(require_p
 async def invoice_pdf(invoice_id: str,
                       user: CurrentUser = Depends(require_permission(*_VIEW_PERMS))):
     """فاتورة PDF A4 — للتنزيل أو الإرسال"""
-    try:
-        from .pdf import build_invoice_pdf
-    except ImportError:
-        raise HTTPException(501, "محرك PDF غير مثبت — شغّل INSTALL-Z8.bat لتثبيت المتطلبات الجديدة")
     from fastapi.responses import Response
     try:
-        from .pdf_v2 import build_invoice_pdf_v2
-        pdf = await build_invoice_pdf_v2(user.company_id, invoice_id)
-    except Exception:
-        import logging
-        logging.getLogger(__name__).exception("pdf_v2 failed, falling back to legacy pdf")
-        pdf = await build_invoice_pdf(user.company_id, invoice_id)
+        pdf = await _invoice_pdf_bytes(user.company_id, invoice_id)
+    except ImportError:
+        raise HTTPException(501, "محرك PDF غير مثبت — شغّل INSTALL-Z8.bat لتثبيت المتطلبات الجديدة")
     return Response(content=pdf, media_type="application/pdf",
                     headers={"Content-Disposition": f"inline; filename={invoice_id}.pdf"})
 

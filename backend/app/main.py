@@ -1018,6 +1018,7 @@ async def lifespan(app: FastAPI):
         "CREATE INDEX IF NOT EXISTS idx_invoices_company_returned_issued ON invoices (company_id, is_returned, issued_at DESC)",
         "CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items (invoice_id)",
         "CREATE INDEX IF NOT EXISTS idx_invoice_payments_invoice ON invoice_payments (invoice_id)",
+        "ALTER TABLE cars ADD COLUMN IF NOT EXISTS reminder_sent_at timestamptz",
         "CREATE INDEX IF NOT EXISTS idx_cars_company_active ON cars (company_id, is_deleted, exited_at)",
         "CREATE INDEX IF NOT EXISTS idx_cars_company_plate ON cars (company_id, plate)",
         "CREATE INDEX IF NOT EXISTS idx_customers_company ON customers (company_id)",
@@ -1031,9 +1032,12 @@ async def lifespan(app: FastAPI):
     _sup_task = _aio0.create_task(_auto_supervisor())
     from .modules.shortage_sync.firestore_relay import start_relay_loop as _start_relay_loop
     _relay_task = _aio0.create_task(_start_relay_loop())
+    from .modules.cars.booking_notify import reminder_loop as _reminder_loop
+    _remind_task = _aio0.create_task(_reminder_loop())
     yield
     _sup_task.cancel()
     _relay_task.cancel()
+    _remind_task.cancel()
     await close_pool()
 
 app = FastAPI(

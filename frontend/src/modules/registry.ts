@@ -22,7 +22,7 @@ export const SECTION_ICONS: Record<string, string> = {
 
 export const NAV_MODULES: NavModule[] = [
   // ── الرئيسية (خارج القوائم المنسدلة — دايماً ظاهرة) ──
-  { path: "/dashboard",     title: "لوحة القيادة",   icon: "dashboard", section: "الرئيسية", permissions: [], adminOnly: true },
+  { path: "/dashboard",     title: "لوحة القيادة",   icon: "dashboard", section: "الرئيسية", permissions: ["reports.view", "reports.sales", "accounting.view_reports", "invoices.view_all", "products.view_stock"] },
   { path: "/sales",         title: "نقطة بيع الخدمة", icon: "sales", section: "الرئيسية", permissions: ["invoices.create", "invoices.create_service"] },
   { path: "/sales/direct",  title: "البيع المباشر",   icon: "sales", section: "الرئيسية", permissions: ["invoices.create", "invoices.create_direct"] },
 
