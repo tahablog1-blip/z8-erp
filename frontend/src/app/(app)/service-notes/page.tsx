@@ -10,6 +10,7 @@ import { api } from "@/lib/api";
 import { Button, IconButton, Input, Select } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 import { PlateBadge } from "@/components/PlateBadge";
+import { CarBrandMark } from "@/components/CarBrandMark";
 
 /* ═══════ الأنواع ═══════ */
 type Counts = Record<string, number>;
@@ -118,10 +119,8 @@ function ThreadRow({ t, typeLabels, onOpen, onOpenNote }: {
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
             <span className={`text-[14px] ${unread > 0 ? "font-black" : "font-bold"}`}>{name}</span>
             {t.plate && <PlateBadge plate={t.plate} size="sm" />}
-            <span className="text-[12px] text-text-dim">
-              {[t.brand, t.car_name].filter(Boolean).join(" ")}
-              {t.customer_phone && <span dir="ltr" className="tnum mr-2 inline-block">{t.customer_phone}</span>}
-            </span>
+            <CarBrandMark brand={t.brand} model={t.car_name} size="md" />
+            {t.customer_phone && <span dir="ltr" className="tnum text-[12px] text-text-dim">{t.customer_phone}</span>}
           </div>
           <div className={`mt-1 truncate text-[13px] ${unread > 0 ? "font-bold text-text" : "text-text-dim"}`}>
             <Preview t={t} />
@@ -397,7 +396,12 @@ export default function ServiceNotesPage() {
                     <td className="px-3 py-3">{typeLabels[r.type] ?? r.type}</td>
                     <td className="px-3 py-3">{r.customer_name ?? "—"}</td>
                     <td className="px-3 py-3">
-                      {r.plate ? <PlateBadge plate={r.plate} size="sm" /> : (r.brand || r.car_name ? [r.brand, r.car_name, r.model_year].filter(Boolean).join(" ") : "—")}
+                      {r.plate || r.brand || r.car_name ? (
+                        <span className="inline-flex items-center gap-2">
+                          {r.plate && <PlateBadge plate={r.plate} size="sm" />}
+                          <CarBrandMark brand={r.brand} model={r.car_name} year={r.model_year} size="sm" />
+                        </span>
+                      ) : "—"}
                     </td>
                     <td className="px-3 py-3">{r.product_name ?? "—"}</td>
                     <td className="px-3 py-3 tnum">{r.required_quantity != null ? `${r.required_quantity} / ${r.available_quantity ?? "؟"}` : "—"}</td>

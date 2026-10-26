@@ -18,6 +18,7 @@ import { appAlert, appConfirm } from "@/components/dialog";
 import AddNoteModal from "@/components/AddNoteModal";
 import { MIcon } from "@/components/m-icon";
 import { PlateBadge } from "@/components/PlateBadge";
+import { CarBrandMark } from "@/components/CarBrandMark";
 
 type CartLine = {
   productId: string;
@@ -389,7 +390,8 @@ export default function PreparePage() {
                   <span className="tnum text-[11.5px] font-bold text-text-dim">دور {c.queue_no}</span>
                 </div>
                 <div className="mt-2 truncate text-[13.5px] font-bold">{c.customer_name || "عميل غير معروف"}</div>
-                <div className="truncate text-[12.5px] text-text-dim">{carLine || "سيارة بدون بيانات"}</div>
+                {carLine ? <CarBrandMark brand={c.brand} model={c.name} size="sm" className="mt-1" />
+                         : <div className="truncate text-[12.5px] text-text-dim">سيارة بدون بيانات</div>}
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <StatusLabel status={c.work_status} />
                   <span className="flex items-center gap-2 text-[11.5px] text-text-dim">
@@ -428,9 +430,11 @@ export default function PreparePage() {
               </button>
               <PlateBadge plate={active.plate} size="lg" />
               <div className="order-3 min-w-0 basis-full sm:order-none sm:basis-0 sm:flex-1">
-                <div className="text-[15px] font-extrabold sm:truncate">
-                  {[active.brand, active.name, active.model_year].filter(Boolean).join(" ") || "سيارة بدون بيانات"}
-                </div>
+                {active.brand || active.name ? (
+                  <CarBrandMark brand={active.brand} model={active.name} year={active.model_year} size="lg" />
+                ) : (
+                  <div className="text-[15px] font-extrabold">سيارة بدون بيانات</div>
+                )}
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-text-dim">
                   <span className="inline-flex items-center gap-1"><MIcon name="person" className="!text-[15px]" />{active.customer_name || "عميل غير معروف"}</span>
                   {active.customer_phone && <span dir="ltr" className="tnum inline-flex items-center gap-1"><MIcon name="call" className="!text-[15px]" />{active.customer_phone}</span>}
