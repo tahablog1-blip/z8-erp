@@ -68,6 +68,8 @@ class InvoiceOut(BaseModel):
     is_returned: bool
     shift_id: str | None = None
     created_at: datetime
+    customer_phone: str | None = None   # من قائمة البحث (join على العملاء)
+    plate: str | None = None            # لوحة السيارة لفواتير الخدمة
 
 
 class InvoiceItemOut(BaseModel):

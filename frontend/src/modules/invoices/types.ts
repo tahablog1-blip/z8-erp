@@ -28,6 +28,8 @@ export type Invoice = {
   credit_total: number;
   is_returned: boolean;
   shift_id: string | null;
+  customer_phone?: string | null;   // يرجع من قائمة البحث
+  plate?: string | null;            // لوحة السيارة لفواتير الخدمة
 };
 
 export type InvoiceItem = {

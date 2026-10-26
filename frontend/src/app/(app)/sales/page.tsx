@@ -7,10 +7,10 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { MIcon } from "@/components/m-icon";
 import { InvoicePrintAnimation, type PrintLine } from "@/components/InvoicePrintAnimation";
+import { InvoiceHistory } from "./InvoiceHistory";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import type { PrintFormat } from "@/lib/print-invoice";
 import { getPrinting, cachePrinting } from "@/lib/printing";
-import { DataTable, Column } from "@/components/DataTable";
 import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import { Product, productLabel } from "@/modules/products/types";
@@ -770,26 +770,6 @@ export default function SalesPage() {
     finally { setReturnBusy(false); }
   }
 
-  const invoiceCols: Column<Invoice>[] = [
-    { key: "invoice_no", title: "رقم الفاتورة", width: "120px", render: (i) => <span className="tnum font-extrabold">{i.invoice_no}</span> },
-    { key: "customer_name", title: "العميل", render: (i) => i.customer_name || <span className="text-text-dim">بيع نقدي</span> },
-    { key: "total_inc", title: "الإجمالي", width: "110px", render: (i) => <span className="tnum font-bold">{money(i.total_inc)}</span> },
-    {
-      key: "is_returned", title: "الحالة", width: "100px",
-      render: (i) => i.is_returned ? <Badge tone="warn">مرتجعة</Badge> : <Badge tone="good">سارية</Badge>,
-    },
-    { key: "issued_at", title: "التاريخ", width: "160px", render: (i) => <span className="text-[12px] text-text-dim">{dateFmt(i.issued_at)}</span> },
-    {
-      key: "actions", title: "", width: "150px",
-      render: (i) => (
-        <div className="flex gap-1.5">
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => openInvoice(i)}>عرض</Button>
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => printById(i.id)}>طباعة</Button>
-        </div>
-      ),
-    },
-  ];
-
   if (loading) return <LoadingScreen />;
 
   // ── لا توجد وردية مفتوحة: شاشة فتح وردية فقط ──
@@ -906,7 +886,7 @@ export default function SalesPage() {
       </div>
 
       {/* ══════════ بطاقات الإحصائيات الحية — في نقطة بيع الخدمة فقط ══════════ */}
-      {posMode === "service" && (
+      {posMode === "service" && screen === "pos" && (
       <div className="grid grid-cols-3 gap-2">
         {[
           { icon: "schedule", label: "الانتظار", value: stats?.cars.queued ?? "…", sub: "", color: "#B07E14", onClick: () => openSvc("waiting"), href: "" },
@@ -1309,15 +1289,7 @@ export default function SalesPage() {
 
       {/* ══════════════════ تبويب سجل الفواتير ══════════════════ */}
       {screen === "history" && canViewInvoices && (
-        <Card>
-          <DataTable
-            columns={invoiceCols}
-            rows={invoices}
-            searchKeys={["invoice_no", "customer_name"]}
-            searchPlaceholder="بحث برقم الفاتورة أو العميل..."
-            emptyText="لا توجد فواتير بعد"
-          />
-        </Card>
+        <InvoiceHistory onOpen={openInvoice} onPrint={(id) => printById(id)} refreshKey={invoices} />
       )}
 
       {/* ══════════ نافذة اختيار / إضافة عميل ══════════ */}

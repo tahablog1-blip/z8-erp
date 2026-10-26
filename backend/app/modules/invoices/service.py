@@ -329,27 +329,73 @@ async def invoices_by_car(company_id: str, car_id: str, limit: int = 5) -> list[
     return out
 
 
+def _like(v: str) -> str:
+    """نمط ILIKE آمن: نهرّب % و _ و \\ اللي المستخدم يكتبها"""
+    return "%" + v.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+
+
 async def list_invoices(company_id: str, branch_scope: str | None, branch_id_param: str | None,
                         customer_id: str | None, date_from: str | None, date_to: str | None,
-                        limit: int) -> list[dict]:
+                        limit: int, *, q: str | None = None, invoice_no: str | None = None,
+                        customer: str | None = None, plate: str | None = None,
+                        source: str | None = None, status: str | None = None,
+                        min_total: float | None = None, max_total: float | None = None,
+                        offset: int = 0) -> list[dict]:
+    """قائمة الفواتير مع بحث متقدم على السيرفر (كل الفواتير مش بس آخر N):
+    q = بحث سريع في الرقم/العميل/الجوال/اللوحة، والباقي فلاتر دقيقة."""
     branch_id = branch_scope or branch_id_param
     conditions = ["i.company_id = $1"]
     params: list = [company_id]
+
+    def add(cond: str, value) -> None:
+        params.append(value)
+        conditions.append(cond.replace("$$", f"${len(params)}"))
+
+    plate_expr = "REPLACE(COALESCE(ca.plate,''),' ','')"
     if branch_id:
-        params.append(branch_id); conditions.append(f"i.branch_id = ${len(params)}")
+        add("i.branch_id = $$", branch_id)
     if customer_id:
-        params.append(customer_id); conditions.append(f"i.customer_id = ${len(params)}")
+        add("i.customer_id = $$", customer_id)
     if date_from:
-        params.append(date_from); conditions.append(f"i.issued_at >= ${len(params)}::text::timestamptz")
+        add("i.issued_at >= $$::text::timestamptz", date_from)
     if date_to:
-        params.append(f"{date_to} 23:59:59"); conditions.append(f"i.issued_at <= ${len(params)}::text::timestamptz")
-    params.append(min(max(limit, 1), 500))
+        add("i.issued_at <= $$::text::timestamptz", f"{date_to} 23:59:59")
+    if q and q.strip():
+        params.append(_like(q)); a = len(params)
+        params.append(_like(q.replace(" ", ""))); b = len(params)
+        conditions.append(
+            f"(i.invoice_no ILIKE ${a} OR i.customer_name ILIKE ${a} OR cu.phone ILIKE ${a} "
+            f"OR {plate_expr} ILIKE ${b})")
+    if invoice_no and invoice_no.strip():
+        add("i.invoice_no ILIKE $$", _like(invoice_no))
+    if customer and customer.strip():
+        params.append(_like(customer)); a = len(params)
+        conditions.append(f"(i.customer_name ILIKE ${a} OR cu.phone ILIKE ${a})")
+    if plate and plate.strip():
+        add(f"{plate_expr} ILIKE $$", _like(plate.replace(" ", "")))
+    if source in ("pos", "car"):
+        add("i.source = $$", source)
+    if status == "active":
+        conditions.append("NOT i.is_returned")
+    elif status == "returned":
+        conditions.append("i.is_returned")
+    elif status == "credit":
+        conditions.append("i.credit_total > 0")
+    if min_total is not None:
+        add("i.total_inc >= $$", min_total)
+    if max_total is not None:
+        add("i.total_inc <= $$", max_total)
+    params.append(min(max(limit, 1), 500)); lim = len(params)
+    params.append(max(offset, 0)); off = len(params)
 
     rows = await fetch(
-        f"""SELECT i.*, b.name AS branch_name
-            FROM invoices i JOIN branches b ON b.id = i.branch_id
+        f"""SELECT i.*, b.name AS branch_name, cu.phone AS customer_phone, ca.plate AS plate
+            FROM invoices i
+            JOIN branches b ON b.id = i.branch_id
+            LEFT JOIN customers cu ON cu.id = i.customer_id
+            LEFT JOIN cars ca ON ca.id = i.car_id
             WHERE {' AND '.join(conditions)}
-            ORDER BY i.issued_at DESC LIMIT ${len(params)}""",
+            ORDER BY i.issued_at DESC LIMIT ${lim} OFFSET ${off}""",
         *params,
     )
     return [_invoice_out(r) for r in rows]

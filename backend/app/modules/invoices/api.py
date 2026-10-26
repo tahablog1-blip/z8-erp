@@ -133,9 +133,20 @@ async def list_invoices(customerId: str | None = Query(default=None),
                         date_from: str | None = Query(default=None, alias="from"),
                         date_to: str | None = Query(default=None, alias="to"),
                         limit: int = Query(default=100, ge=1, le=500),
+                        offset: int = Query(default=0, ge=0),
+                        q: str | None = Query(default=None, max_length=80),
+                        invoiceNo: str | None = Query(default=None, max_length=40),
+                        customer: str | None = Query(default=None, max_length=80),
+                        plate: str | None = Query(default=None, max_length=20),
+                        source: str | None = Query(default=None, pattern="^(pos|car)$"),
+                        status: str | None = Query(default=None, pattern="^(active|returned|credit)$"),
+                        minTotal: float | None = Query(default=None, ge=0),
+                        maxTotal: float | None = Query(default=None, ge=0),
                         user: CurrentUser = Depends(require_permission(*_VIEW_PERMS))):
     return await service.list_invoices(
-        user.company_id, user.branch_scope, branchId, customerId, date_from, date_to, limit
+        user.company_id, user.branch_scope, branchId, customerId, date_from, date_to, limit,
+        q=q, invoice_no=invoiceNo, customer=customer, plate=plate, source=source, status=status,
+        min_total=minTotal, max_total=maxTotal, offset=offset,
     )
 
 
