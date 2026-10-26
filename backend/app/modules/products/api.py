@@ -2,12 +2,12 @@
 # نفس عقد النظام القديم: مسارات القراءة (القائمة، الباركود، القوائم المتسلسلة)
 # مفتوحة عن قصد للمسجّلين — نقطة البيع وتسجيل السيارات محتاجينها حتى لموظف
 # بلا صلاحية إدارة الأصناف. الكتابة كلها خلف صلاحياتها.
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from ...core.audit import log_action
 from ...core.deps import CurrentUser, get_current_user, require_permission
-from . import service
+from . import overview, service
 from .schemas import ProductCreate, ProductLinkIn, ProductLinkOut, ProductOut, ProductUpdate, SpecOut
 
 router = APIRouter()
@@ -22,6 +22,59 @@ async def list_products(search: str | None = Query(default=None),
     """priceListId: شاشة البيع تبعته لما يكون العميل معيّن على قائمة أسعار —
     الأسعار الراجعة بترجع مخصّصة لهذه القائمة تلقائياً بدل السعر العادي"""
     return await service.list_products(user.company_id, search, priceListId)
+
+
+# ══════════════════ مركز قيادة الأصناف (إضافات قراءة/جماعية — لا تغيّر العقود القائمة) ══════════════════
+
+@router.get("/overview")
+async def products_overview(request: Request, user: CurrentUser = Depends(get_current_user)):
+    """قائمة مُصفّحة (ترقيم/فرز/فلاتر/بحث من السيرفر) + مؤشرات. التكلفة والمبيعات تُحجب عمّن لا يملك الصلاحية."""
+    return await overview.list_overview(user.company_id, user, dict(request.query_params))
+
+
+class BulkIdsIn(BaseModel):
+    ids: list[str]
+    active: bool | None = None
+    category: str | None = None
+
+
+@router.post("/bulk-status")
+async def bulk_status(body: BulkIdsIn, user: CurrentUser = Depends(require_permission("products.edit", "products.delete"))):
+    """تفعيل/تعطيل جماعي — التعطيل حذف ناعم (الفواتير والحركات تبقى)، والتفعيل يعيد الصنف للقوائم."""
+    ids = body.ids[:500]
+    if not ids or body.active is None:
+        raise HTTPException(422, "حدّد الأصناف والحالة")
+    if body.active:
+        from ...core.db import execute
+        await execute("UPDATE products SET is_active=TRUE, updated_at=now() WHERE company_id=$1 AND id = ANY($2::uuid[])", user.company_id, ids)
+        await log_action(user, "product_edit", "stock", details=f"تفعيل {len(ids)} صنف")
+        return {"updated": len(ids)}
+    if not user.has("products.delete"):
+        raise HTTPException(403, "لا تملك صلاحية تعطيل الأصناف")
+    n = 0
+    for pid in ids:
+        try:
+            await service.deactivate_product(user.company_id, pid); n += 1
+        except HTTPException:
+            pass
+    await log_action(user, "product_delete", "stock", details=f"تعطيل {n} صنف")
+    return {"updated": n}
+
+
+@router.post("/bulk-category")
+async def bulk_category(body: BulkIdsIn, user: CurrentUser = Depends(require_permission("products.edit"))):
+    """تعيين فئة لعدة أصناف دفعة واحدة (عبر نفس دالة التعديل القائمة)"""
+    cat = (body.category or "").strip()
+    if not body.ids or not cat:
+        raise HTTPException(422, "حدّد الأصناف والفئة")
+    n = 0
+    for pid in body.ids[:500]:
+        try:
+            await service.update_product(user.company_id, pid, {"category": cat}); n += 1
+        except HTTPException:
+            pass
+    await log_action(user, "product_edit", "stock", details=f"تعيين فئة «{cat}» لـ {n} صنف")
+    return {"updated": n}
 
 
 @router.get("/cascade/categories", response_model=list[str])
@@ -401,6 +454,12 @@ async def public_brand_logo(brand_id: str):
         raise HTTPException(404, "لا يوجد شعار")
     return _Response(content=img["bytes"], media_type=img["mime"],
                      headers={"Cache-Control": "public, max-age=86400"})
+
+
+@router.get("/{product_id}/profile")
+async def product_profile(product_id: str, user: CurrentUser = Depends(get_current_user)):
+    """ملف الصنف 360: مخزون بالمواقع + حركات + مبيعات + مشتريات + موردون + اتجاه (حسب الصلاحية)"""
+    return await overview.profile(user.company_id, user, product_id)
 
 
 @router.get("/{product_id}/links", response_model=list[ProductLinkOut])
