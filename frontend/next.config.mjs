@@ -2,7 +2,13 @@
 // 127.0.0.1 بدل localhost عشان نتفادى مشكلة IPv6 على ويندوز (::1 مقابل 127.0.0.1)
 const API_URL = process.env.API_URL || "http://127.0.0.1:4001";
 
+// رقم النسخة المبنية (آخر commit) — يظهر أسفل القائمة الجانبية عشان تتأكد إن السيرفر شغّال بآخر تحديث
+import { execSync } from "node:child_process";
+let BUILD = "dev";
+try { BUILD = execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim(); } catch { /* */ }
+
 const nextConfig = {
+  env: { NEXT_PUBLIC_BUILD: BUILD },
   // السماح بفتح المشروع من أي عنوان شبكة محلية (منزل / هوت سبوت موبايل / مكتب)
   // Next 16 بيحظر كل الطلبات (fetch + HMR WebSocket) لو فتحت من IP مش localhost
   allowedDevOrigins: [

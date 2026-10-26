@@ -358,7 +358,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </Tooltip>
         </div>
         <div className={`border-t border-white/10 px-3 py-3 text-[10.5px] text-white/45 ${collapsed ? "hidden md:hidden" : ""}`}>
-          Z8 Platform · المرحلة 5
+          Z8 Platform · المرحلة 5 · {process.env.NEXT_PUBLIC_BUILD}
         </div>
       </aside>
 
