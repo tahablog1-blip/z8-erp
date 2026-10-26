@@ -1022,6 +1022,17 @@ async def lifespan(app: FastAPI):
         "CREATE INDEX IF NOT EXISTS idx_cars_company_active ON cars (company_id, is_deleted, exited_at)",
         "CREATE INDEX IF NOT EXISTS idx_cars_company_plate ON cars (company_id, plate)",
         "CREATE INDEX IF NOT EXISTS idx_customers_company ON customers (company_id)",
+        # ── مركز قيادة العملاء: رقم عميل تسلسلي للعرض (CUS-000123) + ملاحظات العميل ──
+        "ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_no BIGSERIAL",
+        """CREATE TABLE IF NOT EXISTS customer_notes (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             customer_id uuid NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+             note text NOT NULL,
+             created_by uuid,
+             created_at timestamptz NOT NULL DEFAULT now())""",
+        "CREATE INDEX IF NOT EXISTS idx_customer_notes_customer ON customer_notes (customer_id, created_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices (customer_id, issued_at DESC)",
         "CREATE INDEX IF NOT EXISTS idx_customer_ledger_customer ON customer_ledger (customer_id)",
     ):
         try:
