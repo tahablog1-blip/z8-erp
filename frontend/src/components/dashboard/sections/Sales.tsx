@@ -51,7 +51,7 @@ export function PaymentMethods({ data, loading }: { data: Executive | null; load
   const total = m.reduce((s, x) => s + x.total, 0);
   const label = (k: string) => (["cash", "card", "transfer", "credit"].includes(k) ? d(`pay.${k}` as any) : k);
   return (
-    <Widget title={d("pay.title")} icon="credit_card" loading={loading} failed={failed(data, "sales")} skeletonHeight={190}>
+    <Widget title={d("pay.title")} icon="credit_card" bodyClassName="flex flex-col justify-center" loading={loading} failed={failed(data, "sales")} skeletonHeight={190}>
       {!m.length ? <SectionEmpty icon="credit_card" title={d("empty.noData")} /> : (
         <div className="flex flex-wrap items-center gap-5">
           <Donut ariaLabel={d("pay.title")} centerValue={fmtCompact(total)} segments={m.map((x) => ({ key: x.method, label: label(x.method), value: x.total, color: METHOD_COLOR[x.method] ?? "var(--chart-neutral)" }))} />

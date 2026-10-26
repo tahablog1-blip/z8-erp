@@ -33,7 +33,7 @@ export function FinancialOverview({ data, loading }: { data: Executive | null; l
               <span key={k} className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full" style={{ background: c }} />{d(k as any)}</span>
             ))}
           </div>
-          <AreaChart ariaLabel={d("fin.title")} labels={chart.labels} height={250} formatValue={fmtCurrency} formatTick={fmtCompact}
+          <AreaChart ariaLabel={d("fin.title")} labels={chart.labels} height={300} formatValue={fmtCurrency} formatTick={fmtCompact}
             series={[
               { key: "rev", label: d("fin.revenue"), color: "var(--chart-revenue)", values: chart.revenue, area: true },
               { key: "exp", label: d("fin.expenses"), color: "var(--chart-expense)", values: chart.expenses },
@@ -57,7 +57,7 @@ export function PnlSnapshot({ data, loading }: { data: Executive | null; loading
     { k: "pnl.net", v: p.netProfit, pv: pp?.netProfit, strong: true },
   ] : [];
   return (
-    <Widget title={d("pnl.title")} icon="balance" loading={loading} failed={failed(data, "pnl")} skeletonHeight={230} href="/accounting" hrefLabel={d("details")}>
+    <Widget title={d("pnl.title")} icon="balance" bodyClassName="flex flex-col justify-center" loading={loading} failed={failed(data, "pnl")} skeletonHeight={230} href="/accounting" hrefLabel={d("details")}>
       {!p || (!p.revenue && !p.cogs && !p.opex) ? <SectionEmpty icon="balance" title={d("empty.noData")} hint={d("fin.noAccounting")} /> : (
         <table className="w-full text-t-sm">
           <tbody>

@@ -112,7 +112,7 @@ export default function DashboardPage() {
       </section>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
-        {(L || a?.sales || a?.finance || a?.inventory) && <div className="order-1 xl:order-none xl:col-span-4"><SmartAlerts data={data} loading={L} /></div>}
+        {(L || a?.sales || a?.finance || a?.inventory) && <div className="order-1 flex flex-col gap-3 xl:order-none xl:col-span-4"><SmartAlerts data={data} loading={L} /><div className="flex-1"><QuickActions /></div></div>}
         {(L || a?.finance) && <div className="order-3 xl:order-none xl:col-span-8"><FinancialOverview data={data} loading={L} /></div>}
         {(L || a?.sales) && <div className="order-2 xl:order-none xl:col-span-8"><SalesPerformance data={data} loading={L} /></div>}
         {(L || a?.finance) && <div className="order-4 xl:order-none xl:col-span-4"><PnlSnapshot data={data} loading={L} /></div>}
@@ -126,7 +126,6 @@ export default function DashboardPage() {
         {(L || a?.sales) && <div className="order-12 xl:order-none xl:col-span-6"><TopCustomers data={data} loading={L} /></div>}
         {(L || a?.finance) && <div className="order-[13] xl:order-none xl:col-span-5"><ExpenseAnalytics data={data} loading={L} /></div>}
         {(L || a?.sales) && <div className="order-[14] xl:order-none xl:col-span-7"><RecentTransactions data={data} loading={L} /></div>}
-        <div className="order-[15] xl:order-none xl:col-span-12"><QuickActions /></div>
       </div>
 
     </div>
