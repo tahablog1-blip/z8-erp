@@ -485,7 +485,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <span className="hidden sm:inline">{t("top.logout")}</span>
             </button>
           </header>
-          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">{children}</main>
+          <main className="relative min-h-0 min-w-0 flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">{children}</main>
         </div>
       </div>
     </div>
