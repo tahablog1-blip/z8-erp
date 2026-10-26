@@ -740,7 +740,7 @@ async def update_whatsapp_settings(company_id: str, body) -> dict:
 
 async def send_test_whatsapp(company_id: str, phone: str) -> None:
     from ...core import wa as _wa
-    ok = await _wa.send_text(company_id, phone, "رسالة اختبار من نظام Z8 — لو وصلتك فإعدادات واتساب سليمة. ✅")
+    ok = await _wa.send_text(company_id, phone, "رسالة اختبار من نظام Z8. في حال وصولها فإعدادات واتساب سليمة.")
     if not ok:
         raise HTTPException(422, "تعذّر الإرسال — تأكد من رقم الـ instance والتوكن، وأن الرقم بصيغة سعودية صحيحة")
 

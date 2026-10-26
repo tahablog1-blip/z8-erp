@@ -144,12 +144,12 @@ async def send_otp(branch_id: str, channel: str, value: str, ip: str | None) -> 
     if channel == "phone":
         sent = await wa.send_text(
             company_id, target,
-            f"رمز التحقق الخاص بك في {brand}: {code}\nصالح لمدة 5 دقائق. لا تشاركه مع أي شخص.")
+            f"رمز التحقق الخاص بكم لدى {brand}: {code}\nصالح لمدة 5 دقائق. يرجى عدم مشاركته مع أي شخص.")
     else:
         sent = await send_email(
             company_id, target, f"رمز التحقق — {brand}",
-            f"رمز التحقق الخاص بك: {code}\n\nصالح لمدة 5 دقائق. لا تشاركه مع أي شخص.\n"
-            f"لو ما طلبت هذا الرمز تجاهل الرسالة.")
+            f"رمز التحقق الخاص بكم: {code}\n\nصالح لمدة 5 دقائق. يرجى عدم مشاركته مع أي شخص.\n"
+            f"في حال عدم طلبكم لهذا الرمز، يرجى تجاهل هذه الرسالة.")
     if not sent:
         # الرمز اتسجّل بس ما وصلش — نبطّله ونقول للعميل بوضوح
         await execute("UPDATE booking_otps SET used=TRUE WHERE company_id=$1 AND channel=$2 AND target=$3 AND used=FALSE",

@@ -87,8 +87,8 @@ async def _send_invoice_wa(company_id: str, invoice_id: str):
            WHERE i.id=$1::uuid""", invoice_id)
     if not row or not row["phone"]:
         return
-    caption = (f"🧾 فاتورتكم من مصدر الزيوت\nرقم: {row['invoice_no']}"
-               f"\nالإجمالي: {float(row['total_inc']):.2f} ر.س شامل الضريبة\nشكراً لتعاملكم معنا 🌟")
+    caption = (f"فاتورتكم من شركة مصدر الزيوت\nرقم الفاتورة: {row['invoice_no']}"
+               f"\nالإجمالي: {float(row['total_inc']):.2f} ر.س شاملاً ضريبة القيمة المضافة\nنشكركم على تعاملكم معنا.")
     try:
         from .pdf import build_invoice_pdf
         import base64

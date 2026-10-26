@@ -382,7 +382,7 @@ async def prepare_confirm_order(car_id: str, body: PrepareConfirmIn,
         if row and row["phone"]:
             import asyncio as _aio
             _aio.create_task(wa.send_text(user.company_id, row["phone"],
-                f"🚗 عميلنا العزيز، سيارتك ({row['plate']}) أصبحت جاهزة للاستلام.\nمصدر الزيوت — شكراً لثقتكم."))
+                f"عميلنا العزيز،\nنفيدكم بأن سيارتكم (رقم اللوحة {row['plate']}) أصبحت جاهزة للاستلام.\nنشكركم على ثقتكم بشركة مصدر الزيوت."))
     except Exception as _e:
         print(f"⚠ إشعار الجاهزية: {_e}")
     return result

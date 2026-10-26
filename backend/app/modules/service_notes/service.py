@@ -132,8 +132,8 @@ async def notify_customer(user, note_id: str, message: str) -> dict:
     link = f"{base}/booking/status/{note['public_token']}" if base else ""
     wa_ok = False
     if note["customer_phone"]:
-        text = ("🔔 لديك رسالة جديدة من موظف الخدمة بخصوص سيارتك.\n"
-                + (f"للاطلاع والرد: {link}" if link else "افتح صفحة الحجز للاطلاع والرد."))
+        text = ("عميلنا العزيز،\nلديكم رسالة جديدة من موظف الخدمة بخصوص سيارتكم.\n"
+                + (f"للاطلاع والرد: {link}" if link else "يرجى فتح صفحة الحجز للاطلاع والرد."))
         wa_ok = await wa.send_text(user.company_id, note["customer_phone"], text)
 
     return {"sent": True, "whatsapp": wa_ok}

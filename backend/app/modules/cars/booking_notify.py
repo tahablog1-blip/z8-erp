@@ -22,19 +22,22 @@ def _link(branch_id: str) -> str:
 def confirmation_text(brand: str | None, name: str | None, plate: str, link: str) -> str:
     car = " ".join(x for x in [brand, name] if x and str(x).strip())
     lines = [
-        f"✅ تم تأكيد حجز سيارتك{(' ' + car) if car else ''} برقم لوحة {plate}",
-        "شكراً لثقتك بشركة مصدر الزيوت 🙏",
-        "برجاء الانتظار حتى يأتي دورك للدخول، وسنذكّرك قبل موعد دخولك.",
+        "عميلنا العزيز،",
+        f"تم تأكيد حجز سيارتكم{(' ' + car) if car else ''} برقم اللوحة {plate}.",
+        "نشكركم على ثقتكم بشركة مصدر الزيوت.",
+        "يرجى التكرّم بالانتظار حتى يحين دوركم للدخول، وسنقوم بتذكيركم قبل موعد دخولكم.",
     ]
     if link:
-        lines.append(f"تابع دورك: {link}")
+        lines.append(f"لمتابعة دوركم: {link}")
     return "\n".join(lines)
 
 
 def reminder_text(plate: str, branch: str | None) -> str:
     where = f" في {branch}" if branch else ""
-    return (f"🔔 اقترب دور سيارتك (لوحة {plate}){where}.\n"
-            "برجاء التوجّه الآن لبوابة الدخول. شكراً لثقتك بشركة مصدر الزيوت 🙏")
+    return ("عميلنا العزيز،\n"
+            f"نفيدكم باقتراب موعد دخول سيارتكم رقم اللوحة {plate}{where}.\n"
+            "يرجى التوجّه إلى بوابة الدخول.\n"
+            "مع خالص التقدير، شركة مصدر الزيوت.")
 
 
 async def notify_booking_confirmed(car_id: str) -> None:
