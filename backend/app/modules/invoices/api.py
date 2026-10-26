@@ -98,21 +98,33 @@ async def _send_invoice_wa(company_id: str, invoice_id: str):
         return
     caption = (f"فاتورتكم من شركة مصدر الزيوت\nرقم الفاتورة: {row['invoice_no']}"
                f"\nالإجمالي: {float(row['total_inc']):.2f} ر.س شاملاً ضريبة القيمة المضافة\nنشكركم على تعاملكم معنا.")
+    import base64
+    from ...core.integration_log import log_event as _log
     try:
-        from .pdf import build_invoice_pdf
-        import base64
-        pdf_bytes = await build_invoice_pdf(company_id, invoice_id)
-        b64 = base64.b64encode(pdf_bytes).decode()
-        ok = await wa.send_document(company_id, row["phone"],
-                                    f"{row['invoice_no']}.pdf", b64, caption)
-        if not ok:
-            await wa.send_text(company_id, row["phone"], caption)
-    except ImportError:
-        print("⚠ محرك PDF غير مثبت (شغّل INSTALL-Z8) — إرسال نصي بديل")
-        await wa.send_text(company_id, row["phone"], caption)
+        pdf_bytes = await _invoice_pdf_bytes(company_id, invoice_id)
     except Exception as e:
+        # ما قدرناش نبني الـ PDF: نبعت الملخص النصي بدل ما العميل يفضل من غير حاجة، ونسجّل السبب
         print(f"⚠ PDF واتساب: {type(e).__name__}: {e}")
+        await _log(company_id, "whatsapp", "send_invoice", "failed",
+                   detail=f"فاتورة {row['invoice_no']}: تعذّر إنشاء PDF ({type(e).__name__}: {str(e)[:150]}) — أُرسل ملخص نصي")
         await wa.send_text(company_id, row["phone"], caption)
+        return
+    b64 = base64.b64encode(pdf_bytes).decode()
+    ok = await wa.send_document(company_id, row["phone"], f"{row['invoice_no']}.pdf", b64, caption)
+    if not ok:
+        await wa.send_text(company_id, row["phone"], caption)
+
+
+async def _invoice_pdf_bytes(company_id: str, invoice_id: str) -> bytes:
+    """الفاتورة الرسمية (pdf_v2: لوجو + QR زكاة + تصميم الشركة)؛ لو فشلت نرجع للمولّد القديم"""
+    try:
+        from .pdf_v2 import build_invoice_pdf_v2
+        return await build_invoice_pdf_v2(company_id, invoice_id)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("pdf_v2 failed, falling back to legacy pdf")
+        from .pdf import build_invoice_pdf
+        return await build_invoice_pdf(company_id, invoice_id)
 
 
 @router.get("", response_model=list[InvoiceOut])
@@ -167,18 +179,11 @@ async def invoice_returns(invoice_id: str, user: CurrentUser = Depends(require_p
 async def invoice_pdf(invoice_id: str,
                       user: CurrentUser = Depends(require_permission(*_VIEW_PERMS))):
     """فاتورة PDF A4 — للتنزيل أو الإرسال"""
-    try:
-        from .pdf import build_invoice_pdf
-    except ImportError:
-        raise HTTPException(501, "محرك PDF غير مثبت — شغّل INSTALL-Z8.bat لتثبيت المتطلبات الجديدة")
     from fastapi.responses import Response
     try:
-        from .pdf_v2 import build_invoice_pdf_v2
-        pdf = await build_invoice_pdf_v2(user.company_id, invoice_id)
-    except Exception:
-        import logging
-        logging.getLogger(__name__).exception("pdf_v2 failed, falling back to legacy pdf")
-        pdf = await build_invoice_pdf(user.company_id, invoice_id)
+        pdf = await _invoice_pdf_bytes(user.company_id, invoice_id)
+    except ImportError:
+        raise HTTPException(501, "محرك PDF غير مثبت — شغّل INSTALL-Z8.bat لتثبيت المتطلبات الجديدة")
     return Response(content=pdf, media_type="application/pdf",
                     headers={"Content-Disposition": f"inline; filename={invoice_id}.pdf"})
 
