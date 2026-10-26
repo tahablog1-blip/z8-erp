@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/dashboard/Widget";
 import { CustomerForm } from "@/components/customers/CustomerForm";
 import { Avatar, SegmentBadge, StatusBadge, statusOf } from "@/components/customers/parts";
 import { PlateBadge } from "@/components/PlateBadge";
+import { parsePlate, plateKey } from "@/lib/plate";
 import { ago, downloadCsv, fmtCurrency, fmtD, fmtDT, fmtMoney } from "@/lib/customers/format";
 import type { Profile, Segment } from "@/lib/customers/types";
 import type { Customer, Statement, Vehicle } from "@/modules/customers/types";
@@ -452,23 +453,40 @@ function PurchasesTab({ purchases, top }: { purchases: NonNullable<Profile["purc
 /* ══════════════ السيارات ══════════════ */
 function VehiclesTab({ customerId, vehicles, canEdit, onChange }: { customerId: string; vehicles: Vehicle[]; canEdit: boolean; onChange: () => Promise<void> }) {
   const [open, setOpen] = useState(false); const [v, setV] = useState({ ...EMPTY_VEHICLE }); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
+  const [num, setNum] = useState(""); const [let3, setLet3] = useState("");
+  const saudi = v.plateType === "saudi";
+  const raw = saudi ? `${num} ${let3}` : v.plate;
+  const parts = parsePlate(raw);
+  const key = plateKey(raw, v.plateType);
+  const dupOwn = !!key && vehicles.some((x) => plateKey(x.plate, x.plate_type) === key);
+  const dupKeys = useMemo(() => {   // لوحات مكرّرة موجودة بالفعل (بيانات قديمة) — تُعلَّم ليحذفها المستخدم
+    const seen = new Map<string, number>(); vehicles.forEach((x) => { const k = plateKey(x.plate, x.plate_type); if (k) seen.set(k, (seen.get(k) ?? 0) + 1); });
+    return new Set([...seen].filter(([, n]) => n > 1).map(([k]) => k));
+  }, [vehicles]);
+  const plateErr = saudi && (num || let3) && !parts.valid ? "اللوحة السعودية = 3 حروف + من 1 إلى 4 أرقام" : dupOwn ? "هذه اللوحة مسجّلة بالفعل لهذا العميل" : "";
+  function reset() { setV({ ...EMPTY_VEHICLE }); setNum(""); setLet3(""); setErr(""); }
   async function add() {
-    if (!v.plate.trim()) { setErr("رقم اللوحة مطلوب"); return; }
+    if (saudi ? !parts.valid : !v.plate.trim()) { setErr(saudi ? "أدخل لوحة صحيحة: من 1 إلى 4 أرقام و3 حروف" : "رقم اللوحة مطلوب"); return; }
+    if (dupOwn) { setErr("هذه اللوحة مسجّلة بالفعل لهذا العميل"); return; }
     setBusy(true); setErr("");
-    try { await api(`/customers/${customerId}/vehicles`, { method: "POST", body: JSON.stringify(v) }); setV({ ...EMPTY_VEHICLE }); setOpen(false); await onChange(); }
-    catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+    try {
+      await api(`/customers/${customerId}/vehicles`, { method: "POST", body: JSON.stringify({ ...v, plate: saudi ? parts.display : v.plate.trim() }) });
+      reset(); setOpen(false); await onChange();
+    } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
   }
   async function remove(x: Vehicle) {
     if (!await appConfirm(`حذف سيارة اللوحة «${x.plate}»؟`)) return;
     try { await api(`/customers/vehicles/${x.id}`, { method: "DELETE" }); await onChange(); } catch (e) { appAlert(e instanceof Error ? e.message : String(e)); }
   }
   return (
-    <Card title="سيارات العميل" icon="directions_car" actions={canEdit && <Button size="sm" onClick={() => setOpen(true)}><MIcon name="add" className="!text-[16px]" />إضافة سيارة</Button>}>
-      {vehicles.length === 0 ? <EmptyState icon="directions_car" title="لا توجد سيارات مسجّلة" description="أضف سيارة العميل لتسهيل التعرف عليه في نقطة البيع." action={canEdit ? <Button onClick={() => setOpen(true)}>إضافة سيارة</Button> : undefined} /> : (
+    <Card title="سيارات العميل" icon="directions_car" actions={canEdit && <Button size="sm" onClick={() => { reset(); setOpen(true); }}><MIcon name="add" className="!text-[16px]" />إضافة سيارة</Button>}>
+      {dupKeys.size > 0 && <div role="alert" className="mb-3 rounded-xl border border-brass/40 bg-brass-bg px-3 py-2 text-t-sm font-bold text-brass">توجد لوحات مكرّرة (نفس الأرقام والحروف) — احذف النسخ الزائدة. لن يُسمح بتسجيل لوحة مكرّرة بعد الآن.</div>}
+      {vehicles.length === 0 ? <EmptyState icon="directions_car" title="لا توجد سيارات مسجّلة" description="أضف سيارة العميل لتسهيل التعرف عليه في نقطة البيع." action={canEdit ? <Button onClick={() => { reset(); setOpen(true); }}>إضافة سيارة</Button> : undefined} /> : (
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {vehicles.map((x) => (
-            <li key={x.id} className="rounded-xl border border-line bg-ink p-3.5">
+            <li key={x.id} className={`rounded-xl border bg-ink p-3.5 ${dupKeys.has(plateKey(x.plate, x.plate_type)) ? "border-brass/60" : "border-line"}`}>
               <div className="flex items-start justify-between gap-2"><PlateBadge plate={x.plate} />{canEdit && <button onClick={() => remove(x)} aria-label={`حذف ${x.plate}`} className="grid h-8 w-8 place-items-center rounded-md text-text-dim hover:bg-ember-bg hover:text-ember"><MIcon name="delete" className="!text-[18px]" /></button>}</div>
+              {dupKeys.has(plateKey(x.plate, x.plate_type)) && <span className="mt-1.5 inline-block rounded-md bg-brass-bg px-1.5 py-0.5 text-t-xs font-extrabold text-brass">لوحة مكرّرة</span>}
               <div className="mt-2 text-t-sm font-bold">{[x.brand, x.make_model, x.model_year].filter(Boolean).join(" ") || "—"}</div>
               <dl className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 text-t-xs text-text-dim">
                 {x.color && <div>اللون: <b className="text-text">{x.color}</b></div>}{x.engine_size && <div>المحرك: <b className="text-text">{x.engine_size}</b></div>}
@@ -477,10 +495,15 @@ function VehiclesTab({ customerId, vehicles, canEdit, onChange }: { customerId: 
             </li>))}
         </ul>)}
       <Modal open={open} onClose={() => setOpen(false)} title="إضافة سيارة">
-        <div className="space-y-3">
+        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); add(); }}>
           <div className="grid gap-2.5 sm:grid-cols-2">
-            <Field label="رقم اللوحة *"><Input value={v.plate} autoFocus onChange={(e) => setV({ ...v, plate: e.target.value })} /></Field>
             <Field label="نوع اللوحة"><Select value={v.plateType} onChange={(e) => setV({ ...v, plateType: e.target.value as "saudi" | "other" })}><option value="saudi">سعودية</option><option value="other">أخرى</option></Select></Field>
+            <div className="flex items-end justify-center sm:justify-end"><PlateBadge plate={saudi ? (parts.digits && parts.letters ? parts.display : null) : v.plate || null} size="md" /></div>
+            {saudi ? <>
+              <Field label="الأرقام (1–4) *"><Input value={num} inputMode="numeric" maxLength={4} dir="ltr" className="tnum text-center" autoFocus aria-invalid={!!plateErr} onChange={(e) => setNum(e.target.value.replace(/[^0-9٠-٩]/g, ""))} /></Field>
+              <Field label="الحروف (3) *"><Input value={let3} maxLength={3} dir="ltr" className="text-center uppercase" aria-invalid={!!plateErr} onChange={(e) => setLet3(e.target.value.replace(/[^A-Za-z\u0621-\u064A]/g, ""))} /></Field>
+            </> : <div className="sm:col-span-2"><Field label="رقم اللوحة *"><Input value={v.plate} autoFocus onChange={(e) => setV({ ...v, plate: e.target.value })} /></Field></div>}
+            {plateErr && <p role="alert" className="text-t-xs font-bold text-ember sm:col-span-2">{plateErr}</p>}
             <Field label="الماركة"><Input value={v.brand} onChange={(e) => setV({ ...v, brand: e.target.value })} /></Field>
             <Field label="الموديل"><Input value={v.makeModel} onChange={(e) => setV({ ...v, makeModel: e.target.value })} /></Field>
             <Field label="سنة الصنع"><Input value={v.modelYear} className="tnum" onChange={(e) => setV({ ...v, modelYear: e.target.value })} /></Field>
@@ -488,8 +511,8 @@ function VehiclesTab({ customerId, vehicles, canEdit, onChange }: { customerId: 
             <div className="sm:col-span-2"><Field label="رقم الهيكل (VIN)"><Input value={v.chassisNumber} dir="ltr" className="tnum text-end" onChange={(e) => setV({ ...v, chassisNumber: e.target.value })} /></Field></div>
           </div>
           <ErrorNote msg={err} />
-          <div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setOpen(false)}>إلغاء</Button><Button loading={busy} onClick={add}>حفظ</Button></div>
-        </div>
+          <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setOpen(false)}>إلغاء</Button><Button type="submit" loading={busy} disabled={!!plateErr}>حفظ</Button></div>
+        </form>
       </Modal>
     </Card>
   );

@@ -191,3 +191,14 @@ if __name__ == "__main__":
     for t in tests:
         k = normalize_plate(t)
         print(f"{t:20} -> canonical={k.canonical:12} loose={k.loose:12} valid={k.is_valid}")
+
+
+def plate_identity(raw: Optional[str], plate_type: str = "saudi") -> tuple[str, str, bool]:
+    """هوية اللوحة لمنع التكرار: (مفتاح موحّد، نص العرض المخزَّن، صالحة؟)
+    اللوحة السعودية: "AAA 111" = "aaa 111" = "111 AAA" = "١١١ ا ا ا" → نفس المفتاح.
+    اللوحات الأخرى: الحروف/الأرقام فقط بحروف كبيرة (بلا مسافات/شرطات)."""
+    if plate_type == "saudi":
+        k = normalize_plate(raw)
+        return (k.canonical, f"{k.digits} {k.letters_en}".strip(), k.is_valid)
+    flat = "".join(ch for ch in (raw or "").translate(DIGIT_MAP).upper() if ch.isalnum())
+    return (f"X-{flat}" if flat else "", (raw or "").strip().upper(), bool(flat))

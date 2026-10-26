@@ -6,7 +6,10 @@ const SIZES = { sm: 112, md: 140, lg: 216 } as const;   // العرض بالبك
 /** لوحة السيارة — تبقى بيضاء بنص داكن في الوضعين (زي اللوحة الحقيقية) */
 export function PlateBadge({ plate, size = "md" }: { plate: string | null; size?: "sm" | "md" | "lg" }) {
   const raw = (plate || "").trim();
-  const m = raw.match(/^(\d+)\s*([A-Za-z؀-ۿ\s]+)$/);
+  // أرقام وحروف بأي ترتيب/حالة ("111 AAA" أو "aaa 111" أو "١١١ ااا") — لا يتداخل النص مع شعار اللوحة أبداً
+  const digits = raw.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660)).replace(/\D/g, "");
+  const letters = raw.replace(/[0-9٠-٩\-_.]/g, "").replace(/\s+/g, " ").trim().toUpperCase();
+  const m = digits && letters ? [raw, digits, letters] : null;
   const width = SIZES[size];
   const height = width / RATIO;
   const font = Math.round(height * 0.56);     // حجم الخط نسبةً لارتفاع اللوحة
