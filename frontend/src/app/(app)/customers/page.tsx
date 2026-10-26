@@ -1,824 +1,419 @@
 "use client";
-// شاشة العملاء — سجل العملاء (أفراد/شركات) + أسطول سياراتهم + كشف الحساب
-import { useEffect, useState } from "react";
-import { MIcon } from "@/components/m-icon";
+// العملاء — مركز قيادة العملاء: مؤشرات الفترة + بحث/فلاتر/فرز/ترقيم من السيرفر + جدول احترافي (بطاقات على الجوال)
+// كل الأرقام المحاسبية تأتي من /customers/overview (الباك اند يحسب والواجهة تعرض).
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { printReport, tableHTML, kpisHTML } from "@/lib/print";
 import { useAuth } from "@/lib/auth";
-import { DataTable, Column } from "@/components/DataTable";
-import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Textarea } from "@/components/ui";
+import { printReport, tableHTML, kpisHTML } from "@/lib/print";
+import { MIcon } from "@/components/m-icon";
+import { Button, EmptyState, Input } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
-import { Customer, Vehicle, Statement, money } from "@/modules/customers/types";
-import { PriceList } from "@/modules/price-lists/types";
+import { GlobalFilters, type FilterState } from "@/components/dashboard/GlobalFilters";
+import { KpiCard, KpiSkeleton } from "@/components/dashboard/KpiCard";
+import { Skeleton } from "@/components/dashboard/Widget";
+import { CustomerForm } from "@/components/customers/CustomerForm";
+import { FiltersPanel } from "@/components/customers/FiltersPanel";
+import { Avatar, SegmentBadge, StatusBadge, statusOf } from "@/components/customers/parts";
+import { PERIODS, rangeFor, type PeriodKey } from "@/lib/dashboard/periods";
+import { useCx, type CKey } from "@/lib/customers/i18n";
+import { ago, downloadCsv, fmtCurrency, fmtD, fmtMoney } from "@/lib/customers/format";
+import { EMPTY_FILTERS, type CustomerRow, type Filters, type Overview } from "@/lib/customers/types";
 
-const EMPTY_CUSTOMER = {
-  name: "", customerType: "individual" as "individual" | "company", phone: "", email: "",
-  vatNumber: "", crNumber: "", address: "",
-  buildingNo: "", street: "", district: "", city: "", postalCode: "", additionalNo: "",
-  creditLimit: "", priceListId: "",
-  contractDiscountPct: "", contractValidFrom: "", contractValidUntil: "", contractNotes: "",
-};
+type ColKey = "customer" | "phone" | "type" | "last" | "sales" | "paid" | "balance" | "status" | "invoices" | "vehicles" | "created";
+type SortKey = "name" | "sales" | "balance" | "last" | "created" | "invoices";
+const COLS: { key: ColKey; label: CKey; sort?: SortKey; fin?: boolean; def: boolean; num?: boolean }[] = [
+  { key: "customer", label: "col.customer", sort: "name", def: true },
+  { key: "phone", label: "col.phone", def: true },
+  { key: "type", label: "col.type", def: true },
+  { key: "last", label: "col.last", sort: "last", def: true },
+  { key: "sales", label: "col.sales", sort: "sales", fin: true, def: true, num: true },
+  { key: "paid", label: "col.paid", fin: true, def: true, num: true },
+  { key: "balance", label: "col.balance", sort: "balance", fin: true, def: true, num: true },
+  { key: "status", label: "col.status", def: true },
+  { key: "invoices", label: "col.invoices", sort: "invoices", def: false, num: true },
+  { key: "vehicles", label: "col.vehicles", def: false, num: true },
+  { key: "created", label: "col.created", sort: "created", def: false },
+];
 
-const EMPTY_VEHICLE = {
-  plate: "", plateType: "saudi" as "saudi" | "other", brand: "", makeModel: "",
-  modelYear: "", carCategory: "", cylinders: "", color: "", chassisNumber: "", notes: "", fuelType: "",
-};
+const cache = new Map<string, { at: number; data: Overview }>();
 
-const dateFmt = (s: string) =>
-  new Date(s).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { year: "numeric", month: "2-digit", day: "2-digit" });
+/** الحالة الابتدائية من الرابط — فلاتر/بحث/فرز/صفحة قابلة للمشاركة */
+function fromUrl() {
+  const base = { q: "", page: 1, sort: "name" as SortKey, dir: "asc" as "asc" | "desc", filters: EMPTY_FILTERS, period: { period: "month", ...rangeFor("month"), branchId: null } as FilterState };
+  if (typeof window === "undefined") return base;
+  const sp = new URLSearchParams(window.location.search);
+  try {
+    const f = sp.get("f"); if (f) base.filters = { ...EMPTY_FILTERS, ...JSON.parse(f) };
+  } catch { /* */ }
+  base.q = sp.get("q") ?? ""; base.page = Math.max(1, Number(sp.get("page")) || 1);
+  const s = sp.get("sort") as SortKey | null; if (s && COLS.some((c) => c.sort === s)) base.sort = s;
+  if (sp.get("dir") === "desc") base.dir = "desc";
+  const p = sp.get("p") as PeriodKey | null;
+  if (p === "custom" && sp.get("from") && sp.get("to")) base.period = { period: "custom", from: sp.get("from")!, to: sp.get("to")!, branchId: null };
+  else if (p && PERIODS.some((x) => x.key === p)) base.period = { period: p, ...rangeFor(p as Exclude<PeriodKey, "custom">), branchId: null };
+  return base;
+}
+
+function buildQs(o: { q: string; page: number; size: number; sort: SortKey; dir: string; filters: Filters; from: string; to: string }) {
+  const sp = new URLSearchParams({ page: String(o.page), pageSize: String(o.size), sort: o.sort, dir: o.dir, from: o.from, to: o.to });
+  if (o.q.trim()) sp.set("q", o.q.trim());
+  const f = o.filters;
+  if (f.status !== "active") sp.set("status", f.status);
+  (["type", "segment", "pay", "regFrom", "regTo", "lastFrom", "lastTo", "salesMin", "salesMax", "balMin", "balMax"] as const).forEach((k) => { if (f[k]) sp.set(k, f[k]); });
+  (["hasBalance", "overdue", "noActivity"] as const).forEach((k) => { if (f[k]) sp.set(k, "1"); });
+  return sp.toString();
+}
 
 export default function CustomersPage() {
   const { hasPerm } = useAuth();
+  const { c, isEn } = useCx();
+  const router = useRouter();
   const canCreate = hasPerm("customers.create");
   const canEdit = hasPerm("customers.edit");
   const canDelete = hasPerm("customers.delete");
-  const canStatement = hasPerm("customers.view_statement");
-  const canPay = hasPerm("customers.record_payment");
-  const router = useRouter();
-  const [view, setView] = useState<"cards" | "table">("cards");
 
-  const [rows, setRows] = useState<Customer[]>([]);
+  const init = useRef(fromUrl()).current;
+  const [period, setPeriod] = useState<FilterState>(init.period);
+  const [qInput, setQInput] = useState(init.q);
+  const [q, setQ] = useState(init.q);
+  const [filters, setFilters] = useState<Filters>(init.filters);
+  const [sort, setSort] = useState<SortKey>(init.sort);
+  const [dir, setDir] = useState<"asc" | "desc">(init.dir);
+  const [page, setPage] = useState(init.page);
+  const [size, setSize] = useState(25);
+  const [data, setData] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pageErr, setPageErr] = useState("");
-  const [priceLists, setPriceLists] = useState<PriceList[]>([]);
-
-  const [modal, setModal] = useState<null | { mode: "create" } | { mode: "edit"; id: string }>(null);
-  const [form, setForm] = useState({ ...EMPTY_CUSTOMER });
-  const [err, setErr] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [form, setForm] = useState<null | { customer: import("@/modules/customers/types").Customer | null }>(null);
+  const [selected, setSelected] = useState<Map<string, CustomerRow>>(new Map());
+  const [dense, setDense] = useState(false);
+  const [cols, setCols] = useState<ColKey[]>(COLS.filter((x) => x.def).map((x) => x.key));
+  const [menu, setMenu] = useState<"" | "cols" | "export">("");
   const [busy, setBusy] = useState(false);
-
-  // ── تفاصيل عميل (سيارات + كشف حساب) ──
-  const [detail, setDetail] = useState<Customer | null>(null);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [statement, setStatement] = useState<Statement | null>(null);
-  const [detailTab, setDetailTab] = useState<"vehicles" | "statement" | "loyalty">("vehicles");
-  const [vehicleForm, setVehicleForm] = useState({ ...EMPTY_VEHICLE });
-  const [vehicleErr, setVehicleErr] = useState("");
-  const [showVehicleForm, setShowVehicleForm] = useState(false);
-
-  // ── سداد ──
-  const [payAmount, setPayAmount] = useState("");
-  const [payMethod, setPayMethod] = useState<"cash" | "card" | "transfer">("cash");
-  const [payNote, setPayNote] = useState("");
-  const [payErr, setPayErr] = useState("");
-
-  // ── نقاط الولاء ──
-  type LoyaltyEntry = { id: string; points: number; kind: string; note: string | null; invoice_id: string | null; created_at: string };
-  const [loyaltyLedger, setLoyaltyLedger] = useState<LoyaltyEntry[] | null>(null);
-  const [redeemPoints, setRedeemPoints] = useState("");
-  const [redeemErr, setRedeemErr] = useState("");
-  const [redeemBusy, setRedeemBusy] = useState(false);
-
-  async function load() {
-    setLoading(true);
-    try { setRows(await api<Customer[]>("/customers")); setPageErr(""); }
-    catch (e: any) { setPageErr(e.message); }
-    finally { setLoading(false); }
-  }
-  useEffect(() => { load(); }, []);
-  useEffect(() => { api<PriceList[]>("/price-lists").then(setPriceLists).catch(() => {}); }, []);
-
-  function openCreate() {
-    setForm({ ...EMPTY_CUSTOMER }); setErr(""); setModal({ mode: "create" });
-  }
-  function openEdit(c: Customer) {
-    setForm({
-      name: c.name, customerType: c.customer_type, phone: c.phone || "", email: c.email || "",
-      vatNumber: c.vat_number || "", crNumber: c.cr_number || "", address: c.address || "",
-      buildingNo: c.building_no || "", street: c.street || "", district: c.district || "",
-      city: c.city || "", postalCode: c.postal_code || "", additionalNo: c.additional_no || "",
-      creditLimit: c.credit_limit != null ? String(c.credit_limit) : "",
-      priceListId: c.price_list_id || "",
-      contractDiscountPct: c.contract_discount_pct != null ? String(c.contract_discount_pct) : "",
-      contractValidFrom: c.contract_valid_from || "", contractValidUntil: c.contract_valid_until || "",
-      contractNotes: c.contract_notes || "",
-    });
-    setErr(""); setModal({ mode: "edit", id: c.id });
-  }
-
-  async function save() {
-    setErr(""); setBusy(true);
-    const body = { ...form, email: form.email.trim() || null,
-                   creditLimit: form.creditLimit.trim() === "" ? null : Number(form.creditLimit),
-                   priceListId: form.priceListId || null,
-                   contractDiscountPct: form.contractDiscountPct.trim() === "" ? null : Number(form.contractDiscountPct),
-                   contractValidFrom: form.contractValidFrom || null,
-                   contractValidUntil: form.contractValidUntil || null,
-                   contractNotes: form.contractNotes.trim() || null };
-    try {
-      if (modal?.mode === "create") {
-        await api("/customers", { method: "POST", body: JSON.stringify(body) });
-      } else if (modal?.mode === "edit") {
-        await api(`/customers/${modal.id}`, { method: "PUT", body: JSON.stringify(body) });
-      }
-      setModal(null);
-      await load();
-    } catch (e: any) { setErr(e.message); }
-    finally { setBusy(false); }
-  }
-
-  async function remove(c: Customer) {
-    if (!await appConfirm(`حذف العميل «${c.name}»؟`)) return;
-    try { await api(`/customers/${c.id}`, { method: "DELETE" }); await load(); }
-    catch (e: any) { await appAlert(e.message); }
-  }
-
-  async function openDetail(c: Customer) {
-    setDetail(c); setDetailTab("vehicles"); setShowVehicleForm(false);
-    setVehicleForm({ ...EMPTY_VEHICLE }); setVehicleErr("");
-    setPayAmount(""); setPayNote(""); setPayErr("");
-    setLoyaltyLedger(null); setRedeemPoints(""); setRedeemErr("");
-    try {
-      const v = await api<Vehicle[]>(`/customers/${c.id}/vehicles`);
-      setVehicles(v);
-    } catch (e: any) { await appAlert(e.message); }
-  }
-
-  async function loadStatement(customerId: string) {
-    try { setStatement(await api<Statement>(`/customers/${customerId}/statement`)); }
-    catch (e: any) { await appAlert(e.message); }
-  }
-
-  async function loadLoyaltyLedger(customerId: string) {
-    try { setLoyaltyLedger(await api<LoyaltyEntry[]>(`/customers/${customerId}/loyalty-ledger`)); }
-    catch (e: any) { await appAlert(e.message); }
-  }
-
-  async function submitRedeem() {
-    if (!detail) return;
-    const points = Number(redeemPoints);
-    setRedeemErr("");
-    if (!points || points <= 0) { setRedeemErr("أدخل عدد نقاط صحيح"); return; }
-    setRedeemBusy(true);
-    try {
-      const r = await api<{ remaining: number }>(`/customers/${detail.id}/redeem-points`, {
-        method: "POST", body: JSON.stringify({ points }),
-      });
-      setDetail({ ...detail, loyalty_points: r.remaining });
-      setRedeemPoints("");
-      await loadLoyaltyLedger(detail.id);
-      await load();
-    } catch (e: any) { setRedeemErr(e.message); }
-    finally { setRedeemBusy(false); }
-  }
-
-  async function addVehicle() {
-    if (!detail) return;
-    setVehicleErr("");
-    try {
-      await api(`/customers/${detail.id}/vehicles`, {
-        method: "POST", body: JSON.stringify(vehicleForm),
-      });
-      setVehicleForm({ ...EMPTY_VEHICLE }); setShowVehicleForm(false);
-      setVehicles(await api<Vehicle[]>(`/customers/${detail.id}/vehicles`));
-      await load();
-    } catch (e: any) { setVehicleErr(e.message); }
-  }
-
-  async function removeVehicle(v: Vehicle) {
-    if (!detail) return;
-    if (!await appConfirm(`حذف سيارة اللوحة «${v.plate}»؟`)) return;
-    try {
-      await api(`/customers/vehicles/${v.id}`, { method: "DELETE" });
-      setVehicles(await api<Vehicle[]>(`/customers/${detail.id}/vehicles`));
-      await load();
-    } catch (e: any) { await appAlert(e.message); }
-  }
-
-  async function submitPayment() {
-    if (!detail) return;
-    setPayErr("");
-    const amount = Number(payAmount);
-    if (!amount || amount <= 0) { setPayErr("أدخل مبلغاً صحيحاً"); return; }
-    try {
-      await api(`/customers/${detail.id}/pay`, {
-        method: "POST",
-        body: JSON.stringify({ amount, method: payMethod, note: payNote.trim() || null }),
-      });
-      setPayAmount(""); setPayNote("");
-      await loadStatement(detail.id);
-      await load();
-    } catch (e: any) { setPayErr(e.message); }
-  }
-
-  const columns: Column<Customer>[] = [
-    {
-      key: "name", title: "العميل",
-      render: (c) => (
-        <div>
-          <div className="font-extrabold">{c.name}</div>
-          <div className="text-[11px] text-text-dim">
-            {c.customer_type === "company" ? "شركة" : "فرد"}
-            {c.phone ? ` · ${c.phone}` : ""}
-          </div>
-          {c.price_list_id && (
-            <div className="mt-0.5 text-[10.5px] font-bold text-petrol">
-              {priceLists.find((pl) => pl.id === c.price_list_id)?.name || "قائمة أسعار خاصة"}
-            </div>
-          )}
-          {c.loyalty_points > 0 && (
-            <div className="mt-0.5 text-[10.5px] font-bold text-text-dim">
-              <MIcon name="star" className="!text-[12px] align-middle" /> {c.loyalty_points} نقطة
-            </div>
-          )}
-          {c.contract_discount_pct != null && (() => {
-            const today = new Date().toISOString().slice(0, 10);
-            const expired = c.contract_valid_until && today > c.contract_valid_until;
-            const notStarted = c.contract_valid_from && today < c.contract_valid_from;
-            const label = expired ? "عقد منتهٍ" : notStarted ? "عقد لم يبدأ" : "عقد نشط";
-            return (
-              <div className={`mt-0.5 text-[10.5px] font-bold ${expired || notStarted ? "text-text-dim" : "text-emerald"}`}>
-                {label} — خصم {c.contract_discount_pct}%
-              </div>
-            );
-          })()}
-        </div>
-      ),
-    },
-    {
-      key: "vehicle_count", title: "السيارات", width: "90px",
-      render: (c) => <span className="tnum">{c.vehicle_count}</span>,
-    },
-    {
-      key: "balance", title: "الرصيد (آجل)", width: "160px",
-      render: (c) => {
-        const overLimit = c.credit_limit != null && c.balance > c.credit_limit;
-        return (
-          <div>
-            <span className={`tnum font-bold ${c.balance > 0 ? "text-ember" : "text-text-dim"}`}>
-              {money(c.balance)}
-            </span>
-            {c.credit_limit != null && (
-              <div className={`text-[10.5px] ${overLimit ? "font-bold text-ember" : "text-text-dim"}`}>
-                {overLimit ? "تجاوز حد " : "حد "}{money(c.credit_limit)}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      key: "vat_number", title: "الرقم الضريبي", width: "140px",
-      render: (c) => c.vat_number || <span className="text-text-dim">—</span>,
-    },
-    {
-      key: "actions", title: "", width: "230px",
-      render: (c) => (
-        <div className="flex justify-end gap-1.5">
-          {canStatement && (
-            <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
-                    onClick={() => openDetail(c)}>عرض</Button>
-          )}
-          {canEdit && (
-            <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
-                    onClick={() => openEdit(c)}>تعديل</Button>
-          )}
-          {canDelete && (
-            <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]"
-                    onClick={() => remove(c)}>حذف</Button>
-          )}
-        </div>
-      ),
-    },
-  ];
-
-  const isCompany = form.customerType === "company";
-
-  function printStatement() {
-    if (!statement || !detail) return;
-    const typeAr = (t: string) => t === "invoice" ? "فاتورة آجل" : t === "payment" ? "سداد" : "مرتجع";
-    const body =
-      kpisHTML([
-        { label: "العميل", value: detail.name },
-        { label: "الجوال", value: detail.phone || "—" },
-        { label: "الرصيد الحالي (ر.س)", value: money(statement.balance) },
-      ]) +
-      tableHTML(["التاريخ", "النوع", "المرجع", "المبلغ", "الرصيد"],
-        statement.entries.map((e) => [
-          dateFmt(e.created_at), typeAr(e.entry_type), e.invoice_no || "—",
-          (e.amount > 0 ? "+" : "") + money(e.amount), money(e.running_balance),
-        ]), { numericCols: [3, 4] });
-    printReport("كشف حساب عميل", `${detail.name}${detail.phone ? " — " + detail.phone : ""}`, body);
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-[19px] font-extrabold">العملاء</h1>
-        <span className="text-[12px] text-text-dim tnum">{rows.length} عميل</span>
-      </div>
-
-      <ErrorNote msg={pageErr} />
-
-      <>
-        <div className="flex justify-end">
-          <Button variant="ghost" onClick={() => setView(view === "cards" ? "table" : "cards")}>
-            {view === "cards" ? "عرض جدول" : "عرض كروت"}
-          </Button>
-        </div>
-        {view === "cards" ? (
-          <CustomerCardsV2 rows={rows} loading={loading} onOpen={(c) => router.push(`/customers/${c.id}`)}
-                         onCreate={canCreate ? openCreate : undefined} />
-        ) : (
-          <Card>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          loading={loading}
-          searchKeys={["name", "phone", "vat_number"]}
-          searchPlaceholder="بحث بالاسم أو الجوال أو الرقم الضريبي..."
-          emptyText="لا يوجد عملاء بعد — أضف أول عميل"
-          toolbar={canCreate && <Button onClick={openCreate}>+ عميل جديد</Button>}
-        />
-      </Card>
-        )}
-      </>
-
-      {/* ══════════ إنشاء / تعديل عميل ══════════ */}
-      <Modal open={!!modal} size="lg" onClose={() => setModal(null)}
-             title={modal?.mode === "create" ? "عميل جديد" : "تعديل العميل"}>
-        <div className="space-y-3">
-          <div className="grid gap-2 sm:grid-cols-3">
-            <Field label="نوع العميل">
-              <Select value={form.customerType}
-                      onChange={(e) => setForm({ ...form, customerType: e.target.value as any })}>
-                <option value="individual">فرد</option>
-                <option value="company">شركة</option>
-              </Select>
-            </Field>
-            <Field label="الاسم">
-              <Input value={form.name} autoFocus
-                     onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            </Field>
-            <Field label="رقم الجوال">
-              <Input value={form.phone} className="tnum"
-                     onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-            </Field>
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-3">
-            <Field label="البريد الإلكتروني">
-              <Input type="email" value={form.email}
-                     onChange={(e) => setForm({ ...form, email: e.target.value })} />
-            </Field>
-            <Field label="الرقم الضريبي" hint={isCompany ? "مطلوب للفاتورة الضريبية القياسية" : undefined}>
-              <Input value={form.vatNumber} className="tnum"
-                     onChange={(e) => setForm({ ...form, vatNumber: e.target.value })} />
-            </Field>
-            <Field label="رقم السجل التجاري">
-              <Input value={form.crNumber} className="tnum"
-                     onChange={(e) => setForm({ ...form, crNumber: e.target.value })} />
-            </Field>
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-3">
-            <Field label="حد الائتمان (ر.س)" hint="فاضي = بلا حد — البيع الآجل غير مقيّد لهذا العميل">
-              <Input type="number" min={0} step={0.01} className="tnum" value={form.creditLimit}
-                     placeholder="بلا حد"
-                     onChange={(e) => setForm({ ...form, creditLimit: e.target.value })} />
-            </Field>
-            <Field label="قائمة الأسعار" hint="فاضي = السعر العادي لكل الأصناف">
-              <Select value={form.priceListId}
-                      onChange={(e) => setForm({ ...form, priceListId: e.target.value })}>
-                <option value="">السعر العادي</option>
-                {priceLists.map((pl) => (
-                  <option key={pl.id} value={pl.id}>{pl.name}</option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-
-          <div className="rounded-lg border border-line bg-ink-3 p-3">
-            <p className="mb-2 text-[12px] font-bold text-text-dim">عقد/اتفاقية تسعير (اختياري — للعملاء الكبار والشركات)</p>
-            <div className="grid gap-2 sm:grid-cols-3">
-              <Field label="نسبة خصم العقد (%)" hint="فاضي = بلا اتفاقية">
-                <Input type="number" min={0} max={100} step={0.01} className="tnum" value={form.contractDiscountPct}
-                       placeholder="مثال: 10"
-                       onChange={(e) => setForm({ ...form, contractDiscountPct: e.target.value })} />
-              </Field>
-              <Field label="سارية من" hint="فاضي = بدون بداية محددة">
-                <Input type="date" value={form.contractValidFrom}
-                       onChange={(e) => setForm({ ...form, contractValidFrom: e.target.value })} />
-              </Field>
-              <Field label="سارية حتى" hint="فاضي = بلا تاريخ انتهاء">
-                <Input type="date" value={form.contractValidUntil}
-                       onChange={(e) => setForm({ ...form, contractValidUntil: e.target.value })} />
-              </Field>
-            </div>
-            <Field label="ملاحظات العقد" hint="اختياري">
-              <Textarea rows={2} value={form.contractNotes}
-                        onChange={(e) => setForm({ ...form, contractNotes: e.target.value })} />
-            </Field>
-          </div>
-
-          {isCompany ? (
-            <div className="rounded-lg border border-line bg-ink-3 p-3">
-              <p className="mb-2 text-[12px] font-bold text-text-dim">العنوان الوطني (للفاتورة الضريبية)</p>
-              <div className="grid gap-2 sm:grid-cols-3">
-                <Field label="رقم المبنى">
-                  <Input value={form.buildingNo} className="tnum"
-                         onChange={(e) => setForm({ ...form, buildingNo: e.target.value })} />
-                </Field>
-                <Field label="الشارع">
-                  <Input value={form.street}
-                         onChange={(e) => setForm({ ...form, street: e.target.value })} />
-                </Field>
-                <Field label="الحي">
-                  <Input value={form.district}
-                         onChange={(e) => setForm({ ...form, district: e.target.value })} />
-                </Field>
-                <Field label="المدينة">
-                  <Input value={form.city}
-                         onChange={(e) => setForm({ ...form, city: e.target.value })} />
-                </Field>
-                <Field label="الرمز البريدي">
-                  <Input value={form.postalCode} className="tnum"
-                         onChange={(e) => setForm({ ...form, postalCode: e.target.value })} />
-                </Field>
-                <Field label="الرقم الإضافي">
-                  <Input value={form.additionalNo} className="tnum"
-                         onChange={(e) => setForm({ ...form, additionalNo: e.target.value })} />
-                </Field>
-              </div>
-            </div>
-          ) : (
-            <Field label="العنوان">
-              <Textarea value={form.address}
-                        onChange={(e) => setForm({ ...form, address: e.target.value })} />
-            </Field>
-          )}
-
-          <ErrorNote msg={err} />
-          <div className="flex justify-end gap-2 pt-1">
-            <Button variant="ghost" onClick={() => setModal(null)}>إلغاء</Button>
-            <Button onClick={save} disabled={busy || form.name.trim().length < 1}>
-              {busy ? "جارِ الحفظ..." : "حفظ"}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* ══════════ تفاصيل العميل: سيارات + كشف حساب ══════════ */}
-      <Modal open={!!detail} size="lg" onClose={() => setDetail(null)} title={detail?.name || ""}>
-        {detail && (
-          <div className="space-y-3">
-            <div className="flex gap-1 border-b border-line">
-              <button onClick={() => setDetailTab("vehicles")}
-                      className={`-mb-px border-b-2 px-4 py-2 text-[13px] font-bold transition
-                        ${detailTab === "vehicles" ? "border-petrol text-petrol" : "border-transparent text-text-dim"}`}>
-                السيارات
-              </button>
-              {canStatement && (
-                <button onClick={() => { setDetailTab("statement"); if (!statement) loadStatement(detail.id); }}
-                        className={`-mb-px border-b-2 px-4 py-2 text-[13px] font-bold transition
-                          ${detailTab === "statement" ? "border-petrol text-petrol" : "border-transparent text-text-dim"}`}>
-                  كشف الحساب
-                </button>
-              )}
-              <button onClick={() => { setDetailTab("loyalty"); if (!loyaltyLedger) loadLoyaltyLedger(detail.id); }}
-                      className={`-mb-px border-b-2 px-4 py-2 text-[13px] font-bold transition
-                        ${detailTab === "loyalty" ? "border-petrol text-petrol" : "border-transparent text-text-dim"}`}>
-                نقاط الولاء
-              </button>
-            </div>
-
-            {detailTab === "vehicles" && (
-              <div className="space-y-3">
-                <div className="overflow-x-auto rounded-lg border border-line">
-                  <table className="w-full border-collapse text-[12.5px]">
-                    <thead>
-                      <tr className="bg-ink-3 text-[11.5px] font-extrabold text-text-dim">
-                        <th className="px-3 py-2 text-right">اللوحة</th>
-                        <th className="px-3 py-2 text-right">الموديل</th>
-                        <th className="px-3 py-2 text-right">اللون</th>
-                        <th className="w-10 px-2 py-2" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {vehicles.length === 0 ? (
-                        <tr><td colSpan={4} className="px-3 py-5 text-center text-text-dim">لا توجد سيارات مسجّلة</td></tr>
-                      ) : vehicles.map((v) => (
-                        <tr key={v.id} className="border-t border-line/70">
-                          <td className="px-3 py-2 tnum font-bold">{v.plate}</td>
-                          <td className="px-3 py-2">{[v.brand, v.make_model, v.model_year].filter(Boolean).join(" ") || "—"}</td>
-                          <td className="px-3 py-2">{v.color || "—"}</td>
-                          <td className="px-2 py-2 text-center">
-                            {canEdit && (
-                              <button onClick={() => removeVehicle(v)} aria-label="حذف"
-                                      className="rounded-md px-2 py-1 text-text-dim hover:bg-ember-bg hover:text-ember">
-                                <MIcon name="delete" className="!text-[16px]" />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {canEdit && !showVehicleForm && (
-                  <Button variant="ghost" onClick={() => setShowVehicleForm(true)}>+ إضافة سيارة</Button>
-                )}
-                {canEdit && showVehicleForm && (
-                  <div className="space-y-2 rounded-lg border border-line bg-ink-3 p-3">
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      <Field label="رقم اللوحة">
-                        <Input value={vehicleForm.plate} autoFocus className="tnum"
-                               onChange={(e) => setVehicleForm({ ...vehicleForm, plate: e.target.value })} />
-                      </Field>
-                      <Field label="الماركة">
-                        <Input value={vehicleForm.brand}
-                               onChange={(e) => setVehicleForm({ ...vehicleForm, brand: e.target.value })} />
-                      </Field>
-                      <Field label="الموديل">
-                        <Input value={vehicleForm.makeModel}
-                               onChange={(e) => setVehicleForm({ ...vehicleForm, makeModel: e.target.value })} />
-                      </Field>
-                      <Field label="سنة الصنع">
-                        <Input value={vehicleForm.modelYear} className="tnum"
-                               onChange={(e) => setVehicleForm({ ...vehicleForm, modelYear: e.target.value })} />
-                      </Field>
-                      <Field label="اللون">
-                        <Input value={vehicleForm.color}
-                               onChange={(e) => setVehicleForm({ ...vehicleForm, color: e.target.value })} />
-                      </Field>
-                      <Field label="رقم الشاصي">
-                        <Input value={vehicleForm.chassisNumber} className="tnum"
-                               onChange={(e) => setVehicleForm({ ...vehicleForm, chassisNumber: e.target.value })} />
-                      </Field>
-                    </div>
-                    <ErrorNote msg={vehicleErr} />
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" onClick={() => setShowVehicleForm(false)}>إلغاء</Button>
-                      <Button onClick={addVehicle} disabled={vehicleForm.plate.trim().length < 1}>حفظ السيارة</Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {detailTab === "statement" && (
-              <div className="space-y-3">
-                {statement && (
-                  <>
-                    <div className="flex items-center justify-between rounded-lg bg-ink-3 p-3">
-                      <span className="text-[12.5px] font-bold text-text-dim">الرصيد الحالي</span>
-                      <div className="flex items-center gap-3">
-                        <span className={`tnum text-[16px] font-black ${statement.balance > 0 ? "text-ember" : "text-emerald"}`}>
-                          {money(statement.balance)} ر.س
-                        </span>
-                        <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={printStatement}>
-                          طباعة الكشف
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="max-h-64 overflow-y-auto rounded-lg border border-line">
-                      <table className="w-full border-collapse text-[12px]">
-                        <thead>
-                          <tr className="bg-ink-3 text-[11px] font-extrabold text-text-dim">
-                            <th className="px-3 py-2 text-right">التاريخ</th>
-                            <th className="px-3 py-2 text-right">النوع</th>
-                            <th className="px-3 py-2 text-right">المرجع</th>
-                            <th className="px-3 py-2 text-right">المبلغ</th>
-                            <th className="px-3 py-2 text-right">الرصيد</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {statement.entries.length === 0 ? (
-                            <tr><td colSpan={5} className="px-3 py-5 text-center text-text-dim">لا توجد حركات بعد</td></tr>
-                          ) : statement.entries.map((e) => (
-                            <tr key={e.id} className="border-t border-line/70">
-                              <td className="px-3 py-2 text-text-dim">{dateFmt(e.created_at)}</td>
-                              <td className="px-3 py-2">
-                                {e.entry_type === "invoice" ? <Badge tone="warn">فاتورة آجل</Badge>
-                                  : e.entry_type === "payment" ? <Badge tone="good">سداد</Badge>
-                                  : <Badge tone="info">مرتجع</Badge>}
-                              </td>
-                              <td className="px-3 py-2 tnum">{e.invoice_no || "—"}</td>
-                              <td className={`px-3 py-2 tnum font-bold ${e.amount > 0 ? "text-ember" : "text-emerald"}`}>
-                                {e.amount > 0 ? "+" : ""}{money(e.amount)}
-                              </td>
-                              <td className="px-3 py-2 tnum font-bold">{money(e.running_balance)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {canPay && statement.balance > 0 && (
-                      <div className="space-y-2 rounded-lg border border-line bg-ink-3 p-3">
-                        <p className="text-[12.5px] font-bold">تسجيل سداد</p>
-                        <div className="grid gap-2 sm:grid-cols-3">
-                          <Field label="المبلغ">
-                            <Input type="number" min={0.01} step="0.01" className="tnum" value={payAmount}
-                                   onChange={(e) => setPayAmount(e.target.value)} />
-                          </Field>
-                          <Field label="طريقة السداد">
-                            <Select value={payMethod} onChange={(e) => setPayMethod(e.target.value as any)}>
-                              <option value="cash">نقدي</option>
-                              <option value="card">شبكة</option>
-                              <option value="transfer">تحويل</option>
-                            </Select>
-                          </Field>
-                          <Field label="ملاحظة">
-                            <Input value={payNote} onChange={(e) => setPayNote(e.target.value)} />
-                          </Field>
-                        </div>
-                        <ErrorNote msg={payErr} />
-                        <div className="flex justify-end">
-                          <Button onClick={submitPayment}>تسجيل السداد</Button>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-
-            {detailTab === "loyalty" && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between rounded-lg bg-ink-3 p-3">
-                  <span className="text-[12.5px] font-bold text-text-dim">رصيد النقاط الحالي</span>
-                  <span className="tnum text-[16px] font-black text-petrol">{detail.loyalty_points} نقطة</span>
-                </div>
-
-                <div className="max-h-56 overflow-y-auto rounded-lg border border-line">
-                  <table className="w-full border-collapse text-[12px]">
-                    <thead>
-                      <tr className="bg-ink-3 text-[11px] font-extrabold text-text-dim">
-                        <th className="px-3 py-2 text-right">التاريخ</th>
-                        <th className="px-3 py-2 text-right">الحركة</th>
-                        <th className="px-3 py-2 text-right">النقاط</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {!loyaltyLedger ? (
-                        <tr><td colSpan={3} className="px-3 py-5 text-center text-text-dim">جارِ التحميل...</td></tr>
-                      ) : loyaltyLedger.length === 0 ? (
-                        <tr><td colSpan={3} className="px-3 py-5 text-center text-text-dim">لا توجد حركات بعد</td></tr>
-                      ) : loyaltyLedger.map((e) => (
-                        <tr key={e.id} className="border-t border-line/70">
-                          <td className="px-3 py-2 text-text-dim">{dateFmt(e.created_at)}</td>
-                          <td className="px-3 py-2">{e.note || (e.kind === "earn" ? "اكتساب" : "استبدال")}</td>
-                          <td className={`px-3 py-2 tnum font-bold ${e.points > 0 ? "text-emerald" : "text-ember"}`}>
-                            {e.points > 0 ? "+" : ""}{e.points}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {canPay && detail.loyalty_points > 0 && (
-                  <div className="space-y-2 rounded-lg border border-line bg-ink-3 p-3">
-                    <p className="text-[12.5px] font-bold">استبدال نقاط</p>
-                    <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                      <Field label="عدد النقاط">
-                        <Input type="number" min={1} step={1} className="tnum" value={redeemPoints}
-                               placeholder={`حتى ${detail.loyalty_points}`}
-                               onChange={(e) => setRedeemPoints(e.target.value)} />
-                      </Field>
-                      <Button className="self-end" disabled={redeemBusy || !redeemPoints} onClick={submitRedeem}>
-                        {redeemBusy ? "..." : "استبدال"}
-                      </Button>
-                    </div>
-                    <ErrorNote msg={redeemErr} />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
-    </div>
-  );
-}
-
-
-// ── عرض الكروت (النسخة 2) ──
-function CustomerCardsV2({ rows, loading, onOpen, onCreate }: {
-  rows: Customer[]; loading: boolean; onOpen: (c: Customer) => void; onCreate?: () => void;
-}) {
-  const [q, setQ] = useState("");
-  const [dq, setDq] = useState("");
-  const [flt, setFlt] = useState<"all" | "debt" | "clear" | "cars">("all");
+  const [updated, setUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
-    const t = setTimeout(() => setDq(q), 250);
-    return () => clearTimeout(t);
-  }, [q]);
+    try {
+      const sv = JSON.parse(localStorage.getItem("z8_cx_cols") || "null"); if (Array.isArray(sv) && sv.length) setCols(sv);
+      setDense(localStorage.getItem("z8_cx_dense") === "1");
+    } catch { /* */ }
+  }, []);
+  useEffect(() => { try { localStorage.setItem("z8_cx_cols", JSON.stringify(cols)); localStorage.setItem("z8_cx_dense", dense ? "1" : "0"); } catch { /* */ } }, [cols, dense]);
 
-  const wa = (p: string) => {
-    const d = p.replace(/\D/g, "");
-    if (d.length < 9) return null;
-    return "https://wa.me/" + (d.startsWith("0") ? "966" + d.slice(1) : d);
-  };
-  const ql = dq.trim().toLowerCase();
-  const shown = rows.filter((c) =>
-    (!ql || (c.name || "").toLowerCase().includes(ql) || (c.phone || "").includes(ql) || (c.vat_number || "").includes(ql)) &&
-    (flt === "all" ||
-      (flt === "debt" && (c.balance ?? 0) > 0) ||
-      (flt === "clear" && (c.balance ?? 0) <= 0) ||
-      (flt === "cars" && (c.vehicle_count ?? 0) > 0)));
-  const isNew = (c: Customer) => !!c.created_at && Date.now() - new Date(c.created_at).getTime() < 30 * 864e5;
-  const active = flt !== "all" || q !== "";
-  const reset = () => { setQ(""); setDq(""); setFlt("all"); };
-  const filters = [["all", "الكل"], ["debt", "عليه مستحق"], ["clear", "بدون مديونية"], ["cars", "له سيارات"]] as const;
+  // بحث بتأخير 300ms — لا طلب مع كل حرف
+  useEffect(() => { const t = setTimeout(() => { setQ((p) => { if (p !== qInput) setPage(1); return qInput; }); }, 300); return () => clearTimeout(t); }, [qInput]);
+
+  const qs = useMemo(() => buildQs({ q, page, size, sort, dir, filters, from: period.from, to: period.to }), [q, page, size, sort, dir, filters, period.from, period.to]);
+
+  const ctl = useRef<AbortController | null>(null);
+  const load = useCallback(async (silent = false) => {
+    ctl.current?.abort(); const ac = new AbortController(); ctl.current = ac;
+    const hit = cache.get(qs);
+    if (hit && !silent) { setData(hit.data); setLoading(false); } else if (!data && !hit) setLoading(true);
+    setRefreshing(true); setError("");
+    try {
+      const d = await api<Overview>(`/customers/overview?${qs}`, { signal: ac.signal });
+      cache.set(qs, { at: Date.now(), data: d }); setData(d); setUpdated(new Date());
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
+      setError(e instanceof Error ? e.message : String(e));
+    } finally { if (ctl.current === ac) { setLoading(false); setRefreshing(false); } }
+  }, [qs]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); return () => ctl.current?.abort(); }, [load]);
+
+  // مزامنة الرابط
+  useEffect(() => {
+    const sp = new URLSearchParams();
+    if (q.trim()) sp.set("q", q.trim());
+    if (page > 1) sp.set("page", String(page));
+    if (sort !== "name" || dir !== "asc") { sp.set("sort", sort); sp.set("dir", dir); }
+    const diff = Object.fromEntries(Object.entries(filters).filter(([k, v]) => v !== (EMPTY_FILTERS as Record<string, unknown>)[k]));
+    if (Object.keys(diff).length) sp.set("f", JSON.stringify(diff));
+    sp.set("p", period.period); if (period.period === "custom") { sp.set("from", period.from); sp.set("to", period.to); }
+    window.history.replaceState(null, "", `?${sp}`);
+  }, [q, page, sort, dir, filters, period]);
+
+  const fin = data?.canFinance ?? true;
+  const visibleCols = COLS.filter((x) => cols.includes(x.key) && (!x.fin || fin));
+  const activeFilterCount = Object.entries(filters).filter(([k, v]) => v !== (EMPTY_FILTERS as Record<string, unknown>)[k]).length;
+  const rows = data?.items ?? [];
+  const pages = Math.max(1, Math.ceil((data?.total ?? 0) / size));
+  const filtered = activeFilterCount > 0 || q.trim() !== "";
+
+  function toggleSort(k: SortKey) { if (sort === k) setDir(dir === "asc" ? "desc" : "asc"); else { setSort(k); setDir(k === "name" ? "asc" : "desc"); } setPage(1); }
+  function clearAll() { setFilters(EMPTY_FILTERS); setQInput(""); setQ(""); setPage(1); }
+  function applyDrill(patch: Partial<Filters>) { setFilters({ ...EMPTY_FILTERS, ...patch }); setPage(1); }
+
+  const toggleRow = (r: CustomerRow) => setSelected((p) => { const n = new Map(p); if (n.has(r.id)) n.delete(r.id); else n.set(r.id, r); return n; });
+  const allOnPage = rows.length > 0 && rows.every((r) => selected.has(r.id));
+  const toggleAll = () => setSelected((p) => { const n = new Map(p); if (allOnPage) rows.forEach((r) => n.delete(r.id)); else rows.forEach((r) => n.set(r.id, r)); return n; });
+
+  const exportHeaders = ["الرقم", "العميل", "النوع", "الجوال", "البريد", "الرقم الضريبي", ...(fin ? ["المبيعات", "المدفوع", "المستحق", "المتأخر"] : []), "عدد الفواتير", "آخر تعامل", "الحالة"];
+  const exportRow = (r: CustomerRow) => [r.no, r.name, r.type === "company" ? "شركة" : "فرد", r.phone, r.email, r.vat,
+    ...(fin ? [r.sales, r.paid, r.balance, r.overdue] : []), r.invoiceCount, r.lastAt ? r.lastAt.slice(0, 10) : "", c(`st.${statusOf(r)}` as CKey)];
+
+  /** يجلب كل نتائج الفلتر الحالي صفحةً صفحة (حد أقصى 5000) للتصدير */
+  async function fetchAll(): Promise<CustomerRow[]> {
+    const out: CustomerRow[] = [];
+    for (let p = 1; p <= 50; p++) {
+      const d = await api<Overview>(`/customers/overview?${buildQs({ q, page: p, size: 100, sort, dir, filters, from: period.from, to: period.to })}`);
+      out.push(...d.items); if (out.length >= d.total || d.items.length === 0) break;
+    }
+    return out;
+  }
+  async function doExport(kind: "csv" | "pdf", only?: CustomerRow[]) {
+    setMenu(""); setBusy(true);
+    try {
+      const list = only ?? await fetchAll();
+      if (kind === "csv") downloadCsv(`customers-${new Date().toISOString().slice(0, 10)}.csv`, exportHeaders, list.map(exportRow));
+      else {
+        const k = data?.kpis;
+        printReport("تقرير العملاء", `${list.length} عميل`,
+          (fin && k ? kpisHTML([{ label: "إجمالي المستحقات", value: fmtCurrency(k.receivables, 2) }, { label: "المتأخرات", value: fmtCurrency(k.overdue, 2) }]) : "") +
+          tableHTML(exportHeaders, list.map((r) => exportRow(r).map((v) => v ?? "")), { numericCols: fin ? [6, 7, 8, 9] : [] }));
+      }
+    } catch (e) { await appAlert(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+  }
+
+  async function bulkStatus(active: boolean) {
+    const ids = [...selected.keys()];
+    if (!await appConfirm(active ? `تفعيل ${ids.length} عميل؟` : `تعطيل ${ids.length} عميل؟ (لا يتم الحذف — يمكن إعادة التفعيل لاحقاً)`)) return;
+    setBusy(true);
+    try {
+      const r = await api<{ updated: number; skipped: { name: string; reason: string }[] }>("/customers/bulk-status", { method: "POST", body: JSON.stringify({ ids, active }) });
+      if (r.skipped.length) await appAlert(`تم تحديث ${r.updated} عميل. تم تخطي ${r.skipped.length}:\n` + r.skipped.map((s) => `• ${s.name} — ${s.reason}`).join("\n"));
+      setSelected(new Map()); cache.clear(); await load(true);
+    } catch (e) { await appAlert(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+  }
+
+  const k = data?.kpis;
+  const kpiLoading = loading && !data;
+
+  const SortIcon = ({ k: sk }: { k?: SortKey }) => !sk ? null : (
+    <MIcon name={sort === sk ? (dir === "asc" ? "arrow_upward" : "arrow_downward") : "unfold_more"} className={`!text-[14px] ${sort === sk ? "text-petrol" : "opacity-40"}`} />);
+  const pad = dense ? "py-1.5" : "py-3";
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[240px] flex-1">
-          <MIcon name="search" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 !text-[20px] text-text-dim" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} aria-label="بحث في العملاء"
-                 placeholder="ابحث باسم العميل أو الجوال أو الرقم الضريبي..."
-                 className="w-full rounded-xl border border-line bg-ink-2 py-3 pr-10 pl-10 text-[15px] text-text placeholder:text-text-dim/60 focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15" />
-          {q && (
-            <button onClick={() => { setQ(""); setDq(""); }} aria-label="مسح البحث"
-                    className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-text-dim hover:bg-ink-3">
-              <MIcon name="close" className="!text-[16px]" />
-            </button>
-          )}
+    <div className="cx-enter mx-auto w-full max-w-[1600px] space-y-4 pb-8" onClick={() => menu && setMenu("")}>
+      {/* ── Header ── */}
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-t-2xl font-black tracking-tight">{c("title")}</h1>
+          <p className="mt-0.5 text-t-sm text-text-dim">{c("subtitle")}</p>
         </div>
-        {onCreate && <Button onClick={onCreate}>+ عميل جديد</Button>}
-      </div>
+        <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <div className="relative">
+            <Button variant="outline" onClick={() => setMenu(menu === "export" ? "" : "export")} loading={busy} aria-haspopup="menu" aria-expanded={menu === "export"}>
+              <MIcon name="download" className="!text-[18px]" />{c("export")}
+            </Button>
+            {menu === "export" && (
+              <div role="menu" className="absolute end-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-xl border border-line bg-ink-2 shadow-xl">
+                <button role="menuitem" onClick={() => doExport("csv")} className="flex w-full items-center gap-2 px-3 py-2.5 text-start text-t-sm font-bold hover:bg-ink-3"><MIcon name="table_view" className="!text-[18px] text-petrol" />{c("exportCsv")}</button>
+                <button role="menuitem" onClick={() => doExport("pdf")} className="flex w-full items-center gap-2 px-3 py-2.5 text-start text-t-sm font-bold hover:bg-ink-3"><MIcon name="picture_as_pdf" className="!text-[18px] text-petrol" />{c("exportPdf")}</button>
+              </div>
+            )}
+          </div>
+          {canCreate && <Button onClick={() => setForm({ customer: null })}><MIcon name="add" className="!text-[18px]" />{c("add")}</Button>}
+        </div>
+      </header>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {filters.map(([k, l]) => (
-          <Button key={k} className="!px-4 !py-2 !text-[14px]" variant={flt === k ? "primary" : "ghost"} onClick={() => setFlt(k)}>{l}</Button>
-        ))}
-        {active && (
-          <Button size="sm" variant="tool" onClick={reset}>
-            <MIcon name="restart_alt" className="!text-[14px]" /> إعادة تعيين الفلاتر
-          </Button>
-        )}
-        <span className="tnum mr-auto text-[14px] text-text-dim">{shown.length} من {rows.length}</span>
-      </div>
+      {/* ── فلتر الفترة (يؤثر على مؤشرات الفترة) ── */}
+      <GlobalFilters value={period} branches={null} onChange={(v) => { setPeriod(v.period === "custom" ? v : { ...v, ...rangeFor(v.period) }); }} onRefresh={() => load(true)} refreshing={refreshing} lastUpdated={updated} />
 
-      {loading ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-[190px] animate-pulse rounded-card border border-line bg-ink-3" />
-          ))}
+      {/* ── KPI ── */}
+      <section aria-label="KPI" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        {kpiLoading ? Array.from({ length: 6 }).map((_, i) => <KpiSkeleton key={i} />) : k && <>
+          <KpiCard label={c("kpi.total")} icon="groups" value={fmtMoney(k.total, 0)} accent="var(--petrol)" />
+          <KpiCard label={c("kpi.active")} tip={c("kpi.active.tip")} icon="how_to_reg" value={fmtMoney(k.activeInPeriod, 0)} accent="var(--chart-profit)" sub={k.total ? `${Math.round((k.activeInPeriod / k.total) * 100)}%` : undefined} />
+          <KpiCard label={c("kpi.new")} tip={c("kpi.new.tip")} icon="person_add" value={fmtMoney(k.newInPeriod, 0)} accent="var(--chart-revenue)" />
+          {fin && k.sales != null && <KpiCard label={c("kpi.sales")} icon="payments" value={fmtCurrency(k.sales)} accent="var(--chart-revenue)" href={`/sales/history?from=${period.from}&to=${period.to}`} sub={k.avgValue != null ? `${c("kpi.avg")}: ${fmtCurrency(k.avgValue)}` : undefined} />}
+          {fin && k.receivables != null && <KpiCard label={c("kpi.receivables")} icon="request_quote" value={fmtCurrency(k.receivables)} accent="var(--brass)" sub={`${k.debtors ?? 0} ${isEn ? "customers" : "عميل"}`} />}
+          {fin && k.overdue != null && <KpiCard label={c("kpi.overdue")} tip={c("kpi.overdue.tip")} icon="schedule" value={fmtCurrency(k.overdue)} accent="var(--ember)" subTone={k.overdue > 0 ? "danger" : "neutral"} />}
+        </>}
+      </section>
+      {fin && k && (k.receivables ?? 0) > 0 && (
+        <div className="-mt-1 flex flex-wrap gap-2 text-t-xs">
+          <button onClick={() => applyDrill({ hasBalance: true })} className="rounded-full border border-line px-2.5 py-1 font-bold text-petrol hover:border-petrol">{isEn ? "Show customers with a balance" : "عرض العملاء أصحاب الأرصدة"}</button>
+          {(k.overdue ?? 0) > 0 && <button onClick={() => applyDrill({ overdue: true })} className="rounded-full border border-ember/30 px-2.5 py-1 font-bold text-ember hover:bg-ember-bg">{isEn ? "Show overdue customers" : "عرض العملاء المتأخرين"}</button>}
+          <Link href="/reports" className="rounded-full border border-line px-2.5 py-1 font-bold text-petrol hover:border-petrol">{isEn ? "Receivables report" : "تقرير أعمار الذمم"}</Link>
         </div>
-      ) : shown.length === 0 ? (
-        <div className="rounded-card border border-line bg-ink-2 p-10 text-center">
-          <p className="text-[14px] font-bold">{rows.length === 0 ? "لا يوجد عملاء لعرضهم حاليًا" : "لم نعثر على عميل مطابق لبحثك"}</p>
-          {rows.length > 0 && active && <div className="mt-3"><Button variant="ghost" onClick={reset}>مسح البحث والفلاتر</Button></div>}
-          {rows.length === 0 && onCreate && <div className="mt-3"><Button onClick={onCreate}>إضافة عميل جديد</Button></div>}
-        </div>
-      ) : (
-       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-  {shown.map((c) => {
-    const bal = c.balance ?? 0;
-    const link = c.phone ? wa(c.phone) : null;
-    return (
-      <div key={c.id} onClick={() => onOpen(c)}
-           className="cursor-pointer rounded-card border border-line bg-ink-2 p-5 shadow-card transition hover:border-petrol hover:shadow-panel">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="truncate text-[17px] font-black">{c.name}</div>
-            <div dir="ltr" className="tnum mt-1 text-right text-[14px] text-text-dim">{c.phone || "—"}</div>
-          </div>
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            <Badge tone="neutral">{c.customer_type === "company" ? "شركة" : "فرد"}</Badge>
-            {isNew(c) && <Badge tone="good">جديد</Badge>}
-          </div>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-2.5 text-center">
-          <div className="rounded-lg bg-ink-3 p-2.5">
-            <div className="text-[13px] text-text-dim">السيارات</div>
-            <div className="tnum text-[17px] font-black">{c.vehicle_count ?? 0}</div>
-          </div>
-          <div className="rounded-lg bg-ink-3 p-2.5">
-            <div className="text-[13px] text-text-dim">الرصيد الآجل</div>
-            <div className={`tnum text-[17px] font-black ${bal > 0 ? "text-ember" : "text-text"}`}>
-              {money(bal)}{bal > 0 && <span className="mr-1 text-[12px] font-bold">مستحق</span>}
-            </div>
-          </div>
-        </div>
-        <div className="mt-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          <Button className="!px-5 !py-2.5 !text-[14px]" onClick={() => onOpen(c)}>عرض التفاصيل</Button>
-          {link && (
-            <a href={link} target="_blank" rel="noreferrer" aria-label={`واتساب ${c.name}`}
-               className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol">
-              <MIcon name="chat" className="!text-[18px]" />
-            </a>
-          )}
-          {c.phone && (
-            <a href={`tel:${c.phone}`} aria-label={`اتصال بـ ${c.name}`}
-               className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol">
-              <MIcon name="call" className="!text-[18px]" />
-            </a>
-          )}
-        </div>
-      </div>
-    );
-  })}
-</div>
       )}
+
+      {/* ── Toolbar: بحث + فلاتر + أعمدة ── */}
+      <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
+        <div className="relative min-w-[220px] flex-1">
+          <MIcon name="search" className="pointer-events-none absolute top-1/2 rtl:right-3 ltr:left-3 -translate-y-1/2 !text-[19px] text-text-dim" />
+          <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder={c("search")} aria-label={c("search")} className="!ps-10" type="search" />
+        </div>
+        <Button variant="outline" onClick={() => setFiltersOpen(true)}>
+          <MIcon name="tune" className="!text-[18px]" />{c("filters")}
+          {activeFilterCount > 0 && <span className="tnum grid h-5 min-w-5 place-items-center rounded-full bg-petrol px-1 text-t-xs font-black text-white">{activeFilterCount}</span>}
+        </Button>
+        {filtered && <button onClick={clearAll} className="text-t-sm font-bold text-petrol hover:underline">{c("clearAll")}</button>}
+        <div className="ms-auto flex items-center gap-1.5">
+          <button onClick={() => setDense(!dense)} title={c("density")} aria-label={c("density")} aria-pressed={dense}
+            className={`hidden h-9 w-9 place-items-center rounded-lg border md:grid ${dense ? "border-petrol text-petrol" : "border-line text-text-dim"} hover:border-petrol`}>
+            <MIcon name={dense ? "density_small" : "density_medium"} className="!text-[19px]" />
+          </button>
+          <div className="relative hidden md:block">
+            <button onClick={() => setMenu(menu === "cols" ? "" : "cols")} aria-haspopup="menu" aria-expanded={menu === "cols"}
+              className="flex h-9 items-center gap-1.5 rounded-lg border border-line px-3 text-t-sm font-bold text-text-dim hover:border-petrol hover:text-petrol">
+              <MIcon name="view_column" className="!text-[18px]" />{c("columns")}
+            </button>
+            {menu === "cols" && (
+              <div role="menu" className="absolute end-0 top-full z-30 mt-1 w-48 rounded-xl border border-line bg-ink-2 p-2 shadow-xl">
+                {COLS.filter((x) => x.key !== "customer" && (!x.fin || fin)).map((x) => (
+                  <label key={x.key} className="flex min-h-[34px] cursor-pointer items-center gap-2 rounded-md px-2 text-t-sm hover:bg-ink-3">
+                    <input type="checkbox" className="accent-[var(--petrol)]" checked={cols.includes(x.key)}
+                      onChange={(e) => setCols((p) => e.target.checked ? [...p, x.key] : p.filter((y) => y !== x.key))} />{c(x.label)}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Bulk bar ── */}
+      {selected.size > 0 && (
+        <div role="region" aria-label="bulk" className="cx-enter flex flex-wrap items-center gap-2 rounded-xl border border-petrol/30 bg-petrol-soft px-3 py-2">
+          <b className="tnum text-t-sm">{selected.size} {c("selected")}</b>
+          <span className="mx-1 h-4 w-px bg-line" />
+          <Button size="sm" variant="outline" onClick={() => doExport("csv", [...selected.values()])}><MIcon name="download" className="!text-[16px]" />{c("bulk.export")}</Button>
+          <Button size="sm" variant="outline" onClick={() => doExport("pdf", [...selected.values()])}><MIcon name="print" className="!text-[16px]" />{c("bulk.print")}</Button>
+          {canDelete && <>
+            <Button size="sm" variant="outline" onClick={() => bulkStatus(false)}><MIcon name="block" className="!text-[16px]" />{c("bulk.deactivate")}</Button>
+            {filters.status !== "active" && <Button size="sm" variant="outline" onClick={() => bulkStatus(true)}><MIcon name="check_circle" className="!text-[16px]" />{c("bulk.activate")}</Button>}
+          </>}
+          <button onClick={() => setSelected(new Map())} className="ms-auto text-t-sm font-bold text-text-dim hover:text-text">{isEn ? "Clear selection" : "إلغاء التحديد"}</button>
+        </div>
+      )}
+
+      {/* ── القائمة ── */}
+      <div className="overflow-hidden rounded-card border border-line bg-ink-2 shadow-card" aria-busy={loading || refreshing}>
+        {error && !data ? (
+          <div role="alert" className="flex flex-col items-center gap-2 py-14 text-center">
+            <MIcon name="cloud_off" className="!text-[36px] text-ember" />
+            <div className="text-t-md font-black">{c("loadFail")}</div><div className="text-t-sm text-text-dim">{error}</div>
+            <Button onClick={() => load()}>{c("retry")}</Button>
+          </div>
+        ) : loading && !data ? (
+          <div className="space-y-2 p-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} height={44} />)}</div>
+        ) : rows.length === 0 ? (
+          filtered ? (
+            <EmptyState icon="search_off" title={c("noResults")} description={c("noResults.desc")} action={<Button variant="outline" onClick={clearAll}>{c("clearAll")}</Button>} />
+          ) : (
+            <EmptyState icon="groups" title={c("empty.title")} description={c("empty.desc")} action={canCreate ? <Button onClick={() => setForm({ customer: null })}><MIcon name="add" className="!text-[18px]" />{c("add")}</Button> : undefined} />
+          )
+        ) : (
+          <>
+            {error && <div role="alert" className="border-b border-ember/30 bg-ember-bg px-4 py-2 text-t-sm text-ember">{c("loadFail")} — <button className="font-bold underline" onClick={() => load()}>{c("retry")}</button></div>}
+
+            {/* جدول — الشاشات المتوسطة فأكبر */}
+            <div className={`hidden max-h-[68vh] overflow-auto md:block ${refreshing ? "opacity-80" : ""} transition-opacity`}>
+              <table className="w-full border-separate border-spacing-0 text-t-sm">
+                <thead className="sticky top-0 z-10 bg-ink-3 text-t-xs text-text-dim">
+                  <tr>
+                    <th className="w-10 border-b border-line px-3 py-2.5"><input type="checkbox" aria-label="select all" className="accent-[var(--petrol)]" checked={allOnPage} onChange={toggleAll} /></th>
+                    {visibleCols.map((col) => (
+                      <th key={col.key} scope="col" aria-sort={col.sort && sort === col.sort ? (dir === "asc" ? "ascending" : "descending") : undefined}
+                        className={`whitespace-nowrap border-b border-line px-3 py-2.5 font-extrabold ${col.num ? "text-end" : "text-start"}`}>
+                        {col.sort ? <button onClick={() => toggleSort(col.sort!)} className="inline-flex items-center gap-1 hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol">{c(col.label)}<SortIcon k={col.sort} /></button> : c(col.label)}
+                      </th>
+                    ))}
+                    <th className="border-b border-line px-3 py-2.5 text-end font-extrabold">{c("col.actions")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" && e.target === e.currentTarget) router.push(`/customers/${r.id}`); }}
+                      className={`group cursor-pointer border-b border-line/60 outline-none transition-colors hover:bg-ink-3/60 focus-visible:bg-ink-3 ${selected.has(r.id) ? "bg-petrol-soft/60" : ""}`}
+                      onClick={(e) => { if ((e.target as HTMLElement).closest("a,button,input,label")) return; router.push(`/customers/${r.id}`); }}>
+                      <td className={`border-b border-line/60 px-3 ${pad}`}><input type="checkbox" aria-label={r.name} className="accent-[var(--petrol)]" checked={selected.has(r.id)} onChange={() => toggleRow(r)} /></td>
+                      {visibleCols.map((col) => <td key={col.key} className={`border-b border-line/60 px-3 ${pad} ${col.num ? "text-end" : ""}`}>{cell(col.key, r)}</td>)}
+                      <td className={`border-b border-line/60 px-3 ${pad}`}>
+                        <div className="flex justify-end gap-1 opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                          <Link href={`/customers/${r.id}`} aria-label={`${c("view")}: ${r.name}`} title={c("view")} className="grid h-8 w-8 place-items-center rounded-md text-text-dim hover:bg-petrol-soft hover:text-petrol"><MIcon name="open_in_new" className="!text-[18px]" /></Link>
+                          {r.phone && <a href={`tel:${r.phone}`} aria-label={`${c("call")}: ${r.name}`} title={c("call")} className="grid h-8 w-8 place-items-center rounded-md text-text-dim hover:bg-petrol-soft hover:text-petrol"><MIcon name="call" className="!text-[18px]" /></a>}
+                          {canEdit && <button aria-label={`${c("edit")}: ${r.name}`} title={c("edit")} onClick={async () => { try { setForm({ customer: await api(`/customers/${r.id}`) }); } catch (e) { appAlert(e instanceof Error ? e.message : String(e)); } }} className="grid h-8 w-8 place-items-center rounded-md text-text-dim hover:bg-petrol-soft hover:text-petrol"><MIcon name="edit" className="!text-[18px]" /></button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* بطاقات الجوال */}
+            <ul className="divide-y divide-line/60 md:hidden">
+              {rows.map((r) => (
+                <li key={r.id}>
+                  <Link href={`/customers/${r.id}`} className="flex items-start gap-3 px-4 py-3 active:bg-ink-3">
+                    <Avatar name={r.name} />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center justify-between gap-2"><b className="truncate text-t-md">{r.name}</b><StatusBadge status={statusOf(r)} /></span>
+                      <span dir="ltr" className="tnum block text-start text-t-xs text-text-dim">{r.phone || "—"}</span>
+                      <span className="mt-1 flex items-center justify-between gap-2 text-t-xs text-text-dim">
+                        <span>{c("col.last")}: {ago(r.lastAt, isEn)}</span>
+                        {fin && r.balance != null && <span className={`tnum text-t-sm font-extrabold ${r.balance > 0 ? "text-ember" : "text-text-dim"}`}>{fmtCurrency(r.balance, 2)}</span>}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            {/* ترقيم */}
+            <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-2.5 text-t-sm">
+              <span className="tnum text-text-dim">{(page - 1) * size + 1}–{Math.min(page * size, data?.total ?? 0)} {c("of")} {data?.total ?? 0}</span>
+              <div className="flex items-center gap-2">
+                <select value={size} onChange={(e) => { setSize(Number(e.target.value)); setPage(1); }} aria-label={c("rows")} className="rounded-lg border border-line bg-ink-2 px-2 py-1 text-t-sm">
+                  {[10, 25, 50, 100].map((n) => <option key={n} value={n}>{n} {c("rows")}</option>)}
+                </select>
+                <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}><MIcon name="chevron_right" className="!text-[18px] ltr:rotate-180" />{c("prev")}</Button>
+                <span className="tnum text-text-dim">{page} / {pages}</span>
+                <Button size="sm" variant="outline" disabled={page >= pages} onClick={() => setPage(page + 1)}>{c("next")}<MIcon name="chevron_left" className="!text-[18px] ltr:rotate-180" /></Button>
+              </div>
+            </footer>
+          </>
+        )}
+      </div>
+
+      <FiltersPanel open={filtersOpen} value={filters} onApply={(f) => { setFilters(f); setPage(1); }} onClose={() => setFiltersOpen(false)} />
+      <CustomerForm open={!!form} customer={form?.customer} onClose={() => setForm(null)}
+        onSaved={(saved) => { const isNew = !form?.customer; setForm(null); cache.clear(); if (isNew) router.push(`/customers/${saved.id}`); else load(true); }} />
     </div>
   );
+
+  function cell(key: ColKey, r: CustomerRow) {
+    switch (key) {
+      case "customer": return (
+        <div className="flex items-center gap-3">
+          <Avatar name={r.name} size={dense ? 28 : 36} />
+          <div className="min-w-0">
+            <Link href={`/customers/${r.id}`} className="block max-w-[260px] truncate font-extrabold hover:text-petrol hover:underline">{r.name}</Link>
+            <div className="flex items-center gap-1.5 text-t-xs text-text-dim"><span className="tnum">{r.no}</span>
+              {r.segment === "vip" && <SegmentBadge seg="vip" />}{r.isCredit && <SegmentBadge seg="credit" />}</div>
+          </div>
+        </div>);
+      case "phone": return <span dir="ltr" className="tnum inline-block text-text-dim">{r.phone || "—"}</span>;
+      case "type": return <span className="text-text-dim">{r.type === "company" ? c("company") : c("individual")}</span>;
+      case "last": return <span title={fmtD(r.lastAt)} className="whitespace-nowrap text-text-dim">{ago(r.lastAt, isEn)}</span>;
+      case "sales": return r.sales == null ? "—" : <Link href={`/sales/history?customer=${encodeURIComponent(r.name)}`} className="tnum font-bold hover:text-petrol hover:underline">{fmtCurrency(r.sales, 2)}</Link>;
+      case "paid": return <span className="tnum text-text-dim">{r.paid == null ? "—" : fmtCurrency(r.paid, 2)}</span>;
+      case "balance": return r.balance == null ? "—" : (
+        <div>
+          <Link href={`/customers/${r.id}?tab=statement`} className={`tnum font-extrabold hover:underline ${r.balance > 0 ? "text-ember" : "text-text-dim"}`}>{fmtCurrency(r.balance, 2)}</Link>
+          {(r.overdue ?? 0) > 0 && <div className="tnum text-t-xs font-bold text-ember">{c("st.overdue")}: {fmtCurrency(r.overdue, 2)}</div>}
+        </div>);
+      case "status": return <StatusBadge status={statusOf(r)} />;
+      case "invoices": return <span className="tnum">{r.invoiceCount}</span>;
+      case "vehicles": return <span className="tnum">{r.vehicles}</span>;
+      case "created": return <span className="tnum whitespace-nowrap text-text-dim">{fmtD(r.createdAt)}</span>;
+    }
+  }
 }

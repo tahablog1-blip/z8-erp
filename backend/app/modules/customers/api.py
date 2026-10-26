@@ -1,11 +1,11 @@
 # modules/customers/api.py — طبقة الـ HTTP: مسارات + صلاحيات فقط
 # ملاحظة ترتيب: المسارات الثابتة (search-by-plate, lookup-by-plate) لازم تفضل
 # قبل /{customer_id} وإلا Express/FastAPI هيحاول يفسّرها كـ id.
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 
 from ...core.deps import CurrentUser, get_current_user, require_permission
-from . import service
+from . import overview, service
 from .schemas import (
     CustomerCreate, CustomerOut, CustomerUpdate, PaymentBody,
     StatementOut, VehicleCreate, VehicleOut,
@@ -40,6 +40,32 @@ async def delete_vehicle(vehicle_id: str,
     await service.delete_vehicle(user.company_id, vehicle_id)
 
 
+# ══════════════════ مركز قيادة العملاء (قائمة مُصفّحة + مؤشرات + 360) ══════════════════
+
+@router.get("/overview")
+async def customers_overview(request: Request, user: CurrentUser = Depends(get_current_user)):
+    """قائمة العملاء بترقيم/فرز/فلاتر من السيرفر + مؤشرات الفترة. الأرقام المالية لمن يملك الصلاحية فقط."""
+    return await overview.list_overview(user.company_id, user, dict(request.query_params))
+
+
+@router.get("/check-duplicate")
+async def check_duplicate(phone: str | None = None, email: str | None = None, vat: str | None = None,
+                          name: str | None = None, excludeId: str | None = None,
+                          user: CurrentUser = Depends(get_current_user)):
+    return await overview.check_duplicate(user.company_id, phone, email, vat, name, excludeId)
+
+
+class BulkStatusIn(BaseModel):
+    ids: list[str] = Field(min_length=1, max_length=500)
+    active: bool
+
+
+@router.post("/bulk-status")
+async def bulk_status(body: BulkStatusIn, user: CurrentUser = Depends(require_permission("customers.delete"))):
+    """تعطيل/تفعيل جماعي — التعطيل فقط (لا حذف)، ويُتخطّى أي عميل عليه رصيد مستحق"""
+    return await overview.bulk_status(user.company_id, body.ids, body.active)
+
+
 # ══════════════════ العملاء ══════════════════
 
 @router.get("", response_model=list[CustomerOut])
@@ -70,6 +96,22 @@ async def update_customer(customer_id: str, body: CustomerUpdate,
 async def delete_customer(customer_id: str,
                           user: CurrentUser = Depends(require_permission("customers.delete"))):
     await service.deactivate_customer(user.company_id, customer_id)
+
+
+@router.get("/{customer_id}/profile")
+async def customer_profile(customer_id: str, user: CurrentUser = Depends(get_current_user)):
+    """ملف العميل 360: مؤشرات + حساب + فواتير + مدفوعات + مشتريات + خط زمني + ملاحظات (حسب الصلاحية)"""
+    return await overview.profile(user.company_id, user, customer_id)
+
+
+class NoteIn(BaseModel):
+    note: str = Field(min_length=1, max_length=2000)
+
+
+@router.post("/{customer_id}/notes", status_code=201)
+async def add_note(customer_id: str, body: NoteIn,
+                   user: CurrentUser = Depends(require_permission("customers.edit", "customers.create", "customers.record_payment"))):
+    return await overview.add_note(user.company_id, user.user_id, customer_id, body.note)
 
 
 @router.get("/{customer_id}/statement", response_model=StatementOut)
