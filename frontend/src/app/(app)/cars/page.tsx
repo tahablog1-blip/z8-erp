@@ -1,6 +1,8 @@
 "use client";
 // شاشة طابور السيارات — لوحة محطات بعدادات حية + تسجيل بكاميرا اللوحة (OCR)
 // + نقاط التشييك أثناء الخدمة + طباعة تذكرة السيارة + الجدول الكامل بالتعديل والحذف
+import { BRANDS, MODELS, COLORS, YEARS } from "@/lib/carOptions";
+import { ComboSelect } from "@/components/ComboSelect";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
@@ -34,68 +36,7 @@ function carProgress(c: Car) {
   return { finished, total, working, ready: finished >= total, pct: Math.round((finished / total) * 100) };
 }
 
-// ══════════ القوائم المرجعية (السوق السعودي) ══════════
-const BRANDS = [
-  "تويوتا", "هيونداي", "نيسان", "كيا", "فورد", "شيفروليه", "جي إم سي", "هوندا",
-  "لكزس", "مازدا", "ميتسوبيشي", "إيسوزو", "سوزوكي", "مرسيدس", "بي إم دبليو",
-  "أودي", "جيلي", "شانجان", "إم جي", "هافال", "فولكس واجن", "دودج", "جيب",
-  "رينو", "بيجو", "فورتشنر", "لاند روفر", "بورش", "كاديلاك", "لينكولن",
-];
-const MODELS: Record<string, string[]> = {
-  "تويوتا": ["كامري", "كورولا", "هايلكس", "لاندكروزر", "برادو", "يارس", "أفالون", "فورتشنر", "راف فور", "هايس", "إنوفا", "شاص"],
-  "هيونداي": ["إلنترا", "سوناتا", "أكسنت", "توسان", "سنتافي", "كريتا", "باليسيد", "أزيرا", "كونا", "H1"],
-  "نيسان": ["صني", "التيما", "باترول", "إكس تريل", "سنترا", "مكسيما", "نافارا", "كيكس", "أورفان"],
-  "كيا": ["سيراتو", "K5", "سبورتاج", "سورينتو", "بيجاس", "ريو", "كارنيفال", "سيلتوس", "تيلورايد"],
-  "فورد": ["إكسبلورر", "تورس", "إكسبيديشن", "F-150", "إيدج", "برونكو", "إيكوسبورت"],
-  "شيفروليه": ["تاهو", "سوبربان", "سلفرادو", "كابتيفا", "ماليبو", "جروف", "بليزر", "إمبالا"],
-  "جي إم سي": ["يوكن", "سييرا", "تيرين", "أكاديا"],
-  "هوندا": ["أكورد", "سيفيك", "CR-V", "بايلوت", "سيتي", "HR-V"],
-  "لكزس": ["ES", "LX", "RX", "IS", "GX", "NX", "LS"],
-  "مازدا": ["6", "3", "CX-5", "CX-9", "CX-30", "بيك أب"],
-  "ميتسوبيشي": ["باجيرو", "L200", "أوتلاندر", "أتراج", "إكسباندر", "مونتيرو"],
-  "إيسوزو": ["ديماكس", "MU-X", "NPR"],
-  "مرسيدس": ["C-Class", "E-Class", "S-Class", "GLE", "GLC", "G-Class", "A-Class"],
-  "بي إم دبليو": ["الفئة 3", "الفئة 5", "الفئة 7", "X5", "X6", "X3"],
-  "جيلي": ["كولراي", "توجيلا", "أوكافانجو", "إمجراند", "مونجارو"],
-  "شانجان": ["CS75", "CS35", "إيدو", "ألسفن", "CS95", "UNI-T", "UNI-K"],
-  "إم جي": ["MG5", "ZS", "RX5", "HS", "GT", "RX8"],
-  "هافال": ["H6", "جوليان", "H9", "داجو"],
-  "دودج": ["تشارجر", "تشالنجر", "دورانجو", "رام"],
-};
-const COLORS = ["أبيض", "أسود", "فضي", "رمادي", "بيج / ذهبي", "أحمر", "أزرق", "بني", "أخضر", "عنابي", "برتقالي", "أصفر"];
 // خيارات المحطة بتتبني ديناميكياً من خطوط الفرع + الحفرة والرافعة الثابتتين
-const YEARS = Array.from({ length: 38 }, (_, i) => String(2027 - i));
-
-// قائمة منسدلة + خيار «أخرى...» يفتح كتابة حرة — وبيتعرف تلقائياً على القيم القديمة
-function ComboSelect({ value, options, placeholder, onChange }: {
-  value: string; options: string[]; placeholder?: string; onChange: (v: string) => void;
-}) {
-  const inList = value === "" || options.includes(value);
-  const [other, setOther] = useState(!inList);
-  useEffect(() => { setOther(!(value === "" || options.includes(value))); }, []); // eslint-disable-line
-  if (other) {
-    return (
-      <div className="flex gap-1.5">
-        <Input value={value} placeholder={placeholder || "اكتب..."} autoFocus
-               onChange={(e) => onChange(e.target.value)} />
-        <button type="button" onClick={() => { setOther(false); onChange(""); }}
-                className="z8-anim-btn shrink-0 rounded-lg border border-line px-2 text-[11px] font-bold text-text-dim hover:text-text"
-                title="الرجوع للقائمة">☰</button>
-      </div>
-    );
-  }
-  return (
-    <Select value={value}
-            onChange={(e) => {
-              if (e.target.value === "__other__") { setOther(true); onChange(""); }
-              else onChange(e.target.value);
-            }}>
-      <option value="">— اختر —</option>
-      {options.map((o) => <option key={o} value={o}>{o}</option>)}
-      <option value="__other__">أخرى...</option>
-    </Select>
-  );
-}
 
 const EMPTY = {
   branchId: "", plateLetters: "", plateNumbers: "", plateType: "saudi" as "saudi" | "other",

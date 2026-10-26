@@ -7,6 +7,8 @@ import { api } from "@/lib/api";
 import { Button, ErrorNote, Field, Input, Modal, Select, Textarea } from "@/components/ui";
 import { appConfirm } from "@/components/dialog";
 import { MIcon } from "@/components/m-icon";
+import { ComboSelect } from "@/components/ComboSelect";
+import { SA_CITIES } from "@/lib/carOptions";
 import { useCx } from "@/lib/customers/i18n";
 import type { DupMatch } from "@/lib/customers/types";
 import type { Customer } from "@/modules/customers/types";
@@ -61,6 +63,7 @@ export function CustomerForm({ open, customer, onClose, onSaved }: {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [dups, setDups] = useState<DupMatch[]>([]);
+  const [ver, setVer] = useState(0);   // يعيد بناء القوائم المنسدلة بعد إعادة تعبئة النموذج
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const dirty = JSON.stringify(f) !== JSON.stringify(initial);
   const errors = validate(f);
@@ -68,7 +71,7 @@ export function CustomerForm({ open, customer, onClose, onSaved }: {
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
   const blur = (k: keyof Form) => () => setTouched((t) => ({ ...t, [k]: true }));
 
-  useEffect(() => { if (open) { setF(initial); setTouched({}); setErr(""); setDups([]); } }, [open, initial]);
+  useEffect(() => { if (open) { setF(initial); setTouched({}); setErr(""); setDups([]); setVer((x) => x + 1); } }, [open, initial]);
   useEffect(() => { if (open) api<PriceList[]>("/price-lists").then(setPriceLists).catch(() => {}); }, [open]);
 
   // كشف التكرار (بعد توقف الكتابة 500ms) — على الجوال/البريد/الضريبي/الاسم
@@ -168,7 +171,7 @@ export function CustomerForm({ open, customer, onClose, onSaved }: {
               <Field label="رقم المبنى"><Input value={f.buildingNo} className="tnum" onChange={(e) => set("buildingNo", e.target.value)} /></Field>
               <Field label="الشارع"><Input value={f.street} onChange={(e) => set("street", e.target.value)} /></Field>
               <Field label="الحي"><Input value={f.district} onChange={(e) => set("district", e.target.value)} /></Field>
-              <Field label="المدينة"><Input value={f.city} onChange={(e) => set("city", e.target.value)} /></Field>
+              <Field label="المدينة"><ComboSelect key={`city${ver}`} value={f.city} options={SA_CITIES} placeholder="اسم المدينة" onChange={(c) => set("city", c)} /></Field>
               <Field label="الرمز البريدي"><Input value={f.postalCode} className="tnum" onChange={(e) => set("postalCode", e.target.value)} /></Field>
               <Field label="الرقم الإضافي"><Input value={f.additionalNo} className="tnum" onChange={(e) => set("additionalNo", e.target.value)} /></Field>
             </div>
