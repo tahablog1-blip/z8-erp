@@ -462,7 +462,7 @@ export default function StocktakePage() {
       )}
 
       {showCreate && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-line bg-ink-2 p-5 shadow-sm">
           <h2 className="mb-4 text-lg font-extrabold">إنشاء جلسة جرد</h2>
 
           {isAdmin ? (
@@ -470,7 +470,7 @@ export default function StocktakePage() {
               <label className="block text-sm font-bold">
                 نوع الموقع
                 <select
-                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3"
+                  className="mt-2 w-full rounded-xl border border-line bg-ink-2 p-3"
                   value={locType}
                   onChange={(e) => setLocType(e.target.value as "warehouse" | "branch")}
                 >
@@ -483,7 +483,7 @@ export default function StocktakePage() {
                 <label className="block text-sm font-bold">
                   الفرع
                   <select
-                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3"
+                    className="mt-2 w-full rounded-xl border border-line bg-ink-2 p-3"
                     value={locId}
                     onChange={(e) => setLocId(e.target.value)}
                   >
@@ -504,7 +504,7 @@ export default function StocktakePage() {
           <label className="mt-4 block text-sm font-bold">
             ملاحظات الجرد (اختياري)
             <textarea
-              className="mt-2 w-full rounded-xl border border-slate-300 p-3"
+              className="mt-2 w-full rounded-xl border border-line p-3"
               rows={2}
               maxLength={500}
               value={newNote}
@@ -528,11 +528,11 @@ export default function StocktakePage() {
         </section>
       )}
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
+      <section className="overflow-hidden rounded-2xl border border-line bg-ink-2 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4">
           <h2 className="font-extrabold">جلسات الجرد</h2>
           <button
-            className={`${buttonClass} border border-slate-300 text-text`}
+            className={`${buttonClass} border border-line text-text`}
             onClick={() => {
               setLoading(true);
               setError("");
@@ -565,7 +565,7 @@ export default function StocktakePage() {
               </thead>
               <tbody>
                 {sessions.map((s) => (
-                  <tr key={s.id} className="border-t border-slate-100">
+                  <tr key={s.id} className="border-t border-line">
                     <td className="p-3 font-bold">
                       {locationName(s.locType, s.locId)}
                     </td>
@@ -599,8 +599,8 @@ export default function StocktakePage() {
       </section>
 
       {detail && (
-        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-          <div className="flex flex-wrap gap-3 border-b border-slate-100 pb-4">
+        <section className="space-y-4 rounded-2xl border border-line bg-ink-2 p-4 shadow-sm md:p-5">
+          <div className="flex flex-wrap gap-3 border-b border-line pb-4">
             {detail.status === "in_progress" && (
               <>
                 <label className={`${buttonClass} cursor-pointer bg-sky-700 text-white`}>
@@ -624,7 +624,7 @@ export default function StocktakePage() {
             )}
             {(detail.status === "in_progress" || detail.status === "review") && (
               <button
-                className={`${buttonClass} border border-red-300 bg-white text-red-700`}
+                className={`${buttonClass} border border-red-300 bg-ink-2 text-red-700`}
                 onClick={cancelSession}
                 disabled={busy}
               >
@@ -681,7 +681,7 @@ export default function StocktakePage() {
               )}
             </div>
             <button
-              className={`${buttonClass} border border-slate-300 text-text`}
+              className={`${buttonClass} border border-line text-text`}
               onClick={() => setDetail(null)}
             >
               إغلاق التفاصيل
@@ -715,7 +715,7 @@ export default function StocktakePage() {
           )}
 
           <input
-            className="w-full rounded-xl border border-slate-300 p-3 text-sm"
+            className="w-full rounded-xl border border-line p-3 text-sm"
             placeholder="ابحث باسم الصنف أو الباركود أو المواصفة..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -735,7 +735,7 @@ export default function StocktakePage() {
               </thead>
               <tbody>
                 {visibleItems.map((item) => (
-                  <tr key={item.productId} className="border-t border-slate-100 align-top">
+                  <tr key={item.productId} className="border-t border-line align-top">
                     <td className="max-w-[300px] p-3">
                       <p className="font-bold">{item.name}</p>
                       <p className="mt-1 text-xs text-text-dim">
@@ -743,7 +743,7 @@ export default function StocktakePage() {
                       </p>
                       {detail.status === "in_progress" && (
                         <input
-                          className="mt-2 w-full rounded-lg border border-slate-200 p-2 text-xs"
+                          className="mt-2 w-full rounded-lg border border-line p-2 text-xs"
                           placeholder="ملاحظة للصنف (اختياري)"
                           value={notes[item.productId] || ""}
                           onChange={(e) => setNotes((old) => ({
@@ -764,7 +764,7 @@ export default function StocktakePage() {
                           min="0"
                           step="1"
                           inputMode="numeric"
-                          className="w-28 rounded-lg border border-slate-300 p-2 font-bold"
+                          className="w-28 rounded-lg border border-line p-2 font-bold"
                           value={counts[item.productId] ?? ""}
                           onChange={(e) => setCounts((old) => ({
                             ...old, [item.productId]: e.target.value,
@@ -809,7 +809,7 @@ export default function StocktakePage() {
           </div>
 
           {detail.countedItems > 0 && detail.status !== "cancelled" && (
-            <div className="rounded-2xl border border-slate-200 p-4">
+            <div className="rounded-2xl border border-line p-4">
               <div className="grid gap-3 sm:grid-cols-3">
                 <div>
                   <p className="text-xs text-text-dim">قيمة العجز (بالتكلفة)</p>
@@ -851,7 +851,7 @@ export default function StocktakePage() {
       )}
           {importPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-2xl bg-white p-5 shadow-xl">
+          <div className="max-h-[90dvh] w-full max-w-3xl overflow-auto rounded-2xl bg-ink-2 p-5 shadow-xl">
             <h3 className="mb-1 text-lg font-bold">معاينة الجرد من الملف</h3>
             <p className="mb-3 text-sm text-text-dim">
               {importPreview.totalPieces} قطعة · {importPreview.matched.length} صنف مطابق ·{" "}
@@ -876,7 +876,7 @@ export default function StocktakePage() {
               </thead>
               <tbody>
                 {importPreview.matched.map((m) => (
-                  <tr key={m.productId} className="border-b border-slate-100">
+                  <tr key={m.productId} className="border-b border-line">
                     <td className="p-2">{m.name}</td>
                     <td className="p-2 font-mono text-xs">{m.barcode}</td>
                     <td className="p-2 font-bold">{m.scanned}</td>

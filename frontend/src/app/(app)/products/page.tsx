@@ -1962,7 +1962,7 @@ export default function ProductsPage() {
                 <div className="mt-1.5 text-text-dim">صوّر هذا الصندوق وأرسله — إضافة الاسم الناقص للمطابقة سطر واحد.</div>
               </div>
             )}
-            <div className="overflow-hidden rounded-lg border border-line">
+            <div className="overflow-x-auto rounded-lg border border-line">
               <table className="w-full text-[11.5px]">
                 <thead className="bg-ink-2 font-black text-text-dim">
                   <tr>

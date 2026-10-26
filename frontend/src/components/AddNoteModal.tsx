@@ -100,7 +100,7 @@ export default function AddNoteModal({ workOrderId, onClose }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3" onClick={onClose}>
-      <Card className="max-h-[92vh] w-full max-w-xl overflow-y-auto">
+      <Card className="max-h-[92dvh] w-full max-w-xl overflow-y-auto">
         <div onClick={(e) => e.stopPropagation()} className="space-y-3">
           <div className="text-[15px] font-black">+ إضافة ملاحظة</div>
 
