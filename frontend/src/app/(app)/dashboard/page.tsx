@@ -21,7 +21,6 @@ import { RecentTransactions } from "@/components/dashboard/sections/Recent";
 import { SmartAlerts } from "@/components/dashboard/sections/Alerts";
 import { QuickActions } from "@/components/dashboard/sections/QuickActions";
 import { OpsStrip } from "@/components/dashboard/sections/Ops";
-import { AiPanel } from "@/components/dashboard/sections/AiPanel";
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -130,7 +129,6 @@ export default function DashboardPage() {
         <div className="order-[15] xl:order-none xl:col-span-12"><QuickActions /></div>
       </div>
 
-      <AiPanel />
     </div>
   );
 }
