@@ -173,7 +173,7 @@ export default function ChatRoomPage() {
   let lastDay = "";
 
   return (
-    <div className="flex h-[calc(100dvh-120px)] flex-col space-y-2">
+    <div className="flex h-[calc(100vh-120px)] flex-col space-y-2">
       {/* رأس الغرفة */}
       <Card className="!py-2.5">
         <div className="flex items-center gap-3">

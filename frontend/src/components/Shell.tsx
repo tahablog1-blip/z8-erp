@@ -240,10 +240,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {mobileNavOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileNavOpen(false)} />
       )}
-      <aside className={`sticky top-0 z-50 flex h-dvh max-h-dvh w-72 shrink-0 flex-col overflow-hidden bg-petrol-deep text-white
-                        transition-[transform,width] duration-300 md:translate-x-0
+      <aside className={`fixed inset-y-0 start-0 z-50 flex z8-h-screen w-72 flex-col overflow-hidden bg-petrol-deep text-white
+                        transition-[transform,width] duration-300 md:sticky md:top-0 md:shrink-0 md:!translate-x-0
                         ${collapsed ? "md:w-[72px]" : "md:w-60"}
-                        ${mobileNavOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
+                        ${mobileNavOpen ? "translate-x-0 shadow-panel" : "ltr:-translate-x-full rtl:translate-x-full"}`}>
         <div className={`flex items-center gap-3 px-5 py-5 ${collapsed ? "md:justify-center md:px-0" : ""}`}>
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 p-1.5">
             <img src="/logo-white.png" alt="مصدر الزيوت" className="h-full w-full object-contain" />
@@ -353,7 +353,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ── مساحة العمل ── */}
-      <div className="flex min-w-0 flex-1 flex-col h-dvh p-2 sm:p-3 md:p-4">
+      <div className="flex min-w-0 flex-1 flex-col z8-h-screen p-2 sm:p-3 md:p-4">
         <div className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line elev-1 ${panelBgStyle(bg) ? "" : "bg-ink-2"}`}
              style={panelBgStyle(bg)}>
           <header className="flex h-14 shrink-0 items-center gap-1.5 border-b border-line px-3 sm:gap-2.5 sm:px-5">
@@ -368,8 +368,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
             {/* عنوان الصفحة + فتات الخبز */}
             <div className="min-w-0 flex-1">
-              {sectionTitle && <Breadcrumb items={[{ label: sectionTitle }, { label: pageTitle }]} />}
-              <div className="truncate text-page-title text-text">{pageTitle}</div>
+              {sectionTitle && <div className="hidden sm:block"><Breadcrumb items={[{ label: sectionTitle }, { label: pageTitle }]} /></div>}
+              <div className="truncate text-[16px] font-extrabold leading-6 text-text sm:text-page-title">{pageTitle}</div>
             </div>
 
             {/* مركز الإشعارات الداخلي */}
@@ -397,7 +397,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                         </button>
                       )}
                     </div>
-                    <div className="max-h-[60dvh] overflow-y-auto sm:max-h-96">
+                    <div className="max-h-[60vh] overflow-y-auto sm:max-h-96">
                       {notifLoading ? (
                         <div className="p-4 text-center text-[12px] text-text-dim">جارِ التحميل...</div>
                       ) : notifList.length === 0 ? (
@@ -424,7 +424,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {/* المحادثات */}
             <Tooltip label="المحادثات" side="bottom">
               <button onClick={() => router.push("/service-notes")} aria-label="المحادثات"
-                className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol">
+                className="relative hidden h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol sm:grid">
                 <MIcon name="chat" className="!text-[19px]" />
                 {unread > 0 && (
                   <span className="absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-ember px-1 text-[9px] font-black text-white">

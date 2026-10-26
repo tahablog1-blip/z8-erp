@@ -101,7 +101,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-dvh content-start justify-items-center bg-ink p-4 pt-8 sm:pt-14">
+    <div className="grid z8-min-h-screen content-start justify-items-center bg-ink p-4 pt-8 sm:pt-14">
       {/* خلفية بترولية هادئة أعلى الشاشة — استمرارية بصرية مع قضيب التطبيق */}
       <div className="pointer-events-none fixed inset-x-0 top-0 h-32 bg-petrol-deep sm:h-44" />
       <div className="relative w-full max-w-sm">

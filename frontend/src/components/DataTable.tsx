@@ -73,7 +73,7 @@ export function DataTable<T extends Record<string, any>>({
 
         {toolbar}
       </div>
-      <div className="max-h-[65dvh] overflow-auto rounded-card border border-line bg-ink-2 shadow-card">
+      <div className="max-h-[65vh] overflow-auto rounded-card border border-line bg-ink-2 shadow-card">
         <table className="w-full border-collapse text-[13px]">
           <thead className="sticky top-0 z-10">
             <tr className="bg-ink-3 text-text-dim">

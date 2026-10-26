@@ -180,7 +180,7 @@ export function Modal({ open, title, children, onClose, size = "md" }:
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-[3px]" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-label={title}
-           className={`z8-pop w-full ${width} max-h-[90dvh] overflow-y-auto rounded-2xl border border-line bg-ink-2 p-4 shadow-panel sm:rounded-[28px] sm:p-6`}
+           className={`z8-pop w-full ${width} max-h-[90vh] overflow-y-auto rounded-2xl border border-line bg-ink-2 p-4 shadow-panel sm:rounded-[28px] sm:p-6`}
            onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-[15px] font-extrabold text-text">{title}</h3>

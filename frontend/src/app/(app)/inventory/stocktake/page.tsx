@@ -851,7 +851,7 @@ export default function StocktakePage() {
       )}
           {importPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[90dvh] w-full max-w-3xl overflow-auto rounded-2xl bg-ink-2 p-5 shadow-xl">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-2xl bg-ink-2 p-5 shadow-xl">
             <h3 className="mb-1 text-lg font-bold">معاينة الجرد من الملف</h3>
             <p className="mb-3 text-sm text-text-dim">
               {importPreview.totalPieces} قطعة · {importPreview.matched.length} صنف مطابق ·{" "}

@@ -1024,7 +1024,7 @@ export default function SalesPage() {
                 </button>
               </div>
 
-              <div className="grid max-h-[calc(100dvh-300px)] grid-cols-2 content-start gap-2 overflow-y-auto p-0.5 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+              <div className="grid max-h-[calc(100vh-300px)] grid-cols-2 content-start gap-2 overflow-y-auto p-0.5 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
                 {products.length === 0 ? (
                   Array.from({ length: 10 }).map((_, i) => (
                     <div key={i} className="rounded-2xl border border-line bg-ink-2 p-2">
@@ -1102,7 +1102,7 @@ export default function SalesPage() {
                 </div>
               </div>
 
-              <div className="max-h-[calc(100dvh-430px)] divide-y divide-line overflow-y-auto">
+              <div className="max-h-[calc(100vh-430px)] divide-y divide-line overflow-y-auto">
                 {cart.length === 0 ? (
                   <div className="flex flex-col items-center gap-2 px-4 py-10 text-text-dim">
                     <MIcon name="shopping_cart" className="!text-[34px]" />

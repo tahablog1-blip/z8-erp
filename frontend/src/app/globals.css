@@ -178,3 +178,8 @@ a:focus-visible, [role="tab"]:focus-visible, summary:focus-visible {
 .z8-loader-breathe { animation: z8-loader-breathe 2.6s ease-in-out infinite; }
 .z8-loader-glow { animation: z8-loader-glow 2.6s ease-in-out infinite; }
 .z8-loader-dot { animation: z8-loader-dot 1.1s ease-in-out infinite; }
+
+
+/* ارتفاع الشاشة الكاملة: vh كأساس (كل المتصفحات) ثم dvh للمتصفحات الحديثة — المتصفح القديم يتجاهل السطر التاني بدل ما يسقط الارتفاع كله */
+.z8-h-screen { height: 100vh; max-height: 100vh; height: 100dvh; max-height: 100dvh; }
+.z8-min-h-screen { min-height: 100vh; min-height: 100dvh; }
