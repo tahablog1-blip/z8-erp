@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { MIcon } from "@/components/m-icon";
 import { InvoicePrintAnimation, type PrintLine } from "@/components/InvoicePrintAnimation";
 import { InvoiceHistory } from "./InvoiceHistory";
+import { InvoicePreviewModal } from "@/components/InvoicePreviewModal";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import type { PrintFormat } from "@/lib/print-invoice";
 import { getPrinting, cachePrinting } from "@/lib/printing";
@@ -108,6 +109,7 @@ export default function SalesPage() {
 
   // ── عرض فاتورة ──
   const [viewInvoice, setViewInvoice] = useState<InvoiceDetail | null>(null);
+  const [previewInvoice, setPreviewInvoice] = useState<InvoiceDetail | null>(null);
 
   // ── مرتجع جزئي ──
   const [partialReturnOpen, setPartialReturnOpen] = useState(false);
@@ -884,6 +886,9 @@ export default function SalesPage() {
 
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="ghost" onClick={() => setViewInvoice(null)}>إغلاق</Button>
+              <Button variant="ghost" onClick={() => setPreviewInvoice(viewInvoice)}>
+                <MIcon name="preview" className="!text-[16px]" /> معاينة
+              </Button>
               <Button variant="ghost" onClick={() => printById(viewInvoice.id, "thermal")}>
                 <MIcon name="print" className="!text-[16px]" /> حراري 80مم
               </Button>
@@ -900,6 +905,8 @@ export default function SalesPage() {
           </div>
         )}
       </Modal>
+
+      {previewInvoice && <InvoicePreviewModal invoice={previewInvoice} onClose={() => setPreviewInvoice(null)} />}
 
       <Modal open={partialReturnOpen} onClose={() => setPartialReturnOpen(false)} title="مرتجع جزئي">
         {viewInvoice && (

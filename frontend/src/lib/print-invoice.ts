@@ -2,7 +2,8 @@
 //   • حراري 80مم (الكاشير) — مضغوط، QR كبير، خط قص
 //   • A4 (فاتورة ضريبية رسمية) — ترويسة كاملة، جدول رسمي، بيانات العميل، QR أسفل
 // الاتنين بيطبعوا تقرير التشييك الكامل مجمّعاً بمحطات خط الخدمة
-import { InvoiceDetail, PAYMENT_LABELS, money } from "@/modules/invoices/types";
+import { InvoiceDetail, money } from "@/modules/invoices/types";
+import { buildInvoiceView, type InvoiceView, type Pair } from "./invoice-view";
 import { getCompany } from "./company";
 import { getPrinting, type PrintingInfo } from "./printing";
 import { STAGES, CK_LABEL, stageOf, type CkStatus } from "./service-line";
@@ -76,52 +77,6 @@ function checklistHTML(inv: InvoiceDetail, compact: boolean): string {
        <tbody>${stageBlocks}</tbody></table>`;
 }
 
-/** الممشى التقريبي عند التغيير القادم — تقدير تقريبي فقط:
- *  فترة 5000 كم للزيوت المعدنية/نصف التخليقية، 10000 كم لو الصنف مكتوب عليه "سانتتيك/توليف/Synthetic" */
-function nextServiceEstimate(inv: InvoiceDetail): number | null {
-  const cur = inv.car?.odometer_current;
-  if (!cur) return null;
-  const hasOilItem = inv.items.some((it) => /زيت|oil/i.test(it.label));
-  if (!hasOilItem) return null;
-  const synthetic = inv.items.some((it) => /سانتتيك|توليف|synthetic|full\s*syn/i.test(it.label));
-  return cur + (synthetic ? 10000 : 5000);
-}
-
-function carHTML(inv: InvoiceDetail, compact: boolean): string {
-  const c = inv.car;
-  if (!c) return "";
-  const delta = c.odometer_current && c.odometer_previous
-    ? c.odometer_current - c.odometer_previous : null;
-  const nextDue = nextServiceEstimate(inv);
-  const pairs: [string, string][] = [
-    ["اللوحة", c.plate || "—"],
-    ["السيارة", [c.brand, c.model, c.model_year].filter(Boolean).join(" ") || "—"],
-  ];
-  if (c.color) pairs.push(["اللون", c.color]);
-  if (c.chassis_number) pairs.push(["رقم الهيكل (VIN)", c.chassis_number]);
-  if (c.odometer_current) pairs.push(["العداد الحالي", `${c.odometer_current} كم`]);
-  if (c.odometer_previous) pairs.push(["العداد السابق", `${c.odometer_previous} كم`]);
-  if (delta !== null && delta > 0) pairs.push(["المسافة منذ آخر خدمة", `${delta} كم`]);
-  if (nextDue) pairs.push(["الممشى التقريبي للتغيير القادم", `${nextDue} كم (تقريبي)`]);
-  // ── فريق العمل المحفوظ لحظة اعتماد أمر العمل ──
-  const t = c as typeof c & {
-    filler_name?: string | null; fitter1_name?: string | null;
-    fitter2_name?: string | null; checker_name?: string | null;
-  };
-  const fitters = [t.fitter1_name, t.fitter2_name].filter(Boolean).join(" و");
-  if (t.filler_name) pairs.push(["فني التعبئة", t.filler_name]);
-  if (fitters) pairs.push(["الفك والتركيب", fitters]);
-  if (t.checker_name) pairs.push(["التشييك", t.checker_name]);
-  if (compact) {
-    return `<div class="box">${pairs.map(([k, v]) =>
-      `<div class="row"><span>${esc(k)}</span><b class="tnum">${esc(v)}</b></div>`).join("")}</div>`;
-  }
-  return `<h2 class="sec">بيانات المركبة</h2>
-    <table><tbody>${pairs.map(([k, v]) =>
-      `<tr><td class="r" style="width:200px;background:#f6f8f8;font-weight:700">${esc(k)}</td><td class="r tnum">${esc(v)}</td></tr>`).join("")}
-    </tbody></table>`;
-}
-
 // qrs: مصفوفة QR واحدة لكل نسخة مطبوعة (إعداد 5 — عدد النسخ، كل نسخة بعنصرها الخاص)
 // autoPrint: false في وضع «معاينة قبل الطباعة» (إعداد 7) — الطباعة تنتظر ضغطة الزر بدل التلقائية
 const PRINT_SCRIPT = (qrs: { id: string; tlv: string }[], autoPrint: boolean) => `
@@ -169,78 +124,68 @@ const PRINT_SCRIPT = (qrs: { id: string; tlv: string }[], autoPrint: boolean) =>
     })();
   </script>`;
 
+// ══════════════════ مكوّنات مشتركة ══════════════════
+
+const CUR = "ر.س";
+const pairsGrid = (pairs: Pair[], cols: number) => pairs.length ? `<div class="grid c${cols}">${pairs.map((p) =>
+  `<div class="cell"><span class="k">${esc(p.k)}</span><b class="v${p.ltr ? " tnum" : ""}">${esc(p.v)}</b></div>`).join("")}</div>` : "";
+const pairsRows = (pairs: Pair[]) => pairs.map((p) =>
+  `<div class="row"><span>${esc(p.k)}</span><b class="${p.ltr ? "tnum" : ""}">${esc(p.v)}</b></div>`).join("");
+
 // ══════════════════ الصيغة الحرارية 80مم ══════════════════
 
 // محتوى نسخة واحدة من الإيصال — تتكرر «copies» مرة في نفس مستند الطباعة (إعداد 5)
-function thermalCopyHTML(inv: InvoiceDetail, CO: ReturnType<typeof getCompany>, PR: PrintingInfo, idx: number): string {
-  const title = inv.is_returned ? "فاتورة مرتجعة"
-    : inv.invoice_type === "standard" ? "فاتورة ضريبية" : "فاتورة ضريبية مبسطة";
-
-  const itemsRows = inv.items.map((it) => `
-    <tr><td class="r">${esc(it.label)}${it.barcode ? `<br><span style="font-size:8.5px;font-weight:500;color:#222">${esc(it.barcode)}</span>` : ""}</td>
-        <td class="c tnum">${it.qty}</td>
-        <td class="c tnum">${money(it.unit_price_vat)}</td>
-        <td class="c tnum b">${money(it.line_inc)}</td></tr>`).join("");
-
-  const payRows = inv.payments.map((p) =>
-    `<div class="row"><span>${PAYMENT_LABELS[p.method] ?? esc(p.method)}</span><b class="tnum">${money(p.amount)}</b></div>`
-  ).join("");
-
+function thermalCopyHTML(inv: InvoiceDetail, V: InvoiceView, CO: ReturnType<typeof getCompany>, PR: PrintingInfo, idx: number): string {
+  const items = V.items.map((it) => `
+    <div class="item">
+      <div class="nm">${esc(it.label)}${it.sku ? `<span class="sku tnum">${esc(it.sku)}</span>` : ""}</div>
+      <div class="ln"><span class="tnum">${it.qty} × ${money(it.unit)}</span><b class="tnum">${money(it.inc)}</b></div>
+      ${it.discount > 0 ? `<div class="ln dim"><span>خصم</span><span class="tnum">- ${money(it.discount)}</span></div>` : ""}
+    </div>`).join("");
+  const pay = V.payments.map((p) => `<div class="row"><span>${esc(p.label)}</span><b class="tnum">${money(p.amount)}</b></div>`).join("");
   const qrId = `qrcode-${idx}`;
   return `
   <div class="head">
-    ${PR.thermalShowLogo ? `<img src="${location.origin}${CO.logoUrl || "/logo-thermal.png"}" alt="" style="width:52px;height:52px;object-fit:contain;display:block;margin:0 auto 5px" />` : ""}
+    ${PR.thermalShowLogo ? `<img src="${location.origin}${CO.logoUrl || "/logo-thermal.png"}" alt="" />` : ""}
     <h1>${esc(CO.name)}</h1>
     <div class="sub">الرقم الضريبي: <span class="tnum">${esc(CO.vat)}</span></div>
-    <div class="sub">س.ت: <span class="tnum">${esc(CO.cr)}</span> — ${esc(inv.branch_name || "")}</div>
+    ${CO.cr ? `<div class="sub">س.ت: <span class="tnum">${esc(CO.cr)}</span></div>` : ""}
     ${CO.phone ? `<div class="sub">هاتف: <span class="tnum">${esc(CO.phone)}</span></div>` : ""}
   </div>
-  <div class="title">${title}</div>
-  <div class="dash"></div>
-  <div class="row"><span>الرقم الضريبي</span><b class="tnum">${esc(CO.vat)}</b></div>
-  <div class="row"><span>س.ت</span><b class="tnum">${esc(CO.cr)}</b></div>
-  <div class="row"><span>رقم الفاتورة</span><b class="tnum">${esc(inv.invoice_no)}</b></div>
-  <div class="row"><span>الفرع</span><b>${esc(inv.branch_name || "—")}</b></div>
-  <div class="row"><span>نقطة البيع</span><b>${esc(inv.branch_name || "—")}${inv.source === "car" ? " (خدمة)" : " (مباشر)"}</b></div>
-  <div class="row"><span>أنشئت بواسطة</span><b>${esc(inv.cashier_name || "—")}</b></div>
-  <div class="dash"></div>
-  <div class="row"><span>العميل</span><b>${esc(inv.customer_name || "بيع نقدي")}</b></div>
-  ${inv.customer_phone ? `<div class="row"><span>الجوال</span><b class="tnum">${esc(inv.customer_phone)}</b></div>` : ""}
-  ${inv.customer_vat ? `<div class="row"><span>الرقم الضريبي للعميل</span><b class="tnum">${esc(inv.customer_vat)}</b></div>` : ""}
-  ${inv.car?.plate ? `
-  <div class="dash"></div>
-  <div class="row"><span>اللوحة</span><b class="tnum">${esc(inv.car.plate)}</b></div>
-  ${inv.car.brand ? `<div class="row"><span>الماركة</span><b>${esc(inv.car.brand)}</b></div>` : ""}
-  ${inv.car.model ? `<div class="row"><span>الموديل</span><b>${esc(inv.car.model)}</b></div>` : ""}
-  ${inv.car.model_year ? `<div class="row"><span>موديل عام</span><b class="tnum">${esc(inv.car.model_year)}</b></div>` : ""}
-  ${inv.car.color ? `<div class="row"><span>اللون</span><b>${esc(inv.car.color)}</b></div>` : ""}
-  ${inv.car.chassis_number ? `<div class="row"><span>رقم الهيكل</span><b class="tnum">${esc(inv.car.chassis_number)}</b></div>` : ""}
-  ${inv.car.odometer_current ? `<div class="row"><span>عداد الكيلومترات</span><b class="tnum">${inv.car.odometer_current}</b></div>` : ""}
-  ${(() => { const nx = nextServiceEstimate(inv); return nx ? `<div class="row"><span>الممشى التقريبي القادم</span><b class="tnum">${nx} (تقريبي)</b></div>` : ""; })()}
-  ` : ""}
+  <div class="title">${esc(V.title.ar)}<small>${esc(V.title.en)}</small></div>
+  <div class="status ${V.status.key}">${esc(V.status.ar)}</div>
+  <div class="row big"><span>رقم الفاتورة</span><b class="tnum">${esc(inv.invoice_no)}</b></div>
   <div class="row"><span>التاريخ</span><b class="tnum">${fmtDT(inv.issued_at, PR.timeFormat)}</b></div>
-  <table>
-    <thead><tr><th class="r">الصنف</th><th class="c">كمية</th><th class="c">سعر</th><th class="c">إجمالي</th></tr></thead>
-    <tbody>${itemsRows}</tbody>
-  </table>
+  ${pairsRows([{ k: "الفرع", v: inv.branch_name || "" }, { k: "الكاشير", v: inv.cashier_name || "" }].filter((x) => x.v))}
+  <div class="dash"></div>
+  ${pairsRows(V.customer)}
+  ${V.vehicle.length ? `<div class="dash"></div><div class="sec">بيانات المركبة</div>${pairsRows(V.vehicle.filter((p) => !["فني التعبئة", "الفك والتركيب", "التشييك", "العداد السابق", "المسافة منذ آخر خدمة"].includes(p.k)))}` : ""}
+  <div class="dash"></div>
+  <div class="items">${items}</div>
   <div class="tot">
     <div class="row"><span>الإجمالي قبل الضريبة</span><b class="tnum">${money(inv.total_ex)}</b></div>
+    ${(inv.discount_total || 0) > 0 ? `<div class="row"><span>إجمالي الخصم</span><b class="tnum">${money(inv.discount_total ?? 0)}</b></div>` : ""}
     <div class="row"><span>ضريبة القيمة المضافة 15%</span><b class="tnum">${money(inv.total_vat)}</b></div>
-    <div class="row grand"><span>الإجمالي شامل الضريبة</span><span class="tnum">${money(inv.total_inc)} ر.س</span></div>
+    <div class="row grand"><span>الإجمالي</span><span class="tnum">${money(inv.total_inc)} ${CUR}</span></div>
   </div>
-  <div class="box">${payRows}${inv.credit_total > 0 ? `<div class="row"><span>آجل في ذمة العميل</span><b class="tnum">${money(inv.credit_total)}</b></div>` : ""}</div>
+  <div class="box">
+    ${pay}
+    <div class="row"><span>المدفوع</span><b class="tnum">${money(inv.paid_total)}</b></div>
+    <div class="row"><span>المتبقي (آجل)</span><b class="tnum">${money(inv.credit_total)}</b></div>
+  </div>
   ${checklistHTML(inv, true)}
   ${PR.thermalShowQr ? `<div class="qr"><div id="${qrId}"></div></div>` : ""}
   <div class="foot">${esc(footerFor(inv, PR))}<br>${esc(CO.address)}</div>`;
 }
 
-function thermalHTML(inv: InvoiceDetail): string {
+function thermalHTML(inv: InvoiceDetail, embedded = false): string {
   const CO = getCompany();
   const PR = getPrinting();
+  const V = buildInvoiceView(inv);
   const large = PR.thermalFontSize === "large";
-  const copies = Math.min(5, Math.max(1, PR.copies || 1));
+  const copies = embedded ? 1 : Math.min(5, Math.max(1, PR.copies || 1));
 
-  const body = Array.from({ length: copies }, (_, i) => thermalCopyHTML(inv, CO, PR, i))
+  const body = Array.from({ length: copies }, (_, i) => thermalCopyHTML(inv, V, CO, PR, i))
     .join('<div class="dash" style="margin:10px 0"></div>');
   const qrScripts = PR.thermalShowQr
     ? Array.from({ length: copies }, (_, i) => ({ id: `qrcode-${i}`, tlv: inv.qr_tlv || "" }))
@@ -252,216 +197,199 @@ function thermalHTML(inv: InvoiceDetail): string {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* ── تثبيت حجم الصفحة صراحة = 80مم بالظبط — بدون هذا السطر المتصفح "يخمّن"
-     حجم ورق الطابعة ويعمل تحجيم (Scale) تلقائي كسري للمحتوى ليطابقه،
-     وأي تحجيم كسري أثناء الطباعة هو السبب الأول للتبكسل — مش الخط ولا الوزن ── */
+  /* حجم الصفحة = 80مم صراحة — بدونه المتصفح يعمل تحجيم كسري يسبب تبكسل الطباعة الحرارية */
   @page { size:80mm auto; margin:0; }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   html, body { background:#fff; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
-  body {
-    /* Cairo وزن حقيقي متوسط (600) — خط عربي بضربات واضحة أصلاً،
-       بخلاف Tahoma/Arial اللي بتاخد "Bold صناعي" بيطلع باهت على الطباعة الحرارية */
-    font-family:"Cairo","Tahoma",sans-serif;
-    width:80mm; padding:4mm 3mm; color:#000; font-size:${large ? 15 : 13}px; font-weight:600;
-    text-rendering:optimizeLegibility;
-  }
+  body { font-family:"Cairo","Tahoma",sans-serif; width:80mm; padding:4mm 3mm; color:#000; font-size:${large ? 15 : 13}px; font-weight:600; text-rendering:optimizeLegibility; }
   .tnum { font-variant-numeric:tabular-nums; direction:ltr; unicode-bidi:embed; }
-  .c { text-align:center; } .r { text-align:right; } .b { font-weight:700; }
   .head { text-align:center; border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:6px; }
-  .head img { image-rendering:auto; }
+  .head img { width:52px; height:52px; object-fit:contain; display:block; margin:0 auto 5px; }
   .head h1 { font-size:${large ? 17 : 15}px; font-weight:700; }
   .head .sub { font-size:${large ? 12 : 10.5}px; font-weight:600; margin-top:2px; }
-  .title { text-align:center; font-size:${large ? 15 : 13}px; font-weight:700; border:1.5px solid #000; border-radius:4px; padding:4px; margin:6px 0; }
-  .row { display:flex; justify-content:space-between; padding:2px 0; font-weight:500; }
+  .title { text-align:center; font-size:${large ? 15 : 13}px; font-weight:700; border:1.5px solid #000; border-radius:4px; padding:3px; margin:6px 0 4px; line-height:1.3; }
+  .title small { display:block; font-size:9.5px; font-weight:500; }
+  .status { text-align:center; font-weight:800; font-size:${large ? 14 : 12}px; border:1.5px solid #000; border-radius:4px; padding:2px; margin-bottom:6px; letter-spacing:.3px; }
+  .status.returned, .status.credit, .status.partial { background:#000; color:#fff; }
+  .sec { font-weight:800; font-size:${large ? 12.5 : 11}px; margin:2px 0 1px; }
+  .row { display:flex; justify-content:space-between; gap:8px; padding:2px 0; font-weight:500; }
+  .row b { text-align:left; }
+  .row.big { font-size:${large ? 15 : 13.5}px; }
   .box { border:1.5px dashed #000; border-radius:4px; padding:5px 6px; margin:6px 0; }
-  table { width:100%; border-collapse:collapse; margin:6px 0; }
-  th { border-top:1.5px solid #000; border-bottom:1.5px solid #000; padding:4px 2px; font-size:${large ? 12 : 10.5}px; font-weight:700; }
-  td { padding:4px 2px; border-bottom:1px dotted #555; font-weight:500; }
+  .items .item { padding:4px 0; border-bottom:1px dotted #555; }
+  .items .nm { font-weight:700; line-height:1.35; }
+  .items .sku { display:block; font-size:8.5px; font-weight:500; color:#222; }
+  .items .ln { display:flex; justify-content:space-between; font-weight:500; }
+  .items .ln.dim { font-size:11px; color:#222; }
   .tot { border-top:2px solid #000; margin-top:4px; padding-top:4px; }
-  .tot .grand { font-size:${large ? 15 : 13}px; font-weight:700; border-top:1.5px solid #000; margin-top:3px; padding-top:3px; }
+  .tot .grand { font-size:${large ? 16 : 14.5}px; font-weight:800; border-top:1.5px solid #000; margin-top:3px; padding-top:3px; }
   .dash { border-top:1.5px dashed #000; margin:6px 0; }
   .qr { text-align:center; margin:8px 0 4px; } .qr img, .qr canvas { margin:0 auto; image-rendering:pixelated; }
   .foot { text-align:center; font-size:${large ? 11.5 : 10}px; font-weight:500; border-top:1.5px dashed #000; margin-top:6px; padding-top:5px; }
   @media print { body { width:auto; } }
 </style></head><body>
-  ${previewButton(PR.previewBeforePrint)}
+  ${embedded ? "" : previewButton(PR.previewBeforePrint)}
   ${body}
-  ${PRINT_SCRIPT(qrScripts, !PR.previewBeforePrint)}
+  ${PRINT_SCRIPT(qrScripts, !embedded && !PR.previewBeforePrint)}
 </body></html>`;
 }
 
 // ══════════════════ صيغة A4 الرسمية ══════════════════
 
-// محتوى نسخة واحدة من فاتورة A4 — تتكرر «copies» مرة، كل نسخة بصفحة مستقلة (page-break)
-function a4CopyHTML(inv: InvoiceDetail, CO: ReturnType<typeof getCompany>, PR: PrintingInfo, idx: number, isLast: boolean): string {
-  const title = inv.is_returned ? "فاتورة مرتجعة"
-    : inv.invoice_type === "standard" ? "فاتورة ضريبية" : "فاتورة ضريبية مبسطة";
-
-  const itemsRows = inv.items.map((it) => {
-    const gross = it.line_inc + it.discount_amount;
-    const discPct = gross > 0 && it.discount_amount > 0 ? (it.discount_amount / gross) * 100 : 0;
-    return `
-    <tr><td class="r">${esc(it.label)}${it.barcode ? `<br><span style="font-size:8px;color:#555">${esc(it.barcode)}</span>` : ""}</td>
+function a4CopyHTML(inv: InvoiceDetail, V: InvoiceView, CO: ReturnType<typeof getCompany>, PR: PrintingInfo, idx: number, isLast: boolean): string {
+  const showDisc = V.hasDiscount;
+  const itemsRows = V.items.map((it, i) => `
+    <tr><td class="c tnum dim">${i + 1}</td>
+        <td class="r"><b>${esc(it.label)}</b>${it.sku ? `<span class="sku tnum">${esc(it.sku)}</span>` : ""}</td>
         <td class="c tnum">${it.qty}</td>
-        <td class="c tnum">${money(it.unit_price)}</td>
-        <td class="c tnum">${discPct > 0 ? discPct.toFixed(1) + "%" : "—"}</td>
-        <td class="c tnum">${money(it.line_vat)}</td>
-        <td class="c tnum">${money(it.line_ex)}</td>
-        <td class="c tnum b">${money(it.line_inc)}</td></tr>`;
-  }).join("");
-
-  const payRows = inv.payments.map((p) =>
-    `<span style="display:inline-block;border:1px solid #c9d4d6;border-radius:14px;padding:3px 10px;margin-left:6px;font-size:11px">
-       ${PAYMENT_LABELS[p.method] ?? esc(p.method)}: <b class="tnum">${money(p.amount)}</b></span>`).join("");
-
+        <td class="n tnum">${money(it.unit)}</td>
+        ${showDisc ? `<td class="n tnum">${it.discount > 0 ? money(it.discount) : "—"}</td>` : ""}
+        <td class="n tnum">${money(it.ex)}</td>
+        <td class="n tnum">${money(it.vat)}</td>
+        <td class="n tnum b">${money(it.inc)}</td></tr>`).join("");
+  const payList = V.payments.map((p) => `<div class="row"><span>${esc(p.label)}</span><b class="tnum">${money(p.amount)}</b></div>`).join("");
   const qrId = `qrcode-${idx}`;
+  const issued = fmtDT(inv.issued_at, PR.timeFormat);
   return `
-<div style="margin:20px${isLast ? "" : ";page-break-after:always"}">
-  <div class="head">
+<section class="inv"${isLast ? "" : ' style="page-break-after:always"'}>
+  <header class="head">
     <div class="brand">
-      <div class="logo-box">
-        <img src="${location.origin}${CO.logoUrl || "/logo-navy.png"}" alt="" />
-      </div>
+      <div class="logo-box"><img src="${location.origin}${CO.logoUrl || "/logo-navy.png"}" alt="" /></div>
       <div class="brand-text">
         <h1>${esc(CO.name)}</h1>
-        <div class="sub">الرقم الضريبي <span class="tnum">${esc(CO.vat)}</span></div>
-        <div class="sub">السجل التجاري <span class="tnum">${esc(CO.cr)}</span></div>
+        <div class="sub">الرقم الضريبي <span class="tnum">${esc(CO.vat)}</span>${CO.cr ? ` · السجل التجاري <span class="tnum">${esc(CO.cr)}</span>` : ""}</div>
         <div class="sub muted">${esc(CO.address)}${CO.phone ? ` · هاتف <span class="tnum">${esc(CO.phone)}</span>` : ""}</div>
       </div>
     </div>
-    <div class="badge">${title}</div>
+    <div class="doc">
+      <div class="doc-title">${esc(V.title.ar)}<small>${esc(V.title.en)}</small></div>
+      <div class="status ${V.status.key}">${esc(V.status.ar)} <small>${esc(V.status.en)}</small></div>
+    </div>
+  </header>
+
+  <div class="two">
+    <div class="card">
+      <h2>بيانات العميل <small>Customer</small></h2>
+      ${pairsRows(V.customer)}
+    </div>
+    <div class="card">
+      <h2>بيانات الفاتورة <small>Invoice</small></h2>
+      <div class="row"><span>رقم الفاتورة</span><b class="tnum">${esc(inv.invoice_no)}</b></div>
+      <div class="row"><span>تاريخ الإصدار</span><b class="tnum">${issued}</b></div>
+      ${pairsRows([{ k: "الفرع", v: inv.branch_name || "" }, { k: "الكاشير", v: inv.cashier_name || "" }].filter((x) => x.v))}
+    </div>
   </div>
 
-  <div class="meta">
-    <div class="row"><span>رقم الفاتورة</span><b class="tnum">${esc(inv.invoice_no)}</b></div>
-    <div class="row"><span>تاريخ الإصدار</span><b class="tnum">${fmtDT(inv.issued_at, PR.timeFormat)}</b></div>
-    <div class="row"><span>الفرع</span><b>${esc(inv.branch_name || "—")}</b></div>
-    <div class="row"><span>الكاشير</span><b>${esc(inv.cashier_name || "—")}</b></div>
-    <div class="row"><span>العميل</span><b>${esc(inv.customer_name || "بيع نقدي")}</b></div>
-    <div class="row"><span>جوال العميل</span><b class="tnum">${esc(inv.customer_phone || "—")}</b></div>
-    ${inv.customer_vat ? `<div class="row"><span>الرقم الضريبي للعميل</span><b class="tnum">${esc(inv.customer_vat)}</b></div>` : ""}
-  </div>
+  ${V.vehicle.length ? `<div class="card"><h2>بيانات المركبة <small>Vehicle</small></h2>${pairsGrid(V.vehicle, 4)}</div>` : ""}
 
-  ${carHTML(inv, false)}
-
-  <h2 class="sec">الأصناف — Products</h2>
-  <table>
+  <table class="items">
     <thead><tr>
-      <th class="r">الصنف<br><span style="font-weight:400;font-size:9px">PRODUCT</span></th>
-      <th style="width:64px">الكمية<br><span style="font-weight:400;font-size:9px">QTY</span></th>
-      <th style="width:84px">سعر الوحدة<br><span style="font-weight:400;font-size:9px">UNIT PRICE</span></th>
-      <th style="width:64px">الخصم %<br><span style="font-weight:400;font-size:9px">DISC</span></th>
-      <th style="width:52px">الضريبة<br><span style="font-weight:400;font-size:9px">VAT</span></th>
-      <th style="width:90px">قبل الضريبة<br><span style="font-weight:400;font-size:9px">SUBTOTAL EX</span></th>
-      <th style="width:90px">الإجمالي<br><span style="font-weight:400;font-size:9px">SUBTOTAL</span></th>
+      <th style="width:26px">#</th><th class="r">الصنف <small>Product</small></th><th style="width:48px">الكمية</th>
+      <th style="width:78px">سعر الوحدة</th>${showDisc ? '<th style="width:70px">الخصم</th>' : ""}
+      <th style="width:84px">قبل الضريبة</th><th style="width:66px">الضريبة</th><th style="width:88px">الإجمالي</th>
     </tr></thead>
     <tbody>${itemsRows}</tbody>
   </table>
 
-  <table class="totals">
-    <tbody>
-      <tr><td class="r">الإجمالي قبل الضريبة <span style="font-weight:400;font-size:9px">Subtotal</span></td><td class="c tnum">${money(inv.total_ex)}</td></tr>
-      <tr><td class="r">ضريبة القيمة المضافة 15% <span style="font-weight:400;font-size:9px">Taxes</span></td><td class="c tnum">${money(inv.total_vat)}</td></tr>
-      <tr class="grand"><td class="r">الإجمالي <span style="font-weight:400;font-size:9px">Total</span></td><td class="c tnum">${money(inv.total_inc)} ر.س</td></tr>
-    </tbody>
-  </table>
-
-  <h2 class="sec">بيانات إضافية — Extra Info</h2>
-  <table>
-    <tbody>
-      <tr>
-        <td class="r" style="width:180px;background:#f6f8f8;font-weight:700">البائع <span style="font-weight:400;font-size:9px">Salesman</span></td>
-        <td class="r">${esc(inv.cashier_name || "—")}</td>
-        <td class="r" style="width:180px;background:#f6f8f8;font-weight:700">نوع العملية <span style="font-weight:400;font-size:9px">Operation Type</span></td>
-        <td class="r">${inv.source === "car" ? "فاتورة خدمة" : "بيع مباشر"}</td>
-      </tr>
-      <tr>
-        <td class="r" style="background:#f6f8f8;font-weight:700">مرجع الفاتورة <span style="font-weight:400;font-size:9px">Receipt Ref</span></td>
-        <td class="r tnum">${esc(inv.invoice_no)}</td>
-        <td class="r" style="background:#f6f8f8;font-weight:700">الشركة <span style="font-weight:400;font-size:9px">Company</span></td>
-        <td class="r">${esc(CO.name)}</td>
-      </tr>
-      <tr>
-        <td class="r" style="background:#f6f8f8;font-weight:700">نقطة البيع <span style="font-weight:400;font-size:9px">Point of Sale</span></td>
-        <td class="r">${esc(inv.branch_name || "—")}</td>
-        <td class="r" style="background:#f6f8f8;font-weight:700">الوردية <span style="font-weight:400;font-size:9px">Shift</span></td>
-        <td class="r tnum">${esc(inv.shift_id ? inv.shift_id.slice(0, 8) : "—")}</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <div class="meta" style="margin-top:16px">
-    <div class="row" style="border-bottom:none">التاريخ — Date: ______________________</div>
-    <div class="row" style="border-bottom:none">التوقيع — Signature: ______________________</div>
-  </div>
-
-  <div style="margin:6px 0">${payRows}
-    ${inv.credit_total > 0 ? `<span style="display:inline-block;border:1px solid #B0451F;color:#B0451F;border-radius:14px;padding:3px 10px;font-size:11px">آجل: <b class="tnum">${money(inv.credit_total)}</b></span>` : ""}
+  <div class="summary">
+    <div class="card pay">
+      <h2>حالة الدفع <small>Payment</small></h2>
+      ${payList}
+      <div class="row top"><span>الإجمالي</span><b class="tnum">${money(inv.total_inc)}</b></div>
+      <div class="row"><span>المدفوع</span><b class="tnum">${money(inv.paid_total)}</b></div>
+      <div class="row ${inv.credit_total > 0 ? "warn" : ""}"><span>المتبقي</span><b class="tnum">${money(inv.credit_total)}</b></div>
+      ${V.extra.length ? `<h2 class="gap">معلومات إضافية <small>Additional</small></h2>${pairsRows(V.extra)}` : ""}
+    </div>
+    <div class="totals">
+      <h2>ملخص الضريبة <small>Tax summary</small></h2>
+      <div class="row"><span>الإجمالي قبل الضريبة</span><b class="tnum">${money(inv.total_ex)}</b></div>
+      ${(inv.discount_total || 0) > 0 ? `<div class="row"><span>إجمالي الخصم</span><b class="tnum">${money(inv.discount_total ?? 0)}</b></div>` : ""}
+      <div class="row"><span>ضريبة القيمة المضافة (15%)</span><b class="tnum">${money(inv.total_vat)}</b></div>
+      <div class="grand"><span>الإجمالي شامل الضريبة <small>Total</small></span><b class="tnum">${money(inv.total_inc)} <i>${CUR}</i></b></div>
+    </div>
   </div>
 
   ${checklistHTML(inv, false)}
 
   <div class="qr-foot">
-    <div style="font-size:10.5px;color:#445">
-      ختم وتوقيع المنشأة: ______________________
+    <div class="qrbox"><div id="${qrId}"></div></div>
+    <div class="zatca">
+      <h2>بيانات الفاتورة الإلكترونية <small>ZATCA</small></h2>
+      <div class="row"><span>اسم المورد</span><b>${esc(CO.name)}</b></div>
+      <div class="row"><span>الرقم الضريبي</span><b class="tnum">${esc(CO.vat)}</b></div>
+      <div class="row"><span>وقت الإصدار</span><b class="tnum">${issued}</b></div>
+      <div class="row"><span>الإجمالي / الضريبة</span><b class="tnum">${money(inv.total_inc)} / ${money(inv.total_vat)}</b></div>
     </div>
-    <div id="${qrId}"></div>
+    <div class="sign"><div class="line"></div><span>التوقيع · Signature</span><div class="line"></div><span>ختم المنشأة · Stamp</span></div>
   </div>
 
-  <div class="foot">${esc(footerFor(inv, PR))} — ${esc(CO.name)}</div>
-</div>`;
+  <footer class="foot"><b>${esc(footerFor(inv, PR))}</b> — ${esc(CO.name)}${CO.phone ? ` · <span class="tnum">${esc(CO.phone)}</span>` : ""}${CO.vat ? ` · الرقم الضريبي <span class="tnum">${esc(CO.vat)}</span>` : ""}</footer>
+</section>`;
 }
 
-function a4HTML(inv: InvoiceDetail): string {
+function a4HTML(inv: InvoiceDetail, embedded = false): string {
   const CO = getCompany();
   const PR = getPrinting();
-  const copies = Math.min(5, Math.max(1, PR.copies || 1));
-
-  const body = Array.from({ length: copies }, (_, i) => a4CopyHTML(inv, CO, PR, i, i === copies - 1)).join("");
-  // QR فاتورة A4 الضريبي إلزامي دائماً — إعداد thermalShowQr خاص بالحرارية فقط (إعداد 4)
+  const V = buildInvoiceView(inv);
+  const copies = embedded ? 1 : Math.min(5, Math.max(1, PR.copies || 1));
+  const body = Array.from({ length: copies }, (_, i) => a4CopyHTML(inv, V, CO, PR, i, i === copies - 1)).join("");
+  // QR فاتورة A4 الضريبي إلزامي دائماً — إعداد thermalShowQr خاص بالحرارية فقط
   const qrScripts = Array.from({ length: copies }, (_, i) => ({ id: `qrcode-${i}`, tlv: inv.qr_tlv || "" }));
 
   return `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
 <title>${esc(CO.name)} — فاتورة ${esc(inv.invoice_no)}</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  @page { size:A4; margin:12mm; }
-  body { font-family:"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif; color:#111; font-size:12px; }
+  :root { --brand:#0C5E66; --ink:#14212b; --muted:#5b6b75; --line:#d5dde0; --soft:#f3f7f7; --ok:#12794a; --warn:#a85a00; --bad:#b3261e; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  @page { size:A4; margin:10mm; }
+  body { font-family:"IBM Plex Sans Arabic","Cairo","Segoe UI",Tahoma,sans-serif; color:var(--ink); font-size:11.5px; line-height:1.45; ${embedded ? "padding:10mm; background:#fff;" : ""} }
   .tnum { font-variant-numeric:tabular-nums; direction:ltr; unicode-bidi:embed; }
-  .c { text-align:center; } .r { text-align:right; } .b { font-weight:700; }
-  .head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; border-bottom:3px solid #0C5E66; padding-bottom:12px; }
-  .brand { display:flex; align-items:center; gap:12px; }
-  .logo-box {
-    flex:0 0 58px; width:58px; height:58px; border-radius:10px;
-    background:#eef3f3; border:1px solid #d7e2e2;
-    display:flex; align-items:center; justify-content:center; overflow:hidden;
-  }
+  small { font-size:8.5px; font-weight:500; color:var(--muted); margin-inline-start:4px; }
+  .c { text-align:center; } .r { text-align:right; } .n { text-align:left; } .b { font-weight:800; } .dim { color:var(--muted); }
+  .head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding-bottom:10px; border-bottom:2.5px solid var(--brand); }
+  .brand { display:flex; gap:12px; align-items:center; min-width:0; }
+  .logo-box { flex:0 0 56px; width:56px; height:56px; border:1px solid var(--line); border-radius:10px; background:var(--soft); display:grid; place-items:center; overflow:hidden; }
   .logo-box img { width:100%; height:100%; object-fit:contain; padding:6px; }
-  .head h1 { font-size:18px; color:#0C5E66; font-weight:800; line-height:1.3; }
-  .head .sub { font-size:11px; color:#334; font-weight:600; margin-top:3px; line-height:1.5; }
-  .head .sub.muted { color:#667; font-weight:500; }
-  .badge {
-    flex:0 0 auto; border:1.5px solid #0C5E66; color:#0C5E66; background:#fff;
-    border-radius:8px; padding:7px 14px; font-size:12.5px; font-weight:800;
-    white-space:nowrap; margin-top:2px;
-  }
-  .meta { display:grid; grid-template-columns:1fr 1fr; gap:4px 24px; margin:10px 0; font-size:11.5px; }
-  .meta .row { display:flex; justify-content:space-between; border-bottom:1px dotted #ccd; padding:3px 0; }
-  table { width:100%; border-collapse:collapse; margin:8px 0; }
-  th { background:#0C5E66; color:#fff; border:1px solid #0C5E66; padding:5px 3px; font-size:9.5px; text-align:center; line-height:1.3; }
-  td { border:1px solid #c9d4d6; padding:4px 5px; font-size:10.5px; }
-  h2.sec { font-size:12.5px; margin:12px 0 4px; border-right:4px solid #0C5E66; padding-right:8px; }
-  .totals { width:280px; margin-right:auto; margin-left:0; }
-  .totals td { font-size:12px; }
-  .totals .grand td { background:#0C5E66; color:#fff; font-weight:800; font-size:13px; }
-  .qr-foot { display:flex; justify-content:space-between; align-items:flex-end; margin-top:14px; }
-  .foot { text-align:center; font-size:10px; color:#556; border-top:1px solid #ccc; margin-top:16px; padding-top:6px; }
+  .brand-text h1 { font-size:18px; font-weight:800; color:var(--brand); line-height:1.25; }
+  .sub { font-size:10.5px; font-weight:600; margin-top:2px; } .sub.muted { color:var(--muted); font-weight:500; }
+  .doc { text-align:left; flex:0 0 auto; }
+  .doc-title { font-size:15px; font-weight:800; color:var(--brand); } .doc-title small { display:block; margin:0; }
+  .status { display:inline-block; margin-top:6px; padding:3px 12px; border-radius:6px; font-weight:800; font-size:12px; border:1.5px solid currentColor; }
+  .status small { color:inherit; opacity:.75; }
+  .status.paid { color:var(--ok); } .status.partial, .status.credit { color:var(--warn); } .status.returned { color:var(--bad); }
+  h2 { font-size:11.5px; font-weight:800; color:var(--brand); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--line); }
+  h2.gap { margin-top:10px; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0; }
+  .card { border:1px solid var(--line); border-radius:8px; padding:8px 10px; margin-bottom:10px; } .two .card { margin:0; }
+  .row { display:flex; justify-content:space-between; gap:10px; padding:2.5px 0; border-bottom:1px dotted var(--line); } .row:last-child { border-bottom:none; }
+  .row > span { color:var(--muted); } .row b { text-align:left; font-weight:700; }
+  .row.top { margin-top:4px; border-top:1px solid var(--line); } .row.warn b { color:var(--warn); }
+  .grid { display:grid; gap:6px 14px; } .grid.c4 { grid-template-columns:repeat(4,1fr); }
+  .cell { display:flex; flex-direction:column; min-width:0; } .cell .k { font-size:9.5px; color:var(--muted); } .cell .v { font-weight:700; overflow-wrap:anywhere; }
+  table.items { width:100%; border-collapse:collapse; margin:4px 0 10px; }
+  .items th { background:var(--brand); color:#fff; padding:5px 4px; font-size:10px; text-align:center; font-weight:700; } .items th small { color:#dff; }
+  .items td { padding:5px 6px; border-bottom:1px solid var(--line); font-size:11px; vertical-align:top; }
+  .items tbody tr:nth-child(even) td { background:#fafcfc; }
+  .items .sku { display:block; font-size:8.5px; color:var(--muted); font-weight:500; }
+  tr { page-break-inside:avoid; }
+  .summary { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
+  .summary .card { margin:0; }
+  .totals { border:1px solid var(--line); border-radius:8px; padding:8px 10px; }
+  .grand { display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding:9px 12px; background:var(--brand); color:#fff; border-radius:8px; font-weight:800; font-size:13px; }
+  .grand small { color:#cfe; } .grand b { font-size:19px; } .grand i { font-style:normal; font-size:11px; font-weight:600; }
+  h2.sec { font-size:12px; margin:12px 0 4px; border-right:4px solid var(--brand); padding-right:8px; border-bottom:none; }
+  table:not(.items) { width:100%; border-collapse:collapse; margin:6px 0; } table:not(.items) th { background:var(--soft); border:1px solid var(--line); padding:4px; font-size:10px; } table:not(.items) td { border:1px solid var(--line); padding:3px 6px; font-size:10.5px; }
+  .qr-foot { display:grid; grid-template-columns:auto 1fr 190px; gap:14px; align-items:center; margin-top:12px; padding-top:10px; border-top:1px solid var(--line); page-break-inside:avoid; }
+  .qrbox { width:128px; height:128px; display:grid; place-items:center; } .qrbox img, .qrbox canvas { width:128px !important; height:128px !important; }
+  .zatca .row { font-size:10.5px; }
+  .sign { display:flex; flex-direction:column; gap:3px; font-size:9.5px; color:var(--muted); text-align:center; } .sign .line { border-bottom:1px solid #889; height:22px; }
+  .foot { text-align:center; font-size:10px; color:var(--muted); border-top:1px solid var(--line); margin-top:10px; padding-top:6px; }
 </style></head>
 
 <body>
-  ${previewButton(PR.previewBeforePrint)}
+  ${embedded ? "" : previewButton(PR.previewBeforePrint)}
   ${body}
-  ${PRINT_SCRIPT(qrScripts, !PR.previewBeforePrint)}
+  ${PRINT_SCRIPT(qrScripts, !embedded && !PR.previewBeforePrint)}
 </body>
 
 </html>`;
@@ -469,8 +397,13 @@ function a4HTML(inv: InvoiceDetail): string {
 
 // ══════════════════ الواجهة العامة ══════════════════
 
+/** HTML الفاتورة جاهزاً — يُستخدم للطباعة وللمعاينة داخل النظام (embedded: بلا طباعة تلقائية ولا نسخ متعددة) */
+export function invoiceHTML(inv: InvoiceDetail, format: PrintFormat = "thermal", embedded = false): string {
+  return format === "a4" ? a4HTML(inv, embedded) : thermalHTML(inv, embedded);
+}
+
 export function printInvoice(inv: InvoiceDetail, format: PrintFormat = "thermal") {
-  const html = format === "a4" ? a4HTML(inv) : thermalHTML(inv);
+  const html = invoiceHTML(inv, format);
   const w = window.open("", "_blank", format === "a4" ? "width=880,height=760" : "width=420,height=680");
   if (!w) { alert("المتصفح منع نافذة الطباعة — اسمح بالنوافذ المنبثقة لهذا الموقع"); return; }
   w.document.write(html);
