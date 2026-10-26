@@ -96,6 +96,21 @@ class VehicleCreate(BaseModel):
     fuelType: str | None = None
 
 
+class VehicleUpdate(BaseModel):
+    """تعديل بيانات سيارة — كل الحقول اختيارية (تُحدَّث المُرسَل فقط)"""
+    plate: str | None = Field(default=None, min_length=1, max_length=30)
+    plateType: PlateType | None = None
+    brand: str | None = None
+    makeModel: str | None = None
+    modelYear: str | None = None
+    carCategory: str | None = None
+    cylinders: str | None = None
+    engineSize: str | None = None
+    color: str | None = None
+    chassisNumber: str | None = None
+    notes: str | None = None
+
+
 class VehicleOut(BaseModel):
     id: str
     customer_id: str
@@ -110,6 +125,11 @@ class VehicleOut(BaseModel):
     color: str | None = None
     chassis_number: str | None = None
     notes: str | None = None
+    # حقول يكتبها مسار الحجز العام (قد تكون فارغة) — إضافة متوافقة للعرض فقط
+    name: str | None = None
+    fuel_type: str | None = None
+    last_odometer: int | None = None
+    service_type: str | None = None
     created_at: datetime
 
 

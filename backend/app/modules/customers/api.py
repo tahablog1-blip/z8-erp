@@ -8,7 +8,7 @@ from ...core.deps import CurrentUser, get_current_user, require_permission
 from . import overview, service
 from .schemas import (
     CustomerCreate, CustomerOut, CustomerUpdate, PaymentBody,
-    StatementOut, VehicleCreate, VehicleOut,
+    StatementOut, VehicleCreate, VehicleOut, VehicleUpdate,
 )
 
 
@@ -32,6 +32,13 @@ async def lookup_by_plate(plate: str = Query(...),
                           user: CurrentUser = Depends(get_current_user)):
     """عميل واحد بالتطابق الكامل للوحة — يفيد عند تسجيل دخول سيارة جديدة"""
     return await service.lookup_by_plate(user.company_id, plate)
+
+
+@router.put("/vehicles/{vehicle_id}", response_model=VehicleOut)
+async def update_vehicle(vehicle_id: str, body: VehicleUpdate,
+                         user: CurrentUser = Depends(require_permission("customers.edit"))):
+    """تعديل بيانات سيارة (إضافة جديدة — لا تغيّر العقود القائمة)"""
+    return await service.update_vehicle(user.company_id, vehicle_id, body.model_dump(exclude_unset=True))
 
 
 @router.delete("/vehicles/{vehicle_id}", status_code=204)

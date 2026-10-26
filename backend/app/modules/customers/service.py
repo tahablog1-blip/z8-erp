@@ -253,7 +253,7 @@ async def list_vehicles(company_id: str, customer_id: str) -> list[dict]:
     return out
 
 
-async def find_vehicle_by_plate(company_id: str, plate: str | None, plate_type: str = "saudi", conn=None) -> dict | None:
+async def find_vehicle_by_plate(company_id: str, plate: str | None, plate_type: str = "saudi", conn=None, exclude_id: str | None = None) -> dict | None:
     """يبحث عن سيارة مسجّلة بنفس اللوحة بأي صيغة (حالة الأحرف/الترتيب/عربي-إنجليزي/أرقام هندية/مسافات).
     يُستخدم من إضافة سيارة بملف العميل ومن الحجز العام عشان نفس المنطق يمنع التكرار في كل المسارات."""
     key, _, _ = plate_identity(plate, plate_type)
@@ -267,6 +267,8 @@ async def find_vehicle_by_plate(company_id: str, plate: str | None, plate_type: 
     rows = await (conn.fetch(sql, company_id, digits) if conn else fetch(sql, company_id, digits))
     for r in rows:
         r = dict(r)
+        if exclude_id and str(r["id"]) == str(exclude_id):
+            continue
         k2, _, _ = plate_identity(r["plate"], r.get("plate_type") or "saudi")
         if k2 and k2 == key:
             return r
@@ -304,6 +306,53 @@ async def add_vehicle(company_id: str, customer_id: str, d: dict) -> dict:
         )
     except asyncpg.UniqueViolationError:
         raise HTTPException(409, "رقم اللوحة ده مسجّل بالفعل لعميل آخر")
+    r = dict(row); r["id"] = str(r["id"]); r["customer_id"] = str(r["customer_id"])
+    return r
+
+
+_VEHICLE_COLS = {
+    "plateType": "plate_type", "brand": "brand", "makeModel": "make_model", "modelYear": "model_year",
+    "carCategory": "car_category", "cylinders": "cylinders", "engineSize": "engine_size", "color": "color",
+    "chassisNumber": "chassis_number", "notes": "notes",
+}
+
+
+async def update_vehicle(company_id: str, vehicle_id: str, fields: dict) -> dict:
+    """تعديل بيانات سيارة (نفس أعمدة الإضافة فقط). تغيير اللوحة يمر بنفس فحص التكرار بأي صيغة، مع استثناء السيارة نفسها."""
+    cur = await fetchrow("SELECT * FROM customer_vehicles WHERE id=$1 AND company_id=$2", vehicle_id, company_id)
+    if not cur:
+        raise HTTPException(404, "السيارة غير موجودة")
+    sets: dict = {}
+    if "plate" in fields or "plateType" in fields:
+        ptype = fields.get("plateType") or cur.get("plate_type") or "saudi"
+        raw = fields.get("plate") if fields.get("plate") is not None else cur["plate"]
+        key, display, valid = plate_identity(raw, ptype)
+        if ptype == "saudi" and sum(ch.isdigit() for ch in (raw or "").translate(DIGIT_MAP)) > 4:
+            valid = False
+        if not valid:
+            raise HTTPException(422, "اللوحة السعودية = 3 حروف + من 1 إلى 4 أرقام" if ptype == "saudi" else "أدخل رقم لوحة صحيح")
+        dup = await find_vehicle_by_plate(company_id, raw, ptype, exclude_id=vehicle_id)
+        if dup:
+            own = str(dup["customer_id"]) == str(cur["customer_id"])
+            raise HTTPException(409, "هذه اللوحة مسجّلة بالفعل لهذا العميل" if own
+                                else f"هذه اللوحة مسجّلة بالفعل لعميل آخر ({dup['customer_name'] or '—'})")
+        sets["plate"] = display
+        if "plateType" in fields and fields["plateType"]:
+            sets["plate_type"] = ptype
+    for k, col in _VEHICLE_COLS.items():
+        if k in fields and k != "plateType":
+            v = fields[k]
+            sets[col] = (v.strip() or None) if isinstance(v, str) else v
+    if not sets:
+        raise HTTPException(400, "لا يوجد ما يُحدَّث")
+    keys = list(sets)
+    set_sql = ", ".join(f"{c} = ${i}" for i, c in enumerate(keys, start=3))
+    try:
+        row = await fetchrow(
+            f"UPDATE customer_vehicles SET {set_sql} WHERE id=$1 AND company_id=$2 RETURNING *",
+            vehicle_id, company_id, *[sets[c] for c in keys])
+    except asyncpg.UniqueViolationError:
+        raise HTTPException(409, "رقم اللوحة ده مسجّل بالفعل")
     r = dict(row); r["id"] = str(r["id"]); r["customer_id"] = str(r["customer_id"])
     return r
 

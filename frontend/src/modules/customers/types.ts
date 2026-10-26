@@ -40,6 +40,10 @@ export type Vehicle = {
   color: string | null;
   chassis_number: string | null;
   notes: string | null;
+  name?: string | null;
+  fuel_type?: string | null;
+  last_odometer?: number | null;
+  service_type?: string | null;
 };
 
 export type LedgerEntry = {
