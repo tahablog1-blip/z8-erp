@@ -98,6 +98,24 @@ async function resolveId(to) {
   return id._serialized;
 }
 
+// إرسال PDF: بنجرّب أكتر من طريقة بالترتيب لأن واجهة واتساب ويب بتتغيّر وبعض الخيارات بتفشل
+// حسب الإصدار — ونسجّل خطأ كل محاولة بالكامل عشان التشخيص.
+async function sendDocument(to, media, caption) {
+  const attempts = [
+    ["document+caption", () => client.sendMessage(to, media, { sendMediaAsDocument: true, sendSeen: false, caption })],
+    ["document", async () => { const r = await client.sendMessage(to, media, { sendMediaAsDocument: true, sendSeen: false });
+                               if (caption) await client.sendMessage(to, caption, { sendSeen: false }); return r; }],
+    ["plain", async () => { const r = await client.sendMessage(to, media, { sendSeen: false });
+                            if (caption) await client.sendMessage(to, caption, { sendSeen: false }); return r; }],
+  ];
+  let last;
+  for (const [name, run] of attempts) {
+    try { const r = await run(); if (name !== attempts[0][0]) console.log(`إرسال PDF نجح بطريقة: ${name}`); return r; }
+    catch (e) { last = e; console.error(`فشل إرسال PDF (${name}):`, String(e && e.message || e).slice(0, 400)); }
+  }
+  throw last;
+}
+
 function readBody(req, limit = 15 * 1024 * 1024) {
   return new Promise((resolve, reject) => {
     let size = 0; const chunks = [];
@@ -137,7 +155,7 @@ const server = http.createServer(async (req, res) => {
       } else {
         if (!b.b64) return send(res, 422, { error: "empty_document" });
         const media = new MessageMedia("application/pdf", b.b64, b.filename || "document.pdf");
-        await enqueue(() => client.sendMessage(to, media, { caption: b.caption || "" }));
+        await enqueue(() => sendDocument(to, media, b.caption || ""));
       }
       return send(res, 200, { ok: true });
     }
