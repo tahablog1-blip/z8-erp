@@ -288,6 +288,18 @@ async def lifespan(app: FastAPI):
         "ALTER TABLE products ADD COLUMN IF NOT EXISTS oil_type text",
         "ALTER TABLE products ADD COLUMN IF NOT EXISTS filter_kind text",
         "ALTER TABLE products ADD COLUMN IF NOT EXISTS original_name text",
+        """CREATE TABLE IF NOT EXISTS booking_otps (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             channel text NOT NULL,
+             target text NOT NULL,
+             code_hash text NOT NULL,
+             attempts int NOT NULL DEFAULT 0,
+             used boolean NOT NULL DEFAULT FALSE,
+             expires_at timestamptz NOT NULL,
+             created_at timestamptz NOT NULL DEFAULT now()
+           )""",
+        "CREATE INDEX IF NOT EXISTS booking_otps_lookup ON booking_otps (company_id, channel, target, created_at DESC)",
         """CREATE TABLE IF NOT EXISTS company_settings (
              company_id uuid NOT NULL,
              key text NOT NULL,

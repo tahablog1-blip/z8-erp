@@ -1,12 +1,13 @@
 # modules/cars/api.py — طبقة الـ HTTP: مسارات + صلاحيات فقط
 # نفس عقد النظام القديم: GET / مفتوح عن قصد — الكاشير محتاجها لربط الفاتورة
 # بالسيارة حتى لو مالوش صلاحيات إدارة الدور.
-from fastapi import HTTPException, APIRouter, Depends, Query
+from fastapi import HTTPException, APIRouter, Depends, Query, Request
 
 import asyncio as _aio
 from ...core.deps import CurrentUser, get_current_user, require_permission
 from ..auto_checkin import vision as _gate_vision  # القارئ الموحّد (Plate Recognizer + احتياطي كلود)
-from . import service
+from . import otp, service
+from ...core.db import fetchrow as _fetchrow
 from .schemas import BillingQueueRow, CarCreate, CarEdit, CarOut, ChecklistIn, LookupOut
 
 router = APIRouter()
@@ -596,6 +597,7 @@ class PublicBookingIn(_BM):
     car: PublicCarIn | None = None
     company: PublicCompanyIn | None = None
     savedCarId: str | None = None       # حجز فوري من الكراج
+    otpToken: str | None = None         # توكن التحقق برمز OTP (مطلوب لو الشركة فعّلت واتساب/SMTP)
     odometer: str | int | None = None   # الممشى مع السيارة المحفوظة
     # الأصناف المختارة (زيت/فلتر/خدمة) — تُحفظ الآن ذرّياً مع إنشاء الحجز نفسه
     # بدل نداء PUT منفصل بعده كان يفشل بصمت أحياناً ويسيب أمر العمل بلا
@@ -608,21 +610,83 @@ class PublicBookingIn(_BM):
 class PublicLookupIn(_BM):
     phone: str = ""
     plate: str | None = None
+    otpToken: str | None = None
+
+
+class OtpSendIn(_BM):
+    channel: str                         # phone | email
+    value: str
+
+
+class OtpVerifyIn(OtpSendIn):
+    code: str
+
+
+async def _branch_company(branch_id: str) -> str:
+    br = await _fetchrow("SELECT company_id FROM branches WHERE id=$1", branch_id)
+    if not br:
+        raise HTTPException(404, "الفرع غير موجود")
+    return str(br["company_id"])
 
 
 @router.get("/public/booking/{branch_id}")
 async def public_booking_info(branch_id: str):
-    return await service.public_booking_info(branch_id)
+    info = await service.public_booking_info(branch_id)
+    ch = await otp.channels(await _branch_company(branch_id))
+    return {**info, "otp": {**ch, "required": ch["phone"] or ch["email"]}}
+
+
+@router.post("/public/booking/{branch_id}/otp/send")
+async def public_otp_send(branch_id: str, body: OtpSendIn, request: Request):
+    ip = (request.headers.get("x-real-ip") or (request.client.host if request.client else None))
+    return await otp.send_otp(branch_id, body.channel, body.value, ip)
+
+
+@router.post("/public/booking/{branch_id}/otp/verify")
+async def public_otp_verify(branch_id: str, body: OtpVerifyIn):
+    res = await otp.verify_otp(branch_id, body.channel, body.value, body.code)
+    company_id = await _branch_company(branch_id)
+    claims = otp.read_token(res["token"], company_id)
+    cust = await otp.customer_for_claims(company_id, claims)
+    profile = await service.public_lookup(branch_id, "", None, customer_id=str(cust["id"])) if cust else {"found": False}
+    return {**res, "profile": profile}
 
 
 @router.post("/public/booking/{branch_id}", status_code=201)
 async def public_create_booking(branch_id: str, body: PublicBookingIn):
-    return await service.public_create_booking(branch_id, body.model_dump())
+    data = body.model_dump()
+    company_id = await _branch_company(branch_id)
+    if await otp.otp_enabled(company_id):
+        claims = otp.read_token(body.otpToken, company_id)
+        if body.savedCarId:
+            owner = await _fetchrow(
+                """SELECT c.phone, lower(COALESCE(c.email,'')) AS email
+                   FROM customer_cars cc JOIN customers c ON c.id = cc.customer_id
+                   WHERE cc.id=$1 AND cc.company_id=$2""", body.savedCarId, company_id)
+            ok = bool(owner) and (
+                (claims["ch"] == "phone" and otp.normalize_phone(owner["phone"]) == claims["sub"]) or
+                (claims["ch"] == "email" and owner["email"] == claims["sub"]))
+            if not ok:
+                raise HTTPException(403, "هذه السيارة غير مرتبطة بحسابك")
+        elif claims["ch"] == "phone":
+            known = await otp.customer_for_claims(company_id, claims)
+            # الجوال الموثّق هو اللي يتسجّل (بصيغته المخزّنة لو العميل قديم) — مش اللي اتكتب في الفورم
+            data["phone"] = known["phone"] if known else claims["sub"]
+        else:
+            data["verifiedEmail"] = claims["sub"]
+    return await service.public_create_booking(branch_id, data)
 
 
 @router.post("/public/booking/{branch_id}/lookup")
 async def public_lookup(branch_id: str, body: PublicLookupIn):
-    """استرجاع ملف العميل وسياراته المحفوظة برقم الجوال"""
+    """استرجاع ملف العميل وسياراته — برمز OTP لو مفعّل، وإلا بالجوال/اللوحة"""
+    company_id = await _branch_company(branch_id)
+    if await otp.otp_enabled(company_id):
+        claims = otp.read_token(body.otpToken, company_id)
+        cust = await otp.customer_for_claims(company_id, claims)
+        if not cust:
+            return {"found": False}
+        return await service.public_lookup(branch_id, "", None, customer_id=str(cust["id"]))
     return await service.public_lookup(branch_id, body.phone, body.plate)
 
 

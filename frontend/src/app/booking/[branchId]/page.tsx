@@ -11,7 +11,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { MIcon } from "@/components/m-icon";
 
-type Info = { branchName: string; waiting: number; inService: number; estWaitMinutes: number };
+type OtpInfo = { phone: boolean; email: boolean; required: boolean };
+type OtpAuth = { token: string; channel: "phone" | "email"; target: string };
+type Info = { otp?: OtpInfo;  branchName: string; waiting: number; inService: number; estWaitMinutes: number };
 type SavedCar = { id: string; plate: string; brand: string | null; name: string | null; model_year: string | null; fuel_type?: string | null; service_type: string };
 type Profile = { found: boolean; customer?: { id: string; name: string; phone: string }; cars?: SavedCar[] };
 type Booking = {
@@ -55,7 +57,11 @@ const EMPTY_FORM: FormValues = {
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api/cars/public/${path}`, { headers: { "Content-Type": "application/json" }, ...init });
   const data = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(data?.error || data?.detail || "حدث خطأ — حاول مرة أخرى");
+  if (!res.ok) {
+    const e = new Error(data?.error || (typeof data?.detail === "string" ? data.detail : "") || "حدث خطأ — حاول مرة أخرى");
+    (e as any).status = res.status;
+    throw e;
+  }
   return data as T;
 }
 
@@ -152,6 +158,126 @@ function ErrBox({ msg }: { msg: string }) {
   );
 }
 
+/* ── 1-أ) كارت الدخول بالتحقق: جوال (واتساب) أو إيميل ← رمز OTP ── */
+function OtpEntryCard({ branchId, otp, onVerified }: {
+  branchId: string; otp: OtpInfo;
+  onVerified: (a: OtpAuth, profile: Profile) => void;
+}) {
+  const [channel, setChannel] = useState<"phone" | "email">(otp.phone ? "phone" : "email");
+  const [value, setValue] = useState("");
+  const [step, setStep] = useState<"enter" | "code">("enter");
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [maskedTo, setMaskedTo] = useState("");
+  const [wait, setWait] = useState(0);
+
+  useEffect(() => {
+    if (wait <= 0) return;
+    const t = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(t);
+  }, [wait]);
+
+  const validValue = channel === "phone"
+    ? value.replace(/\D/g, "").length >= 9
+    : /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(value.trim());
+
+  async function send() {
+    setErr(""); setBusy(true);
+    try {
+      const r = await call<{ to: string; resendIn: number }>(`booking/${branchId}/otp/send`, {
+        method: "POST", body: JSON.stringify({ channel, value: value.trim() }),
+      });
+      setMaskedTo(r.to); setWait(r.resendIn); setCode(""); setStep("code");
+    } catch (e: any) { setErr(e.message); }
+    finally { setBusy(false); }
+  }
+
+  async function verify(c: string) {
+    if (busy) return;
+    setErr(""); setBusy(true);
+    try {
+      const r = await call<{ token: string; channel: "phone" | "email"; target: string; profile: Profile }>(
+        `booking/${branchId}/otp/verify`, {
+          method: "POST", body: JSON.stringify({ channel, value: value.trim(), code: c }),
+        });
+      onVerified({ token: r.token, channel: r.channel, target: r.target }, r.profile);
+    } catch (e: any) { setErr(e.message); setCode(""); setBusy(false); }
+  }
+
+  const tabCls = (on: boolean) =>
+    `flex-1 rounded-lg py-2 text-[13px] font-black transition ${on ? "text-white shadow" : ""}`;
+
+  if (step === "code") {
+    return (
+      <div className="kiosk-step space-y-3 rounded-2xl bg-white p-5 shadow-lg">
+        <h2 className="text-center text-[15px] font-black" style={{ color: NAVY }}>أدخل رمز التحقق</h2>
+        <p className="text-center text-[12px] leading-relaxed" style={{ color: DIM }}>
+          أرسلنا رمزاً من 6 أرقام {channel === "phone" ? "على واتساب" : "إلى بريدك"}{" "}
+          <b className="tnum" dir="ltr" style={{ color: NAVY }}>{maskedTo}</b>
+        </p>
+        <input value={code} autoFocus inputMode="numeric" autoComplete="one-time-code" dir="ltr"
+          maxLength={6} placeholder="••••••" aria-label="رمز التحقق"
+          onChange={(e) => {
+            const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+            setCode(v);
+            if (v.length === 6) verify(v);
+          }}
+          className={`${inputCls} tnum text-center text-[26px] tracking-[0.5em]`} style={{ borderColor: LINE }} />
+        <ErrBox msg={err} />
+        <button onClick={() => verify(code)} disabled={busy || code.length !== 6}
+          className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-black text-white shadow-lg transition active:scale-[.98] disabled:opacity-40"
+          style={{ background: GREEN }}>
+          <MIcon name="verified_user" className="!text-[20px] text-white" />
+          {busy ? "جارِ التحقق..." : "تأكيد الرمز"}
+        </button>
+        <div className="flex items-center justify-between text-[12px] font-bold">
+          <button onClick={() => { setStep("enter"); setErr(""); setCode(""); }} style={{ color: DIM }}>
+            ‹ تغيير {channel === "phone" ? "الرقم" : "البريد"}
+          </button>
+          <button onClick={send} disabled={busy || wait > 0} className="disabled:opacity-50" style={{ color: NAVY }}>
+            {wait > 0 ? `إعادة الإرسال بعد ${wait} ث` : "إعادة إرسال الرمز"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="kiosk-step space-y-3 rounded-2xl bg-white p-5 shadow-lg">
+      <h2 className="text-center text-[15px] font-black" style={{ color: NAVY }}>أهلاً بك 👋</h2>
+      <p className="text-center text-[12px]" style={{ color: DIM }}>
+        سجّل دخولك برقم جوالك أو بريدك — هنبعتلك رمز تحقق، ولو سجّلت قبل كده هنرجّع بياناتك وسياراتك فوراً
+      </p>
+      {otp.phone && otp.email && (
+        <div className="flex gap-1 rounded-xl p-1" style={{ background: "#F1F5F9" }} role="tablist">
+          {([["phone", "رقم الجوال"], ["email", "البريد الإلكتروني"]] as const).map(([k, label]) => (
+            <button key={k} role="tab" aria-selected={channel === k}
+              onClick={() => { setChannel(k); setValue(""); setErr(""); }}
+              className={tabCls(channel === k)} style={channel === k ? { background: NAVY } : { color: DIM }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      {channel === "phone" ? (
+        <TInput label="رقم الجوال (واتساب)" inputMode="tel" autoComplete="tel" placeholder="05xxxxxxxx" dir="ltr" className="tnum text-center"
+          value={value} onChange={(e) => setValue(e.target.value)} />
+      ) : (
+        <TInput label="البريد الإلكتروني" type="email" inputMode="email" autoComplete="email" placeholder="name@example.com" dir="ltr" className="text-center"
+          value={value} onChange={(e) => setValue(e.target.value)} />
+      )}
+      <ErrBox msg={err} />
+      <button onClick={send} disabled={busy || !validValue}
+        className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-black text-white shadow-lg transition active:scale-[.98] disabled:opacity-40"
+        style={{ background: GREEN }}>
+        <MIcon name="sms" className="!text-[20px] text-white" />
+        {busy ? "جارِ الإرسال..." : "إرسال رمز التحقق"}
+      </button>
+    </div>
+  );
+}
+
 /* ── 1) كارت الدخول ── */
 function EntryCard({ busy, err, onSubmit }: {
   busy: boolean; err: string; onSubmit: (phone: string, plate: string) => void;
@@ -235,8 +361,8 @@ function GarageCard({ profile, busy, err, onBook, onAddNew }: {
 }
 
 /* ── 4) نموذج التسجيل — الحالة جوّه الكومبوننت ── */
-function RegisterForm({ sType, initial, busy, err, branchId, onBack, onSubmit }: {
-  sType: SType; initial: FormValues; busy: boolean; err: string; branchId: string;
+function RegisterForm({ sType, initial, busy, err, branchId, lockPhone, onBack, onSubmit }: {
+  sType: SType; initial: FormValues; busy: boolean; err: string; branchId: string; lockPhone?: boolean;
   onBack: (v: FormValues) => void; onSubmit: (v: FormValues) => void;
 }) {
   const [f, setF] = useState<FormValues>(initial);
@@ -275,8 +401,8 @@ function RegisterForm({ sType, initial, busy, err, branchId, onBack, onSubmit }:
 
       <Section title="بياناتك">
         <TInput label="الاسم" value={f.name} onChange={set("name")} />
-        <TInput label="رقم الجوال" inputMode="tel" className="tnum" placeholder="05xxxxxxxx"
-          value={f.phone} onChange={set("phone")} />
+        <TInput label={lockPhone ? "رقم الجوال (موثَّق ✓)" : "رقم الجوال"} inputMode="tel" className="tnum" placeholder="05xxxxxxxx"
+          value={f.phone} onChange={set("phone")} readOnly={lockPhone} />
       </Section>
 
       <Section title="بيانات السيارة">
@@ -1525,6 +1651,9 @@ export default function PublicBookingPage() {
   }, [view, sel.oil?.id, branchId]);
 
   const [info, setInfo] = useState<Info | null>(null);
+  const [otpInfo, setOtpInfo] = useState<OtpInfo | null>(null);   // null = لسه بيتحمّل
+  const [otpAuth, setOtpAuth] = useState<OtpAuth | null>(null);
+  const otpKey = `z8_booking_otp_${branchId}`;
   const [profile, setProfile] = useState<Profile | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [sType, setSType] = useState<SType>("basic");
@@ -1543,7 +1672,10 @@ export default function PublicBookingPage() {
   }, []);
 
   useEffect(() => {
-    call<Info>(`booking/${branchId}`).then(setInfo).catch(() => { });
+    call<Info>(`booking/${branchId}`)
+      .then((i) => { setInfo(i); setOtpInfo(i.otp ?? { phone: false, email: false, required: false }); })
+      .catch(() => setOtpInfo({ phone: false, email: false, required: false }));
+    try { const raw = localStorage.getItem(otpKey); if (raw) setOtpAuth(JSON.parse(raw)); } catch { }
     const savedBooking = localStorage.getItem(`z8_booking_${branchId}`);
     const savedPhone = localStorage.getItem("z8_cust_phone");
     if (savedBooking) {
@@ -1570,11 +1702,35 @@ export default function PublicBookingPage() {
     // eslint-disable-next-line
   }, [view, booking?.bookingId]);
 
+  function storedOtpToken(): string | null {
+    try { return (JSON.parse(localStorage.getItem(otpKey) || "null") as OtpAuth | null)?.token ?? null; } catch { return null; }
+  }
+  function dropOtp() {
+    try { localStorage.removeItem(otpKey); localStorage.removeItem("z8_cust_phone"); } catch { }
+    setOtpAuth(null); setProfile(null);
+  }
+
+  // بعد نجاح التحقق برمز OTP
+  function onOtpVerified(a: OtpAuth, p: Profile) {
+    try { localStorage.setItem(otpKey, JSON.stringify(a)); } catch { }
+    setOtpAuth(a); setErr("");
+    if (p.found && p.customer) {
+      try { localStorage.setItem("z8_cust_phone", p.customer.phone); } catch { }
+      setProfile(p);
+      setDraft((x) => ({ ...x, name: p.customer!.name, phone: p.customer!.phone }));
+      setView((p.cars || []).length ? "garage" : "type");
+    } else {
+      setProfile(null);
+      setDraft((x) => ({ ...x, phone: a.channel === "phone" ? a.target : x.phone }));
+      setView("type");
+    }
+  }
+
   async function restoreProfile(phone: string, plate: string) {
     setErr(""); setBusy(true);
     try {
       const p = await call<Profile>(`booking/${branchId}/lookup`, {
-        method: "POST", body: JSON.stringify({ phone, plate }),
+        method: "POST", body: JSON.stringify({ phone, plate, otpToken: storedOtpToken() }),
       });
       if (p.found && p.customer) {
         localStorage.setItem("z8_cust_phone", p.customer.phone);
@@ -1590,7 +1746,11 @@ export default function PublicBookingPage() {
         }));
         setView("type");
       }
-    } catch (e: any) { setErr(e.message); setView("entry"); }
+    } catch (e: any) {
+      // 401 = لازم تحقق جديد (توكن مفقود/منتهي): نرجّعه لشاشة الدخول من غير رسالة خطأ مخيفة
+      if (e?.status === 401) { dropOtp(); setErr(""); } else setErr(e.message);
+      setView("entry");
+    }
     finally { setBusy(false); }
   }
 
@@ -1631,7 +1791,7 @@ export default function PublicBookingPage() {
           method: "POST",
           body: JSON.stringify({
             savedCarId: pending.car.id, odometer: pending.odometer,
-            serviceType: pending.car.service_type, ...selection
+            serviceType: pending.car.service_type, otpToken: otpAuth?.token ?? null, ...selection
           }),
         });
       } else {
@@ -1642,7 +1802,10 @@ export default function PublicBookingPage() {
       localStorage.setItem(`z8_booking_${branchId}`, b.bookingId);
       setPending(null);
       setBooking(b); setView("ticket");
-    } catch (e: any) { setErr(e.message); }
+    } catch (e: any) {
+      if (e?.status === 401) { dropOtp(); setPending(null); setView("entry"); setErr("انتهت صلاحية التحقق — أعد التحقق برمز جديد"); }
+      else setErr(e.message);
+    }
     finally { setBusy(false); }
   }
 
@@ -1650,7 +1813,7 @@ export default function PublicBookingPage() {
     return await call<Booking>(`booking/${branchId}`, {
       method: "POST",
       body: JSON.stringify({
-        serviceType: sType, name: f.name.trim(), phone: f.phone.trim(),
+        serviceType: sType, name: f.name.trim(), phone: f.phone.trim(), otpToken: otpAuth?.token ?? null,
         car: {
           plateLetters: f.plateLetters, plateNumbers: f.plateNumbers,
           brand: f.brand.trim() || null, carName: f.carName.trim() || null,
@@ -1696,7 +1859,16 @@ export default function PublicBookingPage() {
 
         {view === "loading" && <p className="py-10 text-center text-[13px]" style={{ color: DIM }}>جارِ التحميل...</p>}
 
-        {view === "entry" && (
+        {view === "entry" && otpInfo === null && (
+          <p className="py-10 text-center text-[13px]" style={{ color: DIM }}>جارِ التحميل...</p>
+        )}
+        {view === "entry" && otpInfo?.required && (
+          <>
+            {err && <p className="rounded-lg px-3 py-2 text-center text-[12px] font-bold" style={{ background: "rgba(220,38,38,.08)", color: "#DC2626" }}>{err}</p>}
+            <OtpEntryCard branchId={branchId} otp={otpInfo} onVerified={onOtpVerified} />
+          </>
+        )}
+        {view === "entry" && otpInfo && !otpInfo.required && (
           <EntryCard busy={busy} err={err} onSubmit={(phone, plate) => restoreProfile(phone, plate)} />
         )}
 
@@ -1717,6 +1889,10 @@ export default function PublicBookingPage() {
                 <MIcon name="download" className="!text-[18px] text-white" /> تحميل التطبيق
               </a>
             </div>
+            <button onClick={() => { dropOtp(); setView("entry"); }}
+              className="w-full py-1 text-center text-[12px] font-bold" style={{ color: DIM }}>
+              مش حسابك؟ تبديل الحساب
+            </button>
           </>
         )}
 
@@ -1746,6 +1922,7 @@ export default function PublicBookingPage() {
 
         {view === "form" && (
           <RegisterForm sType={sType} initial={draft} busy={busy} err={err} branchId={branchId}
+            lockPhone={otpAuth?.channel === "phone"}
             onBack={(v) => { setDraft(v); setErr(""); setView(profile?.found ? "garage" : "type"); }}
             onSubmit={submitNew} />
         )}
