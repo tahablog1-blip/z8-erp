@@ -69,7 +69,7 @@ async def create_invoice(body: InvoiceCreate,
             reason=body.discountReason, branch_id=body.branchId))
     # 📲 بعد إتمام الدفع: إرسال الفاتورة PDF للعميل واتساب (تلقائي — لا يعطل الإصدار)
     try:
-        is_credit = any(p.get("method") == "credit" for p in (body.payments or []))
+        is_credit = any(p.method == "credit" for p in (body.payments or []))   # PaymentIn كائن Pydantic — مش dict
         if inv.get("customer_id") and not is_credit:
             import asyncio as _aio
             _aio.create_task(_send_invoice_wa(user.company_id, inv["id"]))
