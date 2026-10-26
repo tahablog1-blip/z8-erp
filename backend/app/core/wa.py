@@ -2,7 +2,7 @@
 الإعداد يُخزَّن في جدول companies (عمودا wa_instance / wa_token).
 كل الإرسال fire-and-forget: فشل الواتساب لا يُفشل العملية الأصلية أبداً."""
 from __future__ import annotations
-import asyncio, json, urllib.request, urllib.parse
+import asyncio, json, urllib.error, urllib.request, urllib.parse
 from .db import fetchrow
 from .integration_log import log_event
 
@@ -31,10 +31,23 @@ async def _settings(company_id: str) -> tuple[str, str] | None:
 
 def _post(url: str, data: dict) -> dict:
     body = urllib.parse.urlencode(data).encode()
-    req = urllib.request.Request(url, data=body,
-        headers={"Content-Type": "application/x-www-form-urlencoded"})
-    with urllib.request.urlopen(req, timeout=15) as r:
-        return json.loads(r.read().decode() or "{}")
+    # User-Agent صريح: بعض واجهات واتساب (خلف Cloudflare) بتحجب "Python-urllib" الافتراضي بـ 403
+    req = urllib.request.Request(url, data=body, headers={
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Mozilla/5.0 (compatible; Z8-ERP/1.0)",
+        "Accept": "application/json",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return json.loads(r.read().decode() or "{}")
+    except urllib.error.HTTPError as e:
+        # نقرأ جسم الرد عشان السبب الحقيقي (توكن غلط/instance متوقف/اشتراك...) يظهر في السجل
+        detail = ""
+        try:
+            detail = e.read().decode("utf-8", "replace")[:200]
+        except Exception:
+            pass
+        raise RuntimeError(f"HTTP {e.code} {detail}".strip()) from None
 
 
 async def send_text(company_id: str, phone: str | None, message: str) -> bool:
