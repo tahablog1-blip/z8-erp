@@ -183,3 +183,16 @@ a:focus-visible, [role="tab"]:focus-visible, summary:focus-visible {
 /* ارتفاع الشاشة الكاملة: vh كأساس (كل المتصفحات) ثم dvh للمتصفحات الحديثة — المتصفح القديم يتجاهل السطر التاني بدل ما يسقط الارتفاع كله */
 .z8-h-screen { height: 100vh; max-height: 100vh; height: 100dvh; max-height: 100dvh; }
 .z8-min-h-screen { min-height: 100vh; min-height: 100dvh; }
+
+/* ── أنيميشن طباعة الفاتورة (InvoicePrintAnimation) ──
+   الحالة الأساسية (بدون حركة) = الوضع النهائي، فمع تقليل الحركة بتظهر الورقة ثابتة وكاملة. */
+@keyframes z8-print-backdrop { from { opacity: 0; } to { opacity: 1; } }
+@keyframes z8-print-feed { from { transform: translateY(96%); } to { transform: translateY(0); } }
+@keyframes z8-print-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-1px); } 75% { transform: translateX(1px); } }
+@keyframes z8-print-done { 0% { opacity: 0; transform: translateY(8px) scale(.9); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+.z8-print-backdrop { animation: z8-print-backdrop 180ms ease-out both; }
+/* تغذية الورق متقطعة زي الطابعة الحرارية: 22 خطوة خلال 1.7 ثانية */
+.z8-receipt { animation: z8-print-feed 1.7s steps(22, end) 250ms both; }
+.z8-printer-body { animation: z8-print-shake 90ms linear 250ms 19; }
+.z8-printer-led { box-shadow: 0 0 8px rgba(52,211,153,.8); }
+.z8-print-done { animation: z8-print-done 320ms cubic-bezier(.2,.7,.3,1) 2.05s both; }

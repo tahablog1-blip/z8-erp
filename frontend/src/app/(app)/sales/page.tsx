@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { MIcon } from "@/components/m-icon";
+import { InvoicePrintAnimation, type PrintLine } from "@/components/InvoicePrintAnimation";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import type { PrintFormat } from "@/lib/print-invoice";
 import { getPrinting, cachePrinting } from "@/lib/printing";
@@ -96,6 +97,8 @@ export default function SalesPage() {
   const [discountReason, setDiscountReason] = useState("");
   const [idemKey, setIdemKey] = useState(() => genId());
   const [lastInvoice, setLastInvoice] = useState<Invoice | null>(null);
+  // أنيميشن خروج الفاتورة من الطابعة بعد الإصدار (لقطة من البنود قبل تفريغ السلة)
+  const [printAnim, setPrintAnim] = useState<{ invoiceNo: string; total: number; lines: PrintLine[] } | null>(null);
 
   // ── الفواتير المعلقة ──
   const [held, setHeld] = useState<HeldInvoice[]>([]);
@@ -706,6 +709,7 @@ export default function SalesPage() {
       };
       const invoice = await api<Invoice>("/invoices", { method: "POST", body: JSON.stringify(body) });
       setLastInvoice(invoice);
+      setPrintAnim({ invoiceNo: invoice.invoice_no, total: Number(invoice.total_inc), lines: cart.map((l) => ({ label: l.label, qty: l.qty })) });
       resetSale();
       setStep("cart");
       // طباعة تلقائية فور الإصدار (تتقفل من الإعدادات ← الطباعة)
@@ -903,11 +907,8 @@ export default function SalesPage() {
 
       {/* ══════════ بطاقات الإحصائيات الحية — في نقطة بيع الخدمة فقط ══════════ */}
       {posMode === "service" && (
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-3 gap-2">
         {[
-          { icon: "description", label: "فواتير اليوم", value: stats?.today.count ?? "…", sub: stats ? `${money(stats.today.total)} ر.س` : "", color: "#0C5E66", onClick: () => setRepFilter("all"), href: "" },
-          { icon: "point_of_sale", label: "فواتير بيع", value: stats?.todayBySource?.pos ?? 0, sub: "", color: "#2E6ED8", onClick: () => setRepFilter("pos"), href: "" },
-          { icon: "receipt_long", label: "فواتير خدمة", value: stats?.todayBySource?.car ?? 0, sub: "", color: "#7C4DBE", onClick: () => setRepFilter("car"), href: "" },
           { icon: "schedule", label: "الانتظار", value: stats?.cars.queued ?? "…", sub: "", color: "#B07E14", onClick: () => openSvc("waiting"), href: "" },
           { icon: "build", label: "في الخدمة", value: stats?.cars.inService ?? "…", sub: "", color: "#D06018", onClick: () => openSvc("in_service"), href: "" },
           { icon: "task_alt", label: "خرجت اليوم", value: stats?.cars.doneToday ?? "…", sub: "", color: "#157F4C", onClick: () => {}, href: "/cars" },
@@ -941,6 +942,11 @@ export default function SalesPage() {
         <div className="fixed bottom-6 right-1/2 z-50 translate-x-1/2 rounded-full bg-slate-900 px-5 py-2.5 text-[13px] font-bold text-white shadow-xl">
           {toast}
         </div>
+      )}
+
+      {printAnim && (
+        <InvoicePrintAnimation invoiceNo={printAnim.invoiceNo} total={printAnim.total} lines={printAnim.lines}
+          onDone={() => setPrintAnim(null)} />
       )}
 
       {lastInvoice && (
