@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     # المسار هو اللي بيخلي الباك إند يقدر يسحبها منه ويحطها في قاعدة البيانات
     # الحقيقية أول ما يرجع يشتغل. فاضي = الميزة متوقفة تمامًا (سلوك افتراضي آمن).
     FIREBASE_SERVICE_ACCOUNT_PATH: str = ""
+    # بوابة واتساب المحلية (whatsapp-web.js) — مجانية بدون اشتراك. لو الاتنين متعبّيين،
+    # كل رسائل واتساب (OTP، فواتير، إشعارات) بتروح من خلالها بدل UltraMsg.
+    WA_GATEWAY_URL: str = ""      # مثال: http://127.0.0.1:4100
+    WA_GATEWAY_KEY: str = ""
 
     class Config:
         env_file = ".env"

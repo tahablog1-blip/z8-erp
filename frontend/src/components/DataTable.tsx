@@ -1,7 +1,10 @@
 "use client";
 // components/DataTable.tsx — الجدول الذكي الموحّد: مكوّن واحد لكل شاشات النظام
 // (بحث فوري، حالات تحميل/فراغ، أعمدة معرّفة تصريحياً) — بدل تكرار كود الجداول 30 مرة
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
+
+/** عدد الصفوف المرسومة في كل دفعة — الجداول الكبيرة (آلاف الأصناف) كانت بترسم كل الصفوف مرة واحدة وتبطّأ الموبايل */
+const PAGE_SIZE = 100;
 
 export type Column<T> = {
   key: string;
@@ -44,6 +47,10 @@ export function DataTable<T extends Record<string, any>>({
       searchKeys.some((k) => String(r[k] ?? "").toLowerCase().includes(needle)));
   }, [rows, q, searchKeys]);
 
+  const [limit, setLimit] = useState(PAGE_SIZE);
+  useEffect(() => { setLimit(PAGE_SIZE); }, [q, rows]);
+  const shown = filtered.length > limit ? filtered.slice(0, limit) : filtered;
+
   const searchInput = searchKeys?.length ? (
     <input
       value={q}
@@ -72,7 +79,7 @@ export function DataTable<T extends Record<string, any>>({
             <tr className="bg-ink-3 text-text-dim">
               {columns.map((c) => (
                 <th key={c.key} style={{ width: c.width }}
-                  className="whitespace-nowrap px-3 py-2.5 text-right text-[12px] font-extrabold">
+                  className="whitespace-nowrap bg-ink-3 px-3 py-2.5 text-right text-[12px] font-extrabold">
                   {c.title}
                 </th>
               ))}
@@ -91,7 +98,7 @@ export function DataTable<T extends Record<string, any>>({
               <tr><td colSpan={columns.length} className="px-3 py-8 text-center text-text-dim">
                 {q ? "لا توجد نتائج مطابقة للبحث" : emptyText}
               </td></tr>
-            ) : filtered.map((row, i) => (
+            ) : shown.map((row, i) => (
               <tr key={row.id ?? i} className="border-t border-line/70 odd:bg-ink-3/25 transition-colors duration-150 hover:bg-petrol-soft/40">
                 {columns.map((c) => (
                   <td key={c.key} className="px-3 py-2.5 align-middle">
@@ -103,6 +110,15 @@ export function DataTable<T extends Record<string, any>>({
           </tbody>
         </table>
       </div>
+      {filtered.length > shown.length && (
+        <div className="mt-3 flex items-center justify-center gap-3 text-[12px] text-text-dim">
+          <span className="tnum">عرض {shown.length} من {filtered.length}</span>
+          <button type="button" onClick={() => setLimit((l) => l + PAGE_SIZE)}
+            className="rounded-lg border border-line bg-ink-2 px-3 py-1.5 font-bold text-petrol transition hover:border-petrol">
+            عرض المزيد
+          </button>
+        </div>
+      )}
     </div>
   );
 }

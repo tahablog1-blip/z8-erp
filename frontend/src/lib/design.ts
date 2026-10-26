@@ -95,6 +95,45 @@ export const FONT_STACKS_EN: Record<EnFontKey, string> = {
   "arial": "Arial, Helvetica, sans-serif", // خط نظام — بلا تحميل شبكة، العادي والبولد مدعومين تلقائياً من النظام
 };
 
+/** مواصفات Google Fonts لكل خط — بنحمّل الخط المختار بس عند الحاجة بدل تحميل 20 عائلة خط مع كل صفحة */
+const GOOGLE_FONT_SPECS: Record<string, string> = {
+  "tajawal": "Tajawal:wght@400;500;700;900",
+  "ibm-plex-arabic": "IBM+Plex+Sans+Arabic:wght@400;500;600;700",
+  "almarai": "Almarai:wght@400;700;800",
+  "noto-kufi-arabic": "Noto+Kufi+Arabic:wght@400;600;700",
+  "changa": "Changa:wght@400;600;700;800",
+  "el-messiri": "El+Messiri:wght@400;500;600;700",
+  "readex-pro": "Readex+Pro:wght@400;500;600;700",
+  "reem-kufi": "Reem+Kufi:wght@400;500;600;700",
+  "markazi-text": "Markazi+Text:wght@400;500;600;700",
+  "lalezar": "Lalezar",
+  "harmattan": "Harmattan:wght@400;700",
+  "inter": "Inter:wght@400;500;600;700;800",
+  "roboto": "Roboto:wght@400;500;700;900",
+  "poppins": "Poppins:wght@400;500;600;700",
+  "montserrat": "Montserrat:wght@400;500;600;700;800",
+  "lato": "Lato:wght@400;700;900",
+  "open-sans": "Open+Sans:wght@400;500;600;700",
+  "nunito": "Nunito:wght@400;600;700;800",
+  "work-sans": "Work+Sans:wght@400;500;600;700",
+  "source-sans": "Source+Sans+3:wght@400;500;600;700",
+  "manrope": "Manrope:wght@400;500;600;700;800",
+  "dm-sans": "DM+Sans:wght@400;500;700",
+  "outfit": "Outfit:wght@400;500;600;700",
+};
+
+export function ensureFontLoaded(key: string) {
+  const spec = GOOGLE_FONT_SPECS[key];
+  if (!spec) return; // cairo (محمّل مع التطبيق) وarial (خط نظام)
+  const id = `z8-font-${key}`;
+  if (document.getElementById(id)) return;
+  const link = document.createElement("link");
+  link.id = id;
+  link.rel = "stylesheet";
+  link.href = `https://fonts.googleapis.com/css2?family=${spec}&display=swap`;
+  document.head.appendChild(link);
+}
+
 export const FONT_LABELS_AR: Record<ArFontKey, string> = {
   "cairo": "Cairo — افتراضي", "tajawal": "Tajawal", "ibm-plex-arabic": "IBM Plex Sans Arabic",
   "almarai": "Almarai", "noto-kufi-arabic": "Noto Kufi Arabic", "changa": "Changa",
@@ -173,6 +212,7 @@ export function applyDesignVars(d: DesignInfo, isDark: boolean, lang: "ar" | "en
   root.setProperty("--radius-card", radii.card);
 
   // الخط يتبع لغة الواجهة الحالية تلقائياً — عربي للعربي، إنجليزي للإنجليزي
+  ensureFontLoaded(lang === "en" ? d.fontFamilyEn : d.fontFamilyAr);
   document.body.style.fontFamily = lang === "en"
     ? (FONT_STACKS_EN[d.fontFamilyEn] || "")
     : (FONT_STACKS_AR[d.fontFamilyAr] || "");

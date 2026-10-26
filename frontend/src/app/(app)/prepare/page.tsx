@@ -397,7 +397,7 @@ export default function PreparePage() {
                   لا يوجد بعد أصناف — ابحث فوق وضيف، أو لو العميل اختار من الكشك هتلاقي اختياره اتعبى تلقائياً
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-xl border border-line">
+                <div className="overflow-x-auto rounded-xl border border-line">
                   <table className="w-full text-sm">
                     <thead className="bg-ink-3 text-text-dim">
                       <tr>

@@ -22,21 +22,21 @@ export default function FullScreenModal({ title, onClose, children }: {
 
   // آخر div داخل المحتوى = صف الأزرار، يثبت أسفل الشاشة
   const bar = "[&>div>div:last-child]";
-  const fields = "[&_input]:border-slate-300 [&_select]:border-slate-300 [&_input]:bg-white [&_select]:bg-white";
+  const fields = "";
 
   return createPortal(
-    <div dir={document.documentElement.dir || "rtl"}
-         className="fixed inset-0 z-[1000] flex flex-col bg-slate-100">
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm md:px-8">
-        <h3 className="text-[18px] font-extrabold text-slate-900">{title}</h3>
+    <div role="dialog" aria-modal="true" aria-label={title} dir={document.documentElement.dir || "rtl"}
+         className="fixed inset-0 z-[1000] flex flex-col bg-ink text-text">
+      <div className="flex shrink-0 items-center justify-between border-b border-line bg-ink-2 px-4 py-3 shadow-sm md:px-8">
+        <h3 className="text-[18px] font-extrabold text-text">{title}</h3>
         <button type="button" onClick={onClose}
-                className="flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-[13px] font-bold hover:bg-slate-50">
+                className="flex items-center gap-1 rounded-lg border border-line bg-ink-2 px-4 py-1.5 text-[13px] font-bold hover:bg-ink-3">
           رجوع <MIcon name="close" className="!text-[15px]" />
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-5xl p-3 md:p-6">
-          <div className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-6 ${fields} ${bar}:sticky ${bar}:bottom-0 ${bar}:z-10 ${bar}:mt-4 ${bar}:border-t ${bar}:border-slate-200 ${bar}:bg-white ${bar}:py-3`}>
+          <div className={`rounded-2xl border border-line bg-ink-2 p-4 shadow-sm md:p-6 ${fields} ${bar}:sticky ${bar}:bottom-0 ${bar}:z-10 ${bar}:mt-4 ${bar}:border-t ${bar}:border-line ${bar}:bg-ink-2 ${bar}:py-3`}>
             {children}
           </div>
         </div>

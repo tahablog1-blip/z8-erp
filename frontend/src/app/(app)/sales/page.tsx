@@ -1024,7 +1024,7 @@ export default function SalesPage() {
                 </button>
               </div>
 
-              <div className="grid max-h-[calc(100vh-300px)] content-start gap-2 overflow-y-auto p-0.5 [grid-template-columns:repeat(5,minmax(0,1fr))]">
+              <div className="grid max-h-[calc(100vh-300px)] grid-cols-2 content-start gap-2 overflow-y-auto p-0.5 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
                 {products.length === 0 ? (
                   Array.from({ length: 10 }).map((_, i) => (
                     <div key={i} className="rounded-2xl border border-line bg-ink-2 p-2">

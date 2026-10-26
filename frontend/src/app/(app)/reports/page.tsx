@@ -522,7 +522,7 @@ export default function ReportsPage() {
                   لا توجد بيانات فنيين في هذه الفترة — الفنيون يُسجَّلون على السيارة لحظة اعتماد أمر العمل من التابلت
                 </p>
               ) : (
-                <div className="overflow-hidden rounded-lg border border-line">
+                <div className="overflow-x-auto rounded-lg border border-line">
                   <table className="w-full text-[12.5px]">
                     <thead className="bg-ink-3 text-[11.5px] font-black text-text-dim">
                       <tr>
@@ -604,7 +604,7 @@ export default function ReportsPage() {
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-lg border border-line">
+              <div className="overflow-x-auto rounded-lg border border-line">
                 <table className="w-full text-[12.5px]">
                   <thead className="bg-ink-3 text-[11.5px] font-black text-text-dim">
                     <tr>
@@ -655,7 +655,7 @@ export default function ReportsPage() {
                   </div>
                 </div>
               </div>
-              <div className="overflow-hidden rounded-lg border border-line">
+              <div className="overflow-x-auto rounded-lg border border-line">
                 <table className="w-full text-[12.5px]">
                   <thead className="bg-ink-3 text-[11.5px] font-black text-text-dim">
                     <tr>
@@ -711,7 +711,7 @@ export default function ReportsPage() {
                   <div className="tnum text-[16px] font-black text-ember">{money(ar.totals.d90plus)}</div>
                 </div>
               </div>
-              <div className="overflow-hidden rounded-lg border border-line">
+              <div className="overflow-x-auto rounded-lg border border-line">
                 <table className="w-full text-[12.5px]">
                   <thead className="bg-ink-3 text-[11.5px] font-black text-text-dim">
                     <tr>

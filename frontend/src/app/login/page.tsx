@@ -101,9 +101,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-screen place-items-center bg-ink p-4">
+    <div className="grid z8-min-h-screen content-start justify-items-center bg-ink p-4 pt-8 sm:pt-14">
       {/* خلفية بترولية هادئة أعلى الشاشة — استمرارية بصرية مع قضيب التطبيق */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-56 bg-petrol-deep" />
+      <div className="pointer-events-none fixed inset-x-0 top-0 h-32 bg-petrol-deep sm:h-44" />
       <div className="relative w-full max-w-sm">
         <div className="mb-5 flex items-center justify-center gap-3 text-white">
           <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white/10 p-2">
@@ -111,7 +111,7 @@ export default function LoginPage() {
           </div>
           <div>
             <div className="text-[17px] font-extrabold">مصدر الزيوت</div>
-            <div className="text-[11px] text-white/65">منصة الإدارة — Python + Next.js</div>
+            <div className="text-[11px] text-white/65">منصة الإدارة</div>
           </div>
         </div>
 
@@ -153,7 +153,7 @@ export default function LoginPage() {
               : "bg-brass animate-pulse"}`} />
             {conn === "ok" && "متصل بالخادم"}
             {conn === "checking" && "جارِ فحص الاتصال بالخادم..."}
-            {conn === "down" && "الخادم غير متاح — شغّل START-Z8.bat ثم انتظر ثواني"}
+            {conn === "down" && "تعذّر الاتصال بالخادم — تأكد من اتصالك بالإنترنت وحاول مرة أخرى"}
           </div>
 
           <Field label="البريد الإلكتروني">
@@ -166,12 +166,9 @@ export default function LoginPage() {
                    onChange={(e) => setPassword(e.target.value)} />
           </Field>
           <ErrorNote msg={err} />
-          <Button type="submit" disabled={busy || conn === "down"} className="w-full justify-center">
+          <Button type="submit" disabled={busy} className="w-full justify-center">
             {busy ? "جارِ الدخول..." : "تسجيل الدخول"}
           </Button>
-          <p className="text-center text-[11px] text-text-dim">
-            نفس حسابك الحالي — كلمات المرور لم تتغير
-          </p>
         </form>
         )}
       </div>

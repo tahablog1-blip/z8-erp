@@ -1,0 +1,11 @@
+{
+  "name": "z8-wa-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "بوابة واتساب محلية لنظام Z8 (whatsapp-web.js) — تستقبل طلبات الإرسال من الباك اند على 127.0.0.1 فقط",
+  "main": "index.js",
+  "scripts": { "start": "node index.js" },
+  "dependencies": {
+    "whatsapp-web.js": "1.34.7"
+  }
+}

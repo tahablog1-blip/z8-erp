@@ -39,7 +39,8 @@ export function DialogHost() {
   useEffect(() => {
     if (!cur) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Enter") { e.preventDefault(); close(true); }
+      // Enter = تأكيد، إلا في الإجراءات الخطرة (حذف/مرتجع...) — لازم ضغطة صريحة على الزر
+      if (e.key === "Enter" && !/حذف|مسح|إلغاء|مرتجع|إنهاء|إغلاق الوردية/.test(cur!.message)) { e.preventDefault(); close(true); }
       if (e.key === "Escape") { e.preventDefault(); close(cur!.kind === "alert"); }
     }
     window.addEventListener("keydown", onKey);

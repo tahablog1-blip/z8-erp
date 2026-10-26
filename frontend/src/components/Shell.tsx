@@ -136,6 +136,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     let last = -1;
     let alive = true;
     async function poll() {
+      if (document.hidden) return;
       try {
         const r = await api<{ unread: number }>("/service-notes/unread-count");
         if (!alive) return;
@@ -155,7 +156,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
     }
     poll();
     const t = setInterval(poll, 15000);
-    return () => { alive = false; clearInterval(t); };
+    const onVisible = () => { if (!document.hidden) poll(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { alive = false; clearInterval(t); document.removeEventListener("visibilitychange", onVisible); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canChats]);
   // عداد في عنوان التبويب — يبان حتى والموظف في شاشة تانية
@@ -172,6 +175,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let alive = true;
     async function poll() {
+      if (document.hidden) return;
       try {
         const r = await api<{ unread: number }>("/notifications/unread-count");
         if (alive) setNotifUnread(r.unread);
@@ -179,7 +183,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
     }
     poll();
     const t = setInterval(poll, 20000);
-    return () => { alive = false; clearInterval(t); };
+    const onVisible = () => { if (!document.hidden) poll(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { alive = false; clearInterval(t); document.removeEventListener("visibilitychange", onVisible); };
   }, []);
   async function openNotifications() {
     const next = !notifOpen;
@@ -234,10 +240,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {mobileNavOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileNavOpen(false)} />
       )}
-      <aside className={`sticky top-0 z-50 flex h-screen max-h-screen w-72 shrink-0 flex-col overflow-hidden bg-petrol-deep text-white
-                        transition-[transform,width] duration-300 md:translate-x-0
+      <aside className={`fixed inset-y-0 start-0 z-50 flex z8-h-screen w-72 flex-col overflow-hidden bg-petrol-deep text-white
+                        transition-[transform,width] duration-300 md:sticky md:top-0 md:shrink-0 md:!translate-x-0
                         ${collapsed ? "md:w-[72px]" : "md:w-60"}
-                        ${mobileNavOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
+                        ${mobileNavOpen ? "translate-x-0 shadow-panel" : "ltr:-translate-x-full rtl:translate-x-full"}`}>
         <div className={`flex items-center gap-3 px-5 py-5 ${collapsed ? "md:justify-center md:px-0" : ""}`}>
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 p-1.5">
             <img src="/logo-white.png" alt="مصدر الزيوت" className="h-full w-full object-contain" />
@@ -276,7 +282,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 )}
                 {/* القائمة المنسدلة — مستطيل واحد بنفس عرض رأس القسم بالظبط، حواف حادة، درجة رمادي فاتح */}
                 <div className={`overflow-hidden transition-all duration-200
-                       ${sectionOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}
+                       ${sectionOpen ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"}
                        ${sec !== "الرئيسية" && !collapsed ? "bg-white/[0.06]" : ""}`}>
                   {items.map((m) => {
                     const active = m.path === activePath;
@@ -347,10 +353,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ── مساحة العمل ── */}
-      <div className="flex min-w-0 flex-1 flex-col h-screen p-3 md:p-4">
-        <div className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line elev-1 ${panelBgStyle(bg) ? "" : "bg-ink2"}`}
+      <div className="flex min-w-0 flex-1 flex-col z8-h-screen p-2 sm:p-3 md:p-4">
+        <div className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line elev-1 ${panelBgStyle(bg) ? "" : "bg-ink-2"}`}
              style={panelBgStyle(bg)}>
-          <header className="flex h-14 shrink-0 items-center gap-2.5 border-b border-line px-5">
+          <header className="flex h-14 shrink-0 items-center gap-1.5 border-b border-line px-3 sm:gap-2.5 sm:px-5">
             {/* زر القائمة — الشاشات الضيقة بس (موبايل/تابلت عمودي) */}
             <button onClick={() => setMobileNavOpen(true)} aria-label="القائمة"
               className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol md:hidden">
@@ -362,8 +368,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
             {/* عنوان الصفحة + فتات الخبز */}
             <div className="min-w-0 flex-1">
-              {sectionTitle && <Breadcrumb items={[{ label: sectionTitle }, { label: pageTitle }]} />}
-              <div className="truncate text-page-title text-text">{pageTitle}</div>
+              {sectionTitle && <div className="hidden sm:block"><Breadcrumb items={[{ label: sectionTitle }, { label: pageTitle }]} /></div>}
+              <div className="truncate text-[16px] font-extrabold leading-6 text-text sm:text-page-title">{pageTitle}</div>
             </div>
 
             {/* مركز الإشعارات الداخلي */}
@@ -382,7 +388,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               {notifOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
-                  <div className="absolute left-0 top-11 z-50 w-80 overflow-hidden rounded-xl border border-line bg-ink2 shadow-panel">
+                  <div role="dialog" aria-label="الإشعارات" className="fixed inset-x-2 top-16 z-50 overflow-hidden rounded-xl border border-line bg-ink-2 shadow-panel sm:absolute sm:inset-x-auto sm:left-0 sm:top-11 sm:w-80">
                     <div className="flex items-center justify-between border-b border-line px-3 py-2">
                       <span className="text-[12.5px] font-bold">الإشعارات</span>
                       {notifUnread > 0 && (
@@ -391,7 +397,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                         </button>
                       )}
                     </div>
-                    <div className="max-h-96 overflow-y-auto">
+                    <div className="max-h-[60vh] overflow-y-auto sm:max-h-96">
                       {notifLoading ? (
                         <div className="p-4 text-center text-[12px] text-text-dim">جارِ التحميل...</div>
                       ) : notifList.length === 0 ? (
@@ -418,7 +424,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {/* المحادثات */}
             <Tooltip label="المحادثات" side="bottom">
               <button onClick={() => router.push("/service-notes")} aria-label="المحادثات"
-                className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol">
+                className="relative hidden h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol sm:grid">
                 <MIcon name="chat" className="!text-[19px]" />
                 {unread > 0 && (
                   <span className="absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-ember px-1 text-[9px] font-black text-white">
@@ -446,22 +452,23 @@ export function Shell({ children }: { children: React.ReactNode }) {
               </svg>
             </button>
 
-            <div className="mx-1 h-6 w-px shrink-0 bg-line" />
+            <div className="mx-1 hidden h-6 w-px shrink-0 bg-line sm:block" />
 
             <div className="hidden text-[12.5px] text-text-dim sm:block">
               <span className="font-bold text-text">{user?.fullName}</span>
               <span className="mx-1.5">·</span>
               {user?.role === "admin" ? (lang === "ar" ? "مدير النظام" : "Administrator") : (lang === "ar" ? "موظف" : "Employee")}
             </div>
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-petrol text-[13px] font-black text-white">
+            <div className="hidden h-9 w-9 shrink-0 place-items-center rounded-full bg-petrol text-[13px] font-black text-white sm:grid">
               {user?.fullName?.trim().charAt(0) || "؟"}
             </div>
-            <button onClick={logout}
-              className="shrink-0 rounded-lg border border-line px-3 py-1.5 text-[12px] font-bold text-text-dim hover:border-ember hover:text-ember">
-              {t("top.logout")}
+            <button onClick={logout} aria-label={t("top.logout")} title={t("top.logout")}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-[12px] font-bold text-text-dim hover:border-ember hover:text-ember sm:w-auto sm:px-3">
+              <MIcon name="logout" className="!text-[19px] sm:hidden" />
+              <span className="hidden sm:inline">{t("top.logout")}</span>
             </button>
           </header>
-          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto p-6">{children}</main>
+          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">{children}</main>
         </div>
       </div>
     </div>

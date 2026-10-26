@@ -261,6 +261,31 @@ async def send_test_whatsapp(body: WhatsAppTestIn,
     return {"success": True}
 
 
+@router.get("/whatsapp/gateway")
+async def whatsapp_gateway_status(user: CurrentUser = Depends(require_permission("settings.whatsapp"))):
+    """حالة بوابة واتساب المحلية + QR الربط لو لسه ما اتربطش"""
+    from ...core import wa
+    if not wa.gateway_enabled():
+        return {"enabled": False, "state": "disabled"}
+    st = await wa.gateway_status(fresh=True)
+    out = {"enabled": True, "state": st.get("state"), "number": st.get("number"), "sentToday": st.get("sentToday")}
+    if st.get("state") == "qr":
+        out["qr"] = await wa.gateway_qr()
+    return out
+
+
+@router.post("/whatsapp/gateway/logout")
+async def whatsapp_gateway_logout(user: CurrentUser = Depends(require_permission("settings.whatsapp"))):
+    from ...core import wa
+    if not wa.gateway_enabled():
+        raise HTTPException(400, "بوابة واتساب غير مفعّلة على السيرفر")
+    ok = await wa.gateway_logout()
+    await log_action(user, "edit", "settings", details="فصل رقم واتساب (بوابة محلية)")
+    if not ok:
+        raise HTTPException(502, "تعذّر فصل الرقم — البوابة لا تستجيب")
+    return {"success": True}
+
+
 # ══════════════════ سجل التكاملات الخارجية ══════════════════
 
 @router.get("/integration-log", response_model=list[IntegrationLogOut])

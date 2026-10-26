@@ -518,7 +518,7 @@ export default function InventoryPage() {
             <span className="text-[11px]">{showLowPanel ? "إخفاء ▲" : "عرض التفاصيل ▼"}</span>
           </button>
           {showLowPanel && (
-            <div className="mt-2.5 max-h-64 overflow-y-auto rounded-lg bg-ink-1/40">
+            <div className="mt-2.5 max-h-64 overflow-y-auto rounded-lg bg-ink-3/40">
               <table className="w-full text-[12px]">
                 <thead className="sticky top-0 bg-ink-1/80 text-[11px] font-black text-text-dim">
                   <tr>

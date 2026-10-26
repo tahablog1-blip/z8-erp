@@ -1165,17 +1165,24 @@ async def _upsert_garage(company_id: str, customer_id: str, plate: str, car: dic
         car.get("color"), car.get("chassisNumber"), service_type)
 
 
-async def public_lookup(branch_id: str, phone: str, plate: str | None = None) -> dict:
+async def public_lookup(branch_id: str, phone: str, plate: str | None = None,
+                        customer_id: str | None = None) -> dict:
     """استرجاع ملف العميل وسياراته بالجوال أو بلوحة أي سيارة له — بياناته ما بتضيعش أبداً"""
     br = await fetchrow("SELECT company_id FROM branches WHERE id=$1", branch_id)
     if not br:
         raise HTTPException(404, "الفرع غير موجود")
     phone = re.sub(r"[^0-9]", "", phone or "")
     plate_norm = re.sub(r"[^A-Z0-9]", "", (plate or "").upper())
-    if len(phone) < 9 and len(plate_norm) < 4:
+    if not customer_id and len(phone) < 9 and len(plate_norm) < 4:
         raise HTTPException(422, "أدخل رقم جوال صحيح أو رقم لوحة")
     cust = None
-    if len(phone) >= 9:
+    if customer_id:   # بعد التحقق برمز OTP — العميل محدّد بهويته مش بإدخال حر
+        cust = await fetchrow(
+            """SELECT id, name, phone, customer_type, vat_number, cr_number, address,
+                      building_no, street, district, city, postal_code, additional_no
+               FROM customers WHERE company_id=$1 AND id=$2""", br["company_id"], customer_id)
+        plate_norm = ""
+    elif len(phone) >= 9:
         cust = await fetchrow(
             """SELECT id, name, phone, customer_type, vat_number, cr_number, address,
                       building_no, street, district, city, postal_code, additional_no
@@ -1517,6 +1524,9 @@ async def public_create_booking(branch_id: str, d: dict) -> dict:
             """INSERT INTO customers (company_id, name, phone, customer_type)
                VALUES ($1,$2,$3,$4) RETURNING id, name""",
             company_id, name, phone, "company" if service_type == "company" else "individual")
+    if d.get("verifiedEmail"):
+        await execute("UPDATE customers SET email=COALESCE(NULLIF(email,''), $1) WHERE id=$2",
+                      d["verifiedEmail"], cust["id"])
     if service_type == "company":
         comp = d.get("company") or {}
         await execute(
