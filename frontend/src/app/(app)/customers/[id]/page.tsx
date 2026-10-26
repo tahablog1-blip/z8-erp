@@ -16,6 +16,8 @@ import { CustomerForm } from "@/components/customers/CustomerForm";
 import { Avatar, SegmentBadge, StatusBadge, statusOf } from "@/components/customers/parts";
 import { PlateBadge } from "@/components/PlateBadge";
 import { parsePlate, plateKey } from "@/lib/plate";
+import { ComboSelect } from "@/components/ComboSelect";
+import { BRANDS, CATEGORIES, COLORS, CYLINDERS, ENGINE_SIZES, MODELS, YEARS } from "@/lib/carOptions";
 import { ago, downloadCsv, fmtCurrency, fmtD, fmtDT, fmtMoney } from "@/lib/customers/format";
 import type { Profile, Segment } from "@/lib/customers/types";
 import type { Customer, Statement, Vehicle } from "@/modules/customers/types";
@@ -527,13 +529,13 @@ function VehiclesTab({ customerId, vehicles, canEdit, onChange }: { customerId: 
               <Field label="الحروف (3) *"><Input value={let3} maxLength={3} dir="ltr" className="text-center uppercase" aria-invalid={!!plateErr} onChange={(e) => setLet3(e.target.value.replace(/[^A-Za-z\u0621-\u064A]/g, ""))} /></Field>
             </> : <div className="sm:col-span-2"><Field label="رقم اللوحة *"><Input value={v.plate} autoFocus onChange={(e) => setV({ ...v, plate: e.target.value })} /></Field></div>}
             {plateErr && <p role="alert" className="text-t-xs font-bold text-ember sm:col-span-2">{plateErr}</p>}
-            <Field label="الماركة"><Input value={v.brand} onChange={(e) => setV({ ...v, brand: e.target.value })} /></Field>
-            <Field label="الموديل"><Input value={v.makeModel} onChange={(e) => setV({ ...v, makeModel: e.target.value })} /></Field>
-            <Field label="سنة الصنع"><Input value={v.modelYear} className="tnum" onChange={(e) => setV({ ...v, modelYear: e.target.value })} /></Field>
-            <Field label="اللون"><Input value={v.color} onChange={(e) => setV({ ...v, color: e.target.value })} /></Field>
-            <Field label="الفئة"><Input value={v.carCategory} onChange={(e) => setV({ ...v, carCategory: e.target.value })} /></Field>
-            <Field label="عدد السلندرات"><Input value={v.cylinders} className="tnum" onChange={(e) => setV({ ...v, cylinders: e.target.value })} /></Field>
-            <Field label="حجم المحرك"><Input value={v.engineSize} className="tnum" placeholder="مثال: 2.5" onChange={(e) => setV({ ...v, engineSize: e.target.value })} /></Field>
+            <Field label="الماركة"><ComboSelect key={`b${editing?.id ?? "new"}`} value={v.brand} options={BRANDS} placeholder="اسم الماركة" onChange={(b) => setV((p) => ({ ...p, brand: b, makeModel: b === p.brand ? p.makeModel : "" }))} /></Field>
+            <Field label="الموديل"><ComboSelect key={`m${editing?.id ?? "new"}${v.brand}`} value={v.makeModel} options={MODELS[v.brand] ?? []} placeholder="اسم الموديل" onChange={(m) => setV((p) => ({ ...p, makeModel: m }))} /></Field>
+            <Field label="سنة الصنع"><ComboSelect key={`y${editing?.id ?? "new"}`} value={v.modelYear} options={YEARS} placeholder="السنة" onChange={(y) => setV((p) => ({ ...p, modelYear: y }))} /></Field>
+            <Field label="اللون"><ComboSelect key={`c${editing?.id ?? "new"}`} value={v.color} options={COLORS} placeholder="اللون" onChange={(c) => setV((p) => ({ ...p, color: c }))} /></Field>
+            <Field label="الفئة"><ComboSelect key={`k${editing?.id ?? "new"}`} value={v.carCategory} options={CATEGORIES} placeholder="الفئة" onChange={(k) => setV((p) => ({ ...p, carCategory: k }))} /></Field>
+            <Field label="عدد السلندرات"><ComboSelect key={`l${editing?.id ?? "new"}`} value={v.cylinders} options={CYLINDERS} placeholder="العدد" onChange={(l) => setV((p) => ({ ...p, cylinders: l }))} /></Field>
+            <Field label="حجم المحرك (لتر)"><ComboSelect key={`e${editing?.id ?? "new"}`} value={v.engineSize} options={ENGINE_SIZES} placeholder="مثال: 2.5" onChange={(e) => setV((p) => ({ ...p, engineSize: e }))} /></Field>
             <Field label="رقم الهيكل (VIN)"><Input value={v.chassisNumber} dir="ltr" className="tnum text-end" onChange={(e) => setV({ ...v, chassisNumber: e.target.value })} /></Field>
             <div className="sm:col-span-2"><Field label="ملاحظات"><Textarea rows={2} value={v.notes} onChange={(e) => setV({ ...v, notes: e.target.value })} /></Field></div>
           </div>
