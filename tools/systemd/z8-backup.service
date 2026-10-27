@@ -1,0 +1,9 @@
+[Unit]
+Description=Z8 database backup
+After=postgresql.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/z8-erp
+ExecStart=/usr/bin/env bash /opt/z8-erp/tools/backup-db.sh
+Nice=10

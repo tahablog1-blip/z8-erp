@@ -1,0 +1,6 @@
+-r requirements.txt
+pytest==8.3.4
+httpx==0.28.1
+weasyprint==70.0
+segno==1.6.1
+pypdf==5.1.0

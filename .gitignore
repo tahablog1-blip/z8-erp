@@ -77,3 +77,8 @@ node_modules/
 *.dump
 *.bak
 frontend/tsconfig.tsbuildinfo
+
+# deploy.sh
+.next-build/
+.next.prev/
+.deploy-prev
