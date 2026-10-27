@@ -183,7 +183,7 @@ export default function Supplier360Page() {
               <td className="p-2.5 text-t-xs">{fmtD(i.date)}</td><td className="tnum p-2.5 font-bold">{canInvoice ? <Link href="/purchases" className="text-petrol hover:underline">{i.invoiceNo}</Link> : i.invoiceNo}</td>
               <td className="p-2.5 text-t-xs">{i.supplierRef || "—"}</td><td className="p-2.5 text-t-xs">{i.terms === "cash" ? "نقداً" : i.dueDate ? fmtD(i.dueDate) : "—"}</td>
               <td className="tnum p-2.5">{fmtM(i.total)}</td><td className="tnum p-2.5 text-text-dim">{fmtM(i.vat)}</td><td className="tnum p-2.5">{fmtM(i.paid)}</td><td className="tnum p-2.5 font-black">{fmtM(i.outstanding)}</td>
-              <td className="p-2.5"><span className={`rounded-full px-2 py-0.5 text-t-xs font-bold ${i.overdue ? "bg-ember-bg text-ember" : i.status === "paid" ? "bg-emerald-bg text-emerald" : "bg-brass-bg text-brass"}`}>{i.overdue ? "متأخرة" : INV_STATUS[i.status] || i.status}</span></td></tr>))}</tbody></table></div>
+              <td className="p-2.5"><Badge tone={i.overdue ? "danger" : i.status === "paid" ? "success" : "warning"}>{i.overdue ? "متأخرة" : INV_STATUS[i.status] || i.status}</Badge></td></tr>))}</tbody></table></div>
         ))}
 
         {tab === "payments" && (data.payments.length === 0 ? <EmptyState icon="payments" title="لا مدفوعات مسجلة" description="تظهر هنا سندات الصرف. المشتريات النقدية تُدفع لحظة الشراء ولا تُسجَّل كسندات." /> : (
