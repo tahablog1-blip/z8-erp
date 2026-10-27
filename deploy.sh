@@ -58,7 +58,8 @@ fi
 
 if [ -f backend/requirements.txt ]; then
   echo "==> تحديث تبعيات الباك اند"
-  (cd backend && { [ -d .venv ] && . .venv/bin/activate; pip install -q -r requirements.txt; }) || echo "    (تخطّيت pip)"
+  (cd backend && { for v in venv .venv; do [ -f "$v/bin/activate" ] && { . "$v/bin/activate"; break; }; done
+                   pip install -q -r requirements.txt; }) || echo "    (تخطّيت pip — لا بيئة venv أو فشل التثبيت)"
 fi
 
 echo "==> تبديل النسخة وإعادة التشغيل"
@@ -70,7 +71,12 @@ eval "$RESTART_CMD" || true
 
 echo "==> فحص الصحة"
 if healthy; then
-  curl -fsS -o /dev/null --max-time 5 "$API_HEALTH_URL" 2>/dev/null || echo "    (تنبيه: $API_HEALTH_URL لم يستجب — تأكد يدوياً)"
+  api_ok=0   # الـ API يحتاج بضع ثوانٍ بعد إعادة التشغيل (DDL التلقائي) — نعيد المحاولة حتى ~30 ثانية
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    if curl -fsS -o /dev/null --max-time 5 "$API_HEALTH_URL" 2>/dev/null; then api_ok=1; break; fi
+    sleep 3
+  done
+  [ "$api_ok" = 1 ] || echo "    (تنبيه: $API_HEALTH_URL لم يستجب — افحص: journalctl -u z8-api -n 40 --no-pager)"
   echo "==> تم. النسخة = $(git rev-parse --short HEAD) (للرجوع: bash deploy.sh --rollback)"
 else
   echo "!! فشل فحص الصحة بعد النشر"
