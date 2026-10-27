@@ -1,944 +1,232 @@
 "use client";
-
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
+// جرد المخزون — مركز قيادة الجرد: مؤشرات حقيقية من /inventory/stocktakes/summary + قائمة الجلسات (بحث/موقع/حالة) + شاشة العدّ.
+// لا تعديل للمخزون من هنا: الاعتماد والتسوية يتمّان في الباك اند عبر مسارات الجرد القائمة وبصلاحياتها.
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Switch } from "@/components/ui";
+import { MIcon } from "@/components/m-icon";
+import { Badge, Button, EmptyState, ErrorNote, Field, Input, Modal, Select, Textarea } from "@/components/ui";
+import { KpiCard, KpiSkeleton } from "@/components/dashboard/KpiCard";
+import { CountScreen } from "@/components/stocktake/CountScreen";
+import { fmtDT, downloadCsv } from "@/lib/customers/format";
+import { fmtMoney } from "@/lib/dashboard/format";
+import { kpisHTML, printReport, tableHTML } from "@/lib/print";
+import {
+  STATUS_LABEL, STATUS_TONE, signed,
+  type Branch, type Session, type StocktakeDetail, type Summary,
+} from "@/lib/stocktake/types";
 
-type Branch = { id: string; name: string };
-
-type Session = {
-  id: string;
-  locType: string;
-  locId: string;
-  status: string;
-  note: string | null;
-  createdByName: string | null;
-  createdAt: string | null;
-  approvedByName: string | null;
-  approvedAt: string | null;
-  totalItems: number;
-  countedItems: number;
-};
-
-type StocktakeItem = {
-  id: string;
-  productId: string;
-  name: string;
-  barcode: string | null;
-  category: string | null;
-  spec: string | null;
-  unit: string | null;
-  expectedQty: number;
-  countedQty: number | null;
-  difference: number | null;
-  currentQty: number;
-  unitCost: number;
-  diffValue: number | null;
-  note: string | null;
-};
-
-type StocktakeDetail = Session & {
-  items: StocktakeItem[];
-  shortageValue: number;
-  surplusValue: number;
-  zeroCostDiffItems: number;
-};
-
-type ImportPreview = {
-  committed: boolean;
-  totalPieces: number;
-  distinctBarcodes: number;
-  matched: {
-    productId: string;
-    name: string;
-    barcode: string;
-    scanned: number;
-    expectedQty: number;
-    previousCounted: number | null;
-    difference: number;
-  }[];
-  unmatched: { barcode: string; count: number }[];
-  uncountedRemaining: number;
-};
-
-const STATUS: Record<string, string> = {
-  in_progress: "جاري الجرد",
-  review: "بانتظار المراجعة",
-  approved: "معتمد",
-  cancelled: "ملغي",
-};
-
-const fmtMoney = (n: number) =>
-  n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-const buttonClass =
-  "rounded-xl px-4 py-2.5 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50";
+const PER = 15;
 
 export default function StocktakePage() {
   const { user, hasPerm } = useAuth();
-
   const canCreate = hasPerm("inventory.stocktake");
   const canApprove = hasPerm("inventory.stocktake_approve");
   const isAdmin = user?.role === "admin";
 
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [summary, setSummary] = useState<Summary | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [detail, setDetail] = useState<StocktakeDetail | null>(null);
-
-  const [locType, setLocType] = useState<"warehouse" | "branch">("branch");
-  const [locId, setLocId] = useState("");
-  const [newNote, setNewNote] = useState("");
-  const [search, setSearch] = useState("");
-  const [counts, setCounts] = useState<Record<string, string>>({});
-  const [notes, setNotes] = useState<Record<string, string>>({});
-
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [savingProduct, setSavingProduct] = useState("");
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
 
-  const loadSessions = useCallback(async () => {
-    const rows = await api<Session[]>("/inventory/stocktakes");
-    setSessions(rows);
+  const [fLoc, setFLoc] = useState("");          // "" | "warehouse" | branchId
+  const [fStatus, setFStatus] = useState("");
+  const [fQ, setFQ] = useState("");
+  const [page, setPage] = useState(1);
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [locType, setLocType] = useState<"warehouse" | "branch">("branch");
+  const [locId, setLocId] = useState("");
+  const [note, setNote] = useState("");
+
+  const locName = useCallback((type: string, id: string) =>
+    type === "warehouse" ? "المستودع الرئيسي" : branches.find((b) => String(b.id) === String(id))?.name || `الفرع ${id}`, [branches]);
+
+  const reload = useCallback(async () => {
+    const [rows, sum] = await Promise.all([
+      api<Session[]>("/inventory/stocktakes"),
+      api<Summary>("/inventory/stocktakes/summary"),
+    ]);
+    setSessions(rows); setSummary(sum);
   }, []);
 
-  const loadBranches = useCallback(async () => {
-    const rows = await api<Branch[]>("/branches");
-    setBranches(rows);
-
-    if (!isAdmin && user?.branchId) {
-      setLocType("branch");
-      setLocId(user.branchId);
-    } else if (isAdmin && rows.length) {
-      setLocId((previous) => previous || rows[0].id);
-    }
-  }, [isAdmin, user?.branchId]);
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      setLoading(true); setError("");
+      try {
+        const [, br] = await Promise.all([reload(), api<Branch[]>("/branches").then((b) => live && setBranches(b))]);
+        void br;
+      } catch (e) { if (live) setError(e instanceof Error ? e.message : "تعذر تحميل بيانات الجرد"); }
+      finally { if (live) setLoading(false); }
+    })();
+    return () => { live = false; };
+  }, [reload]);
 
   useEffect(() => {
-    let active = true;
+    if (!isAdmin && user?.branchId) { setLocType("branch"); setLocId(user.branchId); }
+    else if (isAdmin && branches.length) setLocId((p) => p || branches[0].id);
+  }, [isAdmin, user?.branchId, branches]);
 
-    async function init() {
-      setLoading(true);
-      setError("");
+  async function open(id: string) {
+    setBusy(true); setError("");
+    try { setDetail(await api<StocktakeDetail>(`/inventory/stocktakes/${id}`)); }
+    catch (e) { setError(e instanceof Error ? e.message : "تعذر فتح جلسة الجرد"); }
+    finally { setBusy(false); }
+  }
 
-      try {
-        const [rows, branchRows] = await Promise.all([
-          api<Session[]>("/inventory/stocktakes"),
-          api<Branch[]>("/branches"),
-        ]);
-
-        if (!active) return;
-
-        setSessions(rows);
-        setBranches(branchRows);
-
-        if (!isAdmin && user?.branchId) {
-          setLocType("branch");
-          setLocId(user.branchId);
-        } else if (isAdmin && branchRows.length) {
-          setLocId((previous) => previous || branchRows[0].id);
-        }
-      } catch (e: unknown) {
-        if (active) {
-          setError(e instanceof Error ? e.message : "تعذر تحميل بيانات الجرد");
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-
-    init();
-    return () => { active = false; };
-  }, [isAdmin, user?.branchId]);
-
-  const locationName = useCallback((type: string, id: string) => {
-    if (type === "warehouse") return "المستودع الرئيسي";
-    return branches.find((b) => String(b.id) === String(id))?.name
-      || `الفرع ${id}`;
-  }, [branches]);
-
-  async function openSession(id: string) {
-    setBusy(true);
-    setError("");
-    setMessage("");
-
+  async function create() {
+    if (busy || (locType === "branch" && !locId)) return;
+    setBusy(true); setError("");
     try {
-      const data = await api<StocktakeDetail>(`/inventory/stocktakes/${id}`);
-      setDetail(data);
-
-      const initialCounts: Record<string, string> = {};
-      const initialNotes: Record<string, string> = {};
-
-      data.items.forEach((item) => {
-        initialCounts[item.productId] =
-          item.countedQty == null ? "" : String(item.countedQty);
-        initialNotes[item.productId] = item.note || "";
+      const d = await api<StocktakeDetail>("/inventory/stocktakes", {
+        method: "POST", body: JSON.stringify({ locType, locId: locType === "warehouse" ? "main" : locId, note: note.trim() || null }),
       });
-
-      setCounts(initialCounts);
-      setNotes(initialNotes);
-      setSearch("");
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "تعذر فتح جلسة الجرد");
-    } finally {
-      setBusy(false);
-    }
+      setShowCreate(false); setNote("");
+      await reload(); setDetail(d);
+    } catch (e) { setError(e instanceof Error ? e.message : "تعذر إنشاء الجرد"); }
+    finally { setBusy(false); }
   }
 
-  async function createSession() {
-    if (!canCreate || busy) return;
+  const filtered = useMemo(() => {
+    const s = fQ.trim().toLowerCase();
+    return sessions.filter((x) =>
+      (!fLoc || (fLoc === "warehouse" ? x.locType === "warehouse" : x.locType === "branch" && String(x.locId) === fLoc))
+      && (!fStatus || x.status === fStatus)
+      && (!s || [x.note, x.createdByName, x.approvedByName, locName(x.locType, x.locId), x.id].some((v) => (v || "").toLowerCase().includes(s))));
+  }, [sessions, fLoc, fStatus, fQ, locName]);
+  useEffect(() => setPage(1), [fLoc, fStatus, fQ]);
+  const pages = Math.max(1, Math.ceil(filtered.length / PER));
+  const rows = filtered.slice((page - 1) * PER, page * PER);
 
-    if (locType === "branch" && !locId) {
-      setError("اختر الفرع أولاً.");
-      return;
-    }
-
-    setBusy(true);
-    setError("");
-    setMessage("");
-
-    try {
-      const created = await api<StocktakeDetail>("/inventory/stocktakes", {
-        method: "POST",
-        body: JSON.stringify({
-          locType,
-          locId: locType === "warehouse" ? "main" : locId,
-          note: newNote.trim() || null,
-        }),
-      });
-
-      setShowCreate(false);
-      setNewNote("");
-      await loadSessions();
-      await openSession(created.id);
-      setMessage("تم إنشاء جلسة الجرد. لم تتغير أرصدة المخزون.");
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "تعذر إنشاء الجرد");
-    } finally {
-      setBusy(false);
-    }
+  function exportList() {
+    downloadCsv("stocktakes.csv", ["الموقع", "التاريخ", "المنشئ", "الأصناف", "المعدود", "أصناف بفرق", "قيمة العجز", "قيمة الزيادة", "الحالة"],
+      filtered.map((x) => [locName(x.locType, x.locId), x.createdAt, x.createdByName, x.totalItems, x.countedItems, x.diffItems, x.shortageValue, x.surplusValue, STATUS_LABEL[x.status] || x.status]));
+  }
+  function printList() {
+    printReport("جرد المخزون — قائمة الجلسات", `${filtered.length} جلسة`,
+      (summary ? kpisHTML([
+        { label: "إجمالي الجلسات", value: String(summary.total) }, { label: "مفتوحة", value: String(summary.open) },
+        { label: "قيد المراجعة", value: String(summary.review) }, { label: "معتمدة", value: String(summary.approved) },
+        { label: "العجز المعتمد", value: fmtMoney(summary.shortageValue) }, { label: "الزيادة المعتمدة", value: fmtMoney(summary.surplusValue) },
+      ]) : "") + tableHTML(["الموقع", "التاريخ", "المنشئ", "الأصناف", "بفرق", "العجز", "الزيادة", "الحالة"],
+        filtered.map((x) => [locName(x.locType, x.locId), fmtDT(x.createdAt), x.createdByName || "—", `${x.countedItems}/${x.totalItems}`, x.diffItems, fmtMoney(x.shortageValue), fmtMoney(x.surplusValue), STATUS_LABEL[x.status] || x.status]),
+        { numericCols: [3, 4, 5, 6] }));
   }
 
-  async function saveCount(item: StocktakeItem) {
-    if (!detail || detail.status !== "in_progress" || savingProduct) return;
-
-    const raw = counts[item.productId]?.trim() ?? "";
-
-    if (raw === "" || !Number.isSafeInteger(Number(raw)) || Number(raw) < 0) {
-      setError("أدخل كمية صحيحة غير سالبة قبل الحفظ.");
-      return;
-    }
-
-    setSavingProduct(item.productId);
-    setError("");
-    setMessage("");
-
-    try {
-      await api(
-        `/inventory/stocktakes/${detail.id}/items/${item.productId}`,
-        {
-          method: "PUT",
-          body: JSON.stringify({
-            countedQty: Number(raw),
-            note: notes[item.productId]?.trim() || null,
-          }),
-        },
-      );
-
-      const refreshed = await api<StocktakeDetail>(
-        `/inventory/stocktakes/${detail.id}`,
-      );
-
-      setDetail(refreshed);
-      setCounts((previous) => ({
-        ...previous,
-        [item.productId]: refreshed.items.find(
-          (x) => x.productId === item.productId,
-        )?.countedQty == null
-          ? ""
-          : String(refreshed.items.find(
-              (x) => x.productId === item.productId,
-            )?.countedQty),
-      }));
-      setNotes((previous) => ({
-        ...previous,
-        [item.productId]: refreshed.items.find(
-          (x) => x.productId === item.productId,
-        )?.note || "",
-      }));
-
-      await loadSessions();
-      setMessage(`تم حفظ عدّ الصنف: ${item.name}`);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "تعذر حفظ الكمية");
-    } finally {
-      setSavingProduct("");
-    }
-  }
-
-  async function submitReview() {
-    if (!detail || detail.status !== "in_progress" || busy) return;
-
-    if (detail.items.some((item) => item.countedQty == null)) {
-      setError("لا يمكن الإرسال للمراجعة قبل تسجيل الكمية لكل الأصناف.");
-      return;
-    }
-
-    if (!window.confirm("إرسال جلسة الجرد للمراجعة؟ لن تتم تسوية الأرصدة الآن.")) {
-      return;
-    }
-
-    setBusy(true);
-    setError("");
-    setMessage("");
-
-    try {
-      await api(`/inventory/stocktakes/${detail.id}/review`, {
-        method: "POST",
-      });
-      await openSession(detail.id);
-      await loadSessions();
-      setMessage("تم إرسال الجرد للمراجعة.");
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "تعذر إرسال الجرد");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function approveSession() {
-    if (!detail || detail.status !== "review" || !canApprove || busy) return;
-
-    if (!window.confirm(
-      "تحذير: اعتماد الجرد قد يغيّر أرصدة المخزون. هل راجعت الفروق وتريد الاعتماد؟",
-    )) return;
-
-    setBusy(true);
-    setError("");
-    setMessage("");
-
-    try {
-      await api(`/inventory/stocktakes/${detail.id}/approve`, {
-        method: "POST",
-      });
-      await openSession(detail.id);
-      await loadSessions();
-      setMessage("تم اعتماد الجرد بنجاح.");
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "تعذر اعتماد الجرد");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [zeroRest, setZeroRest] = useState(false);
-
-  async function cancelSession() {
-    if (!detail || busy) return;
-    if (!window.confirm("إلغاء جلسة الجرد؟ لن يتغير أي رصيد، ولا يمكن التراجع.")) return;
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      await api(`/inventory/stocktakes/${detail.id}/cancel`, { method: "POST" });
-      await openSession(detail.id);
-      await loadSessions();
-      setMessage("تم إلغاء الجلسة.");
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "تعذر إلغاء الجلسة");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function pickImportFile(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !detail || busy) return;
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await api<ImportPreview>(
-        `/inventory/stocktakes/${detail.id}/import?commit=false`,
-        { method: "POST", body: fd },
-      );
-      setImportFile(file);
-      setZeroRest(false);
-      setImportPreview(res);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "تعذر قراءة الملف");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function commitImport() {
-    if (!detail || !importFile || busy) return;
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      const fd = new FormData();
-      fd.append("file", importFile);
-      await api(
-        `/inventory/stocktakes/${detail.id}/import?commit=true&zeroRest=${zeroRest}`,
-        { method: "POST", body: fd },
-      );
-      setImportPreview(null);
-      setImportFile(null);
-      await openSession(detail.id);
-      await loadSessions();
-      setMessage("تم حفظ الكميات من الملف.");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "تعذر حفظ الكميات");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const visibleItems = useMemo(() => {
-    if (!detail) return [];
-
-    const q = search.trim().toLowerCase();
-    if (!q) return detail.items;
-
-    return detail.items.filter((item) =>
-      [item.name, item.barcode, item.category, item.spec]
-        .some((v) => (v || "").toLowerCase().includes(q)),
-    );
-  }, [detail, search]);
-
-  const counted = detail?.items.filter((item) => item.countedQty != null).length || 0;
-  const totalDifference = detail?.items.reduce(
-    (sum, item) => sum + (item.difference ?? 0), 0,
-  ) || 0;
+  const onChange = useCallback((d: StocktakeDetail) => { setDetail(d); reload().catch(() => undefined); }, [reload]);
 
   if (!canCreate) {
-    return (
-      <main dir="rtl" className="mx-auto max-w-5xl p-6">
-        <div className="rounded-2xl border border-amber-200 bg-brass-soft p-5 text-sm font-bold text-brass">
-          ليس لديك صلاحية إدارة الجرد الفعلي. راجع مدير النظام لمنحك صلاحية inventory.stocktake.
-        </div>
-      </main>
-    );
+    return <main dir="rtl" className="mx-auto max-w-5xl p-6"><div className="rounded-card border border-brass/40 bg-brass-soft p-5 text-t-sm font-bold text-brass">ليس لديك صلاحية إدارة الجرد الفعلي. راجع مدير النظام لمنحك صلاحية inventory.stocktake.</div></main>;
   }
 
   return (
-    <main dir="rtl" className="mx-auto max-w-[1500px] space-y-5 p-4 md:p-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-black text-text">الجرد الفعلي</h1>
-          <p className="mt-1 text-sm text-text-dim">
-            تسجيل الكميات ومراجعة الفروق قبل تسوية المخزون.
-          </p>
+    <main dir="rtl" className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
+      {detail ? (
+        <CountScreen detail={detail} locName={locName(detail.locType, detail.locId)} canApprove={canApprove} onChange={onChange} onClose={() => setDetail(null)} />
+      ) : (<>
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-t-3xl font-black">جرد المخزون</h1>
+            <p className="mt-1 text-t-sm text-text-dim">إدارة عمليات الجرد ومراجعة فروقات المخزون واعتماد التسويات.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="tool" onClick={exportList} disabled={!filtered.length}><MIcon name="download" className="!text-[18px]" />تصدير</Button>
+            <Button variant="tool" onClick={printList} disabled={!filtered.length}><MIcon name="print" className="!text-[18px]" />طباعة</Button>
+            <Button onClick={() => { setShowCreate(true); setError(""); }}><MIcon name="add" className="!text-[18px]" />إنشاء جرد</Button>
+          </div>
+        </header>
+
+        {error && <ErrorNote msg={error} />}
+
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 2xl:grid-cols-7">
+          {loading || !summary ? Array.from({ length: 7 }).map((_, i) => <KpiSkeleton key={i} />) : (<>
+            <KpiCard label="إجمالي الجرد" icon="inventory" value={String(summary.total)} sub={summary.cancelled ? `${summary.cancelled} ملغاة` : undefined} />
+            <KpiCard label="الجرد المفتوح" icon="edit_note" value={String(summary.open)} accent="var(--brass)" />
+            <KpiCard label="قيد المراجعة" icon="fact_check" value={String(summary.review)} accent="var(--brass)" sub={summary.review ? "تحتاج اعتماد" : undefined} subTone="warning" />
+            <KpiCard label="تم الاعتماد" icon="verified" value={String(summary.approved)} accent="var(--emerald)" />
+            <KpiCard label="إجمالي الزيادة" icon="trending_up" value={fmtMoney(summary.surplusValue)} accent="var(--petrol)" tip="قيمة الزيادة في الجلسات المعتمدة بالتكلفة" />
+            <KpiCard label="إجمالي العجز" icon="trending_down" value={fmtMoney(summary.shortageValue)} accent="var(--ember)" tip="قيمة العجز في الجلسات المعتمدة بالتكلفة" />
+            <KpiCard label="صافي الفرق" icon="balance" value={fmtMoney(summary.netValue)} accent={summary.netValue < 0 ? "var(--ember)" : "var(--petrol)"} sub="الجلسات المعتمدة" />
+          </>)}
         </div>
 
-        <button
-          className={`${buttonClass} bg-slate-900 text-white`}
-          onClick={() => { setShowCreate(!showCreate); setError(""); }}
-          disabled={busy}
-        >
-          {showCreate ? "إلغاء" : "+ جلسة جرد جديدة"}
-        </button>
-      </header>
-
-      {error && (
-        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-          {error}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[220px] flex-1">
+            <MIcon name="search" className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-text-dim rtl:right-3 ltr:left-3 !text-[18px]" />
+            <Input className="rtl:!pr-9 ltr:!pl-9" value={fQ} onChange={(e) => setFQ(e.target.value)} placeholder="بحث بالموقع / المنشئ / الملاحظة" aria-label="بحث في الجلسات" />
+          </div>
+          {isAdmin && (
+            <Select value={fLoc} onChange={(e) => setFLoc(e.target.value)} aria-label="الموقع" className="max-w-[220px]">
+              <option value="">كل المواقع</option><option value="warehouse">المستودع الرئيسي</option>
+              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </Select>
+          )}
+          <Select value={fStatus} onChange={(e) => setFStatus(e.target.value)} aria-label="الحالة" className="max-w-[180px]">
+            <option value="">كل الحالات</option>
+            {Object.entries(STATUS_LABEL).filter(([k]) => k !== "draft").map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </Select>
         </div>
-      )}
-      {message && (
-        <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-          {message}
-        </div>
-      )}
 
-      {showCreate && (
-        <section className="rounded-2xl border border-line bg-ink-2 p-5 shadow-sm">
-          <h2 className="mb-4 text-lg font-extrabold">إنشاء جلسة جرد</h2>
-
-          {isAdmin ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="block text-sm font-bold">
-                نوع الموقع
-                <select
-                  className="mt-2 w-full rounded-xl border border-line bg-ink-2 p-3"
-                  value={locType}
-                  onChange={(e) => setLocType(e.target.value as "warehouse" | "branch")}
-                >
-                  <option value="branch">فرع</option>
-                  <option value="warehouse">المستودع الرئيسي</option>
-                </select>
-              </label>
-
-              {locType === "branch" && (
-                <label className="block text-sm font-bold">
-                  الفرع
-                  <select
-                    className="mt-2 w-full rounded-xl border border-line bg-ink-2 p-3"
-                    value={locId}
-                    onChange={(e) => setLocId(e.target.value)}
-                  >
-                    <option value="">اختر الفرع</option>
-                    {branches.map((b) => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
-                    ))}
-                  </select>
-                </label>
-              )}
-            </div>
+        {loading ? <div className="rounded-card border border-line bg-ink-2 p-6 text-t-sm text-text-dim">جارٍ تحميل الجلسات…</div>
+          : filtered.length === 0 ? (
+            <EmptyState icon="inventory" title={sessions.length ? "لا توجد جلسات مطابقة" : "لا توجد عمليات جرد بعد"} description={sessions.length ? "غيّر البحث أو التصفية." : "أنشئ أول جلسة جرد لموقعك لمقارنة الفعلي بالنظام."}
+              action={sessions.length ? undefined : <Button onClick={() => setShowCreate(true)}>إنشاء جرد</Button>} />
           ) : (
-            <p className="mb-3 text-sm text-text-dim">
-              موقع الجرد: {locationName("branch", user?.branchId || "")}
-            </p>
-          )}
-
-          <label className="mt-4 block text-sm font-bold">
-            ملاحظات الجرد (اختياري)
-            <textarea
-              className="mt-2 w-full rounded-xl border border-line p-3"
-              rows={2}
-              maxLength={500}
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              placeholder="سبب الجرد أو أي ملاحظات..."
-            />
-          </label>
-
-          <p className="my-3 text-xs leading-6 text-text-dim">
-            إنشاء الجلسة يأخذ لقطة للأرصدة الحالية ويجهّز الأصناف للعدّ.
-            لن يتم تعديل المخزون حتى الاعتماد.
-          </p>
-
-          <button
-            className={`${buttonClass} bg-blue-700 text-white`}
-            onClick={createSession}
-            disabled={busy || (locType === "branch" && !locId)}
-          >
-            {busy ? "جارٍ الإنشاء..." : "إنشاء الجلسة"}
-          </button>
-        </section>
-      )}
-
-      <section className="overflow-hidden rounded-2xl border border-line bg-ink-2 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4">
-          <h2 className="font-extrabold">جلسات الجرد</h2>
-          <button
-            className={`${buttonClass} border border-line text-text`}
-            onClick={() => {
-              setLoading(true);
-              setError("");
-              loadSessions()
-                .catch((e: unknown) => setError(e instanceof Error ? e.message : "تعذر تحديث القائمة"))
-                .finally(() => setLoading(false));
-            }}
-            disabled={loading}
-          >
-            تحديث
-          </button>
-        </div>
-
-        {loading ? (
-          <p className="p-6 text-sm text-text-dim">جارٍ تحميل الجلسات...</p>
-        ) : sessions.length === 0 ? (
-          <p className="p-6 text-sm text-text-dim">لا توجد جلسات جرد حتى الآن.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[750px] text-right text-sm">
-              <thead className="bg-ink-3 text-xs text-text-dim">
-                <tr>
-                  <th className="p-3">الموقع</th>
-                  <th className="p-3">تاريخ الإنشاء</th>
-                  <th className="p-3">منشئ الجلسة</th>
-                  <th className="p-3">التقدم</th>
-                  <th className="p-3">الحالة</th>
-                  <th className="p-3">الإجراء</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sessions.map((s) => (
-                  <tr key={s.id} className="border-t border-line">
-                    <td className="p-3 font-bold">
-                      {locationName(s.locType, s.locId)}
-                    </td>
-                    <td className="p-3">
-                      {s.createdAt ? new Date(s.createdAt).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA")) : "—"}
-                    </td>
-                    <td className="p-3">{s.createdByName || "—"}</td>
-                    <td className="p-3">
-                      {s.countedItems} / {s.totalItems}
-                    </td>
-                    <td className="p-3">
-                      <span className="rounded-full bg-ink-3 px-3 py-1 text-xs font-bold">
-                        {STATUS[s.status] || s.status}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      <button
-                        className="font-bold text-blue-700 hover:underline"
-                        onClick={() => openSession(s.id)}
-                        disabled={busy}
-                      >
-                        فتح الجلسة
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      {detail && (
-        <section className="space-y-4 rounded-2xl border border-line bg-ink-2 p-4 shadow-sm md:p-5">
-          <div className="flex flex-wrap gap-3 border-b border-line pb-4">
-            {detail.status === "in_progress" && (
-              <>
-                <label className={`${buttonClass} cursor-pointer bg-sky-700 text-white`}>
-                  رفع ملف Excel / CSV
-                  <input
-                    type="file"
-                    accept=".xlsx,.xlsm,.csv"
-                    className="hidden"
-                    onChange={pickImportFile}
-                    disabled={busy}
-                  />
-                </label>
-                <a
-                  className={`${buttonClass} bg-ink-3 text-text`}
-                  href="data:text/csv;charset=utf-8,%EF%BB%BFbarcode%0A"
-                  download="stocktake-template.csv"
-                >
-                  تحميل قالب
-                </a>
-              </>
-            )}
-            {(detail.status === "in_progress" || detail.status === "review") && (
-              <button
-                className={`${buttonClass} border border-red-300 bg-ink-2 text-red-700`}
-                onClick={cancelSession}
-                disabled={busy}
-              >
-                إلغاء الجلسة
-              </button>
-            )}
-            {detail.status === "in_progress" && (
-              <button
-                className={`${buttonClass} bg-amber-600 text-white`}
-                onClick={submitReview}
-                disabled={busy || !!savingProduct || counted === 0}
-              >
-                إرسال للمراجعة
-              </button>
-            )}
-
-            {detail.status === "review" && canApprove && (
-              <button
-                className={`${buttonClass} bg-emerald-700 text-white`}
-                onClick={approveSession}
-                disabled={busy || !!savingProduct}
-              >
-                اعتماد الجرد وتسوية الأرصدة
-              </button>
-            )}
-
-            {detail.status === "review" && !canApprove && (
-              <p className="self-center text-sm text-amber-800">
-                الجرد بانتظار مستخدم لديه صلاحية اعتماد الجرد.
-              </p>
-            )}
-
-            {detail.status === "approved" && (
-              <p className="self-center text-sm font-bold text-emerald-700">
-                تم اعتماد الجرد.
-              </p>
-            )}
-
-            {detail.status === "cancelled" && (
-              <p className="self-center text-sm text-text-dim">هذه الجلسة ملغاة.</p>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-black">
-                تفاصيل الجرد — {locationName(detail.locType, detail.locId)}
-              </h2>
-              <p className="mt-1 text-xs text-text-dim">
-                رقم الجلسة: {detail.id}
-              </p>
-              {detail.note && (
-                <p className="mt-1 text-sm text-text-dim">{detail.note}</p>
-              )}
-            </div>
-            <button
-              className={`${buttonClass} border border-line text-text`}
-              onClick={() => setDetail(null)}
-            >
-              إغلاق التفاصيل
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <div className="rounded-xl bg-ink-3 p-3">
-              <p className="text-xs text-text-dim">عدد الأصناف</p>
-              <p className="mt-1 text-xl font-black">{detail.totalItems}</p>
-            </div>
-            <div className="rounded-xl bg-ink-3 p-3">
-              <p className="text-xs text-text-dim">تم عدّه</p>
-              <p className="mt-1 text-xl font-black">{counted}</p>
-            </div>
-            <div className="rounded-xl bg-ink-3 p-3">
-              <p className="text-xs text-text-dim">متبقٍ للعدّ</p>
-              <p className="mt-1 text-xl font-black">{detail.totalItems - counted}</p>
-            </div>
-            <div className="rounded-xl bg-ink-3 p-3">
-              <p className="text-xs text-text-dim">صافي الفروق المسجلة</p>
-              <p className="mt-1 text-xl font-black" dir="ltr">{totalDifference}</p>
-            </div>
-          </div>
-
-          {detail.status === "in_progress" && (
-            <div className="rounded-xl bg-blue-50 p-3 text-sm leading-6 text-blue-900">
-              أدخل الكمية الفعلية واحفظ كل صنف. البحث أدناه يفلتر الأصناف المحمّلة
-              داخل المتصفح ولا ينشئ جلسات أو يغيّر الأرصدة.
-            </div>
-          )}
-
-          <input
-            className="w-full rounded-xl border border-line p-3 text-sm"
-            placeholder="ابحث باسم الصنف أو الباركود أو المواصفة..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[850px] text-right text-sm">
-              <thead className="bg-ink-3 text-xs text-text-dim">
-                <tr>
-                  <th className="p-3">الصنف</th>
-                  <th className="p-3">الباركود</th>
-                  <th className="p-3">الرصيد المتوقع</th>
-                  <th className="p-3">الكمية المعدودة</th>
-                  <th className="p-3">الفرق</th>
-                  {detail.status === "in_progress" && <th className="p-3">حفظ</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {visibleItems.map((item) => (
-                  <tr key={item.productId} className="border-t border-line align-top">
-                    <td className="max-w-[300px] p-3">
-                      <p className="font-bold">{item.name}</p>
-                      <p className="mt-1 text-xs text-text-dim">
-                        {[item.category, item.spec, item.unit].filter(Boolean).join(" • ") || "—"}
-                      </p>
-                      {detail.status === "in_progress" && (
-                        <input
-                          className="mt-2 w-full rounded-lg border border-line p-2 text-xs"
-                          placeholder="ملاحظة للصنف (اختياري)"
-                          value={notes[item.productId] || ""}
-                          onChange={(e) => setNotes((old) => ({
-                            ...old, [item.productId]: e.target.value,
-                          }))}
-                        />
-                      )}
-                      {detail.status !== "in_progress" && item.note && (
-                        <p className="mt-1 text-xs text-text-dim">{item.note}</p>
-                      )}
-                    </td>
-                    <td className="p-3 text-xs" dir="ltr">{item.barcode || "—"}</td>
-                    <td className="p-3 font-bold">{item.expectedQty}</td>
-                    <td className="p-3">
-                      {detail.status === "in_progress" ? (
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          inputMode="numeric"
-                          className="w-28 rounded-lg border border-line p-2 font-bold"
-                          value={counts[item.productId] ?? ""}
-                          onChange={(e) => setCounts((old) => ({
-                            ...old, [item.productId]: e.target.value,
-                          }))}
-                          aria-label={`الكمية المعدودة ${item.name}`}
-                        />
-                      ) : (
-                        item.countedQty ?? "—"
-                      )}
-                    </td>
-                    <td className="p-3 font-black" dir="ltr">
-                      {item.difference == null ? "—" : (
-                        <span className={
-                          item.difference < 0 ? "text-red-700" :
-                          item.difference > 0 ? "text-emerald-700" : "text-text-dim"
-                        }>
-                          {item.difference > 0 ? `+${item.difference}` : item.difference}
-                        </span>
-                      )}
-                    </td>
-                    {detail.status === "in_progress" && (
-                      <td className="p-3">
-                        <button
-                          className={`${buttonClass} bg-blue-700 px-3 py-2 text-white`}
-                          onClick={() => saveCount(item)}
-                          disabled={busy || !!savingProduct}
-                        >
-                          {savingProduct === item.productId ? "حفظ..." : "حفظ"}
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {visibleItems.length === 0 && (
-              <p className="p-6 text-center text-sm text-text-dim">
-                لا توجد أصناف مطابقة للبحث.
-              </p>
-            )}
-          </div>
-
-          {detail.countedItems > 0 && detail.status !== "cancelled" && (
-            <div className="rounded-2xl border border-line p-4">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div>
-                  <p className="text-xs text-text-dim">قيمة العجز (بالتكلفة)</p>
-                  <p className="mt-1 text-xl font-black text-red-600">
-                    {fmtMoney(detail.shortageValue)}
-                  </p>
+            <div className="overflow-x-auto rounded-card border border-line bg-ink-2 shadow-card">
+              <table className="w-full min-w-[860px] text-right text-t-sm">
+                <thead className="bg-ink-3 text-t-xs text-text-dim"><tr>{["الموقع", "التاريخ", "المنشئ", "التقدم", "أصناف بفرق", "العجز", "الزيادة", "الحالة", ""].map((h, i) => <th key={i} className="p-3 font-bold">{h}</th>)}</tr></thead>
+                <tbody>
+                  {rows.map((s) => {
+                    const p = s.totalItems ? Math.round((s.countedItems / s.totalItems) * 100) : 0;
+                    return (
+                      <tr key={s.id} className="cursor-pointer border-t border-line hover:bg-ink-3/50" onClick={() => open(s.id)}>
+                        <td className="p-3 font-bold">{locName(s.locType, s.locId)}<span className="tnum block text-t-xs font-normal text-text-dim" dir="ltr">#{s.id.slice(0, 8)}</span></td>
+                        <td className="p-3 text-t-xs">{fmtDT(s.createdAt)}</td>
+                        <td className="p-3">{s.createdByName || "—"}</td>
+                        <td className="p-3">
+                          <span className="tnum text-t-xs">{s.countedItems}/{s.totalItems} · {p}%</span>
+                          <div className="mt-1 h-1.5 w-24 overflow-hidden rounded-full bg-ink-3"><div className="h-full bg-petrol" style={{ width: `${p}%` }} /></div>
+                        </td>
+                        <td className="tnum p-3" dir="ltr">{signed(s.diffItems).replace("+", "")}</td>
+                        <td className="tnum p-3 text-ember">{s.shortageValue ? fmtMoney(s.shortageValue) : "—"}</td>
+                        <td className="tnum p-3 text-petrol">{s.surplusValue ? fmtMoney(s.surplusValue) : "—"}</td>
+                        <td className="p-3"><Badge tone={STATUS_TONE[s.status]}>{STATUS_LABEL[s.status] || s.status}</Badge></td>
+                        <td className="p-3"><Button variant="ghost" size="xs" onClick={(e) => { e.stopPropagation(); open(s.id); }} disabled={busy}>فتح</Button></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {pages > 1 && (
+                <div className="flex items-center justify-between border-t border-line p-3 text-t-sm">
+                  <span className="tnum text-text-dim">{page} / {pages}</span>
+                  <span className="flex gap-2"><Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>السابق</Button><Button size="sm" variant="outline" disabled={page >= pages} onClick={() => setPage(page + 1)}>التالي</Button></span>
                 </div>
-                <div>
-                  <p className="text-xs text-text-dim">قيمة الزيادة (بالتكلفة)</p>
-                  <p className="mt-1 text-xl font-black text-emerald-700">
-                    {fmtMoney(detail.surplusValue)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-text-dim">الصافي</p>
-                  <p
-                    className={`mt-1 text-xl font-black ${
-                      detail.surplusValue - detail.shortageValue < 0
-                        ? "text-red-600"
-                        : "text-emerald-700"
-                    }`}
-                  >
-                    {fmtMoney(detail.surplusValue - detail.shortageValue)}
-                  </p>
-                </div>
-              </div>
-              <p className="mt-3 text-xs text-text-dim">
-                محسوبة بآخر سعر شراء وقت بدء الجلسة، ولا تتأثر بتغيّر الأسعار بعدها.
-              </p>
-              {detail.zeroCostDiffItems > 0 && (
-                <p className="mt-2 rounded-lg bg-brass-soft p-2 text-sm text-amber-800">
-                  تنبيه: {detail.zeroCostDiffItems} صنف به فرق وتكلفته صفر، فلم تُحسب
-                  قيمة فرقه. أدخل تكلفته من المشتريات.
-                </p>
               )}
             </div>
           )}
-</section>
-      )}
-          {importPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-2xl bg-ink-2 p-5 shadow-xl">
-            <h3 className="mb-1 text-lg font-bold">معاينة الجرد من الملف</h3>
-            <p className="mb-3 text-sm text-text-dim">
-              {importPreview.totalPieces} قطعة · {importPreview.matched.length} صنف مطابق ·{" "}
-              {importPreview.unmatched.length} باركود غير معروف
-            </p>
+      </>)}
 
-            {importPreview.matched.some((m) => m.previousCounted != null) && (
-              <p className="mb-3 rounded-lg bg-brass-soft p-2 text-sm text-amber-800">
-                سيتم استبدال الكميات المعدودة سابقاً للأصناف المطابقة.
-              </p>
-            )}
-
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-text-dim">
-                  <th className="p-2 text-right">الصنف</th>
-                  <th className="p-2 text-right">الباركود</th>
-                  <th className="p-2 text-right">المعدود</th>
-                  <th className="p-2 text-right">رصيد السيستم</th>
-                  <th className="p-2 text-right">الفرق</th>
-                </tr>
-              </thead>
-              <tbody>
-                {importPreview.matched.map((m) => (
-                  <tr key={m.productId} className="border-b border-line">
-                    <td className="p-2">{m.name}</td>
-                    <td className="p-2 font-mono text-xs">{m.barcode}</td>
-                    <td className="p-2 font-bold">{m.scanned}</td>
-                    <td className="p-2">{m.expectedQty}</td>
-                    <td
-                      className={`p-2 font-bold ${
-                        m.difference < 0
-                          ? "text-red-600"
-                          : m.difference > 0
-                            ? "text-emerald-700"
-                            : "text-text-dim"
-                      }`}
-                    >
-                      {m.difference > 0 ? `+${m.difference}` : m.difference}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {importPreview.unmatched.length > 0 && (
-              <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">
-                <p className="mb-1 font-bold">باركودات غير موجودة في هذه الجلسة (لن تُحفظ):</p>
-                <p className="font-mono text-xs leading-6">
-                  {importPreview.unmatched
-                    .slice(0, 50)
-                    .map((u) => `${u.barcode} ×${u.count}`)
-                    .join(" ، ")}
-                </p>
-              </div>
-            )}
-
-            {importPreview.uncountedRemaining > 0 && (
-              <label className="mt-4 flex items-center gap-2 text-sm">
-                <Switch checked={zeroRest} onChange={setZeroRest} />
-                اعتبر {importPreview.uncountedRemaining} صنف لم يظهر في الملف = 0
-                (وإلا يبقى «لم يُجرد» ولا تتغير أرصدته)
-              </label>
-            )}
-
-            <div className="mt-5 flex gap-3">
-              <button
-                className={`${buttonClass} bg-emerald-700 text-white`}
-                onClick={commitImport}
-                disabled={busy || importPreview.matched.length === 0}
-              >
-                حفظ الكميات
-              </button>
-              <button
-                className={`${buttonClass} bg-ink-3 text-text`}
-                onClick={() => {
-                  setImportPreview(null);
-                  setImportFile(null);
-                }}
-                disabled={busy}
-              >
-                إغلاق
-              </button>
-            </div>
-          </div>
+      <Modal open={showCreate} title="إنشاء عملية جرد" onClose={() => setShowCreate(false)}>
+        <div className="space-y-3">
+          {isAdmin ? (<>
+            <Field label="الموقع">
+              <Select value={locType === "warehouse" ? "warehouse" : locId} onChange={(e) => { if (e.target.value === "warehouse") setLocType("warehouse"); else { setLocType("branch"); setLocId(e.target.value); } }}>
+                <option value="warehouse">المستودع الرئيسي</option>
+                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </Select>
+            </Field>
+          </>) : <p className="text-t-sm text-text-dim">موقع الجرد: {locName("branch", user?.branchId || "")}</p>}
+          <Field label="نوع الجرد"><Input value="جرد كامل لأصناف الموقع" disabled aria-label="نوع الجرد" /></Field>
+          <Field label="ملاحظات (اختياري)"><Textarea rows={2} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} placeholder="سبب الجرد أو أي ملاحظات…" /></Field>
+          <p className="text-t-xs leading-6 text-text-dim">إنشاء الجلسة يأخذ لقطة للأرصدة الحالية ويجهّز كل أصناف الموقع للعدّ. لا يتغير المخزون حتى الاعتماد.</p>
+          <div className="flex gap-2"><Button onClick={create} loading={busy} disabled={busy || (locType === "branch" && !locId)}>إنشاء وبدء العدّ</Button><Button variant="outline" onClick={() => setShowCreate(false)}>إلغاء</Button></div>
         </div>
-      )}
+      </Modal>
     </main>
   );
 }

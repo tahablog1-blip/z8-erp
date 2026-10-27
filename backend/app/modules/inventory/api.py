@@ -170,6 +170,10 @@ class StocktakeCreateBody(BaseModel):
     note: str | None = None
 
 
+class StocktakeReasonBody(BaseModel):
+    reason: str | None = None
+
+
 class StocktakeCountBody(BaseModel):
     countedQty: int
     note: str | None = None
@@ -210,6 +214,16 @@ async def list_stocktakes_api(
     return rows
 
 
+@router.get("/stocktakes/summary")
+async def stocktake_summary_api(
+    user: CurrentUser = Depends(require_permission("inventory.stocktake")),
+):
+    """مؤشرات الجرد (العدد/المفتوح/المراجعة/المعتمد/قيم الزيادة والعجز) ضمن نطاق المستخدم."""
+    if user.role != "admin" and not user.branch_scope:
+        raise HTTPException(403, "حسابك غير مربوط بفرع؛ راجع مدير النظام")
+    return await service.stocktake_summary(user.company_id, user.branch_scope)
+
+
 @router.post("/stocktakes", status_code=201)
 async def create_stocktake_api(
     body: StocktakeCreateBody,
@@ -230,6 +244,16 @@ async def get_stocktake_api(
 ):
     """تفاصيل الجلسة والأصناف والكميات والفروق."""
     return await _check_stocktake_scope(user, session_id)
+
+
+@router.get("/stocktakes/{session_id}/timeline")
+async def stocktake_timeline_api(
+    session_id: str,
+    user: CurrentUser = Depends(require_permission("inventory.stocktake")),
+):
+    """الخط الزمني للجلسة من سجل التدقيق."""
+    await _check_stocktake_scope(user, session_id)
+    return await service.stocktake_timeline(user.company_id, session_id)
 
 
 @router.put("/stocktakes/{session_id}/items/{product_id}")
@@ -254,7 +278,20 @@ async def submit_stocktake_for_review_api(
 ):
     """إرسال جلسة الجرد للمراجعة."""
     await _check_stocktake_scope(user, session_id)
-    return await service.submit_stocktake_for_review(user.company_id, session_id)
+    return await service.submit_stocktake_for_review(
+        user.company_id, session_id, user.user_id, user.full_name)
+
+
+@router.post("/stocktakes/{session_id}/reopen")
+async def reopen_stocktake_api(
+    session_id: str,
+    body: StocktakeReasonBody,
+    user: CurrentUser = Depends(require_permission("inventory.stocktake_approve")),
+):
+    """طلب إعادة العدّ: إرجاع الجلسة من المراجعة إلى الجرد (السبب إلزامي)."""
+    await _check_stocktake_scope(user, session_id)
+    return await service.reopen_stocktake(
+        user.company_id, session_id, user.user_id, user.full_name, body.reason or "")
 
 
 @router.post("/stocktakes/{session_id}/approve")
@@ -315,11 +352,14 @@ def _parse_barcodes(filename: str, data: bytes) -> dict:
 @router.post("/stocktakes/{session_id}/cancel")
 async def cancel_stocktake_api(
     session_id: str,
+    body: StocktakeReasonBody | None = None,
     user: CurrentUser = Depends(require_permission("inventory.stocktake")),
 ):
     """إلغاء جلسة جرد غير معتمدة."""
     await _check_stocktake_scope(user, session_id)
-    return await service.cancel_stocktake(user.company_id, session_id)
+    return await service.cancel_stocktake(
+        user.company_id, session_id, user.user_id, user.full_name,
+        body.reason if body else None)
 
 
 @router.post("/stocktakes/{session_id}/import")
