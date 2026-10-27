@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Button, Card, ErrorNote, Field, Input, Select, Switch } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, Select, Switch, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type Branch = { id: string; name: string };
@@ -113,12 +113,7 @@ export default function UserEditorPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="page-title">
-          {isNew ? "إضافة موظف جديد" : `تعديل — ${savedName}`}
-        </h1>
-        <Button variant="ghost" className="gap-1" onClick={() => router.push("/settings/users")}><MIcon name="arrow_forward" className="!text-[15px]" /> رجوع للقائمة</Button>
-      </div>
+      <PageHeader title={isNew ? "إضافة موظف جديد" : `تعديل — ${savedName}`} description="بيانات الموظف وصلاحياته." actions={<><Button variant="ghost" className="gap-1" onClick={() => router.push("/settings/users")}><MIcon name="arrow_forward" className="!text-[15px]" /> رجوع للقائمة</Button></>} />
 
       <Card>
         <div className="space-y-3">

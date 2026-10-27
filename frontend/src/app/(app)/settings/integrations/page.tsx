@@ -84,7 +84,7 @@ function WhatsAppGatewayCard() {
       )}
       {gw.state === "qr" && qrImg && (
         <div className="mt-3 flex flex-col items-center gap-2">
-          <img src={qrImg} alt="QR ربط واتساب" className="h-[260px] w-[260px] rounded-card border border-line bg-white p-2" />
+          <img src={qrImg} alt="QR ربط واتساب" className="h-[260px] w-[260px] rounded-card border border-line bg-ink-2 p-2" />
           <ol className="list-decimal space-y-0.5 pe-5 text-t-sm leading-5 text-text-dim">
             <li>افتح واتساب على جوال الشركة</li>
             <li>الإعدادات ← الأجهزة المرتبطة ← ربط جهاز</li>

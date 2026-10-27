@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { MIcon } from "@/components/m-icon";
 import { useAuth } from "@/lib/auth";
-import { Button, Card, ErrorNote, Field, Input, Select, PageHeader } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, Select, PageHeader, Badge } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 
 type Branch = { id: string; name: string };
@@ -265,7 +265,7 @@ export default function CamerasSettingsPage() {
             <button onClick={toggleMaster} disabled={gwOn === null}
                     className="relative inline-flex h-7 w-13 shrink-0 items-center rounded-full transition-colors disabled:opacity-50"
                     style={{ background: gwOn ? "var(--emerald)" : "var(--ink4)", width: 52 }}>
-              <span className="absolute h-6 w-6 rounded-full bg-white shadow transition-all"
+              <span className="absolute h-6 w-6 rounded-full bg-ink-2 shadow transition-all"
                     style={{ right: gwOn ? 2 : 24 }} />
             </button>
           </div>
@@ -283,7 +283,7 @@ export default function CamerasSettingsPage() {
                 <button onClick={() => toggleGwCam(c.id, !c.is_active)}
                         className="relative inline-flex h-6 shrink-0 items-center rounded-full transition-colors"
                         style={{ background: c.is_active ? "var(--emerald)" : "var(--ink4)", width: 44 }}>
-                  <span className="absolute h-5 w-5 rounded-full bg-white shadow transition-all"
+                  <span className="absolute h-5 w-5 rounded-full bg-ink-2 shadow transition-all"
                         style={{ right: c.is_active ? 2 : 22 }} />
                 </button>
               </div>
@@ -333,7 +333,7 @@ export default function CamerasSettingsPage() {
             <button onClick={toggleAiSup} aria-label="تبديل المراقبة الذكية" disabled={aiSup === null}
                     className={`relative h-8 w-14 shrink-0 rounded-full transition-colors duration-300
                       ${aiSup ? "bg-emerald" : "bg-ink-4"}`}>
-              <span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow-md transition-all duration-300
+              <span className={`absolute top-1 h-6 w-6 rounded-full bg-ink-2 shadow-md transition-all duration-300
                   ${aiSup ? "right-1" : "right-7"}`} />
             </button>
           </div>
@@ -365,9 +365,9 @@ export default function CamerasSettingsPage() {
                               title={health[c.id] ? "تعمل" : "لا تستجيب"} />
                       )}
                       {c.name}
-                      <span className="mr-2 rounded-full bg-petrol-soft px-2 py-0.5 text-t-xs font-bold text-petrol">
+                      <Badge tone="info" className="mr-2">
                         {STATION_LABEL[c.station]}
-                      </span>
+                      </Badge>
                       <span className="mr-2 text-t-xs text-text-dim">{c.branch_name}</span>
                     </div>
                     <div className="tnum truncate text-t-xs text-text-dim" dir="ltr">{c.rtsp_url}</div>

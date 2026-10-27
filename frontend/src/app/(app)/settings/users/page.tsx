@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Button, Card, PageHeader } from "@/components/ui";
+import { Button, Card, PageHeader, Badge } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type UserRow = {
@@ -40,9 +40,9 @@ export default function UsersSettingsPage() {
                 <div className="font-bold">
                   {u.full_name}
                   {u.role === "admin"
-                    ? <span className="mr-2 rounded-full bg-petrol-soft px-2 py-0.5 text-t-xs font-bold text-petrol">مدير نظام</span>
-                    : <span className="mr-2 rounded-full bg-ink-3 px-2 py-0.5 text-t-xs font-bold text-text-dim">موظف · {u.permissions.length} صلاحية</span>}
-                  {!u.is_active && <span className="mr-2 rounded-full bg-ember-bg px-2 py-0.5 text-t-xs font-bold text-ember">معطّل</span>}
+                    ? <Badge tone="info" className="mr-2">مدير نظام</Badge>
+                    : <Badge tone="neutral" className="mr-2">موظف · {u.permissions.length} صلاحية</Badge>}
+                  {!u.is_active && <Badge tone="danger" className="mr-2">معطّل</Badge>}
                 </div>
                 <div className="tnum text-t-xs text-text-dim" dir="ltr">{u.email}</div>
                 <div className="text-t-xs text-text-dim">

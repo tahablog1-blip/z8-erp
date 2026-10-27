@@ -19,7 +19,7 @@ export function CarBrandMark({ brand, model, year, size = "md", className = "" }
       {src && !broken ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt={brand || ""} title={brand || undefined} loading="lazy" onError={() => setBroken(true)}
-          className={`${tile} shrink-0 rounded-lg border border-line bg-white object-contain p-1`} />
+          className={`${tile} shrink-0 rounded-lg border border-line bg-ink-2 object-contain p-1`} />
       ) : brand ? (
         <span className="shrink-0 rounded-md bg-ink-3 px-2 py-0.5 text-t-sm font-bold text-text-dim">{brand}</span>
       ) : null}

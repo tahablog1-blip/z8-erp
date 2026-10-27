@@ -122,12 +122,12 @@ export default function BranchesPage() {
       render: (b) => <span className="tnum">{b.category === "retail" ? "—" : b.capacity_rafaat}</span> },
     { key: "is_frozen", title: t("branches.status", "الحالة"), width: "110px",
       render: (b) => b.is_frozen
-        ? <span className="rounded-full bg-ember-bg px-2.5 py-1 text-t-xs font-bold text-ember">
+        ? <Badge tone="danger">
           {t("branches.frozen", "مجمّد")}
-        </span>
-        : <span className="rounded-full bg-emerald-bg px-2.5 py-1 text-t-xs font-bold text-emerald">
+        </Badge>
+        : <Badge tone="success">
           {t("branches.active", "نشط")}
-        </span> },
+        </Badge> },
     ...(canManage ? [{
       key: "actions", title: "", width: "300px",
       render: (b: Branch) => (

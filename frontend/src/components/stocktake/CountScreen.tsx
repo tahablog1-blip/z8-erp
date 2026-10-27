@@ -409,7 +409,7 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
                                   <option value="">الحالة</option>{Object.entries(CONDITION_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                                 </select>
                               </div>
-                            : <>{it.condition && <span className="mt-1 inline-block rounded-full bg-ink-3 px-2 py-0.5 text-t-xs font-bold text-text-dim">{CONDITION_LABEL[it.condition]}</span>}{it.note && <p className="mt-1 text-t-xs text-text-dim">{it.note}</p>}</>}
+                            : <>{it.condition && <Badge tone="neutral" className="mt-1">{CONDITION_LABEL[it.condition]}</Badge>}{it.note && <p className="mt-1 text-t-xs text-text-dim">{it.note}</p>}</>}
                           {it.countEntries > 1 && <button className="mt-1 text-t-xs font-bold text-petrol hover:underline" onClick={() => showHistory(it)}>عُدّ {it.countEntries} مرات — عرض السجل</button>}
                           {it.countEntries === 1 && <button className="mt-1 text-t-xs text-text-dim hover:underline" onClick={() => showHistory(it)}>سجل العدّ</button>}
                         </td>

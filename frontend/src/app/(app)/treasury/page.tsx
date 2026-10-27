@@ -349,9 +349,9 @@ export default function TreasuryPage() {
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5">
           <div className="flex flex-wrap items-center gap-2 text-t-sm">
             <span className="font-bold text-text-dim">من</span>
-            <Input type="date" className="tnum !py-1.5" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <Input type="date" className="tnum !w-auto" value={from} onChange={(e) => setFrom(e.target.value)} />
             <span className="font-bold text-text-dim">إلى</span>
-            <Input type="date" className="tnum !py-1.5" value={to} onChange={(e) => setTo(e.target.value)} />
+            <Input type="date" className="tnum !w-auto" value={to} onChange={(e) => setTo(e.target.value)} />
             <label className="flex items-center gap-1.5 text-t-sm font-bold text-text-dim">
               <Switch size="sm" checked={showCancelled} onChange={setShowCancelled} />
               إظهار الملغي

@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { printReport, tableHTML, kpisHTML } from "@/lib/print";
 import { MIcon } from "@/components/m-icon";
-import { Button, EmptyState, Input } from "@/components/ui";
+import { Button, EmptyState, Input, PageHeader } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import { GlobalFilters, type FilterState } from "@/components/dashboard/GlobalFilters";
 import { KpiCard, KpiSkeleton } from "@/components/dashboard/KpiCard";
@@ -200,12 +200,7 @@ export default function CustomersPage() {
   return (
     <div className="cx-enter mx-auto w-full max-w-[1600px] space-y-4 pb-8" onClick={() => menu && setMenu("")}>
       {/* ── Header ── */}
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="page-title">{c("title")}</h1>
-          <p className="page-desc">{c("subtitle")}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
+      <PageHeader title={c("title")} description={c("subtitle")} actions={<><div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
           <div className="relative">
             <Button variant="outline" onClick={() => setMenu(menu === "export" ? "" : "export")} loading={busy} aria-haspopup="menu" aria-expanded={menu === "export"}>
               <MIcon name="download" className="!text-[18px]" />{c("export")}
@@ -218,8 +213,7 @@ export default function CustomersPage() {
             )}
           </div>
           {canCreate && <Button onClick={() => setForm({ customer: null })}><MIcon name="add" className="!text-[18px]" />{c("add")}</Button>}
-        </div>
-      </header>
+        </div></>} />
 
       {/* ── فلتر الفترة (يؤثر على مؤشرات الفترة) ── */}
       <GlobalFilters value={period} branches={null} onChange={(v) => { setPeriod(v.period === "custom" ? v : { ...v, ...rangeFor(v.period) }); }} onRefresh={() => load(true)} refreshing={refreshing} lastUpdated={updated} />

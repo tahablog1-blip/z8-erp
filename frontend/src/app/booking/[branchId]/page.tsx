@@ -114,7 +114,7 @@ function Combobox({ label, value, onChange, options, placeholder, allowCustom = 
         className={inputCls}
       />
       {open && (options.length > 0 || value.trim()) && (
-        <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-card border bg-white shadow-lg"
+        <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-card border bg-ink-2 shadow-lg"
           style={{ borderColor: LINE }}>
           {filtered.length === 0 ? (
             <div className="px-4 py-2.5 text-t-sm font-bold" style={{ color: DIM }}>
@@ -210,7 +210,7 @@ function OtpEntryCard({ branchId, otp, onVerified }: {
 
   if (step === "code") {
     return (
-      <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+      <div className="kiosk-step space-y-3 rounded-card bg-ink-2 p-5 shadow-lg">
         <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>أدخل رمز التحقق</h2>
         <p className="text-center text-t-sm leading-relaxed" style={{ color: DIM }}>
           أرسلنا رمزاً من 6 أرقام {channel === "phone" ? "على واتساب" : "إلى بريدك"}{" "}
@@ -244,7 +244,7 @@ function OtpEntryCard({ branchId, otp, onVerified }: {
   }
 
   return (
-    <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+    <div className="kiosk-step space-y-3 rounded-card bg-ink-2 p-5 shadow-lg">
       <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>أهلاً بك</h2>
       <p className="text-center text-t-sm" style={{ color: DIM }}>
         سجّل دخولك برقم جوالك أو بريدك — هنبعتلك رمز تحقق، ولو سجّلت قبل كده هنرجّع بياناتك وسياراتك فوراً
@@ -287,7 +287,7 @@ function EntryCard({ busy, err, onSubmit }: {
   const blocked = busy || (phone.replace(/\D/g, "").length < 9 && plate.trim().length < 4);
 
   return (
-    <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+    <div className="kiosk-step space-y-3 rounded-card bg-ink-2 p-5 shadow-lg">
       <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>أهلاً بك</h2>
       <p className="text-center text-t-sm" style={{ color: DIM }}>
         أدخل جوالك أو رقم لوحتك — لو سجّلت قبل كده هنرجّع بياناتك وسياراتك فوراً
@@ -317,7 +317,7 @@ function GarageCard({ profile, busy, err, onBook, onAddNew }: {
   const [quickOdo, setQuickOdo] = useState("");
 
   return (
-    <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+    <div className="kiosk-step space-y-3 rounded-card bg-ink-2 p-5 shadow-lg">
       <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>
         أهلاً {profile.customer?.name}
       </h2>
@@ -389,7 +389,7 @@ function RegisterForm({ sType, initial, busy, err, branchId, lockPhone, onBack, 
     };
 
   return (
-    <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+    <div className="kiosk-step space-y-3 rounded-card bg-ink-2 p-5 shadow-lg">
       <div className="flex items-center justify-between">
         <button onClick={() => onBack(f)} className="flex items-center gap-1.5 rounded-lg bg-ink-3 px-3 py-1.5 text-t-sm font-black text-text hover:bg-ink-4 transition">
           <MIcon name="arrow_forward" className="!text-[15px]" /> رجوع
@@ -584,7 +584,7 @@ function ChatBubble({ m }: { m: ChatMsg }) {
   const mine = m.sender_type === "customer";
   return (
     <div className={`flex ${mine ? "justify-start" : "justify-end"}`}>
-      <div className={`max-w-[82%] rounded-card px-3.5 py-2 text-t-md leading-relaxed ${mine ? "rounded-bl-sm text-white" : "rounded-br-sm border bg-white"}`}
+      <div className={`max-w-[82%] rounded-card px-3.5 py-2 text-t-md leading-relaxed ${mine ? "rounded-bl-sm text-white" : "rounded-br-sm border bg-ink-2"}`}
         style={mine ? { background: GREEN } : { borderColor: LINE, color: "var(--text)" }}>
         {m.attachment_url && (m.message_type === "voice" || m.attachment_url.endsWith(".wav")) ? (
           <audio controls preload="metadata" src={m.attachment_url} className="my-0.5 w-[215px] max-w-full" />
@@ -748,7 +748,7 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
   if (!token) return null;
 
   return (
-    <div className="kiosk-pop space-y-2.5 rounded-card bg-white p-4 shadow-lg">
+    <div className="kiosk-pop space-y-2.5 rounded-card bg-ink-2 p-4 shadow-lg">
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-1.5 text-t-md font-black" style={{ color: NAVY }}>
           <MIcon name="forum" className="!text-[19px]" /> تواصل مع مركز الخدمة
@@ -879,7 +879,7 @@ function OilCard({ carId }: { carId: string }) {
   }
 
   return (
-    <div className="kiosk-pop rounded-card bg-white p-4 shadow-lg">
+    <div className="kiosk-pop rounded-card bg-ink-2 p-4 shadow-lg">
       <button onClick={toggle}
         className="flex w-full items-center justify-between text-right">
         <span className="flex items-center gap-1.5 text-t-md font-black" style={{ color: NAVY }}>
@@ -978,7 +978,7 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
     : !brandPick || ((o.brand || "").trim() || "أخرى") === brandPick));
 
   return (
-    <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+    <div className="kiosk-step space-y-3 rounded-card bg-ink-2 p-5 shadow-lg">
       <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>اختيار الزيت</h2>
 
       {mode === "choose" && (
@@ -1186,7 +1186,7 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
   const [showAllFilters, setShowAllFilters] = useState(false);
 
   return (
-    <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+    <div className="kiosk-step space-y-3 rounded-card bg-ink-2 p-5 shadow-lg">
       <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>هل تريد تغيير فلتر الزيت؟</h2>
       <div className="grid grid-cols-2 gap-2">
         <button onClick={() => setSel({ ...sel, withFilter: true })}
@@ -1360,7 +1360,7 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
   const total = sel.extras.reduce((s, e) => s + e.p.price * e.qty, 0);
 
   return (
-    <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+    <div className="kiosk-step space-y-3 rounded-card bg-ink-2 p-5 shadow-lg">
       <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>منتجات وخدمات إضافية</h2>
       <p className="text-center text-t-xs font-bold" style={{ color: DIM }}>
         اختياري — تصفح كل الأقسام وأضف ما تحتاجه لسيارتك
@@ -1487,7 +1487,7 @@ function BookingSummary({ carLabel, plate, odometer, sel, autoService, busy, err
   const vat = totalInc - totalEx;
 
   return (
-    <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+    <div className="kiosk-step space-y-3 rounded-card bg-ink-2 p-5 shadow-lg">
       <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>ملخص الحجز</h2>
 
       <div className="space-y-2 rounded-card p-3.5" style={{ background: "var(--ink3)" }}>
@@ -1880,7 +1880,7 @@ export default function PublicBookingPage() {
               onAddNew={() => { setErr(""); setSType("basic"); setView("type"); }} />
             <div className="grid grid-cols-2 gap-2">
               <a href={`/booking/${branchId}/invoices`}
-                className="flex items-center justify-center gap-1.5 rounded-lg border-2 bg-white py-3 text-t-md font-black shadow transition active:scale-[.98]"
+                className="flex items-center justify-center gap-1.5 rounded-lg border-2 bg-ink-2 py-3 text-t-md font-black shadow transition active:scale-[.98]"
                 style={{ borderColor: LINE, color: NAVY }}>
                 <MIcon name="receipt_long" className="!text-[18px]" /> فواتيري
               </a>
@@ -1898,7 +1898,7 @@ export default function PublicBookingPage() {
         )}
 
         {view === "type" && (
-          <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+          <div className="kiosk-step space-y-3 rounded-card bg-ink-2 p-5 shadow-lg">
             <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>نوع تسجيل السيارة</h2>
             {(Object.keys(TYPE_META) as SType[]).map((t) => (
               <button key={t} onClick={() => { setSType(t); setView("form"); setErr(""); }}
@@ -1969,7 +1969,7 @@ export default function PublicBookingPage() {
 
         {view === "ticket" && booking && stateUi && (
           <div className="kiosk-pop space-y-3">
-            <div className="overflow-hidden rounded-card bg-white shadow-lg">
+            <div className="overflow-hidden rounded-card bg-ink-2 shadow-lg">
               <div className="px-5 py-5 text-center" style={{ background: stateUi.bg }}>
                 <MIcon name={stateUi.icon} filled className="!text-[44px]" />
                 <div className="mt-1 text-t-lg font-black" style={{ color: stateUi.color }}>{stateUi.title}</div>
@@ -1988,7 +1988,7 @@ export default function PublicBookingPage() {
             </div>
             <OilCard carId={booking.bookingId} />
             <a href={`/booking/${branchId}/invoices`}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border-2 bg-white py-3 text-t-md font-black transition active:scale-[.98]"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border-2 bg-ink-2 py-3 text-t-md font-black transition active:scale-[.98]"
               style={{ borderColor: LINE, color: NAVY }}>
               <MIcon name="receipt_long" className="!text-[19px]" /> فواتيري
             </a>
@@ -1999,7 +1999,7 @@ export default function PublicBookingPage() {
               setBooking(null);
               ph ? restoreProfile(ph, "") : setView("entry");
             }}
-              className="flex w-full items-center justify-center gap-1.5 rounded-card border-2 bg-white py-3 text-t-md font-black transition active:scale-[.98]"
+              className="flex w-full items-center justify-center gap-1.5 rounded-card border-2 bg-ink-2 py-3 text-t-md font-black transition active:scale-[.98]"
               style={{ borderColor: LINE, color: NAVY }}>
               <MIcon name="add_circle" className="!text-[18px]" /> حجز جديد — اختر السيارة
             </button>

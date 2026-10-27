@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { MIcon } from "@/components/m-icon";
-import { Badge, Button, EmptyState, ErrorNote, Field, Input, Modal, Select, Textarea } from "@/components/ui";
+import { Badge, Button, EmptyState, ErrorNote, Field, Input, Modal, Select, Textarea, PageHeader } from "@/components/ui";
 import { KpiCard, KpiSkeleton } from "@/components/dashboard/KpiCard";
 import { CountScreen } from "@/components/stocktake/CountScreen";
 import { fmtDT, downloadCsv } from "@/lib/customers/format";
@@ -138,17 +138,9 @@ export default function StocktakePage() {
       {detail ? (
         <CountScreen detail={detail} locName={locName(detail.locType, detail.locId)} canApprove={canApprove} onChange={onChange} onClose={() => setDetail(null)} />
       ) : (<>
-        <header className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="page-title">جرد المخزون</h1>
-            <p className="page-desc">إدارة عمليات الجرد ومراجعة فروقات المخزون واعتماد التسويات.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="tool" onClick={exportList} disabled={!filtered.length}><MIcon name="download" className="!text-[18px]" />تصدير</Button>
+        <PageHeader title="جرد المخزون" description="إدارة عمليات الجرد ومراجعة فروقات المخزون واعتماد التسويات." actions={<><Button variant="tool" onClick={exportList} disabled={!filtered.length}><MIcon name="download" className="!text-[18px]" />تصدير</Button>
             <Button variant="tool" onClick={printList} disabled={!filtered.length}><MIcon name="print" className="!text-[18px]" />طباعة</Button>
-            <Button onClick={() => { setShowCreate(true); setError(""); }}><MIcon name="add" className="!text-[18px]" />إنشاء جرد</Button>
-          </div>
-        </header>
+            <Button onClick={() => { setShowCreate(true); setError(""); }}><MIcon name="add" className="!text-[18px]" />إنشاء جرد</Button></>} />
 
         {error && <ErrorNote msg={error} />}
 

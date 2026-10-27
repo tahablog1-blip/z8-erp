@@ -68,7 +68,7 @@ export function Switch({ checked, onChange, disabled = false, size = "md", tone 
       onClick={() => !disabled && onChange(!checked)}
       className={`m3 relative shrink-0 rounded-full border transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-petrol ${dims.track} ${checked ? `${onBg} border-transparent` : "border-line bg-ink-4"}`}>
       <span aria-hidden
-        className={`absolute top-1/2 -translate-y-1/2 rounded-full bg-white shadow-sm transition-[inset-inline-start] duration-200 ease-out ${dims.thumb}`}
+        className={`absolute top-1/2 -translate-y-1/2 rounded-full bg-ink-2 shadow-sm transition-[inset-inline-start] duration-200 ease-out ${dims.thumb}`}
         style={{ insetInlineStart: checked ? dims.on : "2px" }} />
     </button>
   );
@@ -146,11 +146,11 @@ const TONE_CLASS: Record<Tone, string> = {
 const LEGACY: Record<string, Tone> = { good: "success", warn: "danger" };
 
 /** شارة حالة موحّدة لكل النظام — نفس الشكل والألوان الدلالية في كل صفحة */
-export function Badge({ tone = "neutral", dot = false, children }:
-  { tone?: Tone | "good" | "warn"; dot?: boolean; children: ReactNode }) {
+export function Badge({ tone = "neutral", dot = false, className = "", children }:
+  { tone?: Tone | "good" | "warn"; dot?: boolean; className?: string; children: ReactNode }) {
   const t = (LEGACY[tone] ?? tone) as Tone;
   return (
-    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-t-xs font-bold ${TONE_CLASS[t]}`}>
+    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-t-xs font-bold ${TONE_CLASS[t]} ${className}`}>
       {dot && <i aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />}{children}
     </span>
   );
@@ -159,7 +159,7 @@ export { Badge as StatusBadge };
 
 /** ترويسة صفحة موحّدة: عنوان + وصف + إجراءات (الأساسي أولاً) */
 export function PageHeader({ title, description, actions, breadcrumb }:
-  { title: string; description?: string; actions?: ReactNode; breadcrumb?: ReactNode }) {
+  { title: ReactNode; description?: ReactNode; actions?: ReactNode; breadcrumb?: ReactNode }) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">

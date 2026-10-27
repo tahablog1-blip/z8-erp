@@ -197,9 +197,9 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
                       className="flex min-h-[152px] flex-col items-center justify-between gap-1.5 rounded-card border-2 border-line bg-ink-2 p-3 shadow-card transition hover:border-emerald hover:-translate-y-0.5 active:scale-[.96]">
                 <ProductImg p={p} />
                 <span className="line-clamp-2 text-t-xs font-black leading-snug">{p.name}{p.spec ? ` — ${p.spec}` : ""}</span>
-                <span className="tnum rounded-full bg-emerald-bg px-2.5 py-0.5 text-t-sm font-black text-emerald">
+                <Badge tone="success">
                   {p.price_vat.toFixed(2)} ر.س / علبة
-                </span>
+                </Badge>
               </button>
             ))}
           </div>
@@ -319,9 +319,9 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
                           ${rec?.productId === p.id ? "border-emerald bg-emerald-bg" : "border-line bg-ink-2 hover:border-petrol"}`}>
                   <ProductImg p={p} />
                   <span className="line-clamp-2 text-t-xs font-black leading-snug">{p.name}{p.spec ? ` — ${p.spec}` : ""}</span>
-                  <span className="tnum rounded-full bg-petrol-soft px-2.5 py-0.5 text-t-sm font-black text-petrol">
+                  <Badge tone="info">
                     {p.price_vat.toFixed(2)} ر.س
-                  </span>
+                  </Badge>
                 </button>
               ))}
             </div>
@@ -1738,7 +1738,7 @@ export default function CarsPage() {
                     <button onClick={toggleGateSw} disabled={gateSwOn === null || gateSwBusy}
                             className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50"
                             style={{ background: gateSwOn ? UI.success : "var(--ink4)" }}>
-                      <span className="absolute h-5 w-5 rounded-full bg-white shadow transition-all"
+                      <span className="absolute h-5 w-5 rounded-full bg-ink-2 shadow transition-all"
                             style={{ right: gateSwOn ? "2px" : "22px" }} />
                     </button>
                   </div>
@@ -1761,7 +1761,7 @@ export default function CarsPage() {
                         <button onClick={() => toggleCam(c.id, !c.is_active)}
                                 className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
                                 style={{ background: c.is_active ? UI.success : "var(--ink4)" }}>
-                          <span className="absolute h-5 w-5 rounded-full bg-white shadow transition-all"
+                          <span className="absolute h-5 w-5 rounded-full bg-ink-2 shadow transition-all"
                                 style={{ right: c.is_active ? "2px" : "22px" }} />
                         </button>
                       </div>
@@ -1827,7 +1827,7 @@ export default function CarsPage() {
             <h2 className="flex items-center gap-2 text-t-md font-extrabold text-text">
               <MIcon name="schedule" className="!text-[17px] text-brass" /> في الانتظار
             </h2>
-            <span className="tnum rounded-full bg-brass-soft px-2.5 py-0.5 text-t-sm font-black text-brass">{queued.length}</span>
+            <Badge tone="warning">{queued.length}</Badge>
           </div>
           <div className="max-h-56 divide-y overflow-y-auto" style={{ borderColor: UI.border }}>
             {queued.length === 0 ? (
@@ -2505,7 +2505,7 @@ export default function CarsPage() {
             {/* ══ شاشة اختيار مصدر الكاميرا ══ */}
             {liveStatus === "idle" && (
               <div className="absolute inset-0 grid place-items-center bg-black/80 p-5">
-                <div className="w-full max-w-md space-y-3 rounded-card bg-white p-5">
+                <div className="w-full max-w-md space-y-3 rounded-card bg-ink-2 p-5">
                   <h3 className="text-center text-t-lg font-black">مصدر كاميرا البوابة</h3>
                   <button onClick={() => startLive("device")}
                           className="w-full rounded-card bg-petrol py-3.5 text-t-md font-black text-white hover:brightness-110">
@@ -2579,7 +2579,7 @@ export default function CarsPage() {
 
             {liveStatus === "error" && (
               <div className="absolute inset-0 grid place-items-center bg-black/70 p-6">
-                <div className="max-w-md space-y-3 rounded-card bg-white p-5 text-center">
+                <div className="max-w-md space-y-3 rounded-card bg-ink-2 p-5 text-center">
                   <p className="text-t-md font-black text-ember">{liveErr}</p>
                   {liveMode === "ip" ? (
                     <div className="space-y-1.5 text-right text-t-sm leading-relaxed text-text-dim">

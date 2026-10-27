@@ -122,7 +122,7 @@ export function ProductForm({ open, product, categories, canCost, onClose, onSav
             <Field label="الباركود"><Input value={f.barcode} dir="ltr" className="tnum text-end" onChange={(e) => set("barcode", e.target.value)} /></Field>
             <Field label="رمز SKU" hint="فارغ = يُولَّد تلقائياً"><Input value={f.sku} dir="ltr" className="tnum text-end" onChange={(e) => set("sku", e.target.value)} /></Field>
           </div>
-          {bc && barcodeSvg(bc) && <div className="rounded-lg border border-line bg-white p-2 text-center" dangerouslySetInnerHTML={{ __html: barcodeSvg(bc, { height: 36 }) }} />}
+          {bc && barcodeSvg(bc) && <div className="rounded-lg border border-line bg-ink-2 p-2 text-center" dangerouslySetInnerHTML={{ __html: barcodeSvg(bc, { height: 36 }) }} />}
         </Section>
 
         <Section title="إعدادات المخزون" hint="لا تغيّر الأرصدة — الأرصدة تتغير فقط عبر الاستلام والتحويل والجرد">
@@ -143,8 +143,8 @@ export function ProductForm({ open, product, categories, canCost, onClose, onSav
 
         <Section title="صورة الصنف">
           <div className="flex items-center gap-3">
-            {img ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={`data:image/jpeg;base64,${img}`} alt="" className="h-16 w-16 rounded-lg border border-line bg-white object-contain" />
-              : product?.hasImage && img === undefined ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={`/api/products/public/product-image/${product.id}`} alt="" className="h-16 w-16 rounded-lg border border-line bg-white object-contain" />
+            {img ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={`data:image/jpeg;base64,${img}`} alt="" className="h-16 w-16 rounded-lg border border-line bg-ink-2 object-contain" />
+              : product?.hasImage && img === undefined ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={`/api/products/public/product-image/${product.id}`} alt="" className="h-16 w-16 rounded-lg border border-line bg-ink-2 object-contain" />
               : <span className="grid h-16 w-16 place-items-center rounded-lg border border-dashed border-line text-text-dim"><MIcon name="image" className="!text-[26px]" /></span>}
             <label className="cursor-pointer rounded-lg border border-line px-3 py-2 text-t-sm font-bold hover:border-petrol">{product?.hasImage || img ? "استبدال" : "رفع صورة"}
               <input type="file" accept="image/*" hidden onChange={async (e) => { const file = e.target.files?.[0]; e.target.value = ""; if (!file) return; try { setImg(await resizeToBase64(file, 400)); } catch (er) { setErr(er instanceof Error ? er.message : String(er)); } }} /></label>
