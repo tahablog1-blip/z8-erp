@@ -329,6 +329,24 @@ async def reconciliation(user, date_from, date_to, branch_id) -> dict:
                 FROM journal_lines jl JOIN journal_entries je ON je.id = jl.entry_id JOIN accounts a ON a.id = jl.account_id
                 WHERE je.company_id=$1 AND a.company_id=$1 AND je.entry_date <= $2 AND a.code = $3{gbc}""", *gp)
         add(inv_item["key"], inv_item["label"], _num(sv["v"]), _num(gl["v"]), inv_item["note"])
+    # ── الذمم: أرصدة دفاتر العملاء/الموردين حتى نهاية الفترة مقابل حسابي الذمم المدينة والدائنة (إجماليات الشركة) ──
+    for key, label, table, acc_code, sign, note in (
+        ("receivables", "الذمم المدينة (العملاء)", "customer_ledger", ACCOUNT_CODES["RECEIVABLES"], 1,
+         "مجموع دفتر العملاء حتى نهاية الفترة مقابل رصيد حساب الذمم المدينة (مدين − دائن)."),
+        ("payables", "الذمم الدائنة (الموردون)", "supplier_ledger", ACCOUNT_CODES["PAYABLES"], -1,
+         "مجموع دفتر الموردين (المستحق لهم) حتى نهاية الفترة مقابل رصيد حساب الذمم الدائنة (دائن − مدين).")):
+        if branch:
+            checks.append({"key": key, "label": label, "invoices": None, "ledger": None, "diff": None, "ok": None,
+                           "note": "دفاتر العملاء والموردين على مستوى الشركة — لا تُقارن لمستخدم مقيَّد بفرع."})
+            continue
+        sub = await fetchrow(
+            f"""SELECT COALESCE(SUM(amount),0) AS v FROM {table}
+                WHERE company_id=$1 AND (created_at AT TIME ZONE 'Asia/Riyadh')::date <= $2""", user.company_id, t)
+        gl = await fetchrow(
+            """SELECT COALESCE(SUM(jl.debit - jl.credit),0) AS v
+               FROM journal_lines jl JOIN journal_entries je ON je.id = jl.entry_id JOIN accounts a ON a.id = jl.account_id
+               WHERE je.company_id=$1 AND a.company_id=$1 AND je.entry_date <= $2 AND a.code = $3""", user.company_id, t, acc_code)
+        add(key, label, _num(sub["v"]), sign * _num(gl["v"]), note)
     bad = [c for c in checks if c["ok"] is False]
     return {"meta": _meta(user, f, t, branch), "checks": checks, "fullReturnsInPeriod": full["n"],
             "status": "mismatch" if bad else "ok",
