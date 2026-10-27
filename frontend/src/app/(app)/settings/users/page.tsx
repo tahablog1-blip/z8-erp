@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type UserRow = {
@@ -29,10 +29,7 @@ export default function UsersSettingsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="page-title">الإعدادات — المستخدمون والصلاحيات</h1>
-        <Button onClick={() => router.push("/settings/users/new")}>+ موظف جديد</Button>
-      </div>
+      <PageHeader title="الإعدادات — المستخدمون والصلاحيات" description="حسابات الموظفين وأدوارهم وصلاحياتهم." actions={<><Button onClick={() => router.push("/settings/users/new")}>+ موظف جديد</Button></>} />
       <Card>
         <p className="mb-3 text-t-sm text-text-dim">حسابات الموظفين وأدوارهم وصلاحياتهم على كل قسم في المنظومة — اضغط أي موظف لفتح صفحته الكاملة.</p>
         <div className="divide-y divide-line rounded-lg border border-line">

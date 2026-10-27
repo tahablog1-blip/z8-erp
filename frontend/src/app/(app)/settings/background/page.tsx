@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { cacheBackground } from "@/lib/background";
-import { Button, Card, ErrorNote, Field, Select } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Select, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type Bg = { id: string; name: string; image_url: string; created_at: string | null };
@@ -103,7 +103,7 @@ export default function BackgroundSettingsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="page-title">الإعدادات — الخلفية</h1>
+      <PageHeader title="الإعدادات — الخلفية" description="خلفية النظام." />
       <p className="page-desc">
         خلفية موحدة تظهر خلف كل صفحات النظام بعد تسجيل الدخول — ارفع كذا خلفية، فعّل أي واحدة، واحذف ما لا تحتاجه.
       </p>

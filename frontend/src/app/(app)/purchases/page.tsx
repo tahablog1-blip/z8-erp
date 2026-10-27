@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { DataTable, Column } from "@/components/DataTable";
-import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Tabs } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Tabs, PageHeader } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import { StockItemsEditor, StockLine } from "@/components/StockItemsEditor";
 import { Product, productLabel } from "@/modules/products/types";
@@ -223,8 +223,8 @@ export default function PurchasesPage() {
       key: "actions", title: "", width: "170px",
       render: (i) => (
         <div className="flex gap-1">
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => openInvoice(i)}>عرض</Button>
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => printTaxInvoice(i)}>ضريبية</Button>
+          <Button variant="ghost" size="xs" onClick={() => openInvoice(i)}>عرض</Button>
+          <Button variant="ghost" size="xs" onClick={() => printTaxInvoice(i)}>ضريبية</Button>
         </div>
       ),
     },
@@ -287,7 +287,7 @@ export default function PurchasesPage() {
     { key: "status", title: "الحالة", width: "150px", render: (q) => <Badge tone={QUOT_BADGE[q.status].tone}>{QUOT_BADGE[q.status].label}</Badge> },
     {
       key: "actions", title: "", width: "90px",
-      render: (q) => <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => openQuotation(q)}>عرض</Button>,
+      render: (q) => <Button variant="ghost" size="xs" onClick={() => openQuotation(q)}>عرض</Button>,
     },
   ];
 
@@ -399,7 +399,7 @@ export default function PurchasesPage() {
     { key: "invoice_no", title: "الفاتورة", width: "100px", render: (p) => p.invoice_no || <span className="text-text-dim">—</span> },
     {
       key: "actions", title: "", width: "90px",
-      render: (p) => <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => openPO(p)}>عرض</Button>,
+      render: (p) => <Button variant="ghost" size="xs" onClick={() => openPO(p)}>عرض</Button>,
     },
   ];
 
@@ -418,25 +418,25 @@ export default function PurchasesPage() {
       w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
         <title>فاتورة شراء ضريبية ${detail.invoice_no}</title>
         <style>
-          *{box-sizing:border-box} body{font-family:'Cairo','Segoe UI',sans-serif;margin:0;padding:26px;color:#0F2D52;font-size:13px}
-          .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0F2D52;padding-bottom:12px}
+          *{box-sizing:border-box} body{font-family:'Cairo','Segoe UI',sans-serif;margin:0;padding:26px;color:#1E3A8A;font-size:13px}
+          .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1E3A8A;padding-bottom:12px}
           h1{font-size:20px;margin:0} .sub{color:#51617A;font-size:11px}
-          .badge{background:#16A34A;color:#fff;border-radius:10px;padding:6px 14px;font-weight:900;font-size:13px}
+          .badge{background:#1E3A8A;color:#fff;border-radius:10px;padding:6px 14px;font-weight:900;font-size:13px}
           .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
           .box{border:1.5px solid #E2E8F0;border-radius:12px;padding:10px 12px}
-          .box h3{margin:0 0 6px;font-size:12px;color:#16A34A}
+          .box h3{margin:0 0 6px;font-size:12px;color:#1E3A8A}
           .box div{display:flex;justify-content:space-between;padding:2px 0}
           .box span{color:#51617A}
           table{width:100%;border-collapse:collapse;margin-top:6px}
-          th{background:#0F2D52;color:#fff;padding:8px;font-size:12px}
+          th{background:#1E3A8A;color:#fff;padding:8px;font-size:12px}
           td{border-bottom:1px solid #E2E8F0;padding:7px 8px;text-align:center}
           td:first-child{text-align:right}
           .totals{margin-top:12px;margin-right:auto;width:280px}
           .totals div{display:flex;justify-content:space-between;padding:5px 10px}
-          .totals .grand{background:#0F2D52;color:#fff;border-radius:10px;font-weight:900;font-size:15px}
+          .totals .grand{background:#1E3A8A;color:#fff;border-radius:10px;font-weight:900;font-size:15px}
           .foot{margin-top:22px;text-align:center;color:#51617A;font-size:10.5px;border-top:1px dashed #E2E8F0;padding-top:10px}
           @media print{.noprint{display:none}} .noprint{text-align:center;margin-top:16px}
-          button{background:#16A34A;color:#fff;border:0;border-radius:10px;padding:10px 28px;font-weight:900;font-family:inherit;cursor:pointer}
+          button{background:#1E3A8A;color:#fff;border:0;border-radius:10px;padding:10px 28px;font-weight:900;font-family:inherit;cursor:pointer}
         </style></head><body>
         <div class="head">
           <div><h1>فاتورة شراء ضريبية</h1><div class="sub">Tax Purchase Invoice</div></div>
@@ -481,9 +481,7 @@ export default function PurchasesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="page-title">المشتريات</h1>
-      </div>
+      <PageHeader title="المشتريات" description="فواتير الشراء وعروض الأسعار وأوامر الشراء." />
 
       <ErrorNote msg={pageErr} />
 
@@ -731,7 +729,7 @@ export default function PurchasesPage() {
                 <Button onClick={() => convertQuotationToPO(viewQuotation)}>تحويل لأمر شراء</Button>
               )}
               {viewQuotation.status === "received" && (
-                <Button variant="ghost" className="!text-ember" onClick={() => rejectQuotation(viewQuotation)}>رفض العرض</Button>
+                <Button variant="ghost" size="sm" onClick={() => rejectQuotation(viewQuotation)}>رفض العرض</Button>
               )}
             </div>
           </div>
@@ -878,7 +876,7 @@ export default function PurchasesPage() {
               <Button variant="ghost" onClick={() => setViewPO(null)}>إغلاق</Button>
               {viewPO.status === "pending_approval" && (
                 <>
-                  <Button variant="ghost" className="!text-ember" onClick={openReject}>رفض</Button>
+                  <Button variant="ghost" size="sm" onClick={openReject}>رفض</Button>
                   <Button onClick={openApprove}>اعتماد</Button>
                 </>
               )}

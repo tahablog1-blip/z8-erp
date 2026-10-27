@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Button, Card, ErrorNote, Field, Input } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 import { appConfirm } from "@/components/dialog";
 import { PriceList, PriceListItem } from "@/modules/price-lists/types";
@@ -129,7 +129,7 @@ export default function PriceListsSettingsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="page-title">الإعدادات — قوائم الأسعار</h1>
+          <PageHeader title="الإعدادات — قوائم الأسعار" description="قوائم الأسعار." />
           <p className="page-desc">
             عيّن أسعاراً خاصة لأصناف معيّنة ثم اربط القائمة بعميل من شاشة العملاء — باقي الأصناف تفضل بسعرها العادي.
           </p>

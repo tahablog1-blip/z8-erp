@@ -3,7 +3,7 @@
 // بلا أي شاشة لعرضه؛ هنا أول واجهة له: فلاتر + جدول + صفحات)
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Button, Card, EmptyState, ErrorNote, Field, Input, Select } from "@/components/ui";
+import { Button, Card, EmptyState, ErrorNote, Field, Input, Select, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type LogRow = {
@@ -61,7 +61,7 @@ export default function AuditLogPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="page-title">سجل المراجعة</h1>
+        <PageHeader title="سجل المراجعة" description="سجل العمليات الحساسة." />
         <p className="page-desc">كل العمليات الحساسة المسجَّلة تلقائياً — من سجّلها ومتى وماذا تغيّر.</p>
       </div>
 

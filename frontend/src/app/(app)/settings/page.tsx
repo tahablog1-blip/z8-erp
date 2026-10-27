@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Card } from "@/components/ui";
+import { Card, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type SetupStatus = { key: string; label: string; ok: boolean };
@@ -62,7 +62,7 @@ export default function SettingsDashboard() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="page-title">الإعدادات</h1>
+        <PageHeader title="الإعدادات" description="إعدادات النظام والتهيئة." />
         <p className="page-desc">
           إدارة إعدادات منصة Z8 ERP والفروع والمستخدمين والصلاحيات والأجهزة المتصلة.
         </p>

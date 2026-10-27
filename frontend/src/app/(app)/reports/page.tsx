@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Badge, Button, Card, ErrorNote, Field, Input, Select, Tabs } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Select, Tabs, PageHeader } from "@/components/ui";
 import { SalesSummary, VatReturn, money } from "@/modules/accounting/types";
 import { printReport, tableHTML, kpisHTML } from "@/lib/print";
 
@@ -309,7 +309,7 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="page-title">التقارير</h1>
+      <PageHeader title="التقارير" description="تقارير الأداء والمبيعات ومقارنة الفروع." />
 
       {/* ══════════ مقارنة الفروع ══════════ */}
       <Card>
@@ -388,7 +388,7 @@ export default function ReportsPage() {
               <>
                 <Field label="من"><Input type="date" className="tnum" value={from} onChange={(e) => setFrom(e.target.value)} /></Field>
                 <Field label="إلى"><Input type="date" className="tnum" value={to} onChange={(e) => setTo(e.target.value)} /></Field>
-                <Button variant="outline" className="!text-[11.5px]" onClick={applyFiscalYear}>السنة المالية الحالية</Button>
+                <Button variant="outline" size="xs" onClick={applyFiscalYear}>السنة المالية الحالية</Button>
               </>
             )}
             {tab === "sales" && (
@@ -416,10 +416,7 @@ export default function ReportsPage() {
                 </Select>
               </Field>
             )}
-            <button onClick={refresh}
-                    className="rounded-lg bg-petrol px-4 py-2 text-t-md font-bold text-white hover:bg-petrol-deep">
-              تحديث
-            </button>
+            <Button onClick={refresh}>تحديث</Button>
             <button onClick={printCurrent}
                     disabled={tab === "vat" ? !vat : tab === "sales" ? !sales : tab === "techs" ? !techs
                              : tab === "inventory" ? !inv : tab === "profit" ? !profit : !ar}

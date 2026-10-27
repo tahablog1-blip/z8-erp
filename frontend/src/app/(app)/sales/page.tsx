@@ -1078,11 +1078,11 @@ export default function SalesPage() {
                   <b className="tnum">{money(shift.sales.totalInc)}</b>
                 </div>
                 <div className="flex gap-1.5">
-                  <Button variant="ghost" className="flex-1 justify-center !py-1.5 !text-[11.5px]"
+                  <Button variant="ghost" size="xs" className="flex-1 justify-center"
                           onClick={() => { printShiftReport(shift); setGearOpen(false); }}>
                     تقرير الوردية
                   </Button>
-                  <Button variant="danger" className="flex-1 justify-center !py-1.5 !text-[11.5px]"
+                  <Button variant="danger" size="xs" className="flex-1 justify-center"
                           onClick={() => { setCountedCash(""); setCloseNotes(""); setShiftErr(""); setCloseModal(true); setGearOpen(false); }}>
                     إغلاق الوردية
                   </Button>
@@ -1154,10 +1154,10 @@ export default function SalesPage() {
         <div className="flex items-center justify-between rounded-lg border border-emerald/30 bg-emerald-bg px-4 py-2.5 text-t-sm font-bold text-emerald">
           <span>تم إصدار فاتورة {lastInvoice.invoice_no} بإجمالي {money(lastInvoice.total_inc)} ر.س</span>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => printById(lastInvoice.id)}>إعادة طباعة</Button>
-            <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
+            <Button variant="ghost" size="xs" onClick={() => printById(lastInvoice.id)}>إعادة طباعة</Button>
+            <Button variant="ghost" size="xs"
                     onClick={() => window.open(`/api/invoices/${lastInvoice.id}/pdf`, "_blank")}>PDF</Button>
-            <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
+            <Button variant="ghost" size="xs"
                     onClick={async () => {
                       try { await api(`/invoices/${lastInvoice.id}/send-whatsapp`, { method: "POST" }); showToast("جارٍ الإرسال واتساب"); }
                       catch { showToast("تعذر الإرسال"); }
@@ -1390,7 +1390,7 @@ export default function SalesPage() {
                   </span>
                   <span className="tnum text-t-2xl font-black">{money(totalInc)} <span className="text-t-xs">ر.س</span></span>
                 </button>
-                <Button variant="ghost" className="w-full justify-center !text-[11.5px]" disabled={cart.length === 0}
+                <Button variant="ghost" size="xs" className="w-full justify-center" disabled={cart.length === 0}
                         onClick={() => { setHoldNote(""); setHoldModal(true); }}>
                   تعليق الفاتورة
                 </Button>
@@ -1476,7 +1476,7 @@ export default function SalesPage() {
                       </Select>
                       <Input type="number" min={0} step="0.01" className="tnum" value={p.amount}
                              onChange={(e) => setPayments((prev) => prev.map((pp, idx) => idx === i ? { ...pp, amount: e.target.value } : pp))} />
-                      <Button variant="ghost" className="!px-2 !py-1.5 !text-[10.5px] whitespace-nowrap"
+                      <Button variant="ghost" size="xs" className="whitespace-nowrap"
                               onClick={() => fillRemaining(i)}>الباقي</Button>
                       {payments.length > 1 && (
                         <button onClick={() => removePaymentLine(i)} aria-label="حذف"
@@ -1485,7 +1485,7 @@ export default function SalesPage() {
                     </div>
                   ))}
                   <div className="flex items-center justify-between">
-                    <Button variant="ghost" className="!text-[11px]" onClick={addPaymentLine}>+ طريقة أخرى</Button>
+                    <Button variant="ghost" size="xs" onClick={addPaymentLine}>+ طريقة أخرى</Button>
                     <span className={`tnum text-t-sm font-bold ${Math.abs(remaining) > 0.01 ? "text-ember" : "text-emerald"}`}>
                       {Math.abs(remaining) > 0.01 ? `المتبقي: ${money(remaining)}` : "المبلغ مكتمل"}
                     </span>
@@ -1776,8 +1776,8 @@ export default function SalesPage() {
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="tnum font-bold">{money(i.total_inc)}</span>
-                <Button variant="ghost" className="!px-2 !py-1 !text-[11px]" onClick={() => printById(i.id, "thermal")}>حراري</Button>
-                <Button variant="ghost" className="!px-2 !py-1 !text-[11px]" onClick={() => printById(i.id, "a4")}>A4</Button>
+                <Button variant="ghost" size="xs" onClick={() => printById(i.id, "thermal")}>حراري</Button>
+                <Button variant="ghost" size="xs" onClick={() => printById(i.id, "a4")}>A4</Button>
               </div>
             </div>
           ))}
@@ -1820,8 +1820,8 @@ export default function SalesPage() {
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-2">
-                  <Button className="!px-3 !py-1.5 !text-[11.5px]" onClick={() => resumeHeld(h)}>استرجاع</Button>
-                  <Button variant="danger" className="!px-3 !py-1.5 !text-[11.5px]" onClick={() => deleteHeld(h.id)}>حذف</Button>
+                  <Button size="xs" onClick={() => resumeHeld(h)}>استرجاع</Button>
+                  <Button variant="danger" size="xs" onClick={() => deleteHeld(h.id)}>حذف</Button>
                 </div>
               </div>
             ))}

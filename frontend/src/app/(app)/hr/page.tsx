@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { DataTable, Column } from "@/components/DataTable";
-import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch, Tabs, Textarea } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch, Tabs, Textarea, PageHeader } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import {
   Attendance, CommissionPreviewRow, CommissionType, COMMISSION_TYPE_LABELS, CONTRACT_LABELS,
@@ -366,8 +366,8 @@ export default function HrPage() {
       key: "actions", title: "", width: "180px",
       render: (e: Employee) => (
         <div className="flex justify-end gap-1.5">
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => openEditEmp(e)}>تعديل</Button>
-          {e.is_active && <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => terminateEmp(e)}>إنهاء خدمة</Button>}
+          <Button variant="ghost" size="xs" onClick={() => openEditEmp(e)}>تعديل</Button>
+          {e.is_active && <Button variant="danger" size="xs" onClick={() => terminateEmp(e)}>إنهاء خدمة</Button>}
         </div>
       ),
     } satisfies Column<Employee>] : []),
@@ -392,8 +392,8 @@ export default function HrPage() {
       key: "actions", title: "", width: "150px",
       render: (l: LeaveRequest) => l.status === "pending" ? (
         <div className="flex justify-end gap-1.5">
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => decideLeave(l, "approved")}>اعتماد</Button>
-          <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => decideLeave(l, "rejected")}>رفض</Button>
+          <Button variant="ghost" size="xs" onClick={() => decideLeave(l, "approved")}>اعتماد</Button>
+          <Button variant="danger" size="xs" onClick={() => decideLeave(l, "rejected")}>رفض</Button>
         </div>
       ) : null,
     } satisfies Column<LeaveRequest>] : []),
@@ -414,7 +414,7 @@ export default function HrPage() {
       : <Badge tone="warn">مسودة</Badge> },
     { key: "payslip_count", title: "عدد القسائم", width: "100px", render: (r) => <span className="tnum">{r.payslip_count}</span> },
     { key: "total_net", title: "إجمالي الصافي", width: "130px", render: (r) => <span className="tnum font-bold">{money(r.total_net || 0)}</span> },
-    { key: "actions", title: "", width: "90px", render: (r) => <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => openPayslips(r)}>عرض</Button> },
+    { key: "actions", title: "", width: "90px", render: (r) => <Button variant="ghost" size="xs" onClick={() => openPayslips(r)}>عرض</Button> },
   ];
 
   const custodyCols: Column<CustodyItem>[] = [
@@ -432,8 +432,8 @@ export default function HrPage() {
       key: "actions", title: "", width: "160px",
       render: (c: CustodyItem) => c.status === "held" ? (
         <div className="flex justify-end gap-1.5">
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => custodyReturn(c, "returned")}>إرجاع</Button>
-          <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => custodyReturn(c, "lost")}>فقد</Button>
+          <Button variant="ghost" size="xs" onClick={() => custodyReturn(c, "returned")}>إرجاع</Button>
+          <Button variant="danger" size="xs" onClick={() => custodyReturn(c, "lost")}>فقد</Button>
         </div>
       ) : null,
     } satisfies Column<CustodyItem>] : []),
@@ -456,8 +456,8 @@ export default function HrPage() {
       key: "actions", title: "", width: "150px",
       render: (r: EmployeeRequest) => r.status === "pending" ? (
         <div className="flex justify-end gap-1.5">
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => decideRequest(r, "approved")}>اعتماد</Button>
-          <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => decideRequest(r, "rejected")}>رفض</Button>
+          <Button variant="ghost" size="xs" onClick={() => decideRequest(r, "approved")}>اعتماد</Button>
+          <Button variant="danger" size="xs" onClick={() => decideRequest(r, "rejected")}>رفض</Button>
         </div>
       ) : null,
     } satisfies Column<EmployeeRequest>] : []),
@@ -467,7 +467,7 @@ export default function HrPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="page-title">الموارد البشرية</h1>
+      <PageHeader title="الموارد البشرية" description="إدارة الموظفين والحضور والرواتب والإجازات والعهد." />
       <ErrorNote msg={pageErr} />
 
       {canView && iqamaAlerts.length > 0 && (

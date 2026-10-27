@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { cacheCompany } from "@/lib/company";
-import { Button, Card, ErrorNote, Field, Input } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type Company = {
@@ -137,7 +137,7 @@ export default function CompanySettingsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="page-title">الإعدادات — المنشأة</h1>
+      <PageHeader title="الإعدادات — المنشأة" description="بيانات المنشأة والشعار والتواصل." />
 
       <Card>
         <h2 className="mb-2 text-t-md font-black">الشعار</h2>

@@ -7,10 +7,10 @@ import { printInvoice } from "@/lib/print-invoice";
 import { cacheCompany } from "@/lib/company";
 import type { InvoiceDetail } from "@/modules/invoices/types";
 
-const NAVY = "#122A5C";
-const GREEN = "#16A34A";
-const DIM = "#6B7A90";
-const LINE = "#E3E8EF";
+const NAVY = "var(--petrol-deep)";
+const GREEN = "var(--emerald)";
+const DIM = "var(--text-dim)";
+const LINE = "var(--line)";
 
 type Inv = {
   id: string; invoiceNo: string; issuedAt: string; total: number;
@@ -29,9 +29,9 @@ function money(n: number): string {
 }
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
-  paid: { label: "مدفوعة", color: GREEN, bg: "rgba(22,163,74,.1)" },
-  partial: { label: "مدفوعة جزئياً", color: "#D97706", bg: "#FCF0DE" },
-  unpaid: { label: "غير مدفوعة", color: "#DC2626", bg: "#FDECEC" },
+  paid: { label: "مدفوعة", color: GREEN, bg: "var(--emerald-bg)" },
+  partial: { label: "مدفوعة جزئياً", color: "var(--brass)", bg: "var(--brass-soft)" },
+  unpaid: { label: "غير مدفوعة", color: "var(--ember)", bg: "var(--ember-bg)" },
 };
 
 export default function MyInvoicesPage() {
@@ -69,11 +69,11 @@ export default function MyInvoicesPage() {
   }
 
   return (
-    <div dir="rtl" className="min-h-screen px-4 py-6" style={{ background: "#EEF2F6" }}>
+    <div dir="rtl" className="min-h-screen px-4 py-6" style={{ background: "var(--ink3)" }}>
       <div className="mx-auto max-w-md space-y-4">
         <div className="flex items-center justify-between rounded-card px-5 py-4 text-white shadow-lg" style={{ background: NAVY }}>
           <div>
-            <div className="text-t-xl font-black">📄 فواتيري</div>
+            <div className="text-t-xl font-black">فواتيري</div>
             <div className="text-t-xs text-white/70">كل فواتيرك — معاينة وتحميل</div>
           </div>
           <a href={`/booking/${branchId}`}
@@ -81,7 +81,7 @@ export default function MyInvoicesPage() {
         </div>
 
         {err && (
-          <p className="rounded-card bg-white px-4 py-3 text-center text-t-sm font-bold shadow" style={{ color: "#DC2626" }}>{err}</p>
+          <p className="rounded-card bg-white px-4 py-3 text-center text-t-sm font-bold shadow" style={{ color: "var(--ember)" }}>{err}</p>
         )}
 
         {invoices === null && <p className="py-8 text-center text-t-md" style={{ color: DIM }}>جارِ التحميل...</p>}
@@ -97,7 +97,7 @@ export default function MyInvoicesPage() {
           return (
             <div key={inv.id} className="kiosk-pop space-y-3 rounded-card bg-white p-4 shadow-lg">
               {(inv.plate || inv.carLabel) && (
-                <div className="flex items-center gap-2 rounded-card px-3 py-2" style={{ background: "#F3F6FA" }}>
+                <div className="flex items-center gap-2 rounded-card px-3 py-2" style={{ background: "var(--ink3)" }}>
                   {inv.plate && (
                     <span className="tnum rounded-lg px-2.5 py-1 text-t-sm font-black text-white" style={{ background: NAVY }}>
                       {inv.plate}
@@ -112,8 +112,8 @@ export default function MyInvoicesPage() {
                 <div>
                   <div className="tnum text-t-lg font-black" style={{ color: NAVY }}>{inv.invoiceNo}</div>
                   <div className="tnum mt-0.5 text-t-xs font-bold" style={{ color: DIM }}>
-                    📅 {new Date(inv.issuedAt).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { year: "numeric", month: "2-digit", day: "2-digit" })}
-                    {inv.odometer != null && <> · 🛞 عداد {inv.odometer.toLocaleString("en")}</>}
+                    {new Date(inv.issuedAt).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { year: "numeric", month: "2-digit", day: "2-digit" })}
+                    {inv.odometer != null && <> · عداد {inv.odometer.toLocaleString("en")}</>}
                   </div>
                 </div>
                 <div className="text-left">

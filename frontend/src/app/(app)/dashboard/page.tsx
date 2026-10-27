@@ -1,6 +1,7 @@
 "use client";
 // لوحة القيادة التنفيذية — طلب واحد /reports/executive يغذّي كل الأقسام، والأقسام تظهر حسب صلاحيات المستخدم
 // (data.access). التصميم: فلتر شامل → مؤشرات → رسوم وتحليلات → جداول → تنبيهات/إجراءات. RTL أولاً والإنجليزية جاهزة.
+import { Button } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -70,7 +71,7 @@ export default function DashboardPage() {
         <MIcon name="cloud_off" className="!text-[44px] text-ember" />
         <h1 className="mt-2 page-title">{d("loadFail")}</h1>
         <p className="page-desc">{error}</p>
-        <button onClick={reload} className="mt-4 rounded-lg bg-petrol px-5 py-2 text-t-sm font-bold text-white">{d("retry")}</button>
+        <Button className="mt-4" onClick={reload}>{d("retry")}</Button>
       </div>
     );
   }

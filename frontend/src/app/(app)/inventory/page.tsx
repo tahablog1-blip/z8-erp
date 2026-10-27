@@ -336,7 +336,7 @@ export default function InventoryPage() {
       key: "actions", title: "", width: "90px",
       render: (v) => (
         <div className="flex justify-end">
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
+          <Button variant="ghost" size="xs"
                   onClick={() => openVoucher(v.moveNo)}>عرض</Button>
         </div>
       ),
@@ -439,8 +439,8 @@ export default function InventoryPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex gap-1.5">
-                  <Button variant={reqFilter === "pending" ? "primary" : "ghost"} className="!text-[12px]" onClick={() => setReqFilter("pending")}>معلّقة</Button>
-                  <Button variant={reqFilter === "all" ? "primary" : "ghost"} className="!text-[12px]" onClick={() => setReqFilter("all")}>الكل</Button>
+                  <Button variant={reqFilter === "pending" ? "primary" : "ghost"} size="sm" onClick={() => setReqFilter("pending")}>معلّقة</Button>
+                  <Button variant={reqFilter === "all" ? "primary" : "ghost"} size="sm" onClick={() => setReqFilter("all")}>الكل</Button>
                 </div>
               </div>
               {requests.length === 0 && <p className="py-10 text-center text-t-sm text-text-dim">لا طلبات حالياً</p>}
@@ -472,7 +472,7 @@ export default function InventoryPage() {
                       </div>
                       {(r.status === "pending" || r.status === "approved") && canApproveRequests && (
                         <div className="mt-2.5">
-                          <Button className="!text-[12px]" onClick={() => openDecide(r)}>
+                          <Button size="sm" onClick={() => openDecide(r)}>
                             {r.status === "approved" ? "إعادة محاولة التنفيذ" : "مراجعة والبت"}
                           </Button>
                         </div>
@@ -646,7 +646,7 @@ export default function InventoryPage() {
         {voucher && (
           <div className="space-y-3">
             <div className="flex justify-end">
-              <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={printVoucher}>طباعة السند</Button>
+              <Button variant="ghost" size="xs" onClick={printVoucher}>طباعة السند</Button>
             </div>
             <div className="grid gap-2 rounded-lg bg-ink-3 p-3 text-t-sm sm:grid-cols-4">
               <div><span className="text-text-dim">النوع:</span>{" "}

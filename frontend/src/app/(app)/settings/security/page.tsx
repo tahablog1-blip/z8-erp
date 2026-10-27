@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { api } from "@/lib/api";
-import { Button, Card, ErrorNote, Field, Input } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type TotpStatus = { enabled: boolean; backupCodesLeft: number };
@@ -87,7 +87,7 @@ export default function SecuritySettingsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="page-title">الأمان</h1>
+        <PageHeader title="الأمان" description="أمان الحساب." />
         <p className="page-desc">المصادقة الثنائية وإدارة الجلسات المفتوحة على حسابك.</p>
       </div>
 

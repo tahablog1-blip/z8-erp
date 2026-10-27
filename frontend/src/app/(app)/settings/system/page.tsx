@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { api, getToken } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { setFormatSettings } from "@/lib/format";
-import { Button, Card, ErrorNote, Field, Input, Select, Switch } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, Select, Switch, PageHeader } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import { NAV_MODULES } from "@/modules/registry";
 
@@ -156,7 +156,7 @@ export default function SystemSettingsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="page-title">الإعدادات — النظام</h1>
+      <PageHeader title="الإعدادات — النظام" description="حالة النظام والتكاملات." />
 
       <Card>
         <div className="max-w-xl space-y-2 text-t-sm">
@@ -358,8 +358,8 @@ export default function SystemSettingsPage() {
                   </div>
                 </div>
                 <div className="flex gap-1.5">
-                  <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => downloadBackup(b)}>تنزيل</Button>
-                  <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => deleteBackup(b)}>حذف</Button>
+                  <Button variant="ghost" size="xs" onClick={() => downloadBackup(b)}>تنزيل</Button>
+                  <Button variant="danger" size="xs" onClick={() => deleteBackup(b)}>حذف</Button>
                 </div>
               </div>
             ))}

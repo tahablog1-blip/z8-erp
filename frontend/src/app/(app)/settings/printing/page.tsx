@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { cachePrinting } from "@/lib/printing";
-import { Button, Card, ErrorNote, Field, Input, Select, Switch } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, Select, Switch, PageHeader } from "@/components/ui";
 
 type Printing = {
   autoPrint: boolean; footer: string; footerReturn: string;
@@ -45,7 +45,7 @@ export default function PrintingSettingsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="page-title">الإعدادات — الطباعة</h1>
+      <PageHeader title="الإعدادات — الطباعة" description="إعدادات الطباعة." />
 
       <Card>
         <div className="max-w-xl space-y-4">

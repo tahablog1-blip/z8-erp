@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { api } from "@/lib/api";
-import { Badge, Button, Card, EmptyState, ErrorNote, Field, Input } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type WhatsAppSettings = { waInstance: string | null; hasToken: boolean };
@@ -158,7 +158,7 @@ export default function IntegrationsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="page-title">التكاملات</h1>
+        <PageHeader title="التكاملات" description="ربط الخدمات الخارجية." />
         <p className="page-desc">مفاتيح واتساب (UltraMsg) وسجل أحداث كل التكاملات الخارجية.</p>
       </div>
 
@@ -206,7 +206,7 @@ export default function IntegrationsPage() {
       <Card className="!p-0">
         <div className="flex items-center justify-between px-5 pt-4">
           <div className="text-t-md font-extrabold">سجل أحداث التكاملات</div>
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={loadLog}>
+          <Button variant="ghost" size="xs" onClick={loadLog}>
             <MIcon name="refresh" className="!text-[16px]" /> تحديث
           </Button>
         </div>

@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Button, Card, ErrorNote, Field, Input, Switch, Textarea } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, Switch, Textarea, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type Role = {
@@ -94,7 +94,7 @@ export default function RolesSettingsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="page-title">الإعدادات — الأدوار والصلاحيات</h1>
+          <PageHeader title="الإعدادات — الأدوار والصلاحيات" description="الأدوار وصلاحياتها." />
           <p className="page-desc">
             كل دور مجموعة صلاحيات جاهزة — طبّقه على أي موظف بضغطة من صفحته، وأي تعديل هنا ينعكس فوراً.
           </p>

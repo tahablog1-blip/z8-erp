@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
-const NAVY = "#0F2D52", DIM = "#51617A";
+const NAVY = "var(--petrol-deep)", DIM = "var(--text-dim)";
 
 export default function StatusTokenPage() {
   const params = useParams<{ token: string }>();
@@ -35,14 +35,14 @@ export default function StatusTokenPage() {
   }, [token]);
 
   return (
-    <div dir="rtl" className="grid min-h-screen place-items-center px-4" style={{ background: "#EEF2F6" }}>
+    <div dir="rtl" className="grid min-h-screen place-items-center px-4" style={{ background: "var(--ink3)" }}>
       <div className="w-full max-w-sm rounded-card bg-white p-6 text-center shadow-lg">
         <div className="text-t-lg font-black" style={{ color: NAVY }}>مصدر الزيوت</div>
         {!err ? (
           <p className="mt-2 text-t-md font-bold" style={{ color: DIM }}>جارِ فتح المحادثة…</p>
         ) : (
           <p className="mt-2 rounded-lg px-3 py-2 text-t-sm font-black"
-             style={{ background: "rgba(220,38,38,.08)", color: "#DC2626" }}>{err}</p>
+             style={{ background: "var(--ember-bg)", color: "var(--ember)" }}>{err}</p>
         )}
       </div>
     </div>

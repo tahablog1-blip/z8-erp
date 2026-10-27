@@ -2,7 +2,7 @@
 // حجز الدور الذاتي — رحلة العميل الكاملة:
 // جوال/لوحة → جراجه المحفوظ (بياناته ما بتضيعش) → أو تسجيل جديد بثلاث فئات → تذكرة حية
 //
-// ⚠️ قاعدة مهمة في هذا الملف:
+// قاعدة مهمة في هذا الملف:
 // كل كومبوننت (TInput / Section / EntryCard / GarageCard / RegisterForm) معرّف
 // خارج الكومبوننت الأب. لو اتعرّف جوه، React بيعتبره "نوع جديد" كل render
 // فبيهد الحقول ويعيد بناءها → الفوكس بيضيع وتضطر تضغط قبل كل حرف.
@@ -40,7 +40,7 @@ const ENGINE_SIZE_SUGGESTIONS = [
   "2.7", "3.0", "3.3", "3.5", "3.6", "4.0", "4.6", "5.0", "5.3", "5.7", "6.2",
 ];
 
-const NAVY = "#0F2D52", GREEN = "#16A34A", DIM = "#51617A", LINE = "#E2E8F0";
+const NAVY = "var(--petrol-deep)", GREEN = "var(--emerald)", DIM = "var(--text-dim)", LINE = "var(--line)";
 const TYPE_META: Record<SType, { title: string; desc: string; icon: string }> = {
   basic: { title: "خارج الضمان", desc: "بيانات مختصرة وسريعة", icon: "directions_car" },
   warranty: { title: "تحت الضمان", desc: "بيانات السيارة كاملة", icon: "verified_user" },
@@ -67,7 +67,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 
 /* ═══════════ كومبوننتات ثابتة (module scope) ═══════════ */
 
-const inputCls = `w-full rounded-card border px-4 py-3 text-t-md font-bold outline-none transition focus:border-[#0F2D52] focus:ring-2 focus:ring-[#0F2D52]/15`;
+const inputCls = `w-full rounded-card border px-4 py-3 text-t-md font-bold outline-none transition focus:border-petrol focus:ring-2 focus:ring-[var(--petrol-deep)]/15`;
 
 function TInput(props: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
   const { label, className = "", ...rest } = props;
@@ -129,7 +129,7 @@ function Combobox({ label, value, onChange, options, placeholder, allowCustom = 
                 onChange(o);
                 setOpen(false);
               }}
-              className="block w-full px-4 py-2.5 text-right text-t-md font-bold transition hover:bg-[#F1F5F9]"
+              className="block w-full px-4 py-2.5 text-right text-t-md font-bold transition hover:bg-ink-3"
               style={{ color: value === o ? GREEN : NAVY }}
             >
               {o}
@@ -143,7 +143,7 @@ function Combobox({ label, value, onChange, options, placeholder, allowCustom = 
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-2.5 rounded-card p-3" style={{ background: "#F6F8FA" }}>
+    <div className="space-y-2.5 rounded-card p-3" style={{ background: "var(--ink3)" }}>
       <div className="text-t-sm font-black" style={{ color: GREEN }}>{title}</div>
       {children}
     </div>
@@ -154,7 +154,7 @@ function ErrBox({ msg }: { msg: string }) {
   if (!msg) return null;
   return (
     <p className="rounded-lg px-3 py-2 text-center text-t-sm font-bold"
-      style={{ background: "rgba(220,38,38,.08)", color: "#DC2626" }}>{msg}</p>
+      style={{ background: "var(--ember-bg)", color: "var(--ember)" }}>{msg}</p>
   );
 }
 
@@ -223,7 +223,7 @@ function OtpEntryCard({ branchId, otp, onVerified }: {
             setCode(v);
             if (v.length === 6) verify(v);
           }}
-          className={`${inputCls} tnum text-center text-[26px] tracking-[0.5em]`} style={{ borderColor: LINE }} />
+          className={`${inputCls} tnum text-center text-t-3xl tracking-[0.5em]`} style={{ borderColor: LINE }} />
         <ErrBox msg={err} />
         <button onClick={() => verify(code)} disabled={busy || code.length !== 6}
           className="flex w-full items-center justify-center gap-2 rounded-card py-3.5 text-t-lg font-black text-white shadow-lg transition active:scale-[.98] disabled:opacity-40"
@@ -245,12 +245,12 @@ function OtpEntryCard({ branchId, otp, onVerified }: {
 
   return (
     <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
-      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>أهلاً بك 👋</h2>
+      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>أهلاً بك</h2>
       <p className="text-center text-t-sm" style={{ color: DIM }}>
         سجّل دخولك برقم جوالك أو بريدك — هنبعتلك رمز تحقق، ولو سجّلت قبل كده هنرجّع بياناتك وسياراتك فوراً
       </p>
       {otp.phone && otp.email && (
-        <div className="flex gap-1 rounded-card p-1" style={{ background: "#F1F5F9" }} role="tablist">
+        <div className="flex gap-1 rounded-card p-1" style={{ background: "var(--ink3)" }} role="tablist">
           {([["phone", "رقم الجوال"], ["email", "البريد الإلكتروني"]] as const).map(([k, label]) => (
             <button key={k} role="tab" aria-selected={channel === k}
               onClick={() => { setChannel(k); setValue(""); setErr(""); }}
@@ -288,7 +288,7 @@ function EntryCard({ busy, err, onSubmit }: {
 
   return (
     <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
-      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>أهلاً بك 👋</h2>
+      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>أهلاً بك</h2>
       <p className="text-center text-t-sm" style={{ color: DIM }}>
         أدخل جوالك أو رقم لوحتك — لو سجّلت قبل كده هنرجّع بياناتك وسياراتك فوراً
       </p>
@@ -319,14 +319,14 @@ function GarageCard({ profile, busy, err, onBook, onAddNew }: {
   return (
     <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
       <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>
-        أهلاً {profile.customer?.name} 👋
+        أهلاً {profile.customer?.name}
       </h2>
       <p className="text-center text-t-sm" style={{ color: DIM }}>اختر سيارتك لحجز الدور بضغطة</p>
       <div className="space-y-2">
         {(profile.cars || []).map((c) => (
           <button key={c.id} onClick={() => { setQuickCar(c); setQuickOdo(""); }}
             className="flex w-full items-center gap-3 rounded-card border-2 p-3 text-right transition active:scale-[.98]"
-            style={{ borderColor: quickCar?.id === c.id ? GREEN : LINE, background: quickCar?.id === c.id ? "rgba(22,163,74,.06)" : "#fff" }}>
+            style={{ borderColor: quickCar?.id === c.id ? GREEN : LINE, background: quickCar?.id === c.id ? "var(--emerald-bg)" : "var(--ink2)" }}>
             <MIcon name={TYPE_META[(c.service_type as SType) || "basic"]?.icon || "directions_car"} className="!text-[26px]" />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-t-md font-black">{[c.brand, c.name, c.model_year].filter(Boolean).join(" ") || "سيارة"}</span>
@@ -339,7 +339,7 @@ function GarageCard({ profile, busy, err, onBook, onAddNew }: {
         ))}
       </div>
       {quickCar && (
-        <div className="kiosk-pop space-y-2 rounded-card p-3" style={{ background: "#F6F8FA" }}>
+        <div className="kiosk-pop space-y-2 rounded-card p-3" style={{ background: "var(--ink3)" }}>
           <TInput label={`ممشى ${quickCar.plate} الحالي (كم)`} inputMode="numeric" className="tnum" placeholder="مثال: 84500"
             value={quickOdo} onChange={(e) => setQuickOdo(e.target.value.replace(/\D/g, ""))} autoFocus />
           <button onClick={() => onBook(quickCar, quickOdo)} disabled={busy || !quickOdo}
@@ -391,7 +391,7 @@ function RegisterForm({ sType, initial, busy, err, branchId, lockPhone, onBack, 
   return (
     <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
       <div className="flex items-center justify-between">
-        <button onClick={() => onBack(f)} className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-t-sm font-black text-slate-700 hover:bg-slate-200 transition">
+        <button onClick={() => onBack(f)} className="flex items-center gap-1.5 rounded-lg bg-ink-3 px-3 py-1.5 text-t-sm font-black text-text hover:bg-ink-4 transition">
           <MIcon name="arrow_forward" className="!text-[15px]" /> رجوع
         </button>
         <span className="rounded-full px-3 py-1 text-t-xs font-black text-white" style={{ background: NAVY }}>
@@ -401,7 +401,7 @@ function RegisterForm({ sType, initial, busy, err, branchId, lockPhone, onBack, 
 
       <Section title="بياناتك">
         <TInput label="الاسم" value={f.name} onChange={set("name")} />
-        <TInput label={lockPhone ? "رقم الجوال (موثَّق ✓)" : "رقم الجوال"} inputMode="tel" className="tnum" placeholder="05xxxxxxxx"
+        <TInput label={lockPhone ? "رقم الجوال (موثَّق)" : "رقم الجوال"} inputMode="tel" className="tnum" placeholder="05xxxxxxxx"
           value={f.phone} onChange={set("phone")} readOnly={lockPhone} />
       </Section>
 
@@ -524,7 +524,7 @@ function RegisterForm({ sType, initial, busy, err, branchId, lockPhone, onBack, 
 
       <ErrBox msg={err} />
       {!f.cylinders && (
-        <p className="text-center text-t-xs font-bold" style={{ color: "#B45309" }}>
+        <p className="text-center text-t-xs font-bold" style={{ color: "var(--brass)" }}>
           حدّد عدد السلندرات فوق قبل المتابعة — ضروري لمطابقة الفلتر الصحيح لسيارتك.
         </p>
       )}
@@ -535,7 +535,7 @@ function RegisterForm({ sType, initial, busy, err, branchId, lockPhone, onBack, 
         {busy ? "جارِ الحجز..." : "حفظ السيارة وحجز الدور"}
       </button>
       <p className="text-center text-t-xs" style={{ color: DIM }}>
-        سيارتك بتتحفظ في ملفك — المرة الجاية حجزك بضغطة واحدة، وبياناتك محفوظة حتى لو غيّرت جوالك ✨
+        سيارتك بتتحفظ في ملفك — المرة الجاية حجزك بضغطة واحدة، وبياناتك محفوظة حتى لو غيّرت جوالك
       </p>
     </div>
   );
@@ -544,10 +544,10 @@ function RegisterForm({ sType, initial, busy, err, branchId, lockPhone, onBack, 
 /* ═══════════ محادثة مركز الخدمة (مرحلة 3) — module scope ═══════════ */
 
 const QUICK_REPLIES = [
-  "موافق — نفّذوا الخدمة ✅",
-  "غير موافق حالياً ❌",
+  "موافق — نفّذوا الخدمة",
+  "غير موافق حالياً",
   "كم التكلفة الإضافية؟",
-  "اتصلوا بي من فضلكم 📞",
+  "اتصلوا بي من فضلكم",
 ];
 
 function fmtChatTime(iso: string): string {
@@ -585,7 +585,7 @@ function ChatBubble({ m }: { m: ChatMsg }) {
   return (
     <div className={`flex ${mine ? "justify-start" : "justify-end"}`}>
       <div className={`max-w-[82%] rounded-card px-3.5 py-2 text-t-md leading-relaxed ${mine ? "rounded-bl-sm text-white" : "rounded-br-sm border bg-white"}`}
-        style={mine ? { background: GREEN } : { borderColor: LINE, color: "#1E293B" }}>
+        style={mine ? { background: GREEN } : { borderColor: LINE, color: "var(--text)" }}>
         {m.attachment_url && (m.message_type === "voice" || m.attachment_url.endsWith(".wav")) ? (
           <audio controls preload="metadata" src={m.attachment_url} className="my-0.5 w-[215px] max-w-full" />
         ) : m.attachment_url ? (
@@ -595,7 +595,7 @@ function ChatBubble({ m }: { m: ChatMsg }) {
         {(!m.attachment_url || m.message_type !== "voice") && (
           <p className="whitespace-pre-wrap break-words font-bold">{m.message}</p>
         )}
-        <p className="mt-0.5 text-[9.5px]" style={{ color: mine ? "rgba(255,255,255,.75)" : DIM }}>
+        <p className="mt-0.5 text-t-xs" style={{ color: mine ? "rgba(255,255,255,.75)" : DIM }}>
           {mine ? "أنت" : "مركز الخدمة"} · {fmtChatTime(m.created_at)}
         </p>
       </div>
@@ -605,15 +605,15 @@ function ChatBubble({ m }: { m: ChatMsg }) {
 
 function ChatNoteCard({ n, labels }: { n: ChatNote; labels: Record<string, string> }) {
   return (
-    <div className="rounded-card border px-3.5 py-2.5" style={{ borderColor: "#FDE68A", background: "#FFFBEB" }}>
+    <div className="rounded-card border px-3.5 py-2.5" style={{ borderColor: "var(--brass-soft)", background: "var(--brass-soft)" }}>
       <div className="flex items-center justify-between gap-2">
-        <span className="rounded-full px-2.5 py-0.5 text-t-xs font-black" style={{ background: "#FDE68A", color: "#92400E" }}>
+        <span className="rounded-full px-2.5 py-0.5 text-t-xs font-black" style={{ background: "var(--brass-soft)", color: "var(--brass)" }}>
           {labels[n.type] ?? n.type}
         </span>
-        <span className="tnum text-t-xs font-bold" style={{ color: "#B45309" }}>{n.note_number}</span>
+        <span className="tnum text-t-xs font-bold" style={{ color: "var(--brass)" }}>{n.note_number}</span>
       </div>
       {n.title && <p className="mt-1 text-t-sm font-black" style={{ color: NAVY }}>{n.title}</p>}
-      {n.description && <p className="mt-0.5 text-t-sm font-bold" style={{ color: "#334155" }}>{n.description}</p>}
+      {n.description && <p className="mt-0.5 text-t-sm font-bold" style={{ color: "var(--text)" }}>{n.description}</p>}
     </div>
   );
 }
@@ -720,7 +720,7 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
         if (s >= 60) stopRec(true); // حد أقصى دقيقة
       }, 500);
     } catch {
-      setCErr("اسمح بالوصول للمايكروفون من المتصفح أولاً 🎤");
+      setCErr("اسمح بالوصول للمايكروفون من المتصفح أولاً");
     }
   }
 
@@ -764,10 +764,10 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
         </div>
       )}
 
-      <div className="max-h-[42vh] space-y-2 overflow-y-auto rounded-card p-2.5" style={{ background: "#F6F8FA" }}>
+      <div className="max-h-[42vh] space-y-2 overflow-y-auto rounded-card p-2.5" style={{ background: "var(--ink3)" }}>
         {(!data || data.messages.length === 0) && (
           <p className="py-5 text-center text-t-xs font-bold" style={{ color: DIM }}>
-            اكتب رسالتك وسيصلك الرد هنا — أي تحديث عن سيارتك هيظهر في نفس المكان 💬
+            اكتب رسالتك وسيصلك الرد هنا — أي تحديث عن سيارتك هيظهر في نفس المكان
           </p>
         )}
         {data?.messages.map((m) => <ChatBubble key={m.id} m={m} />)}
@@ -778,7 +778,7 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
         {QUICK_REPLIES.map((q) => (
           <button key={q} disabled={sending} onClick={() => sendMsg(q)}
             className="rounded-full border px-3 py-1.5 text-t-xs font-black transition active:scale-[.97] disabled:opacity-40"
-            style={{ borderColor: LINE, color: NAVY, background: "#fff" }}>
+            style={{ borderColor: LINE, color: NAVY, background: "var(--ink2)" }}>
             {q}
           </button>
         ))}
@@ -794,7 +794,7 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
           <input value={text} onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") sendMsg(); }}
             placeholder="اكتب رسالتك هنا…" maxLength={2000}
-            className="min-w-0 flex-1 rounded-card border px-3.5 py-2.5 text-t-md font-bold outline-none focus:border-[#0F2D52]"
+            className="min-w-0 flex-1 rounded-card border px-3.5 py-2.5 text-t-md font-bold outline-none focus:border-petrol"
             style={{ borderColor: LINE }} />
           <button onClick={() => sendMsg()} disabled={sending || !text.trim()}
             className="flex items-center gap-1 rounded-card px-4 py-2.5 text-t-md font-black text-white transition active:scale-[.97] disabled:opacity-40"
@@ -804,9 +804,9 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
           </button>
         </div>
       ) : (
-        <div className="flex items-center gap-2 rounded-card px-3 py-2.5" style={{ background: "rgba(220,38,38,.07)" }}>
-          <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full" style={{ background: "#DC2626" }} />
-          <span className="tnum min-w-0 flex-1 text-t-sm font-black" style={{ color: "#DC2626" }}>
+        <div className="flex items-center gap-2 rounded-card px-3 py-2.5" style={{ background: "var(--ember-bg)" }}>
+          <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full" style={{ background: "var(--ember)" }} />
+          <span className="tnum min-w-0 flex-1 text-t-sm font-black" style={{ color: "var(--ember)" }}>
             جارِ التسجيل… {recSec} ث / 60
           </span>
           <button onClick={() => stopRec(true)}
@@ -860,7 +860,7 @@ function brandLogoFor(name: string, logos: BrandLogo[]): string | null {
   return null;
 }
 
-/* ═══════════ 🛢 زيت سيارتك — الكمية المعتمدة لموديلك (تُحدد مرة واحدة) ═══════════ */
+/* ═══════════ زيت سيارتك — الكمية المعتمدة لموديلك (تُحدد مرة واحدة) ═══════════ */
 function OilCard({ carId }: { carId: string }) {
   const [open, setOpen] = useState(false);
   const [info, setInfo] = useState<{ oilQty: number | null; oilType: string; brand?: string; model?: string; modelYear?: string } | null>(null);
@@ -891,19 +891,19 @@ function OilCard({ carId }: { carId: string }) {
         <div className="mt-3">
           {loading && <p className="text-t-sm font-bold" style={{ color: DIM }}>جارِ التحميل…</p>}
           {!loading && info && info.oilQty != null && (
-            <div className="rounded-card p-3" style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
-              <p className="text-t-md font-black" style={{ color: "#166534" }}>
+            <div className="rounded-card p-3" style={{ background: "var(--emerald-bg)", border: "1px solid var(--emerald-bg)" }}>
+              <p className="text-t-md font-black" style={{ color: "var(--emerald)" }}>
                 الكمية المعتمدة لموديل سيارتك: {info.oilQty} لتر
                 {info.oilType && <> — {info.oilType}</>}
               </p>
-              <p className="mt-0.5 text-t-xs font-bold" style={{ color: "#15803D" }}>
+              <p className="mt-0.5 text-t-xs font-bold" style={{ color: "var(--emerald)" }}>
                 {[info.brand, info.model, info.modelYear].filter(Boolean).join(" ")}
               </p>
             </div>
           )}
           {!loading && (!info || info.oilQty == null) && (
             <p className="rounded-card p-3 text-t-sm font-bold"
-              style={{ background: "#F6F8FA", color: DIM }}>
+              style={{ background: "var(--ink3)", color: DIM }}>
               لم تُحدد كمية الزيت لموديل سيارتك بعد — سيحددها الفني عند الخدمة وتظهر هنا تلقائياً لكل زياراتك القادمة.
             </p>
           )}
@@ -979,7 +979,7 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
 
   return (
     <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
-      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>🛢 اختيار الزيت</h2>
+      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>اختيار الزيت</h2>
 
       {mode === "choose" && (
         <div className="space-y-2.5">
@@ -1016,7 +1016,7 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
         <div className="space-y-2">
           {loadingInv && <p className="py-4 text-center text-t-sm" style={{ color: DIM }}>جارِ تحميل فواتيرك...</p>}
           {!loadingInv && invoices !== null && invoices.length === 0 && (
-            <p className="rounded-card p-3 text-center text-t-sm font-bold" style={{ background: "#F6F8FA", color: DIM }}>
+            <p className="rounded-card p-3 text-center text-t-sm font-bold" style={{ background: "var(--ink3)", color: DIM }}>
               لا توجد فواتير سابقة بهذا الجوال — اختر زيتاً من القائمة
             </p>
           )}
@@ -1035,7 +1035,7 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
             </button>
           ))}
           {err && <ErrBox msg={err} />}
-          <button onClick={() => setMode("choose")} className="mx-auto flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-t-sm font-black text-slate-700 hover:bg-slate-200 transition">
+          <button onClick={() => setMode("choose")} className="mx-auto flex items-center gap-1.5 rounded-lg bg-ink-3 px-3 py-1.5 text-t-sm font-black text-text hover:bg-ink-4 transition">
             <MIcon name="arrow_forward" className="!text-[15px]" /> رجوع
           </button>
         </div>
@@ -1054,19 +1054,19 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
               {brands.map((b) => (
                 <button key={b.name} onClick={() => setBrandPick(b.name)}
                   className="flex flex-col items-center gap-1.5 rounded-card border-2 p-3 transition active:scale-[.97]"
-                  style={{ borderColor: LINE, background: "#fff" }}>
+                  style={{ borderColor: LINE, background: "var(--ink2)" }}>
                   {(() => {
                     const lg = brandLogoFor(b.name, brandLogos);
                     return lg
                       ? <img src={lg} alt="" loading="lazy"
-                        className="h-11 w-11 rounded-full object-contain" style={{ background: "#EEF3F9" }} />
+                        className="h-11 w-11 rounded-full object-contain" style={{ background: "var(--ink3)" }} />
                       : <span className="grid h-11 w-11 place-items-center rounded-full text-t-2xl"
-                        style={{ background: "#EEF3F9", color: NAVY }}>
+                        style={{ background: "var(--ink3)", color: NAVY }}>
                         <MIcon name="oil_barrel" className="!text-[22px]" />
                       </span>;
                   })()}
                   <span className="line-clamp-1 text-t-xs font-black" style={{ color: NAVY }}>{b.name}</span>
-                  <span className="tnum text-[9.5px] font-bold" style={{ color: DIM }}>{b.count} منتج</span>
+                  <span className="tnum text-t-xs font-bold" style={{ color: DIM }}>{b.count} منتج</span>
                 </button>
               ))}
             </div>
@@ -1074,8 +1074,8 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
 
           {/* شريط الشركة المختارة + رجوع للشركات */}
           {!ql && brandPick && (
-            <div className="flex items-center justify-between rounded-card px-3.5 py-2" style={{ background: "#F1F4F8" }}>
-              <span className="text-t-sm font-black" style={{ color: NAVY }}>🏷 {brandPick}</span>
+            <div className="flex items-center justify-between rounded-card px-3.5 py-2" style={{ background: "var(--ink3)" }}>
+              <span className="text-t-sm font-black" style={{ color: NAVY }}>{brandPick}</span>
               <button onClick={() => setBrandPick(null)} className="text-t-xs font-black" style={{ color: GREEN }}>
                 ‹ كل الشركات
               </button>
@@ -1088,12 +1088,12 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
               return (
                 <button key={o.id} onClick={() => setSel({ ...sel, oil: o, fromInvoice: null })}
                   className="flex flex-col gap-2 rounded-card border-2 p-3 text-right transition active:scale-[.98]"
-                  style={{ borderColor: active ? GREEN : LINE, background: active ? "rgba(22,163,74,.06)" : "#fff" }}>
+                  style={{ borderColor: active ? GREEN : LINE, background: active ? "var(--emerald-bg)" : "var(--ink2)" }}>
                   {/* الصف العلوي: الصورة + الاسم كاملاً بلا قطع (يلف على أكثر من سطر) */}
                   <span className="flex w-full items-start gap-3">
                     {o.image
-                      ? <img src={o.image} alt="" className="h-12 w-12 shrink-0 rounded-lg object-contain" style={{ background: "#F6F8FA" }} />
-                      : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg" style={{ background: "#F6F8FA" }}><MIcon name="oil_barrel" className="!text-[22px]" /></span>}
+                      ? <img src={o.image} alt="" className="h-12 w-12 shrink-0 rounded-lg object-contain" style={{ background: "var(--ink3)" }} />
+                      : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg" style={{ background: "var(--ink3)" }}><MIcon name="oil_barrel" className="!text-[22px]" /></span>}
                     <span className="min-w-0 flex-1">
                       {/* بلا truncate: الاسم يظهر كاملاً حتى لو طال، يلف على سطرين+ */}
                       <span className="block text-t-md font-black leading-snug" style={{ color: NAVY }}>{o.name}</span>
@@ -1105,8 +1105,8 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
                   </span>
                   {/* الصف السفلي: السعر بشارة بارزة بعرض كامل — لا يفوته أحد أثناء المرور السريع */}
                   <span className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5"
-                    style={{ background: "rgba(22,163,74,.08)" }}>
-                    <span className="text-[9.5px] font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
+                    style={{ background: "var(--emerald-bg)" }}>
+                    <span className="text-t-xs font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
                     <span className="tnum text-t-lg font-black" style={{ color: GREEN }}>{money(o.price)} ر.س</span>
                   </span>
                 </button>
@@ -1117,7 +1117,7 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
             )}
           </div>
           {sel.oil && (
-            <div className="flex items-center justify-between rounded-card px-4 py-2.5" style={{ background: "#F1F4F8" }}>
+            <div className="flex items-center justify-between rounded-card px-4 py-2.5" style={{ background: "var(--ink3)" }}>
               <span className="text-t-sm font-black" style={{ color: NAVY }}>الكمية (عبوة)</span>
               <span className="flex items-center gap-3">
                 <button onClick={() => setSel({ ...sel, oilQty: Math.max(1, sel.oilQty - 1) })}
@@ -1128,14 +1128,14 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
               </span>
             </div>
           )}
-          <button onClick={() => setMode("choose")} className="mx-auto flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-t-sm font-black text-slate-700 hover:bg-slate-200 transition">
+          <button onClick={() => setMode("choose")} className="mx-auto flex items-center gap-1.5 rounded-lg bg-ink-3 px-3 py-1.5 text-t-sm font-black text-text hover:bg-ink-4 transition">
             <MIcon name="arrow_forward" className="!text-[15px]" /> رجوع
           </button>
         </div>
       )}
 
       <div className="flex gap-2 pt-1">
-        <button onClick={onBack} className="rounded-lg px-4 py-3 text-t-md font-black bg-slate-100 text-slate-700 hover:bg-slate-200 transition">رجوع</button>
+        <button onClick={onBack} className="rounded-lg px-4 py-3 text-t-md font-black bg-ink-3 text-text hover:bg-ink-4 transition">رجوع</button>
         <button onClick={onNext} disabled={mode === "list" && !sel.oil}
           className="flex-1 rounded-lg py-3 text-t-md font-black text-white transition active:scale-[.98] disabled:opacity-40"
           style={{ background: GREEN }}>
@@ -1193,7 +1193,7 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
           className="flex items-center justify-center gap-1 rounded-card border-2 py-3.5 text-t-md font-black transition active:scale-[.98]"
           style={{
             borderColor: sel.withFilter === true ? GREEN : LINE,
-            background: sel.withFilter === true ? "rgba(22,163,74,.06)" : "#fff", color: NAVY
+            background: sel.withFilter === true ? "var(--emerald-bg)" : "var(--ink2)", color: NAVY
           }}>
           <MIcon name="check" className="!text-[15px]" /> مع فلتر الزيت
         </button>
@@ -1201,7 +1201,7 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
           className="rounded-card border-2 py-3.5 text-t-md font-black transition active:scale-[.98]"
           style={{
             borderColor: sel.withFilter === false ? NAVY : LINE,
-            background: sel.withFilter === false ? "#E9EEF6" : "#fff", color: NAVY
+            background: sel.withFilter === false ? "var(--ink4)" : "var(--ink2)", color: NAVY
           }}>
           بدون فلتر الزيت
         </button>
@@ -1213,21 +1213,21 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
             // ── تطابق دقيق موجود: نعرض الفلتر الصحيح فقط بثقة، بدل قائمة
             //    كاملة بماركات عشوائية غير متعلقة بسيارة العميل خالص. ──
             <div className="space-y-2">
-              <p className="rounded-lg px-3 py-2 text-t-xs font-bold" style={{ background: "rgba(22,163,74,.08)", color: GREEN }}>
-                ✓ هذا هو الفلتر الأصلي المطابق لسيارتك — محدد تلقائياً.
+              <p className="rounded-lg px-3 py-2 text-t-xs font-bold" style={{ background: "var(--emerald-bg)", color: GREEN }}>
+                هذا هو الفلتر الأصلي المطابق لسيارتك — محدد تلقائياً.
               </p>
               <div className="flex flex-col gap-2 rounded-card border-2 p-3 text-right"
-                style={{ borderColor: GREEN, background: "rgba(22,163,74,.06)" }}>
+                style={{ borderColor: GREEN, background: "var(--emerald-bg)" }}>
                 <span className="flex w-full items-start gap-3">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-t-xl" style={{ background: "#F6F8FA" }}>⭕</span>
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-t-xl" style={{ background: "var(--ink3)" }}><MIcon name="filter_alt" /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-t-md font-black leading-snug" style={{ color: NAVY }}>{matchedFilter.name}</span>
                     {matchedFilter.spec && <span className="tnum text-t-xs font-bold" style={{ color: DIM }}>{matchedFilter.spec}</span>}
                   </span>
                   <MIcon name="check_circle" filled className="!text-[18px] shrink-0" />
                 </span>
-                <span className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5" style={{ background: "rgba(22,163,74,.08)" }}>
-                  <span className="text-[9.5px] font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
+                <span className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5" style={{ background: "var(--emerald-bg)" }}>
+                  <span className="text-t-xs font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
                   <span className="tnum text-t-md font-black" style={{ color: GREEN }}>{money(matchedFilter.price)} ر.س</span>
                 </span>
               </div>
@@ -1254,22 +1254,22 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
                   return (
                     <button key={f.id} onClick={() => setSel({ ...sel, filter: f })}
                       className="flex flex-col gap-2 rounded-card border-2 p-3 text-right transition active:scale-[.98]"
-                      style={{ borderColor: active ? GREEN : LINE, background: active ? "rgba(22,163,74,.06)" : "#fff" }}>
+                      style={{ borderColor: active ? GREEN : LINE, background: active ? "var(--emerald-bg)" : "var(--ink2)" }}>
                       <span className="flex w-full items-start gap-3">
-                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg" style={{ background: "#F6F8FA" }}><MIcon name="filter_alt" className="!text-[18px]" /></span>
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg" style={{ background: "var(--ink3)" }}><MIcon name="filter_alt" className="!text-[18px]" /></span>
                         <span className="min-w-0 flex-1">
                           <span className="block text-t-md font-black leading-snug" style={{ color: NAVY }}>{f.name}</span>
                           {f.spec && <span className="tnum text-t-xs font-bold" style={{ color: DIM }}>{f.spec}</span>}
                           {matchedFilter?.id === f.id && (
-                            <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[9.5px] font-black"
-                              style={{ background: GREEN, color: "#fff" }}>الأصلي لسيارتك</span>
+                            <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-t-xs font-black"
+                              style={{ background: GREEN, color: "var(--ink2)" }}>الأصلي لسيارتك</span>
                           )}
                         </span>
                         {active && <MIcon name="check_circle" filled className="!text-[18px] shrink-0" />}
                       </span>
                       <span className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5"
-                        style={{ background: "rgba(22,163,74,.08)" }}>
-                        <span className="text-[9.5px] font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
+                        style={{ background: "var(--emerald-bg)" }}>
+                        <span className="text-t-xs font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
                         <span className="tnum text-t-md font-black" style={{ color: GREEN }}>{money(f.price)} ر.س</span>
                       </span>
                     </button>
@@ -1285,7 +1285,7 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
       )}
 
       <div className="flex gap-2 pt-1">
-        <button onClick={onBack} className="rounded-lg px-4 py-3 text-t-md font-black bg-slate-100 text-slate-700 hover:bg-slate-200 transition">رجوع</button>
+        <button onClick={onBack} className="rounded-lg px-4 py-3 text-t-md font-black bg-ink-3 text-text hover:bg-ink-4 transition">رجوع</button>
         <button onClick={onNext} disabled={sel.withFilter === null || (sel.withFilter === true && !sel.filter)}
           className="flex-1 rounded-lg py-3 text-t-md font-black text-white transition active:scale-[.98] disabled:opacity-40"
           style={{ background: GREEN }}>
@@ -1297,20 +1297,21 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
 }
 
 /* ═══════════ خطوة المنتجات والخدمات الإضافية — خريطة الأصناف الكاملة ═══════════ */
-function catIcon(name: string): string {
+function catIcon(name: string): string {   // أسماء أيقونات Material Symbols
   const n = name || "";
-  if (n === "الخدمات") return "🛠";
-  if (/فلتر|فلاتر/.test(n)) return "⭕";
-  if (/زيت/.test(n)) return "🛢";
-  if (/شحم/.test(n)) return "🧴";
-  if (/منظف|ملمع|شامبو/.test(n)) return "🧽";
-  if (/معطر/.test(n)) return "🌸";
-  if (/رديتر|تبريد|مبرد/.test(n)) return "🌡";
-  if (/مكيف|تكييف/.test(n)) return "❄️";
-  if (/إضاف|معالج|سوائل|محسن/.test(n)) return "🧪";
-  if (/أدوات|ملحق|مساح/.test(n)) return "🧰";
-  return "📦";
+  if (n === "الخدمات") return "build";
+  if (/فلتر|فلاتر/.test(n)) return "filter_alt";
+  if (/زيت/.test(n)) return "oil_barrel";
+  if (/شحم/.test(n)) return "science";
+  if (/منظف|ملمع|شامبو/.test(n)) return "cleaning_services";
+  if (/معطر/.test(n)) return "air_freshener";
+  if (/رديتر|تبريد|مبرد/.test(n)) return "device_thermostat";
+  if (/مكيف|تكييف/.test(n)) return "ac_unit";
+  if (/إضاف|معالج|سوائل|محسن/.test(n)) return "science";
+  if (/أدوات|ملحق|مساح/.test(n)) return "handyman";
+  return "inventory_2";
 }
+const CatIcon = ({ name, size = 22 }: { name: string; size?: number }) => <MIcon name={catIcon(name)} style={{ fontSize: size }} />;
 
 function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
   branchId: string; sel: Selection; setSel: (s: Selection) => void;
@@ -1360,7 +1361,7 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
 
   return (
     <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
-      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>🗂 منتجات وخدمات إضافية</h2>
+      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>منتجات وخدمات إضافية</h2>
       <p className="text-center text-t-xs font-bold" style={{ color: DIM }}>
         اختياري — تصفح كل الأقسام وأضف ما تحتاجه لسيارتك
       </p>
@@ -1373,19 +1374,19 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
               {services.length > 0 && (
                 <button onClick={() => openCat("الخدمات")}
                   className="flex flex-col items-center gap-1.5 rounded-card border-2 p-3 transition active:scale-[.97]"
-                  style={{ borderColor: LINE, background: "#fff" }}>
-                  <span className="grid h-11 w-11 place-items-center rounded-full" style={{ background: "#EEF3F9" }}><MIcon name="build" className="!text-[20px]" /></span>
+                  style={{ borderColor: LINE, background: "var(--ink2)" }}>
+                  <span className="grid h-11 w-11 place-items-center rounded-full" style={{ background: "var(--ink3)" }}><MIcon name="build" className="!text-[20px]" /></span>
                   <span className="line-clamp-1 text-t-xs font-black" style={{ color: NAVY }}>الخدمات</span>
-                  <span className="tnum text-[9.5px] font-bold" style={{ color: DIM }}>{services.length} خدمة</span>
+                  <span className="tnum text-t-xs font-bold" style={{ color: DIM }}>{services.length} خدمة</span>
                 </button>
               )}
               {cats.map((c) => (
                 <button key={c.name} onClick={() => openCat(c.name)}
                   className="flex flex-col items-center gap-1.5 rounded-card border-2 p-3 transition active:scale-[.97]"
-                  style={{ borderColor: LINE, background: "#fff" }}>
-                  <span className="grid h-11 w-11 place-items-center rounded-full text-t-2xl" style={{ background: "#EEF3F9" }}>{catIcon(c.name)}</span>
+                  style={{ borderColor: LINE, background: "var(--ink2)" }}>
+                  <span className="grid h-11 w-11 place-items-center rounded-full text-t-2xl" style={{ background: "var(--ink3)" }}><CatIcon name={c.name} /></span>
                   <span className="line-clamp-1 text-t-xs font-black" style={{ color: NAVY }}>{c.name}</span>
-                  <span className="tnum text-[9.5px] font-bold" style={{ color: DIM }}>{c.count} صنف</span>
+                  <span className="tnum text-t-xs font-bold" style={{ color: DIM }}>{c.count} صنف</span>
                 </button>
               ))}
               {cats.length === 0 && services.length === 0 && (
@@ -1398,8 +1399,8 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
 
       {pick !== null && (
         <div className="space-y-2.5">
-          <div className="flex items-center justify-between rounded-card px-3.5 py-2" style={{ background: "#F1F4F8" }}>
-            <span className="text-t-sm font-black" style={{ color: NAVY }}>{catIcon(pick)} {pick}</span>
+          <div className="flex items-center justify-between rounded-card px-3.5 py-2" style={{ background: "var(--ink3)" }}>
+            <span className="text-t-sm font-black" style={{ color: NAVY }}><CatIcon name={pick} size={18} /> {pick}</span>
             <button onClick={() => { setPick(null); setProds(null); setQ(""); }} className="text-t-xs font-black" style={{ color: GREEN }}>
               ‹ كل الأقسام
             </button>
@@ -1414,11 +1415,11 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
               return (
                 <div key={p.id}
                   className="flex items-center gap-3 rounded-card border-2 p-3 text-right"
-                  style={{ borderColor: n > 0 ? GREEN : LINE, background: n > 0 ? "rgba(22,163,74,.06)" : "#fff" }}>
+                  style={{ borderColor: n > 0 ? GREEN : LINE, background: n > 0 ? "var(--emerald-bg)" : "var(--ink2)" }}>
                   {p.hasImage
                     ? <img src={`/api/products/public/product-image/${p.id}`} alt="" loading="lazy"
-                      className="h-12 w-12 shrink-0 rounded-lg object-contain" style={{ background: "#F6F8FA" }} />
-                    : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg text-t-2xl" style={{ background: "#F6F8FA" }}>{catIcon(pick)}</span>}
+                      className="h-12 w-12 shrink-0 rounded-lg object-contain" style={{ background: "var(--ink3)" }} />
+                    : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg text-t-2xl" style={{ background: "var(--ink3)" }}><CatIcon name={pick} /></span>}
                   <span className="min-w-0 flex-1">
                     <span className="block text-t-md font-black leading-snug" style={{ color: NAVY }}>{p.name}</span>
                     <span className="text-t-xs font-bold" style={{ color: DIM }}>
@@ -1452,14 +1453,14 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
       )}
 
       {count > 0 && (
-        <div className="flex items-center justify-between rounded-card px-4 py-2.5" style={{ background: "rgba(22,163,74,.08)" }}>
-          <span className="text-t-sm font-black" style={{ color: NAVY }}>🧺 المضاف: {count} صنف</span>
+        <div className="flex items-center justify-between rounded-card px-4 py-2.5" style={{ background: "var(--emerald-bg)" }}>
+          <span className="text-t-sm font-black" style={{ color: NAVY }}>المضاف: {count} صنف</span>
           <b className="tnum text-t-md" style={{ color: GREEN }}>{money(total)} ر.س</b>
         </div>
       )}
 
       <div className="flex gap-2 pt-1">
-        <button onClick={onBack} className="rounded-lg px-4 py-3 text-t-md font-black bg-slate-100 text-slate-700 hover:bg-slate-200 transition">رجوع</button>
+        <button onClick={onBack} className="rounded-lg px-4 py-3 text-t-md font-black bg-ink-3 text-text hover:bg-ink-4 transition">رجوع</button>
         <button onClick={onNext}
           className="flex-1 rounded-lg py-3 text-t-md font-black text-white transition active:scale-[.98]"
           style={{ background: GREEN }}>
@@ -1487,16 +1488,16 @@ function BookingSummary({ carLabel, plate, odometer, sel, autoService, busy, err
 
   return (
     <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
-      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>📋 ملخص الحجز</h2>
+      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>ملخص الحجز</h2>
 
-      <div className="space-y-2 rounded-card p-3.5" style={{ background: "#F6F8FA" }}>
+      <div className="space-y-2 rounded-card p-3.5" style={{ background: "var(--ink3)" }}>
         <div className="flex justify-between text-t-sm"><span style={{ color: DIM }}>السيارة</span><b>{carLabel || "—"}</b></div>
         <div className="flex justify-between text-t-sm"><span style={{ color: DIM }}>اللوحة</span><b className="tnum">{plate || "—"}</b></div>
         {odometer && <div className="flex justify-between text-t-sm"><span style={{ color: DIM }}>العداد</span><b className="tnum">{Number(odometer).toLocaleString("en")}</b></div>}
       </div>
 
       {sel.fromInvoice && (
-        <p className="rounded-card px-3.5 py-2 text-t-xs font-bold" style={{ background: "rgba(22,163,74,.08)", color: GREEN }}>
+        <p className="rounded-card px-3.5 py-2 text-t-xs font-bold" style={{ background: "var(--emerald-bg)", color: GREEN }}>
           ↻ مُكرر من الفاتورة {sel.fromInvoice} — يمكنك التعديل بالرجوع
         </p>
       )}
@@ -1505,7 +1506,7 @@ function BookingSummary({ carLabel, plate, odometer, sel, autoService, busy, err
         {sel.oil ? (
           <div className="flex items-center justify-between rounded-card border-2 p-3" style={{ borderColor: LINE }}>
             <span className="min-w-0">
-              <span className="block truncate text-t-md font-black" style={{ color: NAVY }}>🛢 {sel.oil.name}</span>
+              <span className="block truncate text-t-md font-black" style={{ color: NAVY }}>{sel.oil.name}</span>
               <span className="text-t-xs font-bold" style={{ color: DIM }}>
                 {[sel.oil.brand, sel.oil.spec, sel.oil.unit].filter(Boolean).join(" · ")} × {sel.oilQty}
               </span>
@@ -1513,26 +1514,26 @@ function BookingSummary({ carLabel, plate, odometer, sel, autoService, busy, err
             <b className="tnum text-t-md" style={{ color: NAVY }}>{money(oilTotal)}</b>
           </div>
         ) : (
-          <p className="rounded-card px-3.5 py-2.5 text-t-sm font-bold" style={{ background: "#F6F8FA", color: DIM }}>
-            🛢 الزيت: سيُحدد عند الوصول مع الفني
+          <p className="rounded-card px-3.5 py-2.5 text-t-sm font-bold" style={{ background: "var(--ink3)", color: DIM }}>
+            الزيت: سيُحدد عند الوصول مع الفني
           </p>
         )}
         {sel.withFilter === true && sel.filter && (
           <div className="flex items-center justify-between rounded-card border-2 p-3" style={{ borderColor: LINE }}>
             <span className="min-w-0">
-              <span className="block truncate text-t-md font-black" style={{ color: NAVY }}>⭕ {sel.filter.name}</span>
+              <span className="block truncate text-t-md font-black" style={{ color: NAVY }}>{sel.filter.name}</span>
               {sel.filter.spec && <span className="tnum text-t-xs font-bold" style={{ color: DIM }}>{sel.filter.spec}</span>}
             </span>
             <b className="tnum text-t-md" style={{ color: NAVY }}>{money(filterTotal)}</b>
           </div>
         )}
         {sel.withFilter === false && (
-          <p className="rounded-card px-3.5 py-2 text-t-xs font-bold" style={{ background: "#F6F8FA", color: DIM }}>بدون فلتر الزيت</p>
+          <p className="rounded-card px-3.5 py-2 text-t-xs font-bold" style={{ background: "var(--ink3)", color: DIM }}>بدون فلتر الزيت</p>
         )}
         {svc && (
-          <div className="flex items-center justify-between rounded-card border-2 p-3" style={{ borderColor: LINE, background: "rgba(22,163,74,.04)" }}>
+          <div className="flex items-center justify-between rounded-card border-2 p-3" style={{ borderColor: LINE, background: "var(--emerald-bg)" }}>
             <span className="min-w-0">
-              <span className="block truncate text-t-md font-black" style={{ color: NAVY }}>🛠 {svc.name}</span>
+              <span className="block truncate text-t-md font-black" style={{ color: NAVY }}>{svc.name}</span>
               <span className="text-t-xs font-bold" style={{ color: DIM }}>أُضيفت تلقائياً مع اختيار الزيت</span>
             </span>
             <b className="tnum text-t-md" style={{ color: NAVY }}>{svc.price > 0 ? money(svc.price) : "يُحدد عند الخدمة"}</b>
@@ -1541,7 +1542,7 @@ function BookingSummary({ carLabel, plate, odometer, sel, autoService, busy, err
         {sel.extras.map((e) => (
           <div key={e.p.id} className="flex items-center justify-between rounded-card border-2 p-3" style={{ borderColor: LINE }}>
             <span className="min-w-0">
-              <span className="block truncate text-t-md font-black" style={{ color: NAVY }}>{catIcon("")} {e.p.name}</span>
+              <span className="block truncate text-t-md font-black" style={{ color: NAVY }}><CatIcon name="" size={18} /> {e.p.name}</span>
               <span className="text-t-xs font-bold" style={{ color: DIM }}>
                 {[e.p.spec, e.p.unit].filter(Boolean).join(" · ")} × {e.qty}
               </span>
@@ -1552,7 +1553,7 @@ function BookingSummary({ carLabel, plate, odometer, sel, autoService, busy, err
       </div>
 
       {totalInc > 0 && (
-        <div className="space-y-1.5 rounded-card p-3.5" style={{ background: "#F1F4F8" }}>
+        <div className="space-y-1.5 rounded-card p-3.5" style={{ background: "var(--ink3)" }}>
           <div className="flex justify-between text-t-sm"><span style={{ color: DIM }}>السعر قبل الضريبة</span><b className="tnum">{money(totalEx)} ر.س</b></div>
           <div className="flex justify-between text-t-sm"><span style={{ color: DIM }}>الضريبة (15%)</span><b className="tnum">{money(vat)} ر.س</b></div>
           <div className="flex justify-between border-t pt-1.5 text-t-md" style={{ borderColor: LINE }}>
@@ -1565,7 +1566,7 @@ function BookingSummary({ carLabel, plate, odometer, sel, autoService, busy, err
       {err && <ErrBox msg={err} />}
       <div className="flex gap-2">
         <button onClick={onBack} disabled={busy}
-          className="rounded-lg px-4 py-3 text-t-md font-black bg-slate-100 text-slate-700 hover:bg-slate-200 transition">رجوع</button>
+          className="rounded-lg px-4 py-3 text-t-md font-black bg-ink-3 text-text hover:bg-ink-4 transition">رجوع</button>
         <button onClick={onConfirm} disabled={busy}
           className="flex-1 rounded-lg py-3.5 text-t-lg font-black text-white transition active:scale-[.98] disabled:opacity-50"
           style={{ background: GREEN }}>
@@ -1834,25 +1835,25 @@ export default function PublicBookingPage() {
 
   const stateUi = booking && {
     waiting: {
-      icon: "schedule", color: "#D97706", bg: "#FCF0DE", title: "في الانتظار",
+      icon: "schedule", color: "var(--brass)", bg: "var(--brass-soft)", title: "في الانتظار",
       sub: booking.ahead === 0 ? "أنت التالي — استعد!" : `أمامك ${booking.ahead} سيارة · انتظار متوقع ~${booking.estWaitMinutes} دقيقة`
     },
     in_service: {
-      icon: "build", color: GREEN, bg: "rgba(22,163,74,.1)", title: "سيارتك في الخدمة الآن 🎉",
+      icon: "build", color: GREEN, bg: "var(--emerald-bg)", title: "سيارتك في الخدمة الآن",
       sub: booking.station ? `المحطة: ${booking.station}` : "جاري تنفيذ الخدمة"
     },
-    done: { icon: "task_alt", color: NAVY, bg: "#E9EEF6", title: "اكتملت الخدمة — شكراً لزيارتك", sub: "نسعد بخدمتك دائماً" },
+    done: { icon: "task_alt", color: NAVY, bg: "var(--ink4)", title: "اكتملت الخدمة — شكراً لزيارتك", sub: "نسعد بخدمتك دائماً" },
   }[booking.state];
 
   return (
-    <div dir="rtl" className="min-h-screen px-4 py-6" style={{ background: "#EEF2F6" }}>
+    <div dir="rtl" className="min-h-screen px-4 py-6" style={{ background: "var(--ink3)" }}>
       <div className="mx-auto max-w-md space-y-4">
         <div className="rounded-card px-5 py-4 text-center text-white shadow-lg" style={{ background: NAVY }}>
           <div className="text-t-xl font-black">مصدر الزيوت</div>
           <div className="text-t-sm text-white/70">{info?.branchName || "..."} — حجز الدور الذاتي</div>
           {info && view !== "ticket" && (
             <div className="mx-auto mt-2 flex w-fit gap-4 rounded-full bg-white/10 px-4 py-1 text-t-xs font-bold">
-              <span>⏳ {info.waiting} منتظر</span><span>🔧 {info.inService} في الخدمة</span><span>~{info.estWaitMinutes} دقيقة</span>
+              <span>{info.waiting} منتظر</span><span>{info.inService} في الخدمة</span><span>~{info.estWaitMinutes} دقيقة</span>
             </div>
           )}
         </div>
@@ -1864,7 +1865,7 @@ export default function PublicBookingPage() {
         )}
         {view === "entry" && otpInfo?.required && (
           <>
-            {err && <p className="rounded-lg px-3 py-2 text-center text-t-sm font-bold" style={{ background: "rgba(220,38,38,.08)", color: "#DC2626" }}>{err}</p>}
+            {err && <p className="rounded-lg px-3 py-2 text-center text-t-sm font-bold" style={{ background: "var(--ember-bg)", color: "var(--ember)" }}>{err}</p>}
             <OtpEntryCard branchId={branchId} otp={otpInfo} onVerified={onOtpVerified} />
           </>
         )}
@@ -1913,7 +1914,7 @@ export default function PublicBookingPage() {
               </button>
             ))}
             {profile?.found && (
-              <button onClick={() => setView("garage")} className="mx-auto flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-t-sm font-black text-slate-700 hover:bg-slate-200 transition">
+              <button onClick={() => setView("garage")} className="mx-auto flex items-center gap-1.5 rounded-lg bg-ink-3 px-3 py-1.5 text-t-sm font-black text-text hover:bg-ink-4 transition">
                 <MIcon name="arrow_forward" className="!text-[15px]" /> رجوع لسياراتي
               </button>
             )}
@@ -1975,15 +1976,15 @@ export default function PublicBookingPage() {
                 <div className="text-t-sm font-bold" style={{ color: DIM }}>{stateUi.sub}</div>
               </div>
               <div className="space-y-2.5 px-5 py-4">
-                <div className="flex items-center justify-between rounded-card px-4 py-3" style={{ background: "#F1F4F8" }}>
+                <div className="flex items-center justify-between rounded-card px-4 py-3" style={{ background: "var(--ink3)" }}>
                   <span className="text-t-sm font-bold" style={{ color: DIM }}>رقم دورك</span>
-                  <span className="tnum text-[30px] font-black leading-none" style={{ color: NAVY }}>#{booking.queueNo}</span>
+                  <span className="tnum text-t-3xl font-black leading-none" style={{ color: NAVY }}>#{booking.queueNo}</span>
                 </div>
                 <div className="flex justify-between text-t-sm"><span style={{ color: DIM }}>الاسم</span><b>{booking.customerName}</b></div>
                 <div className="flex justify-between text-t-sm"><span style={{ color: DIM }}>اللوحة</span><b className="tnum">{booking.plate}</b></div>
                 <div className="flex justify-between text-t-sm"><span style={{ color: DIM }}>الفرع</span><b>{booking.branchName}</b></div>
               </div>
-              <div className="h-3" style={{ background: "linear-gradient(45deg, #EEF2F6 50%, transparent 50%) 0 100%/12px 12px repeat-x, linear-gradient(-45deg, #EEF2F6 50%, transparent 50%) 6px 100%/12px 12px repeat-x" }} />
+              <div className="h-3" style={{ background: "linear-gradient(45deg, var(--ink3) 50%, transparent 50%) 0 100%/12px 12px repeat-x, linear-gradient(-45deg, var(--ink3) 50%, transparent 50%) 6px 100%/12px 12px repeat-x" }} />
             </div>
             <OilCard carId={booking.bookingId} />
             <a href={`/booking/${branchId}/invoices`}

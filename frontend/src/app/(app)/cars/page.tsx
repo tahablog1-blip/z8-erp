@@ -1043,7 +1043,7 @@ export default function CarsPage() {
       if (res.matched && !res.alreadyEntered && !res.lastInvoiceId) {
         // عميل جديد (مفيهوش فاتورة سابقة): إيقاف المسح وفتح بوابة اختيار الزيت الذاتية
         beep(true);
-        liveAddLog(`دخلت ${res.car.plate} — عميل جديد (⏱ ${((performance.now() - t0) / 1000).toFixed(1)}ث)`, "ok");
+        liveAddLog(`دخلت ${res.car.plate} — عميل جديد (${((performance.now() - t0) / 1000).toFixed(1)}ث)`, "ok");
         load();
         R.paused = true;
         setLiveKioskCar(res.car.id);
@@ -1055,7 +1055,7 @@ export default function CarsPage() {
         showHit(`تم تأكيد دخول ${res.car.plate}`,
                 [walkInNote, prepped ? "الفاتورة جاهزة بنفس أصناف آخر مرة" : "سجّل الأصناف يدوياً من المبيعات"]
                   .filter(Boolean).join(" — "), "ok");
-        liveAddLog(`دخلت ${res.car.plate} — ${res.car.customer_name || "بدون عميل"}${res.isWalkIn ? " (عميل مسجل بدون حجز)" : ""}${prepped ? " (فاتورة مجهّزة)" : ""} ⏱ ${((performance.now() - t0) / 1000).toFixed(1)}ث`, "ok");
+        liveAddLog(`دخلت ${res.car.plate} — ${res.car.customer_name || "بدون عميل"}${res.isWalkIn ? " (عميل مسجل بدون حجز)" : ""}${prepped ? " (فاتورة مجهّزة)" : ""} ${((performance.now() - t0) / 1000).toFixed(1)}ث`, "ok");
         load();
       } else if (res.matched && res.alreadyEntered) {
         showHit(`اللوحة ${res.car.plate} داخلة بالفعل`, "", "warn");
@@ -1240,8 +1240,8 @@ export default function CarsPage() {
       <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
       <style>
         body{font-family:'IBM Plex Sans Arabic',system-ui;margin:0;padding:28px;text-align:center;color:#0B2B30}
-        .card{border:3px solid #0C5E66;border-radius:24px;padding:28px 20px}
-        h1{font-size:26px;margin:0 0 4px;color:#0C5E66}
+        .card{border:3px solid #1E3A8A;border-radius:24px;padding:28px 20px}
+        h1{font-size:26px;margin:0 0 4px;color:#1E3A8A}
         h2{font-size:16px;margin:0 0 18px;color:#555}
         #qrcode{display:flex;justify-content:center;margin:14px 0}
         .steps{text-align:right;font-size:14.5px;line-height:2;margin:14px auto 0;max-width:330px;font-weight:700}
@@ -2061,7 +2061,7 @@ export default function CarsPage() {
             <div className="pb-0.5">
               <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
                      onChange={(e) => { const f = e.target.files?.[0]; if (f) onPlatePhoto(f); e.target.value = ""; }} />
-              <Button variant="ghost" className="!px-3" disabled={ocrBusy}
+              <Button variant="ghost" size="sm" disabled={ocrBusy}
                       onClick={() => fileRef.current?.click()} title="التقاط صورة اللوحة">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                      strokeLinecap="round" strokeLinejoin="round">
@@ -2231,7 +2231,7 @@ export default function CarsPage() {
                     {i.label}
                   </span>
                   <div className="flex flex-wrap gap-1">
-                    {btn("in_progress", "▶ بدء", "bg-petrol text-white")}
+                    {btn("in_progress", "بدء", "bg-petrol text-white")}
                     {btn("ok", "سليم", "bg-emerald text-white")}
                     {btn("done", "تم التغيير", "bg-emerald text-white")}
                     {btn("needs", "يحتاج متابعة", "bg-brass text-white")}
@@ -2529,7 +2529,7 @@ export default function CarsPage() {
                                 }}
                                 className="flex w-full items-center justify-between rounded-lg bg-ink-2 px-3 py-2 text-t-sm font-bold shadow-card transition hover:brightness-105 active:scale-[.98]">
                           <span>{c.name} — {c.branch_name || ""} م{c.station}</span>
-                          <span className="text-emerald">▶ تشغيل</span>
+                          <span className="text-emerald">تشغيل</span>
                         </button>
                       ))}
                     </div>
@@ -2544,7 +2544,7 @@ export default function CarsPage() {
                     </p>
                     <button onClick={() => startLive("ip")}
                             className="mt-2 w-full rounded-card bg-emerald py-3 text-t-md font-black text-white hover:brightness-110">
-                      ▶ تشغيل من كاميرا IP
+                      تشغيل من كاميرا IP
                     </button>
                   </div>
                 </div>

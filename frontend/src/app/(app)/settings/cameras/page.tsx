@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { MIcon } from "@/components/m-icon";
 import { useAuth } from "@/lib/auth";
-import { Button, Card, ErrorNote, Field, Input, Select } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, Select, PageHeader } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 
 type Branch = { id: string; name: string };
@@ -247,7 +247,7 @@ export default function CamerasSettingsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="page-title">الإعدادات — كاميرات المحطات</h1>
+      <PageHeader title="الإعدادات — كاميرات المحطات" description="كاميرات المحطات والبوابة الذكية." />
       {/* ═══ مركز تحكم البوابة الذكية — رسمي ومنظم في مكان واحد ═══ */}
       <Card>
         <div className="space-y-3">
@@ -373,11 +373,11 @@ export default function CamerasSettingsPage() {
                     <div className="tnum truncate text-t-xs text-text-dim" dir="ltr">{c.rtsp_url}</div>
                   </div>
                   <div className="flex shrink-0 gap-1.5">
-                    <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
+                    <Button variant="ghost" size="xs"
                             disabled={snapFor === c.id} onClick={() => testSnapshot(c)}>
                       {snapFor === c.id ? "جارِ الالتقاط..." : "اختبار لقطة"}
                     </Button>
-                    <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => removeCamera(c)}>حذف</Button>
+                    <Button variant="danger" size="xs" onClick={() => removeCamera(c)}>حذف</Button>
                   </div>
                 </div>
               ))}

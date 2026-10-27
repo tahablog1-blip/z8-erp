@@ -47,7 +47,7 @@ const footerFor = (inv: InvoiceDetail, PR: PrintingInfo) =>
 // زر طباعة يدوي يظهر فقط في وضع «معاينة قبل الطباعة» (إعداد 7) — مخفي عن الورق نفسه
 const previewButton = (show: boolean) => !show ? "" : `
   <button onclick="window.print()" class="no-print"
-    style="position:fixed;top:8px;inset-inline-start:8px;z-index:9;background:#0C5E66;color:#fff;
+    style="position:fixed;top:8px;inset-inline-start:8px;z-index:9;background:#1E3A8A;color:#fff;
            border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-family:inherit;
            font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)">طباعة</button>
   <style>@media print { .no-print { display:none !important; } }</style>`;
@@ -68,7 +68,7 @@ function checklistHTML(inv: InvoiceDetail, compact: boolean): string {
     }).join("");
     return compact
       ? `<div style="font-weight:800;font-size:10.5px;margin-top:4px">${esc(st.title)}</div>${body}`
-      : `<tr><td colspan="3" style="background:#eef3f4;font-weight:800">${esc(st.title)}</td></tr>${body}`;
+      : `<tr><td colspan="3" style="background:#F1F5F9;font-weight:800">${esc(st.title)}</td></tr>${body}`;
   }).join("");
   return compact
     ? `<div class="dash"></div><div style="font-weight:800;text-align:center">تقرير التشييك</div>${stageBlocks}`
@@ -339,7 +339,7 @@ function a4HTML(inv: InvoiceDetail, embedded = false): string {
   return `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
 <title>${esc(CO.name)} — فاتورة ${esc(inv.invoice_no)}</title>
 <style>
-  :root { --brand:#0C5E66; --ink:#14212b; --muted:#5b6b75; --line:#d5dde0; --soft:#f3f7f7; --ok:#12794a; --warn:#a85a00; --bad:#b3261e; }
+  :root { --brand:#1E3A8A; --ink:#14212b; --muted:#5b6b75; --line:#E2E8F0; --soft:#F1F5F9; --ok:#12794a; --warn:#a85a00; --bad:#b3261e; }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   @page { size:A4; margin:10mm; }
   body { font-family:"IBM Plex Sans Arabic","Cairo","Segoe UI",Tahoma,sans-serif; color:var(--ink); font-size:11.5px; line-height:1.45; ${embedded ? "padding:10mm; background:#fff;" : ""} }
@@ -369,7 +369,7 @@ function a4HTML(inv: InvoiceDetail, embedded = false): string {
   table.items { width:100%; border-collapse:collapse; margin:4px 0 10px; }
   .items th { background:var(--brand); color:#fff; padding:5px 4px; font-size:10px; text-align:center; font-weight:700; } .items th small { color:#dff; }
   .items td { padding:5px 6px; border-bottom:1px solid var(--line); font-size:11px; vertical-align:top; }
-  .items tbody tr:nth-child(even) td { background:#fafcfc; }
+  .items tbody tr:nth-child(even) td { background:#F8FAFC; }
   .items .sku { display:block; font-size:8.5px; color:var(--muted); font-weight:500; }
   tr { page-break-inside:avoid; }
   .summary { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }

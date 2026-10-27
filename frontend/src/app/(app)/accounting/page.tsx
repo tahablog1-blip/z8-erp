@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { printReport, tableHTML, kpisHTML } from "@/lib/print";
 import { useAuth } from "@/lib/auth";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Tabs } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Tabs, PageHeader } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import {
   Account, ACCOUNT_TYPE_LABELS, BalanceSheet, IncomeStatement, JournalEntry, TrialBalance, money,
@@ -209,12 +209,9 @@ export default function AccountingPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="page-title">الحسابات</h1>
-        <Button variant="ghost" className="!px-3 !py-1.5 !text-[12px]" onClick={printCurrent}>
+      <PageHeader title="الحسابات" description="دليل الحسابات والقيود اليومية وتقارير المحاسبة." actions={<><Button variant="ghost" size="sm" onClick={printCurrent}>
           طباعة التبويب الحالي
-        </Button>
-      </div>
+        </Button></>} />
       <ErrorNote msg={pageErr} />
 
       <Card className="!p-0">

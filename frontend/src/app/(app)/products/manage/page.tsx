@@ -195,7 +195,7 @@ export default function ProductsPage() {
     try {
       const data = await callImport(pendingFile, false);
       setImportOk(true); setImportMsg(`استيراد ناجح: ${data.added} صنف جديد + ${data.updated} تحديث` +
-        (data.warningsTotal ? ` — ℹ ${data.warningsTotal} صف حُدّث سعره/تكلفته فقط لأن اسمه وفئته مكرران مع صنف آخر (مثال: ${(data.warnings || [])[0]})` : "") +
+        (data.warningsTotal ? ` — ${data.warningsTotal} صف حُدّث سعره/تكلفته فقط لأن اسمه وفئته مكرران مع صنف آخر (مثال: ${(data.warnings || [])[0]})` : "") +
         (data.errorsTotal ? ` — ${data.errorsTotal} صف فيه مشكلة: ${(data.errors || []).slice(0, 3).join(" | ")}` : ""));
       setPreview(null); setPendingFile(null);
       load();
@@ -468,15 +468,15 @@ export default function ProductsPage() {
       render: (p: Product) => (
         <div className="flex justify-end gap-1.5">
           {canEdit && (
-            <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
+            <Button variant="ghost" size="xs"
               onClick={() => openEdit(p)}>تعديل</Button>
           )}
           {canEdit && (
-            <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
+            <Button variant="ghost" size="xs"
               onClick={() => openLinks(p)}>بدائل/مرتبطة</Button>
           )}
           {canDelete && (
-            <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]"
+            <Button variant="danger" size="xs"
               onClick={() => remove(p)}>حذف</Button>
           )}
         </div>
@@ -989,8 +989,7 @@ export default function ProductsPage() {
                   {activeFilterCount > 0 && (
                     <div className="col-span-full flex justify-end">
                       <Button
-                        variant="ghost"
-                        className="!py-1.5 !text-[11.5px] gap-1"
+                        variant="ghost" size="xs" className="gap-1"
                         onClick={clearFilters}
                       >
                         <MIcon name="close" className="!text-[14px]" /> مسح كل الفلاتر
@@ -1057,8 +1056,7 @@ export default function ProductsPage() {
                     </optgroup>
                   </Select>
 
-                  <Button
-                    className="!py-1.5 !text-[11.5px] gap-1"
+                  <Button size="xs" className="gap-1"
                     disabled={!bulkType || bulkBusy}
                     onClick={applyBulkType}
                   >
@@ -1066,8 +1064,7 @@ export default function ProductsPage() {
                   </Button>
 
                   <Button
-                    variant="ghost"
-                    className="!py-1.5 !text-[11.5px]"
+                    variant="ghost" size="xs"
                     onClick={() => setBulkSel(new Set())}
                   >
                     إلغاء التحديد
@@ -1372,7 +1369,7 @@ export default function ProductsPage() {
                     <span className="tnum">مخزون: {l.stock_qty}</span>
                   </div>
                 </div>
-                <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]"
+                <Button variant="danger" size="xs"
                   onClick={() => removeLink(l.id)}>حذف</Button>
               </div>
             ))}
@@ -1473,7 +1470,7 @@ export default function ProductsPage() {
           <div className="rounded-card border border-line bg-ink-3/40 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-t-sm font-black">توزيع الزيوت على الشركات تلقائياً</div>
-              <Button variant="ghost" className="!py-1.5 !text-[11.5px]" disabled={autoBrandBusy}
+              <Button variant="ghost" size="xs" disabled={autoBrandBusy}
                 onClick={() => runAutoBrand(false)}>
                 {autoBrandBusy ? "جارِ الفحص…" : "معاينة التوزيع"}
               </Button>
@@ -1496,7 +1493,7 @@ export default function ProductsPage() {
                     {autoBrand.applied ? (
                       <p className="font-black text-emerald">اتطبق التوزيع</p>
                     ) : autoBrand.assigned > 0 && (
-                      <Button className="!py-1.5 !text-[11.5px] gap-1" disabled={autoBrandBusy}
+                      <Button size="xs" className="gap-1" disabled={autoBrandBusy}
                         onClick={() => runAutoBrand(true)}>
                         <MIcon name="check" className="!text-[14px]" /> تطبيق التوزيع على {autoBrand.assigned} صنف
                       </Button>
@@ -1732,7 +1729,7 @@ export default function ProductsPage() {
               نصيحة: صنّف أصنافك بنوع الفلتر (من الجدول الرئيسي) عشان تقدر تفلترها
               وتحلّل تقاريرها لاحقاً — مش شرط للبحث والربط هنا.
             </p>
-            <Button variant="ghost" className="!shrink-0 !py-1.5 !text-[11px]"
+            <Button variant="ghost" size="xs" className="!shrink-0"
               disabled={autoClsBusy} onClick={runAutoClassify}>
               {autoClsBusy ? "جارِ التصنيف..." : "تصنيف تلقائي من الفئة"}
             </Button>

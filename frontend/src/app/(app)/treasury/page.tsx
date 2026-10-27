@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch, PageHeader, Tabs } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import { money } from "@/modules/invoices/types";
 import { Customer } from "@/modules/customers/types";
@@ -319,34 +319,17 @@ export default function TreasuryPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="page-title">الخزينة</h1>
-        {canCreate && tab === "vouchers" && (
-          <div className="flex gap-2">
-            <button onClick={() => openModal("receipt")}
-                    className="flex items-center gap-1 rounded-card bg-emerald px-5 py-2.5 text-t-md font-black text-white shadow-card transition hover:brightness-110 active:scale-[.98]">
-              <MIcon name="arrow_downward" className="!text-[16px]" /> سند قبض
-            </button>
-            <button onClick={() => openModal("payment")}
-                    className="flex items-center gap-1 rounded-card bg-ember px-5 py-2.5 text-t-md font-black text-white shadow-card transition hover:brightness-110 active:scale-[.98]">
-              <MIcon name="arrow_upward" className="!text-[16px]" /> سند صرف
-            </button>
-          </div>
+      <PageHeader title="الخزينة" description="سندات القبض والصرف وحسابات الخزينة." actions={<>{canCreate && tab === "vouchers" && (
+          <>
+            <Button onClick={() => openModal("receipt")}><MIcon name="arrow_downward" className="!text-[16px]" />سند قبض</Button>
+            <Button variant="outline" onClick={() => openModal("payment")}><MIcon name="arrow_upward" className="!text-[16px]" />سند صرف</Button>
+          </>
         )}
         {tab === "banks" && canCreate && (
           <Button onClick={() => setBankModal(true)}>+ حساب بنكي جديد</Button>
-        )}
-      </div>
+        )}</>} />
 
-      <div className="flex gap-1.5 border-b border-line">
-        {([["vouchers", "السندات"], ["banks", "البنوك"]] as const).map(([k, label]) => (
-          <button key={k} onClick={() => setTab(k)}
-                  className={`px-3 py-2 text-t-md font-bold ${tab === k
-                    ? "border-b-2 border-petrol text-petrol" : "text-text-dim hover:text-text"}`}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs value={tab} onChange={setTab} items={[{ key: "vouchers", label: "السندات" }, { key: "banks", label: "البنوك" }]} />
 
       {tab === "vouchers" && <ErrorNote msg={pageErr} />}
 
@@ -420,9 +403,9 @@ export default function TreasuryPage() {
                     <td className="px-3 py-2 tnum text-t-xs text-text-dim">{v.voucher_date || dtFmt(v.created_at)}</td>
                     <td className="px-2 py-2">
                       <div className="flex gap-1">
-                        <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => printVoucher(v)}>السند</Button>
+                        <Button variant="ghost" size="xs" onClick={() => printVoucher(v)}>السند</Button>
                         {canCreate && !cancelled && (
-                          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => cancelVoucher(v)}>إلغاء</Button>
+                          <Button variant="ghost" size="xs" onClick={() => cancelVoucher(v)}>إلغاء</Button>
                         )}
                       </div>
                     </td>
@@ -471,9 +454,9 @@ export default function TreasuryPage() {
                       </div>
                       {canCreate && (
                         <div className="flex gap-1.5">
-                          <Button className="!text-[12px]" onClick={() => setTxnModal("deposit")}>إيداع</Button>
-                          <Button variant="ghost" className="!text-[12px]" onClick={() => setTxnModal("withdrawal")}>سحب</Button>
-                          <Button variant="danger" className="!text-[12px]" onClick={() => removeBankAccount(selectedBank)}>إلغاء الحساب</Button>
+                          <Button size="sm" onClick={() => setTxnModal("deposit")}>إيداع</Button>
+                          <Button variant="ghost" size="sm" onClick={() => setTxnModal("withdrawal")}>سحب</Button>
+                          <Button variant="danger" size="sm" onClick={() => removeBankAccount(selectedBank)}>إلغاء الحساب</Button>
                         </div>
                       )}
                     </div>
@@ -527,7 +510,7 @@ export default function TreasuryPage() {
                     <div className="flex items-center justify-between border-b border-line px-3 py-2">
                       <div className="text-t-sm font-bold">كشف حساب البنك (للتسوية)</div>
                       {canCreate && (
-                        <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => setStmtModal(true)}>
+                        <Button variant="ghost" size="xs" onClick={() => setStmtModal(true)}>
                           + سطر من الكشف
                         </Button>
                       )}
@@ -543,9 +526,9 @@ export default function TreasuryPage() {
                           <div className="flex items-center gap-2">
                             <span className={`tnum font-bold ${l.amount >= 0 ? "text-emerald" : "text-ember"}`}>{money(l.amount)}</span>
                             {l.matched_txn_id ? (
-                              <Button variant="ghost" className="!px-2 !py-0.5 !text-[11px]" onClick={() => doUnmatch(l)}>فك المطابقة</Button>
+                              <Button variant="ghost" size="xs" onClick={() => doUnmatch(l)}>فك المطابقة</Button>
                             ) : (
-                              <Button className="!px-2 !py-0.5 !text-[11px]" onClick={() => { setMatchFor(l); setMatchTxnId(""); }}>مطابقة</Button>
+                              <Button size="xs" onClick={() => { setMatchFor(l); setMatchTxnId(""); }}>مطابقة</Button>
                             )}
                           </div>
                         </div>

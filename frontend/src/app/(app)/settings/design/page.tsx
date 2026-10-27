@@ -8,7 +8,7 @@ import {
   FONT_SCALE_LABELS, FONT_SCALE_PERCENT,
   type DesignInfo, type ArFontKey, type EnFontKey, type ButtonShape, type FontScale,
 } from "@/lib/design";
-import { Button, Card, ErrorNote, Field, Select, Switch } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Select, Switch, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 import { contrastRatio } from "@/lib/colorUtils";
 import { toast } from "@/components/toast";
@@ -88,7 +88,7 @@ export default function DesignSettingsPage() {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="page-title">الإعدادات — التصميم</h1>
+          <PageHeader title="الإعدادات — التصميم" description="مظهر النظام والألوان." />
           <p className="page-desc">
             إعداد موحّد للشركة كاملة — أي تغيير هنا ينعكس فوراً على كل المستخدمين في كل صفحات النظام.
           </p>
