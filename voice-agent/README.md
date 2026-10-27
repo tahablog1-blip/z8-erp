@@ -25,6 +25,11 @@ Unknown/malformed steps are dropped by `PlanValidator` before anything executes.
 - **Claude** (optional): paste an Anthropic API key in the app; falls back to rules on any failure.
   The key is kept in plain `SharedPreferences` — fine for an MVP, move to Keystore-backed storage before shipping.
 
+## فتح المشروع في Android Studio
+1. Android Studio (Koala أو أحدث) → **File ▸ Open** → اختار فولدر `voice-agent` (مش الفولدر الرئيسي للريبو).
+2. استنى Gradle Sync (JDK 17 جاهز مع Android Studio، والـ SDK 34 هيتحمّل لو ناقص).
+3. وصّل موبايل (USB debugging) أو Emulator بـ Google Play → اضغط **Run ▶** على `app`.
+
 ## Run it
 1. Open `voice-agent/` in Android Studio, run `app` on a device (needs Google speech services for `ar-EG`).
 2. Tap the status button -> enable **Voice Agent** in Accessibility settings.

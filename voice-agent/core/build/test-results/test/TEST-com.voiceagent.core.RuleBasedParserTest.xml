@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.voiceagent.core.RuleBasedParserTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-27T00:04:40" hostname="vm" time="0.023">
+  <properties/>
+  <testcase name="search click back home()" classname="com.voiceagent.core.RuleBasedParserTest" time="0.002"/>
+  <testcase name="plain write only types()" classname="com.voiceagent.core.RuleBasedParserTest" time="0.003"/>
+  <testcase name="and between names is not a split()" classname="com.voiceagent.core.RuleBasedParserTest" time="0.001"/>
+  <testcase name="unknown app and gibberish yield no steps()" classname="com.voiceagent.core.RuleBasedParserTest" time="0.002"/>
+  <testcase name="english command()" classname="com.voiceagent.core.RuleBasedParserTest" time="0.001"/>
+  <testcase name="egyptian facebook like and comment example()" classname="com.voiceagent.core.RuleBasedParserTest" time="0.001"/>
+  <testcase name="short colloquial form without comment keyword()" classname="com.voiceagent.core.RuleBasedParserTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
