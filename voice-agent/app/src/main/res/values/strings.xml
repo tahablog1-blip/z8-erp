@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Voice Agent</string>
+    <string name="service_description">Lets Voice Agent read the screen and tap, scroll and type on your behalf when you give a voice command. Only acts when you run a plan.</string>
+    <string name="enable_service">Enable accessibility service</string>
+    <string name="service_on">Accessibility service: ON</string>
+    <string name="service_off">Accessibility service: OFF — tap to enable</string>
+    <string name="listen">Tap to speak</string>
+    <string name="listening">Listening…</string>
+    <string name="transcript_hint">Your command (you can edit it)</string>
+    <string name="parse">Build plan</string>
+    <string name="run">Run plan</string>
+    <string name="api_key_hint">Anthropic API key (optional, enables smarter parsing)</string>
+    <string name="lang_ar">العربية (مصر)</string>
+    <string name="lang_en">English</string>
+</resources>

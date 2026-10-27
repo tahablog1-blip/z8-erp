@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">المساعد الصوتي</string>
+    <string name="service_description">يسمح للتطبيق بقراءة الشاشة والضغط والتمرير والكتابة نيابةً عنك عند إعطاء أمر صوتي. لا ينفّذ شيئًا إلا عند تشغيل الخطة.</string>
+    <string name="enable_service">تفعيل خدمة إمكانية الوصول</string>
+    <string name="service_on">خدمة إمكانية الوصول: مفعّلة</string>
+    <string name="service_off">خدمة إمكانية الوصول: متوقفة — اضغط للتفعيل</string>
+    <string name="listen">اضغط للتحدث</string>
+    <string name="listening">جاري الاستماع…</string>
+    <string name="transcript_hint">أمرك (ممكن تعدّله)</string>
+    <string name="parse">إنشاء الخطة</string>
+    <string name="run">تنفيذ الخطة</string>
+    <string name="api_key_hint">مفتاح Anthropic (اختياري لفهم أذكى)</string>
+</resources>
