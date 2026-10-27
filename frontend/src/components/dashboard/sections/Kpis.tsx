@@ -39,7 +39,7 @@ export function Kpis({ data, loading }: { data: Executive | null; loading: boole
     cards.push(
       <KpiCard key="gross" icon="trending_up" label={d("kpi.gross")} tip={d("kpi.gross.tip")} accent="var(--chart-profit)"
         value={fmtCurrency(pnl.grossProfit)} pct={pnlPrev ? growth(pnl.grossProfit, pnlPrev.grossProfit) : null} spark={spark.gross}
-        sub={gm != null ? `${d("margin")} ${fmtPct(gm)}` : undefined} href="/reports" />,
+        sub={gm != null ? `${d("margin")} ${fmtPct(gm)}` : undefined} href="/reports/analysis?tab=profit" />,
       <KpiCard key="exp" icon="receipt_long" label={d("kpi.expenses")} tip={d("kpi.expenses.tip")} accent="var(--chart-expense)" goodWhenUp={false}
         value={fmtCurrency(pnl.opex)} pct={pnlPrev ? growth(pnl.opex, pnlPrev.opex) : null} spark={spark.exp} href="/accounting" />,
       <KpiCard key="net" icon="account_balance" label={d("kpi.net")} tip={d("kpi.net.tip")} accent={pnl.netProfit < 0 ? "var(--chart-negative)" : "var(--chart-profit)"}

@@ -6,5 +6,5 @@ MODULE = ModuleInfo(
     name="reports", title="التقارير",
     router=router, prefix="/api/reports",
     icon="fa-chart-column",
-    nav_permissions=["reports.sales", "accounting.view_vat"],
+    nav_permissions=["reports.sales", "accounting.view_vat", "accounting.view_reports", "reports.view", "treasury.view", "purchasing.invoices"],
 )

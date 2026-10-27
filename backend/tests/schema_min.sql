@@ -9,7 +9,7 @@ CREATE TABLE customer_ledger (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), com
 CREATE TABLE customer_vehicles (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, customer_id uuid, plate text, plate_type text DEFAULT 'saudi', brand text, make_model text, model_year text,
   car_category text, cylinders text, engine_size text, color text, chassis_number text, notes text, created_at timestamptz DEFAULT now());
 CREATE TABLE invoices (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, branch_id uuid, invoice_no text, source text, customer_id uuid, customer_name text, issued_at timestamptz DEFAULT now(),
-  total_ex numeric(12,2), total_inc numeric(12,2), paid_total numeric(12,2), credit_total numeric(12,2) DEFAULT 0, cogs_total numeric(12,2), is_returned boolean DEFAULT false, created_by uuid, created_at timestamptz DEFAULT now());
+  total_ex numeric(12,2), total_inc numeric(12,2), paid_total numeric(12,2), credit_total numeric(12,2) DEFAULT 0, cogs_total numeric(12,2), is_returned boolean DEFAULT false, created_by uuid, created_at timestamptz DEFAULT now(), qr_tlv text, zatca_status text DEFAULT 'pending');
 CREATE TABLE invoice_items (id serial PRIMARY KEY, invoice_id uuid, product_id uuid, label text, qty numeric, unit_price_vat numeric, discount_amount numeric DEFAULT 0, line_ex numeric, line_inc numeric);
 CREATE TABLE invoice_payments (id serial PRIMARY KEY, invoice_id uuid, company_id uuid, method text, amount numeric, created_at timestamptz DEFAULT now());
 CREATE TABLE products (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, category text DEFAULT '', name text, spec text DEFAULT '', unit text DEFAULT 'قطعة', barcode text, sku text,
@@ -77,3 +77,5 @@ CREATE TABLE hr_employee_history (id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 CREATE TABLE employee_advances (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, employee_id uuid, amount numeric(12,2), installment numeric(12,2), status text DEFAULT 'active', created_at timestamptz DEFAULT now());
 CREATE TABLE advance_repayments (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), advance_id uuid, amount numeric(12,2), source text, voucher_id uuid, payroll_run_id uuid);
 CREATE TABLE invoice_returns (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), invoice_id uuid, total_ex numeric(12,2), created_at timestamptz DEFAULT now());
+CREATE TABLE company_settings (company_id uuid NOT NULL, key text NOT NULL, value text NOT NULL, PRIMARY KEY (company_id, key));
+CREATE TABLE treasury_vouchers (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, branch_id uuid, voucher_no text, type text, amount numeric(12,2), method text, category text, status text DEFAULT 'active', created_at timestamptz DEFAULT now());

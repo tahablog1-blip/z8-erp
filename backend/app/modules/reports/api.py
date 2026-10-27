@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ...core.deps import CurrentUser, get_current_user, require_permission
-from . import service
+from . import center, service
 from .schemas import SalesSummaryOut, VatReturnOut
 
 router = APIRouter()
@@ -258,8 +258,71 @@ async def anomalies(user: CurrentUser = Depends(require_permission("reports.view
 @router.get("/branches-compare")
 async def branches_compare(days: int = Query(default=30, ge=1, le=365),
                            month: str | None = Query(default=None),
-                           user: CurrentUser = Depends(require_permission("reports.view"))):
+                           user: CurrentUser = Depends(require_permission("reports.view", "accounting.view_reports"))):
     import re as _re
     if month and not _re.fullmatch(r"\d{4}-\d{2}", month):
         raise HTTPException(422, "صيغة الشهر: YYYY-MM")
     return await service.branches_compare(user.company_id, days, month)
+
+
+# ══════════════════ مركز التقارير: الفهرس والتفضيلات + تقارير قراءة فقط ══════════════════
+from pydantic import BaseModel as _CBM
+
+
+class PrefsIn(_CBM):
+    favorites: list[str] | None = None
+    saved: list[dict] | None = None
+
+
+@router.get("/catalog")
+async def reports_catalog(user: CurrentUser = Depends(get_current_user)):
+    """فهرس التقارير المتاح لهذا المستخدم فقط (الحجب في الخادم حسب الصلاحيات)"""
+    return center.catalog_for(user)
+
+
+@router.get("/prefs")
+async def reports_prefs(user: CurrentUser = Depends(get_current_user)):
+    return await center.get_prefs(user)
+
+
+@router.put("/prefs")
+async def reports_prefs_put(body: PrefsIn, user: CurrentUser = Depends(get_current_user)):
+    return await center.put_prefs(user, body.favorites, body.saved)
+
+
+@router.post("/open/{report_id}")
+async def reports_open(report_id: str, user: CurrentUser = Depends(get_current_user)):
+    """تسجيل فتح تقرير: آخر التقارير + أثر تدقيق للتقارير الحساسة"""
+    return await center.record_open(user, report_id)
+
+
+@router.get("/payment-methods")
+async def rpt_payment_methods(date_from: str | None = Query(default=None, alias="from"),
+                              date_to: str | None = Query(default=None, alias="to"),
+                              branchId: str | None = Query(default=None),
+                              user: CurrentUser = Depends(require_permission("reports.sales", "accounting.view_reports"))):
+    return await center.payment_methods(user, date_from, date_to, branchId)
+
+
+@router.get("/purchases")
+async def rpt_purchases(date_from: str | None = Query(default=None, alias="from"),
+                        date_to: str | None = Query(default=None, alias="to"),
+                        supplierId: str | None = Query(default=None),
+                        user: CurrentUser = Depends(require_permission("purchasing.invoices", "accounting.view_reports"))):
+    return await center.purchases_report(user, date_from, date_to, supplierId)
+
+
+@router.get("/treasury")
+async def rpt_treasury(date_from: str | None = Query(default=None, alias="from"),
+                       date_to: str | None = Query(default=None, alias="to"),
+                       branchId: str | None = Query(default=None),
+                       user: CurrentUser = Depends(require_permission("treasury.view", "accounting.view_reports"))):
+    return await center.treasury_report(user, date_from, date_to, branchId)
+
+
+@router.get("/zatca-status")
+async def rpt_zatca(date_from: str | None = Query(default=None, alias="from"),
+                    date_to: str | None = Query(default=None, alias="to"),
+                    branchId: str | None = Query(default=None),
+                    user: CurrentUser = Depends(require_permission("accounting.view_vat", "accounting.view_reports"))):
+    return await center.zatca_status(user, date_from, date_to, branchId)

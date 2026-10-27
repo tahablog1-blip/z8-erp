@@ -55,6 +55,11 @@ export default function HrPage() {
   const canIdentity = hasPerm("hr.identity.view");
 
   const [tab, setTab] = useState<Tab>(canView ? "dashboard" : "attendance");
+  useEffect(() => {   // رابط مباشر من مركز التقارير: /hr?tab=payroll
+    const t = new URLSearchParams(window.location.search).get("tab") as Tab | null;
+    if (t && ["payroll", "attendance", "leave", "contracts", "documents"].includes(t)) changeTab(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Lookup[]>([]);
   const [positions, setPositions] = useState<Lookup[]>([]);
