@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui";
 import { Panel } from "@/components/hr/shared";
-import { Kpi, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, Money, dateAr, num, useFilters, useReport } from "@/components/reports/ReportShell";
+import { pdfParams, Kpi, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, Money, dateAr, num, useFilters, useReport } from "@/components/reports/ReportShell";
 
 type R = { meta: { from: string; to: string; branchId: string | null; branchLocked: boolean; generatedAt: string };
            totals: { invoices: number; withQr: number; withoutQr: number }; byStatus: { status: string; n: number }[];
@@ -15,7 +15,7 @@ export default function ZatcaStatusReport() {
   return (
     <div className="space-y-4">
       <ReportHeader title="حالة الفواتير الضريبية" description="الفواتير حسب الحالة المسجّلة ووجود رمز QR." meta={d?.meta}
-        actions={<ReportToolbar onRefresh={reload} csv={d && { file: "invoice-status.csv", headers: ["رقم الفاتورة", "التاريخ", "الإجمالي", "الحالة"], rows: d.missingQr.map((r) => [r.invoiceNo, r.issuedAt, r.total, r.status]) }} />} />
+        actions={<ReportToolbar onRefresh={reload} pdf={{ id: "zatca-status", params: pdfParams(f) }} csv={d && { file: "invoice-status.csv", headers: ["رقم الفاتورة", "التاريخ", "الإجمالي", "الحالة"], rows: d.missingQr.map((r) => [r.invoiceNo, r.issuedAt, r.total, r.status]) }} />} />
       <ReportFilters value={f} onChange={setF} lockedBranch={d?.meta.branchLocked} />
       {error ? <ReportError msg={error} onRetry={reload} /> : loading || !d ? <ReportSkeleton /> : (<>
         <div className="rounded-lg border border-brass/30 bg-brass-bg px-4 py-2.5 text-t-sm font-bold text-brass">{d.note}</div>

@@ -1,8 +1,9 @@
 # modules/reports/api.py — طبقة الـ HTTP: مسارات + صلاحيات فقط
+import datetime as dt
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ...core.deps import CurrentUser, get_current_user, require_permission
-from . import center, service
+from . import center, detail, service
 from .schemas import SalesSummaryOut, VatReturnOut
 
 router = APIRouter()
@@ -300,24 +301,30 @@ async def reports_open(report_id: str, user: CurrentUser = Depends(get_current_u
 async def rpt_payment_methods(date_from: str | None = Query(default=None, alias="from"),
                               date_to: str | None = Query(default=None, alias="to"),
                               branchId: str | None = Query(default=None),
+                              compare: str | None = Query(default=None, pattern="^(prev|yoy)$"),
                               user: CurrentUser = Depends(require_permission("reports.sales", "accounting.view_reports"))):
-    return await center.payment_methods(user, date_from, date_to, branchId)
+    res = await center.payment_methods(user, date_from, date_to, branchId)
+    return await _cmp(res, compare, lambda f, t: center.payment_methods(user, f, t, branchId), ["amount", "count"])
 
 
 @router.get("/purchases")
 async def rpt_purchases(date_from: str | None = Query(default=None, alias="from"),
                         date_to: str | None = Query(default=None, alias="to"),
                         supplierId: str | None = Query(default=None),
+                        compare: str | None = Query(default=None, pattern="^(prev|yoy)$"),
                         user: CurrentUser = Depends(require_permission("purchasing.invoices", "accounting.view_reports"))):
-    return await center.purchases_report(user, date_from, date_to, supplierId)
+    res = await center.purchases_report(user, date_from, date_to, supplierId)
+    return await _cmp(res, compare, lambda f, t: center.purchases_report(user, f, t, supplierId), ["total", "vat", "paid", "n"])
 
 
 @router.get("/treasury")
 async def rpt_treasury(date_from: str | None = Query(default=None, alias="from"),
                        date_to: str | None = Query(default=None, alias="to"),
                        branchId: str | None = Query(default=None),
+                       compare: str | None = Query(default=None, pattern="^(prev|yoy)$"),
                        user: CurrentUser = Depends(require_permission("treasury.view", "accounting.view_reports"))):
-    return await center.treasury_report(user, date_from, date_to, branchId)
+    res = await center.treasury_report(user, date_from, date_to, branchId)
+    return await _cmp(res, compare, lambda f, t: center.treasury_report(user, f, t, branchId), ["receipts", "payments", "count"])
 
 
 @router.get("/zatca-status")
@@ -326,3 +333,85 @@ async def rpt_zatca(date_from: str | None = Query(default=None, alias="from"),
                     branchId: str | None = Query(default=None),
                     user: CurrentUser = Depends(require_permission("accounting.view_vat", "accounting.view_reports"))):
     return await center.zatca_status(user, date_from, date_to, branchId)
+
+
+async def _cmp(res: dict, compare: str | None, run, metrics: list[str]) -> dict:
+    """مقارنة بفترة سابقة/نفس الفترة من العام الماضي — الحساب في الخادم"""
+    if not compare:
+        return res
+    f = dt.date.fromisoformat(res["meta"]["from"]); t = dt.date.fromisoformat(res["meta"]["to"])
+    cr = detail.compare_range(f, t, compare)
+    prev = await run(cr[0].isoformat(), cr[1].isoformat())
+    return detail.attach_compare(res, prev, compare, cr, metrics)
+
+
+_SALES_PERMS = ("reports.sales", "accounting.view_reports")
+
+
+@router.get("/sales-breakdown")
+async def rpt_sales_breakdown(dim: str = Query(default="product"),
+                              date_from: str | None = Query(default=None, alias="from"),
+                              date_to: str | None = Query(default=None, alias="to"),
+                              branchId: str | None = Query(default=None),
+                              compare: str | None = Query(default=None, pattern="^(prev|yoy)$"),
+                              user: CurrentUser = Depends(require_permission(*_SALES_PERMS))):
+    return await detail.sales_breakdown(user, date_from, date_to, branchId, dim, compare)
+
+
+@router.get("/returns")
+async def rpt_returns(date_from: str | None = Query(default=None, alias="from"),
+                      date_to: str | None = Query(default=None, alias="to"),
+                      branchId: str | None = Query(default=None),
+                      user: CurrentUser = Depends(require_permission(*_SALES_PERMS))):
+    return await detail.returns_report(user, date_from, date_to, branchId)
+
+
+@router.get("/stock-movements")
+async def rpt_stock_movements(date_from: str | None = Query(default=None, alias="from"),
+                              date_to: str | None = Query(default=None, alias="to"),
+                              branchId: str | None = Query(default=None),
+                              user: CurrentUser = Depends(require_permission("products.view_stock", "accounting.view_reports"))):
+    return await detail.stock_movements_report(user, date_from, date_to, branchId)
+
+
+@router.get("/hr")
+async def rpt_hr(date_from: str | None = Query(default=None, alias="from"),
+                 date_to: str | None = Query(default=None, alias="to"),
+                 branchId: str | None = Query(default=None),
+                 user: CurrentUser = Depends(require_permission("hr.view", "hr.manage"))):
+    return await detail.hr_report(user, date_from, date_to, branchId)
+
+
+@router.get("/reconciliation")
+async def rpt_reconciliation(date_from: str | None = Query(default=None, alias="from"),
+                             date_to: str | None = Query(default=None, alias="to"),
+                             branchId: str | None = Query(default=None),
+                             user: CurrentUser = Depends(require_permission("accounting.view_reports"))):
+    return await detail.reconciliation(user, date_from, date_to, branchId)
+
+
+@router.get("/period-compare")
+async def rpt_period_compare(kind: str = Query(..., pattern="^(vat|sales|profit)$"),
+                             date_from: str | None = Query(default=None, alias="from"),
+                             date_to: str | None = Query(default=None, alias="to"),
+                             mode: str = Query(default="prev", pattern="^(prev|yoy)$"),
+                             branchId: str | None = Query(default=None),
+                             user: CurrentUser = Depends(get_current_user)):
+    """مقارنة فترة بفترة لتقارير: الإقرار الضريبي / ملخص المبيعات / الربحية (الصلاحية تُفحص داخل الخدمة)"""
+    return await detail.period_compare(user, kind, date_from, date_to, mode, branchId)
+
+
+@router.get("/pdf/{report_id}")
+async def rpt_pdf(report_id: str,
+                  date_from: str | None = Query(default=None, alias="from"),
+                  date_to: str | None = Query(default=None, alias="to"),
+                  branchId: str | None = Query(default=None),
+                  dim: str | None = Query(default=None),
+                  compare: str | None = Query(default=None, pattern="^(prev|yoy)$"),
+                  supplierId: str | None = Query(default=None),
+                  user: CurrentUser = Depends(get_current_user)):
+    """تصدير PDF من الخادم — نفس صلاحيات عرض التقرير ونفس بياناته (يعاد تشغيل التقرير على الخادم)"""
+    from fastapi.responses import Response
+    from . import pdf_export
+    pdf, name = await pdf_export.build(user, report_id, {"from": date_from, "to": date_to, "branchId": branchId, "dim": dim, "compare": compare, "supplierId": supplierId})
+    return Response(content=pdf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{name}"'})

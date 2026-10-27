@@ -3,7 +3,7 @@
 // لا حسابات مالية هنا: الأرقام كلها من الخادم، والواجهة تعرض وتنسّق فقط.
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { api } from "@/lib/api";
+import { api, getToken } from "@/lib/api";
 import { Badge, Button, EmptyState, ErrorNote, PageHeader } from "@/components/ui";
 import { Skeleton } from "@/components/dashboard/Widget";
 import { MIcon } from "@/components/m-icon";
@@ -22,7 +22,7 @@ export const dateAr = (s: string | null | undefined) => (s ? new Date(s).toLocal
 /** رقم مالي: السالب بعلامة ولون خطر دلالي فقط عند السالب (لا تلوين للموجب) */
 export function Money({ v, strong }: { v: number | null | undefined; strong?: boolean }) {
   if (v == null) return <span className="text-text-dim">—</span>;
-  return <span dir="ltr" className={`tnum inline-block ${v < 0 ? "text-ember" : ""} ${strong ? "font-black" : ""}`}>{v < 0 ? "-" : ""}{cur(Math.abs(v))}</span>;
+  return <span dir="ltr" className={`tnum inline-block whitespace-nowrap ${v < 0 ? "text-ember" : ""} ${strong ? "font-black" : ""}`}>{v < 0 ? "-" : ""}{cur(Math.abs(v))}</span>;
 }
 
 // ── الفترات (بتوقيت الجهاز كما في بقية النظام؛ الخادم يفسّر التواريخ بتوقيت الرياض) ──
@@ -143,15 +143,35 @@ export function ReportHeader({ title, description, meta, actions, back = true }:
 }
 
 /** أدوات: تحديث + تصدير (Excel/CSV) + طباعة/PDF — تُعرض فقط لما هو مدعوم فعلاً */
-export function ReportToolbar({ onRefresh, csv, print }: {
+/** معاملات تصدير PDF: نفس فلاتر الشاشة (الخادم يعيد تشغيل التقرير ويفرض الصلاحيات) */
+export const pdfParams = (f: Filters, extra: Record<string, string> = {}) => ({ from: f.from, to: f.to, ...(f.branchId ? { branchId: f.branchId } : {}), ...extra });
+
+async function downloadPdf(id: string, params: Record<string, string>): Promise<string> {
+  const q = new URLSearchParams(params).toString();
+  const res = await fetch(`/api/reports/pdf/${id}?${q}`, { headers: { Authorization: `Bearer ${getToken() ?? ""}` } });
+  if (!res.ok) { let m = `تعذر إنشاء PDF (${res.status})`; try { const j = await res.json(); m = j.error || j.detail || m; } catch { /* بلا جسم */ } throw new Error(m); }
+  const name = /filename="?([^";]+)"?/.exec(res.headers.get("content-disposition") || "")?.[1] || `${id}.pdf`;
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  return name;
+}
+
+export function ReportToolbar({ onRefresh, csv, print, pdf }: {
   onRefresh: () => void;
+  pdf?: { id: string; params: Record<string, string> } | null;
   csv?: { file: string; headers: string[]; rows: (string | number | null)[][] } | null;
   print?: { title: string; subtitle: string; body: () => string } | null;
 }) {
   const co = getCompany();
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfErr, setPdfErr] = useState("");
   return (
     <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="أدوات التقرير">
       <Button variant="ghost" size="sm" onClick={onRefresh}>تحديث</Button>
+      {pdf && <Button variant="ghost" size="sm" disabled={pdfBusy} title="ملف PDF يُنشأ في الخادم بنفس بياناتك وصلاحياتك"
+                      onClick={async () => { setPdfBusy(true); setPdfErr(""); try { await downloadPdf(pdf.id, pdf.params); } catch (e: unknown) { setPdfErr(e instanceof Error ? e.message : "تعذر إنشاء PDF"); } finally { setPdfBusy(false); } }}>{pdfBusy ? "جارٍ الإنشاء…" : "تصدير PDF"}</Button>}
+      {pdfErr && <span className="text-t-xs font-bold text-ember" role="alert">{pdfErr}</span>}
       {csv && <Button variant="ghost" size="sm" onClick={() => downloadCsv(csv.file, csv.headers, csv.rows)} title="يُفتح في Excel">تصدير Excel / CSV</Button>}
       {print && <Button variant="ghost" size="sm" onClick={() => printReport(print.title, print.subtitle + (co?.name ? ` · ${co.name}` : "") + ` · طُبع: ${new Date().toLocaleString("en-GB", { hour12: false })}`, print.body())} title="يُفتح حوار الطباعة — اختر «حفظ كـ PDF»">طباعة / PDF</Button>}
     </div>
@@ -159,28 +179,60 @@ export function ReportToolbar({ onRefresh, csv, print }: {
 }
 export { tableHTML, kpisHTML };
 
-export function Kpi({ label, value, tone = "neutral", sub }: { label: string; value: ReactNode; tone?: "neutral" | "danger" | "success"; sub?: string }) {
+export type Trend = { prev: number | null; pct: number | null } | null | undefined;
+export function Kpi({ label, value, tone = "neutral", sub, trend, goodWhenUp = true }: { label: string; value: ReactNode; tone?: "neutral" | "danger" | "success"; sub?: string; trend?: Trend; goodWhenUp?: boolean }) {
   return (
     <div className="min-w-0 rounded-card border border-line bg-ink-2 p-3.5 shadow-card">
       <div className="truncate text-t-sm font-bold text-text-dim">{label}</div>
       <div className={`tnum mt-1 text-t-xl font-black leading-tight ${tone === "danger" ? "text-ember" : tone === "success" ? "text-emerald" : ""}`}>{value}</div>
       {sub && <div className="mt-0.5 truncate text-t-xs font-bold text-text-dim">{sub}</div>}
+      {trend !== undefined && trend !== null && (trend.pct == null
+        ? <div className="mt-1 text-t-xs text-text-dim">لا أساس للمقارنة</div>
+        : <div className={`mt-1 text-t-xs font-bold ${(trend.pct >= 0) === goodWhenUp ? "text-emerald" : "text-ember"}`} dir="ltr">
+            {trend.pct >= 0 ? "↑" : "↓"} {pct(trend.pct)} <span className="text-text-dim" dir="rtl">عن الفترة المقارنة ({cur(trend.prev)})</span></div>)}
+    </div>
+  );
+}
+
+/** اختيار المقارنة: بلا / الفترة السابقة / نفس الفترة من العام الماضي — الحساب في الخادم */
+export type CompareMode = "" | "prev" | "yoy";
+export function CompareToggle({ value, onChange }: { value: CompareMode; onChange: (v: CompareMode) => void }) {
+  const opts: [CompareMode, string][] = [["", "بلا مقارنة"], ["prev", "مقارنة بالفترة السابقة"], ["yoy", "مقارنة بالعام الماضي"]];
+  return (
+    <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="المقارنة">
+      {opts.map(([k, l]) => <button key={k} aria-pressed={value === k} onClick={() => onChange(k)}
+        className={`rounded-full border px-3 py-1 text-t-xs font-bold ${value === k ? "border-petrol bg-petrol-soft text-petrol" : "border-line text-text-dim hover:border-petrol"}`}>{l}</button>)}
     </div>
   );
 }
 
 /** جدول تقرير موحّد: فرز بالنقر على العنوان، تمرير أفقي على الشاشات الصغيرة، صف إجماليات اختياري */
 export type Col<T> = { key: string; title: string; num?: boolean; render?: (r: T) => ReactNode; value?: (r: T) => string | number };
-export function ReportTable<T extends Record<string, unknown>>({ cols, rows, footer, empty = true }: { cols: Col<T>[]; rows: T[]; footer?: ReactNode; empty?: boolean }) {
+export function ReportTable<T extends object>({ cols: allCols, rows, footer, empty = true, storageKey }: { cols: Col<T>[]; rows: T[]; footer?: ReactNode; empty?: boolean; storageKey?: string }) {
   const [sort, setSort] = useState<{ k: string; d: 1 | -1 } | null>(null);
+  // اختيار الأعمدة (يُحفظ لكل تقرير في المتصفح)
+  const [hidden, setHidden] = useState<string[]>([]);
+  const [menu, setMenu] = useState(false);
+  useEffect(() => { if (!storageKey) return; try { setHidden(JSON.parse(localStorage.getItem(`z8_cols_${storageKey}`) || "[]")); } catch { /* تجاهل */ } }, [storageKey]);
+  const cols = allCols.filter((c) => !hidden.includes(c.key));
+  const toggleCol = (k: string) => setHidden((h) => { const n = h.includes(k) ? h.filter((x) => x !== k) : allCols.length - h.length > 1 ? [...h, k] : h; try { if (storageKey) localStorage.setItem(`z8_cols_${storageKey}`, JSON.stringify(n)); } catch { /* تجاهل */ } return n; });
   const shown = useMemo(() => {
     if (!sort) return rows;
     const c = cols.find((x) => x.key === sort.k);
-    const val = (r: T) => (c?.value ? c.value(r) : (r[sort.k] as string | number));
+    const val = (r: T) => (c?.value ? c.value(r) : ((r as Record<string, unknown>)[sort.k] as string | number));
     return [...rows].sort((a, b) => { const x = val(a), y = val(b); return (typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y), "ar")) * sort.d; });
   }, [rows, sort, cols]);
   if (!rows.length) return empty ? <ReportEmpty /> : null;
   return (
+    <div className="space-y-1.5">
+      {storageKey && (
+        <div className="relative flex justify-end">
+          <Button size="xs" variant="ghost" onClick={() => setMenu((m) => !m)} aria-expanded={menu}>الأعمدة</Button>
+          {menu && (
+            <div className="absolute end-0 top-full z-20 mt-1 min-w-44 rounded-lg border border-line bg-ink-2 p-2 shadow-lg" role="menu">
+              {allCols.map((c) => <label key={c.key} className="flex cursor-pointer items-center gap-2 px-2 py-1 text-t-sm"><input type="checkbox" checked={!hidden.includes(c.key)} onChange={() => toggleCol(c.key)} />{c.title}</label>)}
+            </div>)}
+        </div>)}
     <div className="overflow-x-auto rounded-lg border border-line">
       <table className="w-full min-w-[560px] border-collapse text-t-sm">
         <thead className="bg-ink-3 text-t-xs text-text-dim">
@@ -190,9 +242,10 @@ export function ReportTable<T extends Record<string, unknown>>({ cols, rows, foo
                 {c.title}{sort?.k === c.key && <span aria-hidden>{sort.d === 1 ? "▲" : "▼"}</span>}</button></th>))}</tr>
         </thead>
         <tbody>{shown.map((r, i) => (
-          <tr key={i} className="border-t border-line hover:bg-ink-3/50">{cols.map((c) => <td key={c.key} className={`p-2.5 ${c.num ? "tnum text-end" : ""}`}>{c.render ? c.render(r) : String(r[c.key] ?? "—")}</td>)}</tr>))}</tbody>
+          <tr key={i} className="border-t border-line hover:bg-ink-3/50">{cols.map((c) => <td key={c.key} className={`p-2.5 ${c.num ? "tnum text-end" : ""}`}>{c.render ? c.render(r) : String((r as Record<string, unknown>)[c.key] ?? "—")}</td>)}</tr>))}</tbody>
         {footer && <tfoot className="border-t-2 border-line bg-ink-3/60 font-black">{footer}</tfoot>}
       </table>
+    </div>
     </div>
   );
 }

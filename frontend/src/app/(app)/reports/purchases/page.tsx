@@ -1,29 +1,33 @@
 "use client";
 // تقرير المشتريات — قراءة فقط من GET /reports/purchases
+import { useState } from "react";
 import { Panel } from "@/components/hr/shared";
 import { HBars } from "@/components/dashboard/charts/HBars";
-import { Kpi, Money, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, SaveReportButton, cur, kpisHTML, num, tableHTML, useFilters, useReport } from "@/components/reports/ReportShell";
+import { pdfParams, CompareToggle, type CompareMode, type Trend, Kpi, Money, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, SaveReportButton, cur, kpisHTML, num, tableHTML, useFilters, useReport } from "@/components/reports/ReportShell";
 
 type Row = { supplier_id: string | null; name: string; n: number; subtotal: number; vat: number; total: number; paid: number; remaining: number };
 type R = { meta: { from: string; to: string; branchId: string | null; branchLocked: boolean; generatedAt: string };
-           totals: { n: number; subtotal: number; vat: number; total: number; paid: number; remaining: number }; bySupplier: Row[]; byMonth: { month: string; n: number; total: number; vat: number }[]; note: string };
+           totals: { n: number; subtotal: number; vat: number; total: number; paid: number; remaining: number }; bySupplier: Row[]; byMonth: { month: string; n: number; total: number; vat: number }[]; note: string;
+           compare?: { from: string; to: string; total: Trend; vat: Trend; paid: Trend; n: Trend } };
 
 export default function PurchasesReport() {
   const [f, setF] = useFilters();
-  const { data: d, loading, error, reload } = useReport<R>("/reports/purchases", f, { branch: false });
+  const [cmp, setCmp] = useState<CompareMode>("");
+  const { data: d, loading, error, reload } = useReport<R>("/reports/purchases", f, { branch: false, extra: cmp ? `&compare=${cmp}` : "" });
   return (
     <div className="space-y-4">
       <ReportHeader title="تقرير المشتريات" description="المشتريات بالمورد والشهر: الإجمالي والضريبة والمدفوع والمتبقي." meta={d?.meta}
         actions={<><SaveReportButton reportId="purchases" filters={f} />
-          <ReportToolbar onRefresh={reload}
+          <ReportToolbar onRefresh={reload} pdf={{ id: "purchases", params: pdfParams(f) }}
             csv={d && { file: "purchases.csv", headers: ["المورد", "الفواتير", "قبل الضريبة", "الضريبة", "الإجمالي", "المدفوع", "المتبقي"], rows: d.bySupplier.map((r) => [r.name, r.n, r.subtotal, r.vat, r.total, r.paid, r.remaining]) }}
             print={d && { title: "تقرير المشتريات", subtitle: `${d.meta.from} → ${d.meta.to}`, body: () => kpisHTML([{ label: "إجمالي المشتريات", value: cur(d.totals.total) }, { label: "المدفوع", value: cur(d.totals.paid) }, { label: "المتبقي", value: cur(d.totals.remaining) }]) + tableHTML(["المورد", "الفواتير", "الإجمالي", "المدفوع", "المتبقي"], d.bySupplier.map((r) => [r.name, num(r.n), cur(r.total), cur(r.paid), cur(r.remaining)]), { numericCols: [1, 2, 3, 4] }) }} /></>} />
       <ReportFilters value={f} onChange={setF} branches={false} />
+      <CompareToggle value={cmp} onChange={setCmp} />
       {error ? <ReportError msg={error} onRetry={reload} /> : loading || !d ? <ReportSkeleton /> : (<>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-          <Kpi label="إجمالي المشتريات" value={<Money v={d.totals.total} />} sub={`${num(d.totals.n)} فاتورة`} />
+          <Kpi label="إجمالي المشتريات" value={<Money v={d.totals.total} />} sub={`${num(d.totals.n)} فاتورة`} trend={d.compare?.total} goodWhenUp={false} />
           <Kpi label="قبل الضريبة" value={<Money v={d.totals.subtotal} />} />
-          <Kpi label="ضريبة المدخلات" value={<Money v={d.totals.vat} />} />
+          <Kpi label="ضريبة المدخلات" value={<Money v={d.totals.vat} />} trend={d.compare?.vat} />
           <Kpi label="المدفوع" value={<Money v={d.totals.paid} />} />
           <Kpi label="المتبقي" value={<Money v={d.totals.remaining} />} tone={d.totals.remaining > 0 ? "danger" : "neutral"} />
         </div>
