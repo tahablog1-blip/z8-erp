@@ -8,6 +8,8 @@ let BUILD = "dev";
 try { BUILD = execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim(); } catch { /* */ }
 
 const nextConfig = {
+  // deploy.sh يبني في مجلد منفصل (NEXT_DIST_DIR) ثم يبدّله بـ .next بعد نجاح البناء — فتبقى النسخة الشغّالة سليمة لو فشل البناء
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   env: { NEXT_PUBLIC_BUILD: BUILD },
   // السماح بفتح المشروع من أي عنوان شبكة محلية (منزل / هوت سبوت موبايل / مكتب)
   // Next 16 بيحظر كل الطلبات (fetch + HMR WebSocket) لو فتحت من IP مش localhost
