@@ -382,6 +382,7 @@ export default function InventoryPage() {
       key: "type", title: "النوع", width: "100px",
       render: (v) => v.type === "receive"
         ? <Badge tone="good">استلام</Badge>
+        : v.type === "adjust" ? <Badge tone="warn">تسوية جرد</Badge>
         : <Badge tone="info">تحويل</Badge>,
     },
     { key: "from", title: "من" },
@@ -422,6 +423,7 @@ export default function InventoryPage() {
       key: "move_type", title: "النوع", width: "90px",
       render: (m) => m.move_type === "receive"
         ? <Badge tone="good">استلام</Badge>
+        : m.move_type === "adjust" ? <Badge tone="warn">تسوية جرد</Badge>
         : <Badge tone="info">تحويل</Badge>,
     },
     { key: "product_label", title: "الصنف" },
@@ -440,7 +442,7 @@ export default function InventoryPage() {
     const body =
       kpisHTML([
         { label: "رقم السند", value: voucher.moveNo },
-        { label: "النوع", value: voucher.type === "receive" ? "سند استلام" : "سند تحويل" },
+        { label: "النوع", value: voucher.type === "receive" ? "سند استلام" : voucher.type === "adjust" ? "سند تسوية جرد" : "سند تحويل" },
         { label: "التاريخ", value: dateFmt(voucher.createdAt) },
       ]) +
       tableHTML(["البيان", "القيمة"], [
@@ -457,7 +459,7 @@ export default function InventoryPage() {
          <div>توقيع المسلِّم: ______________</div>
          <div>توقيع المستلِم: ______________</div>
        </div>`;
-    printReport(voucher.type === "receive" ? "سند استلام مخزون" : "سند تحويل مخزون",
+    printReport(voucher.type === "receive" ? "سند استلام مخزون" : voucher.type === "adjust" ? "سند تسوية جرد" : "سند تحويل مخزون",
                 `سند رقم ${voucher.moveNo}`, body);
   }
 
@@ -816,7 +818,7 @@ export default function InventoryPage() {
             </div>
             <div className="grid gap-2 rounded-lg bg-ink-3 p-3 text-[12.5px] sm:grid-cols-4">
               <div><span className="text-text-dim">النوع:</span>{" "}
-                <b>{voucher.type === "receive" ? "استلام" : "تحويل"}</b></div>
+                <b>{voucher.type === "receive" ? "استلام" : voucher.type === "adjust" ? "تسوية جرد" : "تحويل"}</b></div>
               <div><span className="text-text-dim">من:</span> <b>{voucher.from}</b></div>
               <div><span className="text-text-dim">إلى:</span> <b>{voucher.to}</b></div>
               <div><span className="text-text-dim">التاريخ:</span>{" "}
@@ -833,6 +835,9 @@ export default function InventoryPage() {
               availability={voucher.type === "transfer" ? availability : undefined}
             />
 
+            {voucher.type === "adjust" && (
+              <p className="rounded-lg bg-brass-soft p-2.5 text-[12px] font-bold text-brass">سند تسوية جرد — أثر مُعتمَد لجلسة جرد ولا يُعدَّل. للتصحيح استخدم جلسة جرد جديدة.</p>
+            )}
             <p className="text-[11px] leading-5 text-text-dim">
               تعديل السند بيعكس أثر الأصناف القديمة على الأرصدة ويطبّق الجديدة مكانها في عملية واحدة.
             </p>
@@ -840,7 +845,7 @@ export default function InventoryPage() {
             <ErrorNote msg={err} />
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="ghost" onClick={() => setVoucher(null)}>إغلاق</Button>
-              {canManageStock && (
+              {canManageStock && voucher.type !== "adjust" && (
                 <Button onClick={submitVoucherEdit} disabled={busy || validLines.length === 0}>
                   {busy ? "جارِ الحفظ..." : "حفظ التعديلات"}
                 </Button>

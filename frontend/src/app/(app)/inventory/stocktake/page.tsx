@@ -41,6 +41,12 @@ export default function StocktakePage() {
   const [locType, setLocType] = useState<"warehouse" | "branch">("branch");
   const [locId, setLocId] = useState("");
   const [note, setNote] = useState("");
+  const [jobName, setJobName] = useState("");
+  const [countType, setCountType] = useState<"full" | "category">("full");
+  const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => { if (showCreate && !categories.length) api<string[]>("/products/cascade/categories").then(setCategories).catch(() => undefined); }, [showCreate, categories.length]);
 
   const locName = useCallback((type: string, id: string) =>
     type === "warehouse" ? "المستودع الرئيسي" : branches.find((b) => String(b.id) === String(id))?.name || `الفرع ${id}`, [branches]);
@@ -80,12 +86,16 @@ export default function StocktakePage() {
 
   async function create() {
     if (busy || (locType === "branch" && !locId)) return;
+    if (countType === "category" && !category) { setError("اختر التصنيف المراد جرده."); return; }
     setBusy(true); setError("");
     try {
       const d = await api<StocktakeDetail>("/inventory/stocktakes", {
-        method: "POST", body: JSON.stringify({ locType, locId: locType === "warehouse" ? "main" : locId, note: note.trim() || null }),
+        method: "POST", body: JSON.stringify({
+          locType, locId: locType === "warehouse" ? "main" : locId, note: note.trim() || null,
+          name: jobName.trim() || null, countType, category: countType === "category" ? category : null,
+        }),
       });
-      setShowCreate(false); setNote("");
+      setShowCreate(false); setNote(""); setJobName(""); setCountType("full"); setCategory("");
       await reload(); setDetail(d);
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر إنشاء الجرد"); }
     finally { setBusy(false); }
@@ -184,7 +194,7 @@ export default function StocktakePage() {
                     const p = s.totalItems ? Math.round((s.countedItems / s.totalItems) * 100) : 0;
                     return (
                       <tr key={s.id} className="cursor-pointer border-t border-line hover:bg-ink-3/50" onClick={() => open(s.id)}>
-                        <td className="p-3 font-bold">{locName(s.locType, s.locId)}<span className="tnum block text-t-xs font-normal text-text-dim" dir="ltr">#{s.id.slice(0, 8)}</span></td>
+                        <td className="p-3 font-bold">{s.name || locName(s.locType, s.locId)}{s.name && <span className="block text-t-xs font-normal text-text-dim">{locName(s.locType, s.locId)}</span>}<span className="tnum block text-t-xs font-normal text-text-dim" dir="ltr">#{s.id.slice(0, 8)}</span></td>
                         <td className="p-3 text-t-xs">{fmtDT(s.createdAt)}</td>
                         <td className="p-3">{s.createdByName || "—"}</td>
                         <td className="p-3">
@@ -221,7 +231,19 @@ export default function StocktakePage() {
               </Select>
             </Field>
           </>) : <p className="text-t-sm text-text-dim">موقع الجرد: {locName("branch", user?.branchId || "")}</p>}
-          <Field label="نوع الجرد"><Input value="جرد كامل لأصناف الموقع" disabled aria-label="نوع الجرد" /></Field>
+          <Field label="اسم الجرد (اختياري)"><Input value={jobName} maxLength={120} onChange={(e) => setJobName(e.target.value)} placeholder="مثال: جرد نهاية الربع" /></Field>
+          <Field label="نوع الجرد">
+            <Select value={countType} onChange={(e) => setCountType(e.target.value as "full" | "category")} aria-label="نوع الجرد">
+              <option value="full">جرد كامل لأصناف الموقع</option><option value="category">جرد جزئي حسب التصنيف</option>
+            </Select>
+          </Field>
+          {countType === "category" && (
+            <Field label="التصنيف">
+              <Select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="التصنيف">
+                <option value="">اختر التصنيف</option>{categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </Select>
+            </Field>
+          )}
           <Field label="ملاحظات (اختياري)"><Textarea rows={2} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} placeholder="سبب الجرد أو أي ملاحظات…" /></Field>
           <p className="text-t-xs leading-6 text-text-dim">إنشاء الجلسة يأخذ لقطة للأرصدة الحالية ويجهّز كل أصناف الموقع للعدّ. لا يتغير المخزون حتى الاعتماد.</p>
           <div className="flex gap-2"><Button onClick={create} loading={busy} disabled={busy || (locType === "branch" && !locId)}>إنشاء وبدء العدّ</Button><Button variant="outline" onClick={() => setShowCreate(false)}>إلغاء</Button></div>

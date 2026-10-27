@@ -40,6 +40,11 @@ def _loc_name(loc_type: str | None, loc_id: str | None, branch_map: dict) -> str
     return f"فرع {name}" if name else "مورد خارجي"
 
 
+def _adjust_side(loc_type, loc_id, bmap, label):
+    """سندات تسوية الجرد: الطرف الفارغ يُعرض بوصفه «تسوية جرد» لا «مورد خارجي»."""
+    return _loc_name(loc_type, loc_id, bmap) if loc_type else label
+
+
 async def _branch_map(company_id: str) -> dict:
     rows = await fetch("SELECT id, name FROM branches WHERE company_id = $1", company_id)
     return {str(r["id"]): r["name"] for r in rows}
@@ -173,9 +178,11 @@ async def list_vouchers(company_id: str) -> list[dict]:
     return [{
         "moveNo": r["move_no"],
         "type": r["move_type"],
-        "from": (_loc_name(r["from_loc_type"], r["from_loc_id"], bmap) if r["from_loc_type"]
+        "from": (_adjust_side(r["from_loc_type"], r["from_loc_id"], bmap, "تسوية جرد (زيادة)") if r["move_type"] == "adjust"
+                 else _loc_name(r["from_loc_type"], r["from_loc_id"], bmap) if r["from_loc_type"]
                  else (r["supplier_name"] or "مورد خارجي (بدون اسم)")),
-        "to": _loc_name(r["to_loc_type"], r["to_loc_id"], bmap),
+        "to": (_adjust_side(r["to_loc_type"], r["to_loc_id"], bmap, "تسوية جرد (عجز)") if r["move_type"] == "adjust"
+               else _loc_name(r["to_loc_type"], r["to_loc_id"], bmap)),
         "createdAt": r["created_at"],
         "itemCount": r["item_count"],
         "totalQty": r["total_qty"],
@@ -202,9 +209,11 @@ async def get_voucher(company_id: str, move_no: str) -> dict:
         "fromLocId": first["from_loc_id"],
         "toLocType": first["to_loc_type"],
         "toLocId": first["to_loc_id"],
-        "from": (_loc_name(first["from_loc_type"], first["from_loc_id"], bmap)
+        "from": (_adjust_side(first["from_loc_type"], first["from_loc_id"], bmap, "تسوية جرد (زيادة)") if first["move_type"] == "adjust"
+                 else _loc_name(first["from_loc_type"], first["from_loc_id"], bmap)
                  if first["from_loc_type"] else (first["supplier_name"] or "مورد خارجي (بدون اسم)")),
-        "to": _loc_name(first["to_loc_type"], first["to_loc_id"], bmap),
+        "to": (_adjust_side(first["to_loc_type"], first["to_loc_id"], bmap, "تسوية جرد (عجز)") if first["move_type"] == "adjust"
+               else _loc_name(first["to_loc_type"], first["to_loc_id"], bmap)),
         "createdAt": first["created_at"],
         "note": first["note"],
         "supplierName": first["supplier_name"],
@@ -376,6 +385,8 @@ async def edit_voucher(company_id: str, user_id: str, actor_name: str,
                 raise HTTPException(404, "السند غير موجود")
 
             first = old_rows[0]
+            if first["move_type"] == "adjust":
+                raise HTTPException(409, "سندات تسوية الجرد لا تُعدَّل — هي أثر مُعتمَد لجلسة جرد")
             is_transfer = first["move_type"] == "transfer"
             locations = []
             for old in old_rows:
@@ -654,9 +665,19 @@ async def stocktake_timeline(company_id: str, session_id: str) -> list[dict]:
 async def create_stocktake(
     company_id: str, user_id: str, actor_name: str,
     loc_type: str, loc_id: str, note: str | None = None,
+    name: str | None = None, count_type: str = "full", category: str | None = None,
 ) -> dict:
-    """إنشاء جلسة جرد وأخذ لقطة للأرصدة دون تعديل المخزون."""
+    """إنشاء جلسة جرد وأخذ لقطة للأرصدة دون تعديل المخزون.
+    count_type: full = كل أصناف الموقع، category = أصناف تصنيف واحد (جرد جزئي)."""
     from uuid import UUID
+
+    if count_type not in ("full", "category"):
+        raise HTTPException(400, "نوع الجرد غير مدعوم")
+    category = (category or "").strip() or None
+    if count_type == "category" and not category:
+        raise HTTPException(400, "اختر التصنيف المراد جرده")
+    if count_type == "full":
+        category = None
 
     if loc_type not in ("warehouse", "branch"):
         raise HTTPException(400, "نوع الموقع غير صحيح")
@@ -684,12 +705,12 @@ async def create_stocktake(
             session = await conn.fetchrow(
                 """INSERT INTO stocktake_sessions
                      (company_id, loc_type, loc_id, status, note,
-                      created_by, created_by_name)
-                   VALUES ($1,$2,$3,'in_progress',$4,$5,$6)
+                      created_by, created_by_name, name, count_type, category_filter)
+                   VALUES ($1,$2,$3,'in_progress',$4,$5,$6,$7,$8,$9)
                    RETURNING id, company_id, loc_type, loc_id, status,
                              note, created_at, created_by_name""",
                 company_id, loc_type, loc_id, (note or "").strip() or None,
-                user_id, actor_name,
+                user_id, actor_name, (name or "").strip() or None, count_type, category,
             )
             await conn.execute(
                 """INSERT INTO stocktake_items
@@ -704,9 +725,12 @@ async def create_stocktake(
                    WHERE p.company_id=$4
                      AND COALESCE(p.is_active,TRUE)=TRUE
                      AND COALESCE(p.is_service,FALSE)=FALSE
+                     AND ($5::text IS NULL OR p.category=$5)
                    ON CONFLICT (session_id,product_id) DO NOTHING""",
-                session["id"], loc_type, loc_id, company_id,
+                session["id"], loc_type, loc_id, company_id, category,
             )
+            if not await conn.fetchval("SELECT 1 FROM stocktake_items WHERE session_id=$1 LIMIT 1", session["id"]):
+                raise HTTPException(400, "لا توجد أصناف ضمن نطاق الجرد المحدد")
             await _stocktake_audit(
                 conn, company_id, user_id, actor_name, "stocktake_created", str(session["id"]),
                 f"إنشاء جلسة جرد — الموقع {loc_type}:{loc_id}" + (f" — {note.strip()}" if (note or "").strip() else ""),
@@ -723,7 +747,7 @@ async def list_stocktakes(company_id: str, loc_type: str | None = None) -> list[
     rows = await fetch(
         """SELECT s.id, s.loc_type, s.loc_id, s.status, s.note,
                   s.created_by_name, s.created_at, s.approved_by_name,
-                  s.approved_at,
+                  s.approved_at, s.name, s.count_type,
                   COUNT(i.id)::int AS total_items,
                   COUNT(i.counted_qty)::int AS counted_items,
                   COUNT(*) FILTER (WHERE i.counted_qty IS NOT NULL
@@ -751,6 +775,8 @@ async def list_stocktakes(company_id: str, loc_type: str | None = None) -> list[
             "createdAt": r["created_at"].isoformat() if r["created_at"] else None,
             "approvedByName": r["approved_by_name"],
             "approvedAt": r["approved_at"].isoformat() if r["approved_at"] else None,
+            "name": r["name"],
+            "countType": r["count_type"],
             "totalItems": r["total_items"],
             "countedItems": r["counted_items"],
             "diffItems": r["diff_items"],
@@ -759,6 +785,27 @@ async def list_stocktakes(company_id: str, loc_type: str | None = None) -> list[
         }
         for r in rows
     ]
+
+
+STOCKTAKE_CONDITIONS = ("good", "damaged", "expired", "missing", "unknown")
+
+
+async def stocktake_item_history(company_id: str, session_id: str, product_id: str) -> list[dict]:
+    """كل مرات عدّ صنف داخل الجلسة بالترتيب (العدّ الأول، الثاني…) — للقراءة فقط."""
+    ok = await fetchrow("SELECT 1 FROM stocktake_sessions WHERE id=$1 AND company_id=$2", session_id, company_id)
+    if not ok:
+        raise HTTPException(404, "جلسة الجرد غير موجودة")
+    rows = await fetch(
+        """SELECT counted_qty, item_condition, note, counted_by_name, counted_at
+           FROM stocktake_count_log WHERE session_id=$1 AND product_id=$2
+           ORDER BY counted_at ASC, id ASC""",
+        session_id, product_id,
+    )
+    return [{
+        "round": i + 1, "countedQty": r["counted_qty"], "condition": r["item_condition"], "note": r["note"],
+        "countedByName": r["counted_by_name"],
+        "countedAt": r["counted_at"].isoformat() if r["counted_at"] else None,
+    } for i, r in enumerate(rows)]
 
 
 async def stocktake_summary(company_id: str, branch_id: str | None = None) -> dict:
@@ -787,7 +834,10 @@ async def get_stocktake(company_id: str, session_id: str) -> dict:
     """تفاصيل الجلسة والأرصدة المتوقعة والمعدودة والفروق."""
     session = await fetchrow(
         """SELECT id, loc_type, loc_id, status, note,
-                  created_by_name, created_at, approved_by_name, approved_at
+                  created_by_name, created_at, approved_by_name, approved_at,
+                  name, count_type, category_filter, submitted_by_name, submitted_at,
+                  cancelled_by_name, cancelled_at, cancel_reason, reopen_count,
+                  last_reopen_reason, adjust_in_no, adjust_out_no, adjust_note
            FROM stocktake_sessions
            WHERE id=$1 AND company_id=$2""",
         session_id, company_id,
@@ -798,6 +848,9 @@ async def get_stocktake(company_id: str, session_id: str) -> dict:
     rows = await fetch(
         """SELECT i.id, i.product_id, p.name, p.barcode, p.category,
                   p.spec, p.unit, i.snapshot_qty, i.counted_qty, i.note, i.unit_cost,
+                  i.item_condition,
+                  (SELECT COUNT(*) FROM stocktake_count_log l
+                    WHERE l.session_id=i.session_id AND l.product_id=i.product_id)::int AS count_entries,
                   COALESCE(inv.qty,0) AS current_qty
            FROM stocktake_items i
            JOIN products p ON p.id=i.product_id
@@ -830,6 +883,8 @@ async def get_stocktake(company_id: str, session_id: str) -> dict:
             "diffValue": round((counted - expected) * float(r["unit_cost"] or 0), 2) if counted is not None else None,
             "currentQty": r["current_qty"],
             "note": r["note"],
+            "condition": r["item_condition"],
+            "countEntries": r["count_entries"],
         })
 
     return {
@@ -842,6 +897,19 @@ async def get_stocktake(company_id: str, session_id: str) -> dict:
         "createdAt": session["created_at"].isoformat() if session["created_at"] else None,
         "approvedByName": session["approved_by_name"],
         "approvedAt": session["approved_at"].isoformat() if session["approved_at"] else None,
+        "name": session["name"],
+        "countType": session["count_type"],
+        "categoryFilter": session["category_filter"],
+        "submittedByName": session["submitted_by_name"],
+        "submittedAt": session["submitted_at"].isoformat() if session["submitted_at"] else None,
+        "cancelledByName": session["cancelled_by_name"],
+        "cancelledAt": session["cancelled_at"].isoformat() if session["cancelled_at"] else None,
+        "cancelReason": session["cancel_reason"],
+        "reopenCount": session["reopen_count"],
+        "lastReopenReason": session["last_reopen_reason"],
+        "adjustInNo": session["adjust_in_no"],
+        "adjustOutNo": session["adjust_out_no"],
+        "adjustNote": session["adjust_note"],
         "totalItems": len(items),
         "countedItems": sum(1 for item in items if item["countedQty"] is not None),
         "shortageValue": round(sum(-x["diffValue"] for x in items if x["diffValue"] is not None and x["diffValue"] < 0), 2),
@@ -854,10 +922,14 @@ async def get_stocktake(company_id: str, session_id: str) -> dict:
 async def count_stocktake_item(
     company_id: str, session_id: str, product_id: str,
     counted_qty: int, note: str | None = None,
+    user_id: str | None = None, actor_name: str | None = None, condition: str | None = None,
 ) -> dict:
-    """حفظ العدّ فقط؛ لا يغيّر رصيد المخزون."""
+    """حفظ العدّ فقط؛ لا يغيّر رصيد المخزون. كل إدخال يُضاف لسجل العدّ (لا يُمسح العدّ السابق)."""
     if counted_qty < 0:
         raise HTTPException(400, "الكمية المعدودة لا يمكن أن تكون سالبة")
+    condition = (condition or "").strip() or None
+    if condition and condition not in STOCKTAKE_CONDITIONS:
+        raise HTTPException(400, "حالة الصنف غير صحيحة")
 
     async with transaction() as conn:
         async with conn.transaction():
@@ -873,16 +945,23 @@ async def count_stocktake_item(
 
             result = await conn.execute(
                 """UPDATE stocktake_items i
-                   SET counted_qty=$1, note=$2, updated_at=now()
+                   SET counted_qty=$1, note=$2, item_condition=$6, updated_at=now()
                    FROM stocktake_sessions s
                    WHERE i.session_id=s.id
                      AND s.id=$3 AND s.company_id=$4
                      AND i.product_id=$5""",
                 counted_qty, (note or "").strip() or None,
-                session_id, company_id, product_id,
+                session_id, company_id, product_id, condition,
             )
             if result.endswith(" 0"):
                 raise HTTPException(404, "الصنف غير موجود ضمن جلسة الجرد")
+            await conn.execute(
+                """INSERT INTO stocktake_count_log
+                     (session_id, product_id, counted_qty, item_condition, note, counted_by, counted_by_name)
+                   VALUES ($1,$2,$3,$4,$5,$6,$7)""",
+                session_id, product_id, counted_qty, condition, (note or "").strip() or None,
+                user_id, actor_name,
+            )
 
     return await get_stocktake(company_id, session_id)
 
@@ -912,9 +991,10 @@ async def submit_stocktake_for_review(company_id: str, session_id: str,
                 raise HTTPException(400, "سجّل الكميات الفعلية قبل إرسال الجرد للمراجعة")
 
             await conn.execute(
-                """UPDATE stocktake_sessions SET status='review'
+                """UPDATE stocktake_sessions SET status='review',
+                          submitted_by=$3, submitted_by_name=$4, submitted_at=now()
                    WHERE id=$1 AND company_id=$2""",
-                session_id, company_id,
+                session_id, company_id, user_id, actor_name,
             )
             await _stocktake_audit(
                 conn, company_id, user_id, actor_name, "stocktake_submitted", session_id,
@@ -984,6 +1064,8 @@ async def approve_stocktake(
                 )
 
             changed_count = 0
+            adj_in: list = []      # (product_id, اسم، كمية، تكلفة) زيادات
+            adj_out: list = []     # عجوزات
             positive_adjustments = 0
             negative_adjustments = 0
             shortage_value = 0.0
@@ -1016,17 +1098,47 @@ async def approve_stocktake(
                         409, 'تعذر تحديث رصيد أحد الأصناف؛ تم إلغاء اعتماد الجرد بالكامل'
                     )
                 changed_count += 1
+                row = (r["product_id"], r["name"], abs(delta), r["unit_cost"])
                 if delta > 0:
                     positive_adjustments += delta
+                    adj_in.append(row)
                 else:
                     negative_adjustments += abs(delta)
+                    adj_out.append(row)
+
+            # سجل حركة مخزون للتسوية (move_type='adjust') — نقطة savepoint: لو رفضت القاعدة السطر لأي سبب
+            # (قيد غير متوقع) لا يُلغى الاعتماد، ويُسجَّل السبب في الجلسة والتدقيق بدل الصمت.
+            in_no = out_no = move_note = None
+            if adj_in or adj_out:
+                base = _base36(int(time.time() * 1000))
+                n_in, n_out = (f"STI-{base}" if adj_in else None), (f"STO-{base}" if adj_out else None)
+                try:
+                    async with conn.transaction():
+                        for rows_, no, to_side in ((adj_in, n_in, True), (adj_out, n_out, False)):
+                            for pid, pname, q, cost in rows_:
+                                await conn.execute(
+                                    """INSERT INTO stock_moves
+                                         (company_id, move_type, from_loc_type, from_loc_id, to_loc_type, to_loc_id,
+                                          product_id, product_label, qty, move_no, note, created_by, unit_cost)
+                                       VALUES ($1,'adjust',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)""",
+                                    company_id,
+                                    None if to_side else session["loc_type"], None if to_side else session["loc_id"],
+                                    session["loc_type"] if to_side else None, session["loc_id"] if to_side else None,
+                                    pid, pname, q, no,
+                                    f"تسوية جرد — {'زيادة' if to_side else 'عجز'} — جلسة {session_id[:8]}",
+                                    user_id, cost,
+                                )
+                    in_no, out_no = n_in, n_out
+                except Exception as exc:    # noqa: BLE001
+                    move_note = f"تعذر تسجيل حركة المخزون: {str(exc)[:200]}"
 
             await conn.execute(
                 """UPDATE stocktake_sessions
                    SET status='approved', approved_by=$1,
-                       approved_by_name=$2, approved_at=now()
+                       approved_by_name=$2, approved_at=now(),
+                       adjust_in_no=$5, adjust_out_no=$6, adjust_note=$7
                    WHERE id=$3 AND company_id=$4""",
-                user_id, actor_name, session_id, company_id,
+                user_id, actor_name, session_id, company_id, in_no, out_no, move_note,
             )
             await conn.execute(
                 """INSERT INTO audit_log
@@ -1036,7 +1148,9 @@ async def approve_stocktake(
                 f"جلسة {session_id} — الموقع {session['loc_type']}:{session['loc_id']} — "
                 f"الأصناف المعدودة {len(counted_items)} — الأصناف المعدلة {changed_count} — "
                 f"زيادة {positive_adjustments} — نقص {negative_adjustments} — "
-                f"قيمة العجز {shortage_value:.2f} — قيمة الزيادة {surplus_value:.2f}",
+                f"قيمة العجز {shortage_value:.2f} — قيمة الزيادة {surplus_value:.2f}"
+                + (f" — سندات الحركة {', '.join(x for x in (in_no, out_no) if x)}" if (in_no or out_no) else "")
+                + (f" — {move_note}" if move_note else ""),
             )
 
     return await get_stocktake(company_id, session_id)
@@ -1062,9 +1176,10 @@ async def cancel_stocktake(company_id: str, session_id: str,
             if session["status"] == "cancelled":
                 raise HTTPException(409, "الجلسة ملغاة بالفعل")
             await conn.execute(
-                """UPDATE stocktake_sessions SET status='cancelled'
+                """UPDATE stocktake_sessions SET status='cancelled',
+                          cancelled_by_name=$3, cancelled_at=now(), cancel_reason=$4
                    WHERE id=$1 AND company_id=$2""",
-                session_id, company_id,
+                session_id, company_id, actor_name, (reason or "").strip() or None,
             )
             await _stocktake_audit(
                 conn, company_id, user_id, actor_name, "stocktake_cancelled", session_id,
@@ -1092,8 +1207,10 @@ async def reopen_stocktake(company_id: str, session_id: str, user_id: str,
             if session["status"] != "review":
                 raise HTTPException(409, "يمكن طلب إعادة العدّ للجلسات قيد المراجعة فقط")
             await conn.execute(
-                "UPDATE stocktake_sessions SET status='in_progress' WHERE id=$1 AND company_id=$2",
-                session_id, company_id,
+                """UPDATE stocktake_sessions SET status='in_progress',
+                          reopen_count=reopen_count+1, last_reopen_reason=$3
+                   WHERE id=$1 AND company_id=$2""",
+                session_id, company_id, reason,
             )
             await _stocktake_audit(
                 conn, company_id, user_id, actor_name, "stocktake_reopened", session_id,
@@ -1105,6 +1222,7 @@ async def reopen_stocktake(company_id: str, session_id: str, user_id: str,
 async def import_stocktake_counts(
     company_id: str, session_id: str, scanned: dict[str, int],
     commit: bool = False, zero_rest: bool = False,
+    user_id: str | None = None, actor_name: str | None = None,
 ) -> dict:
     """مطابقة الباركودات بأصناف الجلسة (كل تكرار = قطعة).
     commit=False معاينة فقط. commit=True يستبدل الكمية المعدودة للأصناف المطابقة.
@@ -1173,13 +1291,27 @@ async def import_stocktake_counts(
                     [(scanned[m["barcode"]], session_id, by_barcode[m["barcode"]]["product_id"])
                      for m in matched],
                 )
+                await conn.executemany(
+                    """INSERT INTO stocktake_count_log
+                         (session_id, product_id, counted_qty, note, counted_by, counted_by_name)
+                       VALUES ($1,$2,$3,'استيراد من ملف',$4,$5)""",
+                    [(session_id, by_barcode[m["barcode"]]["product_id"], scanned[m["barcode"]], user_id, actor_name)
+                     for m in matched],
+                )
                 if zero_rest:
-                    await conn.execute(
+                    zeroed = await conn.fetch(
                         """UPDATE stocktake_items
                            SET counted_qty=0, updated_at=now()
                            WHERE session_id=$1 AND counted_qty IS NULL
-                             AND NOT (product_id = ANY($2::uuid[]))""",
+                             AND NOT (product_id = ANY($2::uuid[]))
+                           RETURNING product_id""",
                         session_id, matched_ids,
+                    )
+                    await conn.executemany(
+                        """INSERT INTO stocktake_count_log
+                             (session_id, product_id, counted_qty, note, counted_by, counted_by_name)
+                           VALUES ($1,$2,0,'استيراد من ملف (غير موجود = 0)',$3,$4)""",
+                        [(session_id, z["product_id"], user_id, actor_name) for z in zeroed],
                     )
 
     result = {

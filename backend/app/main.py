@@ -714,6 +714,35 @@ async def lifespan(app: FastAPI):
              ON stocktake_items (session_id)""",
         # تكلفة الوحدة وقت اللقطة — الكود (create_stocktake/get_stocktake) يقرؤها ويكتبها؛ ADD IF NOT EXISTS لا يغيّر شيئاً إن كان العمود موجوداً
         "ALTER TABLE stocktake_items ADD COLUMN IF NOT EXISTS unit_cost NUMERIC(12,2) NOT NULL DEFAULT 0",
+        # ── الجرد: حقول سير العمل والتدقيق (إضافات فقط — لا يُعدَّل أو يُحذف شيء قائم) ──
+        "ALTER TABLE stocktake_sessions ADD COLUMN IF NOT EXISTS name TEXT",
+        "ALTER TABLE stocktake_sessions ADD COLUMN IF NOT EXISTS count_type VARCHAR NOT NULL DEFAULT 'full'",
+        "ALTER TABLE stocktake_sessions ADD COLUMN IF NOT EXISTS category_filter TEXT",
+        "ALTER TABLE stocktake_sessions ADD COLUMN IF NOT EXISTS submitted_by UUID",
+        "ALTER TABLE stocktake_sessions ADD COLUMN IF NOT EXISTS submitted_by_name TEXT",
+        "ALTER TABLE stocktake_sessions ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ",
+        "ALTER TABLE stocktake_sessions ADD COLUMN IF NOT EXISTS cancelled_by_name TEXT",
+        "ALTER TABLE stocktake_sessions ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ",
+        "ALTER TABLE stocktake_sessions ADD COLUMN IF NOT EXISTS cancel_reason TEXT",
+        "ALTER TABLE stocktake_sessions ADD COLUMN IF NOT EXISTS reopen_count INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE stocktake_sessions ADD COLUMN IF NOT EXISTS last_reopen_reason TEXT",
+        "ALTER TABLE stocktake_sessions ADD COLUMN IF NOT EXISTS adjust_in_no TEXT",
+        "ALTER TABLE stocktake_sessions ADD COLUMN IF NOT EXISTS adjust_out_no TEXT",
+        "ALTER TABLE stocktake_sessions ADD COLUMN IF NOT EXISTS adjust_note TEXT",
+        "ALTER TABLE stocktake_items ADD COLUMN IF NOT EXISTS item_condition VARCHAR",
+        # سجل العدّ: كل إدخال كمية يُضاف كسطر جديد ولا يُعدَّل ولا يُحذف (العدّ الأول والثاني…)
+        """CREATE TABLE IF NOT EXISTS stocktake_count_log (
+             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+             session_id UUID NOT NULL REFERENCES stocktake_sessions(id) ON DELETE CASCADE,
+             product_id UUID NOT NULL,
+             counted_qty INTEGER NOT NULL,
+             item_condition VARCHAR,
+             note TEXT,
+             counted_by UUID,
+             counted_by_name TEXT,
+             counted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+           )""",
+        "CREATE INDEX IF NOT EXISTS idx_stocktake_count_log_item ON stocktake_count_log (session_id, product_id, counted_at)",
         # ══ مركز الإعدادات — المرحلة 1: بيانات منشأة كاملة + شعار + أدوار حقيقية ══
         # (idempotent زي كل اللي فوق — بتتطبق تلقائياً مع كل إقلاع للباك-إند،
         #  بدون أي خطوة psql يدوية. عمود permissions الفعلي اللي core/deps.py

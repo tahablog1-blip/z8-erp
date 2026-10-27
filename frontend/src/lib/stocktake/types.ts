@@ -5,6 +5,7 @@ export type Session = {
   id: string; locType: string; locId: string; status: string; note: string | null;
   createdByName: string | null; createdAt: string | null; approvedByName: string | null; approvedAt: string | null;
   totalItems: number; countedItems: number; diffItems: number; surplusValue: number; shortageValue: number;
+  name?: string | null; countType?: string;
 };
 
 export type Summary = {
@@ -16,11 +17,21 @@ export type StocktakeItem = {
   id: string; productId: string; name: string; barcode: string | null; category: string | null; spec: string | null; unit: string | null;
   expectedQty: number; countedQty: number | null; difference: number | null; currentQty: number;
   unitCost: number; diffValue: number | null; note: string | null;
+  condition: string | null; countEntries: number;
 };
 
 export type StocktakeDetail = Omit<Session, "diffItems" | "surplusValue" | "shortageValue"> & {
   items: StocktakeItem[]; shortageValue: number; surplusValue: number; zeroCostDiffItems: number;
+  categoryFilter: string | null; submittedByName: string | null; submittedAt: string | null;
+  cancelledByName: string | null; cancelledAt: string | null; cancelReason: string | null;
+  reopenCount: number; lastReopenReason: string | null;
+  adjustInNo: string | null; adjustOutNo: string | null; adjustNote: string | null;
 };
+
+export type CountRound = { round: number; countedQty: number; condition: string | null; note: string | null; countedByName: string | null; countedAt: string | null };
+
+export const CONDITION_LABEL: Record<string, string> = { good: "صالح", damaged: "تالف", expired: "منتهي الصلاحية", missing: "مفقود", unknown: "غير معروف" };
+export const COUNT_TYPE_LABEL: Record<string, string> = { full: "جرد كامل", category: "جرد حسب التصنيف" };
 
 export type TimelineEvent = { action: string; actorName: string | null; details: string; at: string | null };
 

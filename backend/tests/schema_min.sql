@@ -26,9 +26,14 @@ CREATE TABLE customer_notes (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), comp
 -- الجرد: نفس تعريفات main.py (+ unit_cost) وaudit_log بالأعمدة التي يكتبها الكود فعلياً (actor_id/actor_name/scope/details)
 CREATE TABLE stocktake_sessions (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), company_id UUID NOT NULL, loc_type VARCHAR NOT NULL, loc_id VARCHAR NOT NULL,
   status VARCHAR NOT NULL DEFAULT 'draft', note TEXT, created_by UUID, created_by_name TEXT, approved_by UUID, approved_by_name TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(), approved_at TIMESTAMPTZ);
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(), approved_at TIMESTAMPTZ,
+  name TEXT, count_type VARCHAR NOT NULL DEFAULT 'full', category_filter TEXT, submitted_by UUID, submitted_by_name TEXT, submitted_at TIMESTAMPTZ,
+  cancelled_by_name TEXT, cancelled_at TIMESTAMPTZ, cancel_reason TEXT, reopen_count INTEGER NOT NULL DEFAULT 0, last_reopen_reason TEXT,
+  adjust_in_no TEXT, adjust_out_no TEXT, adjust_note TEXT);
 CREATE TABLE stocktake_items (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), session_id UUID NOT NULL REFERENCES stocktake_sessions(id) ON DELETE CASCADE,
-  product_id UUID NOT NULL REFERENCES products(id), snapshot_qty INTEGER NOT NULL DEFAULT 0, counted_qty INTEGER, note TEXT, unit_cost numeric(12,2) NOT NULL DEFAULT 0,
+  product_id UUID NOT NULL REFERENCES products(id), snapshot_qty INTEGER NOT NULL DEFAULT 0, counted_qty INTEGER, note TEXT, unit_cost numeric(12,2) NOT NULL DEFAULT 0, item_condition VARCHAR,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), UNIQUE (session_id, product_id));
 CREATE TABLE audit_log (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), company_id UUID NOT NULL, branch_id UUID, actor_id text, actor_name TEXT, action TEXT NOT NULL,
   scope TEXT, car_id uuid, details TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE TABLE stocktake_count_log (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), session_id UUID NOT NULL REFERENCES stocktake_sessions(id) ON DELETE CASCADE, product_id UUID NOT NULL,
+  counted_qty INTEGER NOT NULL, item_condition VARCHAR, note TEXT, counted_by UUID, counted_by_name TEXT, counted_at TIMESTAMPTZ NOT NULL DEFAULT now());
