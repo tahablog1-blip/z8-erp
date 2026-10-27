@@ -21,6 +21,11 @@ export default function AccountingPage() {
   const isAdmin = user?.role === "admin";
 
   const [tab, setTab] = useState<Tab>("trial-balance");
+  useEffect(() => {   // رابط مباشر من مركز التقارير: ?tab=income-statement
+    const t = new URLSearchParams(window.location.search).get("tab") as Tab | null;
+    if (t && ["accounts", "journal", "trial-balance", "income-statement", "balance-sheet"].includes(t)) changeTab(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [journal, setJournal] = useState<JournalEntry[]>([]);
   const [trialBalance, setTrialBalance] = useState<TrialBalance | null>(null);

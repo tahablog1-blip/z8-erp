@@ -65,6 +65,7 @@ PERMISSIONS = [
     {"group": "التقارير", "items": [
         {"key": "reports.sales",    "label": "تقرير المبيعات"},
         {"key": "reports.cashiers", "label": "تقرير الكاشيرات"},
+        {"key": "reports.view",     "label": "تقارير الإدارة المتقدمة (مقارنة الفروع والمساعد الذكي)"},
     ]},
     {"group": "الورديات", "items": [
         {"key": "shifts.manage_own",  "label": "إدارة ورديتي"},

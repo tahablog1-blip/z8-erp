@@ -43,7 +43,7 @@ export const NAV_MODULES: NavModule[] = [
   // ── المالية ──
   { path: "/treasury",   title: "الخزينة",        icon: "treasury", section: "المالية", permissions: ["treasury.view", "treasury.create"] },
   { path: "/accounting", title: "الحسابات",       icon: "accounting", section: "المالية", permissions: ["accounting.view_reports"] },
-  { path: "/reports",    title: "التقارير",       icon: "reports", section: "المالية", permissions: ["reports.sales", "accounting.view_vat"] },
+  { path: "/reports",    title: "التقارير",       icon: "reports", section: "المالية", permissions: ["reports.sales", "accounting.view_vat", "accounting.view_reports", "reports.view", "treasury.view", "purchasing.invoices"] },
 
   // ── الإدارة ──
   { path: "/branches",   title: "الفروع",         icon: "branches", section: "الإدارة", permissions: ["branches.manage"] },

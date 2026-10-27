@@ -233,7 +233,7 @@ export default function CustomersPage() {
         <div className="-mt-1 flex flex-wrap gap-2 text-t-xs">
           <button onClick={() => applyDrill({ hasBalance: true })} className="rounded-full border border-line px-2.5 py-1 font-bold text-petrol hover:border-petrol">{isEn ? "Show customers with a balance" : "عرض العملاء أصحاب الأرصدة"}</button>
           {(k.overdue ?? 0) > 0 && <button onClick={() => applyDrill({ overdue: true })} className="rounded-full border border-ember/30 px-2.5 py-1 font-bold text-ember hover:bg-ember-bg">{isEn ? "Show overdue customers" : "عرض العملاء المتأخرين"}</button>}
-          <Link href="/reports" className="rounded-full border border-line px-2.5 py-1 font-bold text-petrol hover:border-petrol">{isEn ? "Receivables report" : "تقرير أعمار الذمم"}</Link>
+          <Link href="/reports/analysis?tab=ar" className="rounded-full border border-line px-2.5 py-1 font-bold text-petrol hover:border-petrol">{isEn ? "Receivables report" : "تقرير أعمار الذمم"}</Link>
         </div>
       )}
 
