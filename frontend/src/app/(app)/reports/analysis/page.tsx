@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { Badge, Button, Card, ErrorNote, Field, Input, Select, Tabs, PageHeader } from "@/components/ui";
 import { SalesSummary, VatReturn, money } from "@/modules/accounting/types";
 import { printReport, tableHTML, kpisHTML } from "@/lib/print";
+import { CompareToggle, type CompareMode } from "@/components/reports/ReportShell";
 
 type Tab = "vat" | "sales" | "techs" | "inventory" | "profit" | "ar";
 
@@ -43,6 +44,7 @@ type TechReport = {
   rows: { id: string; name: string; role: string | null; branchId: string | null;
           filling: number; fitting: number; checking: number; totalCars: number }[];
 };
+const METRIC_AR: Record<string, string> = { outputVat: "ضريبة المخرجات", inputVat: "ضريبة المدخلات", netVat: "صافي الضريبة", totalInc: "المبيعات (شامل الضريبة)", totalEx: "المبيعات قبل الضريبة", invoiceCount: "عدد الفواتير", grossProfit: "مجمل الربح", revenueEx: "المبيعات", cogs: "التكلفة" };
 const ROLE_AR: Record<string, string> = { filling: "تعبئة", fitting: "فك وتركيب", checking: "تشييك" };
 
 export default function ReportsAnalysisPage() {
@@ -97,11 +99,22 @@ export default function ReportsAnalysisPage() {
     api<{ id: string; name: string }[]>("/branches").then(setBranchList).catch(() => {});
   }, []);
   const [pageErr, setPageErr] = useState("");
+  // ── مقارنة فترة بفترة (الإقرار الضريبي / المبيعات / الربحية) — يحسبها الخادم من نفس التقارير ──
+  const [cmpMode, setCmpMode] = useState<CompareMode>("");
+  type Cmp = { prevFrom: string; prevTo: string; note: string; metrics: Record<string, { cur: number; prev: number | null; pct: number | null }> };
+  const [cmpData, setCmpData] = useState<Cmp | null>(null);
+  const [cmpFail, setCmpFail] = useState("");
 
   const today = new Date().toISOString().slice(0, 10);
   const [from, setFrom] = useState(today.slice(0, 8) + "01");
   const [to, setTo] = useState(today);
   const [groupBy, setGroupBy] = useState<"day" | "month">("day");
+  useEffect(() => {
+    const kind = tab === "vat" ? "vat" : tab === "sales" ? "sales" : tab === "profit" ? "profit" : null;
+    setCmpData(null); setCmpFail("");
+    if (!cmpMode || !kind) return;
+    api<Cmp>(`/reports/period-compare?kind=${kind}&from=${from}&to=${to}&mode=${cmpMode}`).then(setCmpData).catch((e: unknown) => setCmpFail(e instanceof Error ? e.message : "تعذر المقارنة"));
+  }, [cmpMode, tab, from, to]);
 
   // بداية السنة المالية — إعداد النظام ← fiscalYearStartMonth (إعداد 13)
   const [fiscalMonth, setFiscalMonth] = useState(1);
@@ -432,6 +445,25 @@ export default function ReportsAnalysisPage() {
               طباعة التقرير
             </button>
           </div>
+
+          {(tab === "vat" || tab === "sales" || tab === "profit") && (
+            <div className="space-y-2">
+              <CompareToggle value={cmpMode} onChange={setCmpMode} />
+              {cmpFail && <ErrorNote msg={cmpFail} />}
+              {cmpMode && cmpData && (
+                <div className="rounded-lg border border-line bg-ink-3/50 p-3">
+                  <div className="mb-1.5 text-t-xs text-text-dim">المقارنة مع {cmpData.prevFrom} → {cmpData.prevTo}. لا تظهر نسبة التغيّر إذا كانت قيمة الفترة المقارنة صفراً.</div>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(cmpData.metrics).map(([k, m]) => (
+                      <span key={k} className="rounded-full border border-line bg-ink-2 px-3 py-1 text-t-xs font-bold">
+                        {METRIC_AR[k] ?? k}: <span className="tnum">{k === "invoiceCount" ? m.cur : money(m.cur)}</span>{" "}
+                        {m.pct == null ? <span className="text-text-dim">(لا أساس للمقارنة)</span>
+                          : <span className={m.pct >= 0 ? "text-emerald" : "text-ember"} dir="ltr">{m.pct >= 0 ? "↑" : "↓"} {Math.abs(m.pct).toFixed(1)}%</span>}
+                      </span>))}
+                  </div>
+                  <div className="mt-1 text-t-xs text-text-dim">{cmpData.note}</div>
+                </div>)}
+            </div>)}
 
           {tab === "vat" && vat && (
             <div className="space-y-4">

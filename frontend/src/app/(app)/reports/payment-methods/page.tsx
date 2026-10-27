@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Donut } from "@/components/dashboard/charts/Donut";
 import { Panel } from "@/components/hr/shared";
-import { CompareToggle, type CompareMode, type Trend, Kpi, Money, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, SaveReportButton, cur, kpisHTML, num, tableHTML, useFilters, useReport } from "@/components/reports/ReportShell";
+import { pdfParams, CompareToggle, type CompareMode, type Trend, Kpi, Money, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, SaveReportButton, cur, kpisHTML, num, tableHTML, useFilters, useReport } from "@/components/reports/ReportShell";
 
 type R = { meta: { from: string; to: string; branchId: string | null; branchLocked: boolean; generatedAt: string }; totals: { amount: number; count: number };
            rows: { method: string; label: string; amount: number; count: number; sharePct: number }[];
@@ -21,7 +21,7 @@ export default function PaymentMethodsReport() {
     <div className="space-y-4">
       <ReportHeader title="المبيعات حسب طريقة الدفع" description="القيمة وعدد العمليات والنسبة لكل طريقة دفع مسجّلة في النظام." meta={d?.meta}
         actions={<><SaveReportButton reportId="payment-methods" filters={f} />
-          <ReportToolbar onRefresh={reload}
+          <ReportToolbar onRefresh={reload} pdf={{ id: "payment-methods", params: pdfParams(f) }}
             csv={d && { file: "payment-methods.csv", headers: ["طريقة الدفع", "القيمة", "العمليات", "النسبة %"], rows: d.rows.map((r) => [r.label, r.amount, r.count, r.sharePct]) }}
             print={d && { title: "المبيعات حسب طريقة الدفع", subtitle: `${d.meta.from} → ${d.meta.to}`, body: () => kpisHTML([{ label: "إجمالي المقبوض والآجل", value: cur(d.totals.amount) }, { label: "العمليات", value: num(d.totals.count) }]) + tableHTML(["طريقة الدفع", "القيمة", "العمليات", "النسبة %"], d.rows.map((r) => [r.label, cur(r.amount), num(r.count), r.sharePct]), { numericCols: [1, 2, 3] }) }} /></>} />
       <ReportFilters value={f} onChange={setF} lockedBranch={d?.meta.branchLocked} />

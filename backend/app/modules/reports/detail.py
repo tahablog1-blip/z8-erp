@@ -4,7 +4,7 @@ import datetime as dt
 
 from fastapi import HTTPException
 
-from ...core.accounting import ACCOUNT_CODES
+from ...core.accounting import ACCOUNT_CODES, PAYMENT_ACCOUNT_CODES
 from ...core.db import fetch, fetchrow
 from .center import RIYADH_DAY, _branch, _meta, _num, parse_range
 
@@ -288,10 +288,51 @@ async def reconciliation(user, date_from, date_to, branch_id) -> dict:
     add("vat", "ضريبة المخرجات", _num(inv["vat"]) - _num(ret["vat"]), jm.get(codes[1], 0.0),
         "ضريبة الفواتير ناقص ضريبة المرتجعات، مقابل حساب ضريبة القيمة المضافة المستحقة (دائن − مدين). قد يشمل الحساب حركات أخرى كسداد الضريبة.")
     add("cogs", "تكلفة المبيعات", _num(inv["cogs"]), -jm.get(codes[2], 0.0), "تكلفة البضاعة المسجّلة على الفواتير مقابل حساب تكلفة المبيعات.")
-    bad = [c for c in checks if not c["ok"]]
+    # ── الخزينة: سندات القبض/الصرف غير الملغاة مقابل حركة حسابات النقد من قيود الخزينة (إنشاء + إلغاء) ──
+    tp: list = [user.company_id, f, t]
+    tbc = tjc = ""
+    if branch:
+        tp.append(branch); tbc = f" AND v.branch_id = ${len(tp)}::uuid"; tjc = f" AND je.branch_id = ${len(tp)}::uuid"
+    vt = await fetchrow(
+        f"""SELECT COALESCE(SUM(CASE WHEN v.type='receipt' THEN v.amount ELSE -v.amount END),0) AS net
+            FROM treasury_vouchers v WHERE v.company_id=$1 AND v.status <> 'cancelled'
+              AND (v.created_at AT TIME ZONE 'Asia/Riyadh')::date BETWEEN $2 AND $3{tbc}""", *tp)
+    cash_codes = [PAYMENT_ACCOUNT_CODES["cash"], PAYMENT_ACCOUNT_CODES["card"], PAYMENT_ACCOUNT_CODES["transfer"]]
+    jt = await fetchrow(
+        f"""SELECT COALESCE(SUM(jl.debit - jl.credit),0) AS net
+            FROM journal_lines jl JOIN journal_entries je ON je.id = jl.entry_id JOIN accounts a ON a.id = jl.account_id
+            WHERE je.company_id=$1 AND a.company_id=$1 AND je.entry_date BETWEEN $2 AND $3
+              AND je.source_type IN ('treasury_voucher','treasury_voucher_cancel') AND a.code = ANY(${len(tp) + 1}::text[]){tjc}""", *tp, cash_codes)
+    add("treasury", "الخزينة (صافي القبض − الصرف)", _num(vt["net"]), _num(jt["net"]),
+        "صافي سندات الخزينة غير الملغاة مقابل حركة حسابات النقد/الشبكة/التحويل الناتجة عن قيود السندات (يشمل قيود الإلغاء). إلغاء سند بتاريخ مختلف عن إصداره يُفسّر فرقاً مؤقتاً.")
+    # ── المخزون: قيمة الأرصدة الحالية بتكلفة الصنف مقابل رصيد حساب المخزون — يُقارن فقط حين تنتهي الفترة اليوم ──
+    from .center import riyadh_today
+    inv_item = {"key": "inventory", "label": "قيمة المخزون (الرصيد الحالي)",
+                "note": "قيمة الأرصدة الحالية × تكلفة الصنف الحالية، مقابل رصيد حساب المخزون في الأستاذ حتى نهاية الفترة. الفرق شائع عند وجود رصيد افتتاحي بلا قيد أو تغيّر تكلفة الأصناف أو تسويات جرد لم تُرحَّل محاسبياً."}
+    if t != riyadh_today():
+        checks.append({**inv_item, "invoices": None, "ledger": None, "diff": None, "ok": None,
+                       "note": "لا يمكن مقارنة المخزون إلا والفترة تنتهي اليوم (أرصدة المخزون لحظية وليست تاريخية)."})
+    else:
+        ip: list = [user.company_id]
+        ibc2 = ""
+        if branch:
+            ip.append(branch); ibc2 = f" AND inv.loc_id = ${len(ip)}"
+        sv = await fetchrow(
+            f"""SELECT COALESCE(SUM(inv.qty * COALESCE(p.cost_price,0)),0) AS v FROM inventory inv JOIN products p ON p.id = inv.product_id
+                WHERE inv.company_id=$1{ibc2}""", *ip)
+        gp: list = [user.company_id, t, ACCOUNT_CODES["INVENTORY"]]
+        gbc = ""
+        if branch:
+            gp.append(branch); gbc = f" AND je.branch_id = ${len(gp)}::uuid"
+        gl = await fetchrow(
+            f"""SELECT COALESCE(SUM(jl.debit - jl.credit),0) AS v
+                FROM journal_lines jl JOIN journal_entries je ON je.id = jl.entry_id JOIN accounts a ON a.id = jl.account_id
+                WHERE je.company_id=$1 AND a.company_id=$1 AND je.entry_date <= $2 AND a.code = $3{gbc}""", *gp)
+        add(inv_item["key"], inv_item["label"], _num(sv["v"]), _num(gl["v"]), inv_item["note"])
+    bad = [c for c in checks if c["ok"] is False]
     return {"meta": _meta(user, f, t, branch), "checks": checks, "fullReturnsInPeriod": full["n"],
             "status": "mismatch" if bad else "ok",
-            "warning": ("يوجد فرق بين الفواتير ودفتر الأستاذ في: " + "، ".join(c["label"] for c in bad) +
+            "warning": ("يوجد فرق بين البيانات التشغيلية ودفتر الأستاذ في: " + "، ".join(c["label"] for c in bad) +
                         ". من الأسباب الشائعة: فواتير مرتجعة بالكامل عُكست قيودها بتاريخ مختلف، أو فواتير قبل ربط الحسابات، أو قيود يدوية على الحسابات نفسها. لا يُخفى الفرق — راجعه مع المحاسب.") if bad else None,
             "note": "فحص قراءة فقط: لا يعدّل أي قيد ولا فاتورة."}
 
@@ -301,3 +342,36 @@ def attach_compare(res: dict, prev: dict, mode: str, cr: tuple[dt.date, dt.date]
     res["compare"] = {"mode": mode, "from": cr[0].isoformat(), "to": cr[1].isoformat(), "totals": prev["totals"],
                       **{m: delta(_num(res["totals"].get(m)), _num(prev["totals"].get(m))) for m in metrics}}
     return res
+
+
+# ══════════════════ مقارنة فترات لتقارير التحليلات القديمة (ضريبة / مبيعات / ربحية) ══════════════════
+
+async def period_compare(user, kind: str, date_from, date_to, mode: str, branch_id=None) -> dict:
+    """يستدعي نفس دوال التقارير القديمة للفترتين ويُرجع القيم والنسبة (الحساب في الخادم). النسبة None بلا أساس مقارنة."""
+    from . import service
+    f, t = parse_range(date_from, date_to)
+    cr = compare_range(f, t, mode)
+    if not cr:
+        raise HTTPException(422, "نمط المقارنة: prev أو yoy")
+    spec = {
+        "vat": ("accounting.view_vat", None, ["outputVat", "inputVat", "netVat"]),
+        "sales": ("reports.sales", None, ["totalInc", "totalEx", "invoiceCount", "grossProfit"]),
+        "profit": ("accounting.view_reports", None, ["revenueEx", "cogs", "grossProfit"]),
+    }
+    if kind not in spec:
+        raise HTTPException(422, "نوع التقرير غير مدعوم")
+    perm = spec[kind][0]
+    if not (user.has(perm) or (kind == "sales" and user.has("accounting.view_reports"))):
+        raise HTTPException(403, "ليس لديك صلاحية لهذا الإجراء")
+
+    async def run(a: dt.date, b: dt.date) -> dict:
+        a_s, b_s = a.isoformat(), b.isoformat()
+        if kind == "vat":
+            return await service.vat_return(user.company_id, a_s, b_s)
+        if kind == "sales":
+            return (await service.sales_summary(user.company_id, a_s, b_s, _branch(user, branch_id), "day"))["totals"]
+        return (await service.profitability(user.company_id, a_s, b_s, "category"))["totals"]
+    cur_d, prev_d = await run(f, t), await run(*cr)
+    metrics = {m: {"cur": round(_num(cur_d.get(m)), 2), **delta(_num(cur_d.get(m)), _num(prev_d.get(m)))} for m in spec[kind][2]}
+    return {"kind": kind, "mode": mode, "from": f.isoformat(), "to": t.isoformat(), "prevFrom": cr[0].isoformat(), "prevTo": cr[1].isoformat(), "metrics": metrics,
+            "note": "التقارير القديمة تقرأ التاريخ بتوقيت الخادم (UTC) — قد يختلف الرقم قرب منتصف الليل عن التقارير الجديدة."}

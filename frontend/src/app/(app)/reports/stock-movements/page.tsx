@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { AreaChart } from "@/components/dashboard/charts/AreaChart";
 import { Panel } from "@/components/hr/shared";
-import { Kpi, Money, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, num, useFilters, useReport } from "@/components/reports/ReportShell";
+import { pdfParams, Kpi, Money, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, num, useFilters, useReport } from "@/components/reports/ReportShell";
 
 type R = { meta: { from: string; to: string; branchId: string | null; branchLocked: boolean; generatedAt: string }; canCost: boolean; note: string; totals: { count: number };
            byType: { type: string; label: string; count: number; qty: number; value: number | null; adjustIn: number | null; adjustOut: number | null }[];
@@ -15,7 +15,7 @@ export default function StockMovementsReport() {
   return (
     <div className="space-y-4">
       <ReportHeader title="حركة المخزون" description="الوارد والتحويلات والتسويات بالنوع واليوم والأصناف الأكثر حركة." meta={d?.meta}
-        actions={<ReportToolbar onRefresh={reload} csv={d && { file: "stock-movements.csv", headers: ["الصنف", "عدد الحركات", "الكمية"], rows: d.topProducts.map((r) => [r.name, r.count, r.qty]) }} />} />
+        actions={<ReportToolbar onRefresh={reload} pdf={{ id: "stock-movements", params: pdfParams(f) }} csv={d && { file: "stock-movements.csv", headers: ["الصنف", "عدد الحركات", "الكمية"], rows: d.topProducts.map((r) => [r.name, r.count, r.qty]) }} />} />
       <ReportFilters value={f} onChange={setF} lockedBranch={d?.meta.branchLocked} />
       {error ? <ReportError msg={error} onRetry={reload} /> : loading || !d ? <ReportSkeleton /> : (<>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

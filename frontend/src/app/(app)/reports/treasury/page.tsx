@@ -2,7 +2,7 @@
 // حركة الخزينة — قراءة فقط من GET /reports/treasury (سندات القبض والصرف غير الملغاة)
 import { useState } from "react";
 import { Panel } from "@/components/hr/shared";
-import { CompareToggle, type CompareMode, type Trend, Kpi, Money, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, SaveReportButton, cur, kpisHTML, num, tableHTML, useFilters, useReport } from "@/components/reports/ReportShell";
+import { pdfParams, CompareToggle, type CompareMode, type Trend, Kpi, Money, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, SaveReportButton, cur, kpisHTML, num, tableHTML, useFilters, useReport } from "@/components/reports/ReportShell";
 
 type R = { meta: { from: string; to: string; branchId: string | null; branchLocked: boolean; generatedAt: string };
            totals: { receipts: number; payments: number; net: number; count: number };
@@ -20,7 +20,7 @@ export default function TreasuryReport() {
     <div className="space-y-4">
       <ReportHeader title="حركة الخزينة" description="المقبوضات والمدفوعات بالطريقة والتصنيف والفرع وصافي الحركة." meta={d?.meta}
         actions={<><SaveReportButton reportId="treasury-report" filters={f} />
-          <ReportToolbar onRefresh={reload}
+          <ReportToolbar onRefresh={reload} pdf={{ id: "treasury-report", params: pdfParams(f) }}
             csv={d && { file: "treasury.csv", headers: ["النوع", "التصنيف", "العدد", "المبلغ"], rows: d.byCategory.map((r) => [T(r.type), r.category, r.count, r.amount]) }}
             print={d && { title: "حركة الخزينة", subtitle: `${d.meta.from} → ${d.meta.to}`, body: () => kpisHTML([{ label: "المقبوضات", value: cur(d.totals.receipts) }, { label: "المدفوعات", value: cur(d.totals.payments) }, { label: "الصافي", value: cur(d.totals.net) }]) + tableHTML(["النوع", "التصنيف", "العدد", "المبلغ"], d.byCategory.map((r) => [T(r.type), r.category, num(r.count), cur(r.amount)]), { numericCols: [2, 3] }) }} /></>} />
       <ReportFilters value={f} onChange={setF} lockedBranch={d?.meta.branchLocked} />

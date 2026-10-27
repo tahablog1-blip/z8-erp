@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Panel } from "@/components/hr/shared";
 import { HBars } from "@/components/dashboard/charts/HBars";
-import { CompareToggle, type CompareMode, type Trend, Kpi, Money, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, SaveReportButton, cur, kpisHTML, num, tableHTML, useFilters, useReport } from "@/components/reports/ReportShell";
+import { pdfParams, CompareToggle, type CompareMode, type Trend, Kpi, Money, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, SaveReportButton, cur, kpisHTML, num, tableHTML, useFilters, useReport } from "@/components/reports/ReportShell";
 
 type Row = { supplier_id: string | null; name: string; n: number; subtotal: number; vat: number; total: number; paid: number; remaining: number };
 type R = { meta: { from: string; to: string; branchId: string | null; branchLocked: boolean; generatedAt: string };
@@ -18,7 +18,7 @@ export default function PurchasesReport() {
     <div className="space-y-4">
       <ReportHeader title="تقرير المشتريات" description="المشتريات بالمورد والشهر: الإجمالي والضريبة والمدفوع والمتبقي." meta={d?.meta}
         actions={<><SaveReportButton reportId="purchases" filters={f} />
-          <ReportToolbar onRefresh={reload}
+          <ReportToolbar onRefresh={reload} pdf={{ id: "purchases", params: pdfParams(f) }}
             csv={d && { file: "purchases.csv", headers: ["المورد", "الفواتير", "قبل الضريبة", "الضريبة", "الإجمالي", "المدفوع", "المتبقي"], rows: d.bySupplier.map((r) => [r.name, r.n, r.subtotal, r.vat, r.total, r.paid, r.remaining]) }}
             print={d && { title: "تقرير المشتريات", subtitle: `${d.meta.from} → ${d.meta.to}`, body: () => kpisHTML([{ label: "إجمالي المشتريات", value: cur(d.totals.total) }, { label: "المدفوع", value: cur(d.totals.paid) }, { label: "المتبقي", value: cur(d.totals.remaining) }]) + tableHTML(["المورد", "الفواتير", "الإجمالي", "المدفوع", "المتبقي"], d.bySupplier.map((r) => [r.name, num(r.n), cur(r.total), cur(r.paid), cur(r.remaining)]), { numericCols: [1, 2, 3, 4] }) }} /></>} />
       <ReportFilters value={f} onChange={setF} branches={false} />

@@ -3,7 +3,7 @@
 import { HBars } from "@/components/dashboard/charts/HBars";
 import { Panel, MONTHS_AR, fmtMin } from "@/components/hr/shared";
 import { LEAVE_TYPE_LABELS } from "@/modules/hr/types";
-import { Kpi, Money, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, num, useFilters, useReport } from "@/components/reports/ReportShell";
+import { pdfParams, Kpi, Money, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, num, useFilters, useReport } from "@/components/reports/ReportShell";
 
 type R = { meta: { from: string; to: string; branchId: string | null; branchLocked: boolean; generatedAt: string }; note: string;
            headcount: { total: number; saudi: number; nonSaudi: number; byBranch: { name: string; count: number }[]; byDepartment: { name: string; count: number }[] };
@@ -17,7 +17,7 @@ export default function HrReport() {
   return (
     <div className="space-y-4">
       <ReportHeader title="تقارير الموارد البشرية" description="الموظفون والحضور والإجازات والعقود، والرواتب لمن يملك صلاحيتها." meta={d?.meta}
-        actions={<ReportToolbar onRefresh={reload} csv={d && { file: "hr-headcount.csv", headers: ["الفرع", "عدد الموظفين"], rows: d.headcount.byBranch.map((r) => [r.name, r.count]) }} />} />
+        actions={<ReportToolbar onRefresh={reload} pdf={{ id: "hr-report", params: pdfParams(f) }} csv={d && { file: "hr-headcount.csv", headers: ["الفرع", "عدد الموظفين"], rows: d.headcount.byBranch.map((r) => [r.name, r.count]) }} />} />
       <ReportFilters value={f} onChange={setF} lockedBranch={d?.meta.branchLocked} />
       {error ? <ReportError msg={error} onRetry={reload} /> : loading || !d ? <ReportSkeleton /> : (<>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">

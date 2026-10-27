@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui";
 import { Panel } from "@/components/hr/shared";
-import { Kpi, Money, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, cur, dateAr, kpisHTML, num, tableHTML, useFilters, useReport } from "@/components/reports/ReportShell";
+import { pdfParams, Kpi, Money, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, cur, dateAr, kpisHTML, num, tableHTML, useFilters, useReport } from "@/components/reports/ReportShell";
 
 type Row = { kind: "partial" | "full"; no: string | null; invoiceNo: string; at: string; branch: string; totalEx: number; vat: number; totalInc: number; note: string | null };
 type R = { meta: { from: string; to: string; branchId: string | null; branchLocked: boolean; generatedAt: string }; rows: Row[]; note: string;
@@ -15,7 +15,7 @@ export default function ReturnsReport() {
   return (
     <div className="space-y-4">
       <ReportHeader title="تقرير المرتجعات" description="المرتجعات الجزئية والكاملة بالفرع والفترة." meta={d?.meta}
-        actions={<ReportToolbar onRefresh={reload}
+        actions={<ReportToolbar onRefresh={reload} pdf={{ id: "returns", params: pdfParams(f) }}
           csv={d && { file: "returns.csv", headers: ["النوع", "رقم المرتجع", "الفاتورة", "التاريخ", "الفرع", "قبل الضريبة", "الإجمالي"], rows: d.rows.map((r) => [r.kind === "full" ? "كامل" : "جزئي", r.no ?? "", r.invoiceNo, r.at, r.branch, r.totalEx, r.totalInc]) }}
           print={d && { title: "تقرير المرتجعات", subtitle: `${d.meta.from} → ${d.meta.to}`, body: () => kpisHTML([{ label: "إجمالي المرتجعات", value: cur(d.totals.totalInc) }]) + tableHTML(["النوع", "الفاتورة", "التاريخ", "الفرع", "الإجمالي"], d.rows.map((r) => [r.kind === "full" ? "كامل" : "جزئي", r.invoiceNo, dateAr(r.at), r.branch, cur(r.totalInc)]), { numericCols: [4] }) }} />} />
       <ReportFilters value={f} onChange={setF} lockedBranch={d?.meta.branchLocked} />

@@ -3,7 +3,7 @@
 // لا حسابات مالية هنا: الأرقام كلها من الخادم، والواجهة تعرض وتنسّق فقط.
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { api } from "@/lib/api";
+import { api, getToken } from "@/lib/api";
 import { Badge, Button, EmptyState, ErrorNote, PageHeader } from "@/components/ui";
 import { Skeleton } from "@/components/dashboard/Widget";
 import { MIcon } from "@/components/m-icon";
@@ -143,15 +143,35 @@ export function ReportHeader({ title, description, meta, actions, back = true }:
 }
 
 /** أدوات: تحديث + تصدير (Excel/CSV) + طباعة/PDF — تُعرض فقط لما هو مدعوم فعلاً */
-export function ReportToolbar({ onRefresh, csv, print }: {
+/** معاملات تصدير PDF: نفس فلاتر الشاشة (الخادم يعيد تشغيل التقرير ويفرض الصلاحيات) */
+export const pdfParams = (f: Filters, extra: Record<string, string> = {}) => ({ from: f.from, to: f.to, ...(f.branchId ? { branchId: f.branchId } : {}), ...extra });
+
+async function downloadPdf(id: string, params: Record<string, string>): Promise<string> {
+  const q = new URLSearchParams(params).toString();
+  const res = await fetch(`/api/reports/pdf/${id}?${q}`, { headers: { Authorization: `Bearer ${getToken() ?? ""}` } });
+  if (!res.ok) { let m = `تعذر إنشاء PDF (${res.status})`; try { const j = await res.json(); m = j.error || j.detail || m; } catch { /* بلا جسم */ } throw new Error(m); }
+  const name = /filename="?([^";]+)"?/.exec(res.headers.get("content-disposition") || "")?.[1] || `${id}.pdf`;
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  return name;
+}
+
+export function ReportToolbar({ onRefresh, csv, print, pdf }: {
   onRefresh: () => void;
+  pdf?: { id: string; params: Record<string, string> } | null;
   csv?: { file: string; headers: string[]; rows: (string | number | null)[][] } | null;
   print?: { title: string; subtitle: string; body: () => string } | null;
 }) {
   const co = getCompany();
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfErr, setPdfErr] = useState("");
   return (
     <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="أدوات التقرير">
       <Button variant="ghost" size="sm" onClick={onRefresh}>تحديث</Button>
+      {pdf && <Button variant="ghost" size="sm" disabled={pdfBusy} title="ملف PDF يُنشأ في الخادم بنفس بياناتك وصلاحياتك"
+                      onClick={async () => { setPdfBusy(true); setPdfErr(""); try { await downloadPdf(pdf.id, pdf.params); } catch (e: unknown) { setPdfErr(e instanceof Error ? e.message : "تعذر إنشاء PDF"); } finally { setPdfBusy(false); } }}>{pdfBusy ? "جارٍ الإنشاء…" : "تصدير PDF"}</Button>}
+      {pdfErr && <span className="text-t-xs font-bold text-ember" role="alert">{pdfErr}</span>}
       {csv && <Button variant="ghost" size="sm" onClick={() => downloadCsv(csv.file, csv.headers, csv.rows)} title="يُفتح في Excel">تصدير Excel / CSV</Button>}
       {print && <Button variant="ghost" size="sm" onClick={() => printReport(print.title, print.subtitle + (co?.name ? ` · ${co.name}` : "") + ` · طُبع: ${new Date().toLocaleString("en-GB", { hour12: false })}`, print.body())} title="يُفتح حوار الطباعة — اختر «حفظ كـ PDF»">طباعة / PDF</Button>}
     </div>

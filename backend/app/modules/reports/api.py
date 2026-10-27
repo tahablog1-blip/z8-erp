@@ -388,3 +388,30 @@ async def rpt_reconciliation(date_from: str | None = Query(default=None, alias="
                              branchId: str | None = Query(default=None),
                              user: CurrentUser = Depends(require_permission("accounting.view_reports"))):
     return await detail.reconciliation(user, date_from, date_to, branchId)
+
+
+@router.get("/period-compare")
+async def rpt_period_compare(kind: str = Query(..., pattern="^(vat|sales|profit)$"),
+                             date_from: str | None = Query(default=None, alias="from"),
+                             date_to: str | None = Query(default=None, alias="to"),
+                             mode: str = Query(default="prev", pattern="^(prev|yoy)$"),
+                             branchId: str | None = Query(default=None),
+                             user: CurrentUser = Depends(get_current_user)):
+    """مقارنة فترة بفترة لتقارير: الإقرار الضريبي / ملخص المبيعات / الربحية (الصلاحية تُفحص داخل الخدمة)"""
+    return await detail.period_compare(user, kind, date_from, date_to, mode, branchId)
+
+
+@router.get("/pdf/{report_id}")
+async def rpt_pdf(report_id: str,
+                  date_from: str | None = Query(default=None, alias="from"),
+                  date_to: str | None = Query(default=None, alias="to"),
+                  branchId: str | None = Query(default=None),
+                  dim: str | None = Query(default=None),
+                  compare: str | None = Query(default=None, pattern="^(prev|yoy)$"),
+                  supplierId: str | None = Query(default=None),
+                  user: CurrentUser = Depends(get_current_user)):
+    """تصدير PDF من الخادم — نفس صلاحيات عرض التقرير ونفس بياناته (يعاد تشغيل التقرير على الخادم)"""
+    from fastapi.responses import Response
+    from . import pdf_export
+    pdf, name = await pdf_export.build(user, report_id, {"from": date_from, "to": date_to, "branchId": branchId, "dim": dim, "compare": compare, "supplierId": supplierId})
+    return Response(content=pdf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{name}"'})

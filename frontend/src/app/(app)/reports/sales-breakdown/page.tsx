@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { HBars } from "@/components/dashboard/charts/HBars";
 import { Panel } from "@/components/hr/shared";
-import { CompareToggle, type CompareMode, Kpi, Money, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, SaveReportButton, cur, kpisHTML, num, tableHTML, useFilters, useReport, type Trend } from "@/components/reports/ReportShell";
+import { pdfParams, CompareToggle, type CompareMode, Kpi, Money, ReportError, ReportFilters, ReportHeader, ReportSkeleton, ReportTable, ReportToolbar, SaveReportButton, cur, kpisHTML, num, tableHTML, useFilters, useReport, type Trend } from "@/components/reports/ReportShell";
 
 type Row = { key: string | null; label: string; revenue: number; vat: number; qty: number; invoices: number; avgInvoice: number; cogs?: number; grossProfit?: number; marginPct?: number | null };
 type R = { meta: { from: string; to: string; branchId: string | null; branchLocked: boolean; generatedAt: string }; dim: string; rows: Row[]; canCost: boolean; truncated: boolean; note: string;
@@ -42,7 +42,7 @@ export default function SalesBreakdown() {
     <div className="space-y-4">
       <ReportHeader title="تحليل المبيعات" description="المبيعات بأي بُعد — اختر البُعد والفترة، وقارنها بفترة أخرى." meta={d?.meta}
         actions={<><SaveReportButton reportId="sales-breakdown" filters={f} />
-          <ReportToolbar onRefresh={reload}
+          <ReportToolbar onRefresh={reload} pdf={{ id: "sales-breakdown", params: pdfParams(f, { dim, ...(cmp ? { compare: cmp } : {}) }) }}
             csv={d && { file: `sales-by-${dim}.csv`, headers: [dimLabel, "المبيعات", "الكمية", "الفواتير", ...(d.canCost ? ["التكلفة", "الربح"] : [])], rows: d.rows.map((r) => [r.label, r.revenue, r.qty, r.invoices, ...(d.canCost ? [r.cogs ?? 0, r.grossProfit ?? 0] : [])]) }}
             print={d && { title: `تحليل المبيعات حسب ${dimLabel}`, subtitle: `${d.meta.from} → ${d.meta.to}`, body: () => kpisHTML([{ label: "المبيعات", value: cur(d.totals.revenue) }, { label: "صافي بعد المرتجعات", value: cur(d.totals.netRevenue) }, { label: "الفواتير", value: num(d.totals.invoices) }]) + tableHTML([dimLabel, "المبيعات", "الكمية", "الفواتير"], d.rows.map((r) => [r.label, cur(r.revenue), num(r.qty), num(r.invoices)]), { numericCols: [1, 2, 3] }) }} /></>} />
       <ReportFilters value={f} onChange={setF} lockedBranch={d?.meta.branchLocked} />

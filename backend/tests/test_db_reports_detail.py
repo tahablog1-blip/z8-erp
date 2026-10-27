@@ -25,7 +25,7 @@ def world(db_ready):
     async def go():
         async with db.pool().acquire() as c:
             await c.execute("TRUNCATE invoices, invoice_items, invoice_returns, products, users, customers, cars, branches, accounts, journal_entries, journal_lines, stock_moves, "
-                            "hr_employees, hr_attendance, hr_leave_requests, hr_contracts, hr_work_schedules, hr_departments, hr_payroll_runs, hr_payslips RESTART IDENTITY CASCADE")
+                            "hr_employees, hr_attendance, hr_leave_requests, hr_contracts, hr_work_schedules, hr_departments, hr_payroll_runs, hr_payslips, treasury_vouchers, inventory, invoice_payments, audit_log RESTART IDENTITY CASCADE")
             b1, b2, u1, p1, p2, car = (uuid.uuid4() for _ in range(6))
             await c.execute("INSERT INTO branches (id, company_id, name) VALUES ($1,$3,'الرياض'),($2,$3,'جدة')", b1, b2, CID)
             await c.execute("INSERT INTO users (id, company_id, full_name) VALUES ($1,$2,'كاشير أ')", u1, CID)
@@ -34,7 +34,7 @@ def world(db_ready):
 
             async def inv(no, br, ex, vat, cogs, items, returned=False, car_id=None, when=NOW):
                 i = uuid.uuid4()
-                await c.execute("INSERT INTO invoices (id,company_id,branch_id,invoice_no,issued_at,total_ex,total_vat,total_inc,cogs_total,is_returned,created_by,car_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",
+                await c.execute("INSERT INTO invoices (id,company_id,branch_id,invoice_no,issued_at,total_ex,total_vat,total_inc,cogs_total,is_returned,created_by,car_id,source) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'pos')",
                                 i, CID, br, no, when, ex, vat, ex + vat, cogs, returned, u1, car_id)
                 for pid, label, q, lex in items:
                     await c.execute("INSERT INTO invoice_items (invoice_id,product_id,label,qty,line_ex,line_vat,line_inc) VALUES ($1,$2,$3,$4,$5,$6,$7)", i, pid, label, q, lex, round(lex * .15, 2), round(lex * 1.15, 2))
@@ -138,3 +138,66 @@ def test_reconciliation_shows_matches_and_never_hides_differences(world):
     run(tweak)
     r2 = run(lambda: detail.reconciliation(U(role="admin"), None, None, None))
     assert r2["status"] == "mismatch" and "الإيرادات" in r2["warning"] and {x["key"]: x for x in r2["checks"]}["revenue"]["diff"] == -80
+
+
+def test_reconciliation_covers_treasury_and_inventory(world):
+    from app.core import db
+    from app.modules.reports import detail
+    r = run(lambda: detail.reconciliation(U(role="admin"), None, None, None))
+    c = {x["key"]: x for x in r["checks"]}
+    assert {"revenue", "vat", "cogs", "treasury", "inventory"} <= set(c)
+    assert c["treasury"]["ok"] and c["treasury"]["invoices"] == 0                      # لا سندات ولا قيود خزينة
+    assert c["inventory"]["ok"] and c["inventory"]["invoices"] == 0 and c["inventory"]["ledger"] == 0
+
+    async def seed():
+        cash = uuid.uuid4(); inv_acc = uuid.uuid4()
+        await db.execute("INSERT INTO accounts (id,company_id,code,name,type) VALUES ($1,$3,'1011','نقد','asset'),($2,$3,'1030','مخزون','asset')", cash, inv_acc, CID)
+        await db.execute("INSERT INTO treasury_vouchers (company_id,voucher_no,type,amount,method,status) VALUES ($1,'R1','receipt',500,'cash','active'),($1,'P1','payment',120,'cash','active'),($1,'P9','payment',999,'cash','cancelled')", CID)
+        je = uuid.uuid4()
+        await db.execute("INSERT INTO journal_entries (id,company_id,entry_date,source_type) VALUES ($1,$2,(now() AT TIME ZONE 'Asia/Riyadh')::date,'treasury_voucher')", je, CID)
+        await db.execute("INSERT INTO journal_lines (entry_id,account_id,debit,credit) VALUES ($1,$2,500,0),($1,$2,0,100)", je, cash)      # صافي 400 بدل 380 → فرق 20
+        pid = await db.fetchrow("SELECT id FROM products WHERE name='زيت 5W30'")
+        await db.execute("INSERT INTO inventory (company_id,loc_type,loc_id,product_id,qty) VALUES ($1,'branch','x',$2,10)", CID, pid["id"])      # 10 × 60 = 600
+        je2 = uuid.uuid4()
+        await db.execute("INSERT INTO journal_entries (id,company_id,entry_date,source_type) VALUES ($1,$2,CURRENT_DATE,'stock_receive')", je2, CID)
+        await db.execute("INSERT INTO journal_lines (entry_id,account_id,debit,credit) VALUES ($1,$2,550,0)", je2, inv_acc)                  # الأستاذ 550 → فرق 50
+    run(seed)
+    r2 = run(lambda: detail.reconciliation(U(role="admin"), None, None, None))
+    c2 = {x["key"]: x for x in r2["checks"]}
+    assert c2["treasury"]["invoices"] == 380 and c2["treasury"]["ledger"] == 400 and c2["treasury"]["diff"] == -20 and not c2["treasury"]["ok"]
+    assert c2["inventory"]["invoices"] == 600 and c2["inventory"]["ledger"] == 550 and c2["inventory"]["diff"] == 50
+    assert r2["status"] == "mismatch" and "الخزينة" in r2["warning"] and "المخزون" in r2["warning"]
+    past = run(lambda: detail.reconciliation(U(role="admin"), "2026-01-01", "2026-01-31", None))
+    assert {x["key"]: x for x in past["checks"]}["inventory"]["ok"] is None                # لا مقارنة تاريخية للمخزون
+
+
+def test_period_compare_for_legacy_reports(world):
+    from app.modules.reports import detail
+    r = run(lambda: detail.period_compare(U(perms=["reports.sales"]), "sales", None, None, "prev"))
+    assert r["metrics"]["invoiceCount"]["cur"] >= 2 and "pct" in r["metrics"]["totalInc"]
+    with pytest.raises(HTTPException) as ex:
+        run(lambda: detail.period_compare(U(perms=["reports.sales"]), "profit", None, None, "prev"))
+    assert ex.value.status_code == 403
+
+
+def test_pdf_export_same_permissions_and_content(world):
+    import shutil
+    import subprocess
+    import tempfile
+    from app.modules.reports import pdf_export
+    pdf, name = run(lambda: pdf_export.build(U(role="admin"), "sales-breakdown", {"dim": "product"}))
+    assert pdf[:4] == b"%PDF" and name.startswith("sales-breakdown-")
+    with pytest.raises(HTTPException) as ex:                                          # بلا صلاحية = 404 (نفس صلاحيات العرض)
+        run(lambda: pdf_export.build(U(), "sales-breakdown", {}))
+    assert ex.value.status_code == 404
+    with pytest.raises(HTTPException):
+        run(lambda: pdf_export.build(U(role="admin"), "income-statement", {}))        # غير قابل للتصدير من هنا
+    if shutil.which("pdftotext"):
+        def text(user):
+            data, _ = run(lambda: pdf_export.build(user, "sales-breakdown", {"dim": "product"}))
+            with tempfile.NamedTemporaryFile(suffix=".pdf") as f:
+                f.write(data); f.flush()
+                return subprocess.run(["pdftotext", f.name, "-"], capture_output=True, text=True).stdout
+        full, limited = text(U(role="admin")), text(U(perms=["reports.sales"]))
+        assert "300.00" in full and "180.00" in full                                  # التكلفة تظهر لصاحب الصلاحية المالية
+        assert "180.00" not in limited and "300.00" in limited                        # ولا تظهر لغيره في الملف
