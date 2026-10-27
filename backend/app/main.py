@@ -1065,6 +1065,122 @@ async def lifespan(app: FastAPI):
         "CREATE INDEX IF NOT EXISTS idx_customer_notes_customer ON customer_notes (customer_id, created_at DESC)",
         "CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices (customer_id, issued_at DESC)",
         "CREATE INDEX IF NOT EXISTS idx_customer_ledger_customer ON customer_ledger (customer_id)",
+        # أعمدة يقرؤها كود الموارد البشرية لكن لم تكن مُعرَّفة في تحصين المخطط (موجودة في الإنتاج) — حتى تعمل القواعد الجديدة
+        "ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS allowances numeric(12,2) NOT NULL DEFAULT 0",
+        "ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS approval_pin text",
+        "ALTER TABLE hr_payslips ADD COLUMN IF NOT EXISTS allowances numeric(12,2) NOT NULL DEFAULT 0",
+        "ALTER TABLE hr_leave_requests ADD COLUMN IF NOT EXISTS approved_at timestamptz",
+        "ALTER TABLE hr_payslips ADD COLUMN IF NOT EXISTS other_deductions numeric(12,2) NOT NULL DEFAULT 0",
+        # ══ الموارد البشرية السعودية: الأقسام والوظائف والعقود والمستندات والدوام (إضافات فقط — لا حذف ولا إعادة تسمية) ══
+        """CREATE TABLE IF NOT EXISTS hr_departments (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             name text NOT NULL,
+             is_active boolean NOT NULL DEFAULT TRUE,
+             created_at timestamptz NOT NULL DEFAULT now(),
+             UNIQUE (company_id, name))""",
+        """CREATE TABLE IF NOT EXISTS hr_positions (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             name text NOT NULL,
+             department_id uuid,
+             is_active boolean NOT NULL DEFAULT TRUE,
+             created_at timestamptz NOT NULL DEFAULT now(),
+             UNIQUE (company_id, name))""",
+        """CREATE TABLE IF NOT EXISTS hr_work_schedules (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             name text NOT NULL,
+             start_time time NOT NULL,
+             end_time time NOT NULL,
+             grace_minutes int NOT NULL DEFAULT 0,
+             weekly_off int[] NOT NULL DEFAULT '{5}',
+             is_active boolean NOT NULL DEFAULT TRUE,
+             created_at timestamptz NOT NULL DEFAULT now(),
+             UNIQUE (company_id, name))""",
+        "ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS department_id uuid",
+        "ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS position_id uuid",
+        "ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS manager_id uuid",
+        "ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS schedule_id uuid",
+        "ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS gender text",
+        "ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS email text",
+        "ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS address text",
+        "ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS gosi_number text",
+        "ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS gosi_status text",
+        "ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS housing_allowance numeric(12,2) NOT NULL DEFAULT 0",
+        "ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS transport_allowance numeric(12,2) NOT NULL DEFAULT 0",
+        "ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS other_allowance numeric(12,2) NOT NULL DEFAULT 0",
+        """CREATE TABLE IF NOT EXISTS hr_contracts (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             employee_id uuid NOT NULL,
+             contract_type text NOT NULL DEFAULT 'full_time',
+             start_date date NOT NULL,
+             end_date date,
+             basic_salary numeric(12,2) NOT NULL DEFAULT 0,
+             status text NOT NULL DEFAULT 'active',
+             notes text,
+             created_by uuid,
+             created_at timestamptz NOT NULL DEFAULT now())""",
+        "CREATE INDEX IF NOT EXISTS idx_hr_contracts_emp ON hr_contracts (company_id, employee_id)",
+        """CREATE TABLE IF NOT EXISTS hr_documents (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             employee_id uuid NOT NULL,
+             doc_type text NOT NULL,
+             doc_number text,
+             issue_date date,
+             expiry_date date,
+             notes text,
+             created_by uuid,
+             created_at timestamptz NOT NULL DEFAULT now())""",
+        "CREATE INDEX IF NOT EXISTS idx_hr_documents_emp ON hr_documents (company_id, employee_id)",
+        """CREATE TABLE IF NOT EXISTS hr_leave_types (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             code text NOT NULL,
+             name text NOT NULL,
+             annual_days int,
+             is_paid boolean NOT NULL DEFAULT TRUE,
+             is_active boolean NOT NULL DEFAULT TRUE,
+             UNIQUE (company_id, code))""",
+        """CREATE TABLE IF NOT EXISTS hr_employee_history (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             employee_id uuid NOT NULL,
+             event_type text NOT NULL,
+             detail jsonb NOT NULL DEFAULT '{}'::jsonb,
+             reason text,
+             actor_id text,
+             actor_name text,
+             created_at timestamptz NOT NULL DEFAULT now())""",
+        "CREATE INDEX IF NOT EXISTS idx_hr_history_emp ON hr_employee_history (company_id, employee_id, created_at DESC)",
+        # إعدادات قابلة للضبط — القيم الافتراضية = السلوك الحالي بالضبط (لا تغيير على من لم يضبط شيئاً)
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS eos_first_years_months numeric(5,2) NOT NULL DEFAULT 0.5",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS eos_after_months numeric(5,2) NOT NULL DEFAULT 1",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS eos_threshold_years numeric(5,2) NOT NULL DEFAULT 5",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS leave_days_before int NOT NULL DEFAULT 21",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS leave_days_after int NOT NULL DEFAULT 30",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS leave_threshold_years numeric(5,2) NOT NULL DEFAULT 5",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS gosi_basis text NOT NULL DEFAULT 'basic'",
+        # صلاحيات الخصوصية الجديدة: منحة لمرة واحدة فقط (علامة في company_settings) لمن يملك hr.manage أو hr.payroll
+        # حتى لا يتغيّر شيء على من يعمل اليوم — وبعدها لا يُعاد منحها لو سحبها المدير عمداً.
+        """WITH m AS (
+             INSERT INTO company_settings (company_id, key, value)
+             SELECT id, 'hr_privacy_v1_users', '1' FROM companies
+             ON CONFLICT DO NOTHING RETURNING company_id)
+           UPDATE users SET permissions = permissions || '["hr.salary.view","hr.identity.view"]'::jsonb
+           WHERE company_id IN (SELECT company_id FROM m)
+             AND jsonb_typeof(permissions)='array'
+             AND (permissions ? 'hr.manage' OR permissions ? 'hr.payroll')""",
+        """WITH m AS (
+             INSERT INTO company_settings (company_id, key, value)
+             SELECT id, 'hr_privacy_v1_roles', '1' FROM companies
+             ON CONFLICT DO NOTHING RETURNING company_id)
+           UPDATE roles SET permissions = permissions || '["hr.salary.view","hr.identity.view"]'::jsonb
+           WHERE company_id IN (SELECT company_id FROM m)
+             AND jsonb_typeof(permissions)='array'
+             AND (permissions ? 'hr.manage' OR permissions ? 'hr.payroll')""",
     ):
         try:
             await execute(stmt)

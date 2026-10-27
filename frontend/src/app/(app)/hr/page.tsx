@@ -1,5 +1,6 @@
 "use client";
 // شاشة الموارد البشرية — الموظفون، الحضور والانصراف، الإجازات، المخالفات، الرواتب
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -14,9 +15,18 @@ import {
   LeaveRequest, LeaveType, PayrollRun, Payslip, RequestType, REQUEST_TYPE_LABELS, Violation, money,
 } from "@/modules/hr/types";
 import { formatDate, formatTime } from "@/lib/format";
+import { HrDashboard } from "@/components/hr/HrDashboard";
+import { OrgPanel } from "@/components/hr/OrgPanel";
+import { ContractsPanel } from "@/components/hr/ContractsPanel";
+import { DocumentsPanel } from "@/components/hr/DocumentsPanel";
+import { HrSettingsPanel } from "@/components/hr/HrSettingsPanel";
+import { Avatar, DayStatus, Hidden, fmtMin, MONTHS_AR } from "@/components/hr/shared";
+import { printReport, tableHTML, kpisHTML } from "@/lib/print";
 
 type Branch = { id: string; name: string };
-type Tab = "employees" | "attendance" | "leave" | "violations" | "payroll" | "custody" | "requests";
+type Tab = "dashboard" | "employees" | "attendance" | "leave" | "violations" | "payroll" | "custody" | "requests" | "contracts" | "documents" | "org" | "settings";
+type Lookup = { id: string; name: string; department_id?: string | null; is_active: boolean };
+type Sched = { id: string; name: string; start_time: string; end_time: string; is_active: boolean };
 
 const dateFmt = (s: string) => formatDate(s);
 const timeFmt = (s: string | null) => (s ? formatTime(s) : "—");
@@ -26,6 +36,8 @@ const EMPTY_EMP = {
   jobTitle: "", techRole: "", contractType: "full_time" as Employee["contract_type"], hireDate: "",
   basicSalary: 0, allowances: 0, iban: "", iqamaNumber: "", iqamaExpiryDate: "", approvalPin: "",
   linkedUserId: "", commissionType: "none" as CommissionType, commissionPct: 0,
+  departmentId: "", positionId: "", managerId: "", scheduleId: "", gender: "", email: "", address: "",
+  gosiNumber: "", gosiStatus: "", housingAllowance: 0, transportAllowance: 0, otherAllowance: 0,
 };
 
 export default function HrPage() {
@@ -39,9 +51,17 @@ export default function HrPage() {
   const canCustody = hasPerm("hr.custody");
   const canRequestsApprove = hasPerm("hr.requests_approve");
   const canRequestsCreate = hasPerm("hr.manage", "hr.requests_approve");
+  const canSalary = hasPerm("hr.salary.view");
+  const canIdentity = hasPerm("hr.identity.view");
 
-  const [tab, setTab] = useState<Tab>(canView ? "employees" : "attendance");
+  const [tab, setTab] = useState<Tab>(canView ? "dashboard" : "attendance");
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [departments, setDepartments] = useState<Lookup[]>([]);
+  const [positions, setPositions] = useState<Lookup[]>([]);
+  const [schedules, setSchedules] = useState<Sched[]>([]);
+  const [leaveTypes, setLeaveTypes] = useState<{ code: string; name: string; is_active: boolean }[]>([]);
+  const [fBranch, setFBranch] = useState(""); const [fDept, setFDept] = useState(""); const [fNat, setFNat] = useState("");
+  const [fStatus, setFStatus] = useState(""); const [fContract, setFContract] = useState(""); const [fSearch, setFSearch] = useState("");
   const [branches, setBranches] = useState<Branch[]>([]);
   // ── حسابات الدخول للربط بالموظفين — المدير العام (admin) مستبعد عمداً ──
   type LoginUser = { id: string; email: string; full_name: string; role: string; is_active: boolean };
@@ -70,7 +90,7 @@ export default function HrPage() {
 
   // ── نموذج إجازة ──
   const [leaveModal, setLeaveModal] = useState(false);
-  const [leaveForm, setLeaveForm] = useState({ employeeId: "", leaveType: "annual" as LeaveType, startDate: "", endDate: "", reason: "" });
+  const [leaveForm, setLeaveForm] = useState({ employeeId: "", leaveType: "annual" as string, startDate: "", endDate: "", reason: "" });
   const [leaveErr, setLeaveErr] = useState("");
   const [balance, setBalance] = useState<LeaveBalance | null>(null);
 
@@ -104,6 +124,16 @@ export default function HrPage() {
   const [commErr, setCommErr] = useState("");
   const [commBusy, setCommBusy] = useState(false);
 
+  const filteredEmployees = useMemo(() => {
+    const q = fSearch.trim().toLowerCase();
+    return employees.filter((e) =>
+      (!fBranch || e.branch_id === fBranch) && (!fDept || e.department_id === fDept) &&
+      (!fNat || (fNat === "saudi" ? e.is_saudi : !e.is_saudi)) &&
+      (!fStatus || (fStatus === "active" ? e.is_active : !e.is_active)) && (!fContract || e.contract_type === fContract) &&
+      (!q || [e.full_name, e.phone, e.email, e.national_id, e.iqama_number, e.department_name, e.position_name, e.job_title]
+        .some((v) => String(v ?? "").toLowerCase().includes(q))));
+  }, [employees, fBranch, fDept, fNat, fStatus, fContract, fSearch]);
+
   const employeeName = useMemo(() => {
     const m: Record<string, string> = {};
     employees.forEach((e) => { m[e.id] = e.full_name; });
@@ -118,6 +148,12 @@ export default function HrPage() {
       const results = await Promise.all(calls);
       setBranches(results[0]);
       if (canView) { setEmployees(results[1]); setIqamaAlerts(results[2]); }
+      if (canView) {   // قوائم مرجعية للفلاتر والنموذج — فشلها لا يمنع الصفحة
+        api<Lookup[]>("/hr/departments").then(setDepartments).catch(() => setDepartments([]));
+        api<Lookup[]>("/hr/positions").then(setPositions).catch(() => setPositions([]));
+        api<Sched[]>("/hr/schedules").then(setSchedules).catch(() => setSchedules([]));
+        api<{ code: string; name: string; is_active: boolean }[]>("/hr/leave-types").then(setLeaveTypes).catch(() => setLeaveTypes([]));
+      }
       setPageErr("");
     } catch (e: any) { setPageErr(e.message); }
     finally { setLoading(false); }
@@ -163,8 +199,8 @@ export default function HrPage() {
       branchId: e.branch_id || "", fullName: e.full_name, nationalId: e.national_id || "",
       nationality: e.nationality || "", isSaudi: e.is_saudi, phone: e.phone || "",
       jobTitle: e.job_title || "", techRole: (e as { tech_role?: string }).tech_role || "", contractType: e.contract_type, hireDate: e.hire_date,
-      basicSalary: e.basic_salary,
-      allowances: (e as { allowances?: number }).allowances || 0,
+      basicSalary: e.basic_salary ?? 0,
+      allowances: e.allowances || 0,
       iban: e.iban || "",
       // حقل واحد للهوية/الإقامة — الصفوف القديمة اللي اتسجل فيها رقم الإقامة بس بتتقري برضو
       iqamaNumber: e.national_id || e.iqama_number || "",
@@ -172,14 +208,26 @@ export default function HrPage() {
       approvalPin: (e as { approval_pin?: string | null }).approval_pin || "",
       linkedUserId: (e as { linked_user_id?: string | null }).linked_user_id || "",
       commissionType: e.commission_type || "none", commissionPct: e.commission_pct || 0,
+      departmentId: e.department_id || "", positionId: e.position_id || "", managerId: e.manager_id || "", scheduleId: e.schedule_id || "",
+      gender: e.gender || "", email: e.email || "", address: e.address || "", gosiNumber: e.gosi_number || "", gosiStatus: e.gosi_status || "",
+      housingAllowance: e.housing_allowance || 0, transportAllowance: e.transport_allowance || 0,
+      // بدلات قديمة مسجّلة كرقم واحد: تظهر في «أخرى» حتى لا تُصفَّر عند أول حفظ
+      otherAllowance: (e.housing_allowance || 0) + (e.transport_allowance || 0) + (e.other_allowance || 0) === 0 ? (e.allowances || 0) : (e.other_allowance || 0),
     });
     setEmpErr(""); setEmpModal({ mode: "edit", emp: e });
   }
   async function saveEmp() {
     setEmpErr("");
     try {
-      const body = JSON.stringify({ ...empForm, nationalId: empForm.iqamaNumber,
-                                    linkedUserId: empForm.linkedUserId || null });
+      const nul = (v: string) => v || null;
+      const payload: Record<string, unknown> = { ...empForm, nationalId: empForm.iqamaNumber, linkedUserId: empForm.linkedUserId || null,
+        departmentId: nul(empForm.departmentId), positionId: nul(empForm.positionId), managerId: nul(empForm.managerId), scheduleId: nul(empForm.scheduleId),
+        gender: nul(empForm.gender), email: nul(empForm.email), address: nul(empForm.address), gosiNumber: nul(empForm.gosiNumber), gosiStatus: nul(empForm.gosiStatus) };
+      // الخادم يتجاهل ما لا يملك المستخدم صلاحيته؛ نحذفه هنا كي لا تُرسل قيم مُقنَّعة/فارغة أصلاً
+      if (!canSalary) ["basicSalary", "allowances", "housingAllowance", "transportAllowance", "otherAllowance", "iban", "commissionType", "commissionPct"].forEach((k) => delete payload[k]);
+      if (!canIdentity) ["nationalId", "iqamaNumber", "iqamaExpiryDate"].forEach((k) => delete payload[k]);
+      delete payload.allowances;   // الإجمالي يحسبه الخادم من المكوّنات
+      const body = JSON.stringify(payload);
       if (empModal?.mode === "create") {
         await api("/hr/employees", { method: "POST", body });
       } else if (empModal?.mode === "edit") {
@@ -192,10 +240,10 @@ export default function HrPage() {
   async function terminateEmp(e: Employee) {
     if (!await appConfirm(`إنهاء خدمة «${e.full_name}»؟`)) return;
     try {
-      const res = await api<{ endOfServiceEstimate: { amount: number; totalYears: number; note: string } }>(
+      const res = await api<{ endOfServiceEstimate: { amount: number | null; totalYears: number; note: string } }>(
         `/hr/employees/${e.id}/terminate`, { method: "POST", body: JSON.stringify({}) }
       );
-      await appAlert(`تقدير مكافأة نهاية الخدمة: ${money(res.endOfServiceEstimate.amount)} ر.س (${res.endOfServiceEstimate.totalYears} سنة)\n${res.endOfServiceEstimate.note}`);
+      await appAlert(`تم إنهاء الخدمة (${res.endOfServiceEstimate.totalYears} سنة خدمة).` + (res.endOfServiceEstimate.amount == null ? "" : `\nتقدير مكافأة نهاية الخدمة: ${money(res.endOfServiceEstimate.amount)} ر.س\n${res.endOfServiceEstimate.note}`));
       await load();
     } catch (e: any) { await appAlert(e.message); }
   }
@@ -335,6 +383,18 @@ export default function HrPage() {
       await loadPayroll();
     } catch (e: any) { await appAlert(e.message); }
   }
+  /** قسيمة راتب — طباعة عبر محرك الطباعة المركزي؛ الأرقام كلها من الخادم كما هي */
+  function printPayslip(s: Payslip, run: PayrollRun) {
+    const period = `${MONTHS_AR[run.period_month - 1]} ${run.period_year}`;
+    const rows: (string | number)[][] = [
+      ["الراتب الأساسي", money(s.basic_salary)], ["البدلات", money(s.allowances)],
+      ["العمولة", money(s.commission_amount)], ["خصم المخالفات", money(s.violations_deduction)],
+      ["خصم السلف", money(s.advance_deduction)], ["التأمينات (حصة الموظف)", money(s.gosi_employee)],
+    ];
+    printReport(`قسيمة راتب — ${s.employee_name}`, `الفترة: ${period} · الحالة: ${run.status === "paid" ? "مدفوع" : run.status === "finalized" ? "معتمد" : "مسودة"}`,
+      kpisHTML([{ label: "الموظف", value: s.employee_name }, { label: "المسمى", value: s.job_title || "—" }, { label: "صافي الراتب", value: money(s.net_pay) }]) +
+      tableHTML(["البند", "المبلغ (ر.س)"], rows, { numericCols: [1] }));
+  }
   const [payMethod, setPayMethod] = useState<"cash" | "card" | "transfer">("transfer");
   async function payRun() {
     if (!viewPayslips) return;
@@ -349,23 +409,24 @@ export default function HrPage() {
   // ══════════════════ الأعمدة ══════════════════
 
   const empCols: Column<Employee>[] = [
-    { key: "full_name", title: "الاسم", render: (e) => (
-      <div><div className="font-extrabold">{e.full_name}</div><div className="text-t-xs text-text-dim">{e.job_title || "—"}</div></div>
+    { key: "full_name", title: "الموظف", render: (e) => (
+      <Link href={`/hr/${e.id}`} className="flex items-center gap-2.5 hover:text-petrol">
+        <Avatar name={e.full_name} size={34} />
+        <span className="min-w-0"><span className="block font-extrabold">{e.full_name}</span><span className="block text-t-xs text-text-dim">{e.position_name || e.job_title || "—"}</span></span>
+      </Link>
     ) },
-    { key: "branch_name", title: "الفرع", width: "110px", render: (e) => e.branch_name || "—" },
-    { key: "linked_email", title: "حساب الدخول", width: "160px", render: (e) => {
-      const mail = (e as { linked_email?: string | null }).linked_email;
-      return mail
-        ? <span className="tnum text-t-xs font-bold text-petrol" dir="ltr">{mail}</span>
-        : <span className="text-t-xs text-text-dim">غير مرتبط</span>;
-    } },
+    { key: "department_name", title: "القسم", width: "110px", render: (e) => e.department_name || "—" },
+    { key: "branch_name", title: "الفرع", width: "100px", render: (e) => e.branch_name || "—" },
+    { key: "is_saudi", title: "الجنسية", width: "100px", render: (e) => e.nationality || (e.is_saudi ? "سعودي" : "غير سعودي") },
+    { key: "hire_date", title: "التعيين", width: "100px", render: (e) => <span className="tnum">{dateFmt(e.hire_date)}</span> },
     { key: "contract_type", title: "نوع العقد", width: "100px", render: (e) => CONTRACT_LABELS[e.contract_type] },
-    { key: "basic_salary", title: "الراتب الأساسي", width: "110px", render: (e) => <span className="tnum font-bold">{money(e.basic_salary)}</span> },
-    { key: "is_active", title: "الحالة", width: "90px", render: (e) => e.is_active ? <Badge tone="good">نشط</Badge> : <Badge tone="neutral">منتهي</Badge> },
+    ...(canSalary ? [{ key: "basic_salary", title: "الراتب الأساسي", width: "110px", render: (e: Employee) => <Hidden v={e.basic_salary} f={money} /> } satisfies Column<Employee>] : []),
+    { key: "is_active", title: "الحالة", width: "90px", render: (e) => e.is_active ? <Badge tone="success">نشط</Badge> : <Badge tone="neutral">منتهي</Badge> },
     ...(canManage ? [{
       key: "actions", title: "", width: "180px",
       render: (e: Employee) => (
         <div className="flex justify-end gap-1.5">
+          <Link href={`/hr/${e.id}`}><Button variant="ghost" size="xs">الملف</Button></Link>
           <Button variant="ghost" size="xs" onClick={() => openEditEmp(e)}>تعديل</Button>
           {e.is_active && <Button variant="danger" size="xs" onClick={() => terminateEmp(e)}>إنهاء خدمة</Button>}
         </div>
@@ -378,11 +439,15 @@ export default function HrPage() {
     { key: "work_date", title: "التاريخ", width: "110px", render: (a) => dateFmt(a.work_date) },
     { key: "check_in", title: "الحضور", width: "90px", render: (a) => <span className="tnum">{timeFmt(a.check_in)}</span> },
     { key: "check_out", title: "الانصراف", width: "90px", render: (a) => <span className="tnum">{timeFmt(a.check_out)}</span> },
+    { key: "worked_minutes", title: "ساعات العمل", width: "90px", render: (a) => <span className="tnum">{fmtMin(a.worked_minutes)}</span> },
+    { key: "late_minutes", title: "التأخير", width: "80px", render: (a) => <span className="tnum">{a.late_minutes ? `${a.late_minutes} د` : "—"}</span> },
+    { key: "overtime_minutes", title: "الإضافي", width: "80px", render: (a) => <span className="tnum">{a.overtime_minutes ? fmtMin(a.overtime_minutes) : "—"}</span> },
+    { key: "day_status", title: "الحالة", width: "100px", render: (a) => <DayStatus s={a.day_status} /> },
   ];
 
   const leaveCols: Column<LeaveRequest>[] = [
     { key: "employee_name", title: "الموظف" },
-    { key: "leave_type", title: "النوع", width: "90px", render: (l) => LEAVE_TYPE_LABELS[l.leave_type] },
+    { key: "leave_type", title: "النوع", width: "90px", render: (l) => LEAVE_TYPE_LABELS[l.leave_type] ?? leaveTypes.find((t) => t.code === l.leave_type)?.name ?? l.leave_type },
     { key: "start_date", title: "من", width: "100px", render: (l) => dateFmt(l.start_date) },
     { key: "end_date", title: "إلى", width: "100px", render: (l) => dateFmt(l.end_date) },
     { key: "days_count", title: "الأيام", width: "70px", render: (l) => <span className="tnum">{l.days_count}</span> },
@@ -403,7 +468,7 @@ export default function HrPage() {
     { key: "employee_name", title: "الموظف" },
     { key: "violation_date", title: "التاريخ", width: "110px", render: (v) => dateFmt(v.violation_date) },
     { key: "violation_type", title: "النوع" },
-    { key: "deduction_amount", title: "الخصم", width: "100px", render: (v) => <span className="tnum font-bold text-ember">{money(v.deduction_amount)}</span> },
+    { key: "deduction_amount", title: "الخصم", width: "100px", render: (v) => <Hidden v={v.deduction_amount} f={money} /> },
   ];
 
   const payrollCols: Column<PayrollRun>[] = [
@@ -480,21 +545,60 @@ export default function HrPage() {
       <Card className="!p-0">
         <div className="px-5 pt-4">
           <Tabs value={tab} onChange={(t) => changeTab(t as Tab)} items={[
-            ...(canView ? [{ key: "employees" as Tab, label: "الموظفون" }] : []),
+            ...(canView ? [{ key: "dashboard" as Tab, label: "لوحة الموارد البشرية" }, { key: "employees" as Tab, label: "الموظفون" }] : []),
             ...(canAttendance ? [{ key: "attendance" as Tab, label: "الحضور والانصراف" }] : []),
             { key: "leave" as Tab, label: "الإجازات" },
             ...(canViolations ? [{ key: "violations" as Tab, label: "المخالفات" }] : []),
             ...(canPayroll ? [{ key: "payroll" as Tab, label: "الرواتب" }] : []),
             ...(canCustody ? [{ key: "custody" as Tab, label: "العهد" }] : []),
             { key: "requests" as Tab, label: "الطلبات" },
+            ...(canView ? [{ key: "contracts" as Tab, label: "العقود" }, { key: "documents" as Tab, label: "المستندات" }, { key: "org" as Tab, label: "الهيكل والدوام" }, { key: "settings" as Tab, label: "الإعدادات" }] : []),
           ]} />
         </div>
 
         <div className="p-5">
+          {tab === "dashboard" && canView && <HrDashboard onGo={(t) => changeTab(t as Tab)} />}
+
+          {tab === "contracts" && canView && <ContractsPanel canManage={canManage} employees={employees} />}
+          {tab === "documents" && canView && <DocumentsPanel canManage={canManage} employees={employees} />}
+          {tab === "org" && canView && <OrgPanel canManage={canManage} />}
+          {tab === "settings" && canView && <HrSettingsPanel canManage={canManage} canEditRules={canPayroll} />}
+
           {tab === "employees" && canView && (
-            <DataTable columns={empCols} rows={employees} searchKeys={["full_name", "job_title"]}
-                      searchPlaceholder="بحث بالاسم أو الوظيفة..." emptyText="لا يوجد موظفون بعد"
-                      toolbar={canManage && <Button onClick={openCreateEmp}>+ موظف جديد</Button>} />
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <input value={fSearch} onChange={(e) => setFSearch(e.target.value)} placeholder="بحث: اسم، جوال، بريد، هوية، قسم، وظيفة..."
+                       className="h-9 min-w-[14rem] flex-1 rounded-lg border border-line bg-ink-2 px-3 text-t-sm focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15" />
+                <Select className="!w-36" value={fBranch} onChange={(e) => setFBranch(e.target.value)}><option value="">كل الفروع</option>{branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Select>
+                <Select className="!w-36" value={fDept} onChange={(e) => setFDept(e.target.value)}><option value="">كل الأقسام</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</Select>
+                <Select className="!w-32" value={fNat} onChange={(e) => setFNat(e.target.value)}><option value="">كل الجنسيات</option><option value="saudi">سعودي</option><option value="non">غير سعودي</option></Select>
+                <Select className="!w-32" value={fStatus} onChange={(e) => setFStatus(e.target.value)}><option value="">كل الحالات</option><option value="active">على رأس العمل</option><option value="ended">منتهي الخدمة</option></Select>
+                <Select className="!w-32" value={fContract} onChange={(e) => setFContract(e.target.value)}><option value="">كل العقود</option>{Object.entries(CONTRACT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select>
+                {canManage && <Button onClick={openCreateEmp}>+ موظف جديد</Button>}
+              </div>
+              <p className="text-t-xs text-text-dim">{filteredEmployees.length} من {employees.length} موظف</p>
+              {/* جدول على الشاشات الكبيرة */}
+              <div className="hidden md:block"><DataTable columns={empCols} rows={filteredEmployees} emptyText="لا يوجد موظفون مطابقون للبحث" /></div>
+              {/* بطاقات على الجوال */}
+              <div className="space-y-2 md:hidden">
+                {!filteredEmployees.length ? <p className="py-8 text-center text-t-sm text-text-dim">لا يوجد موظفون مطابقون للبحث</p> : filteredEmployees.map((e) => (
+                  <div key={e.id} className="rounded-card border border-line bg-ink-2 p-3 shadow-card">
+                    <Link href={`/hr/${e.id}`} className="flex items-center gap-3">
+                      <Avatar name={e.full_name} size={44} />
+                      <span className="min-w-0 flex-1"><span className="block font-extrabold">{e.full_name}</span>
+                        <span className="block text-t-xs text-text-dim">{e.position_name || e.job_title || "—"} · {e.branch_name || "بدون فرع"}</span></span>
+                      {e.is_active ? <Badge tone="success">نشط</Badge> : <Badge>منتهي</Badge>}
+                    </Link>
+                    <div className="mt-2 flex gap-2 text-t-xs font-bold">
+                      <Link href={`/hr/${e.id}?tab=attendance`} className="text-petrol">الحضور</Link><span className="text-line">|</span>
+                      {canSalary && <><Link href={`/hr/${e.id}?tab=salary`} className="text-petrol">الرواتب</Link><span className="text-line">|</span></>}
+                      <Link href={`/hr/${e.id}?tab=leave`} className="text-petrol">الإجازات</Link>
+                      {canManage && <button className="ms-auto text-petrol" onClick={() => openEditEmp(e)}>تعديل</button>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {tab === "attendance" && (
@@ -582,10 +686,25 @@ export default function HrPage() {
               </Select>
             </Field>
           </div>
+          <div className="grid gap-2 sm:grid-cols-4">
+            <Field label="القسم"><Select value={empForm.departmentId} onChange={(e) => setEmpForm({ ...empForm, departmentId: e.target.value, positionId: "" })}>
+              <option value="">— بدون —</option>{departments.filter((d) => d.is_active).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</Select></Field>
+            <Field label="الوظيفة"><Select value={empForm.positionId} onChange={(e) => setEmpForm({ ...empForm, positionId: e.target.value })}>
+              <option value="">— بدون —</option>{positions.filter((x) => x.is_active && (!empForm.departmentId || !x.department_id || x.department_id === empForm.departmentId)).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</Select></Field>
+            <Field label="المدير المباشر"><Select value={empForm.managerId} onChange={(e) => setEmpForm({ ...empForm, managerId: e.target.value })}>
+              <option value="">— بدون —</option>{employees.filter((x) => x.is_active && !(empModal?.mode === "edit" && empModal.emp.id === x.id)).map((x) => <option key={x.id} value={x.id}>{x.full_name}</option>)}</Select></Field>
+            <Field label="جدول الدوام" hint="يُحسب التأخير والإضافي منه"><Select value={empForm.scheduleId} onChange={(e) => setEmpForm({ ...empForm, scheduleId: e.target.value })}>
+              <option value="">— غير محدد —</option>{schedules.filter((x) => x.is_active).map((x) => <option key={x.id} value={x.id}>{x.name} ({x.start_time}–{x.end_time})</option>)}</Select></Field>
+          </div>
           <div className="grid gap-2 sm:grid-cols-3">
             <Field label="رقم الجوال"><Input value={empForm.phone} className="tnum" onChange={(e) => setEmpForm({ ...empForm, phone: e.target.value })} /></Field>
             <Field label="الجنسية"><Input value={empForm.nationality} onChange={(e) => setEmpForm({ ...empForm, nationality: e.target.value })} /></Field>
             <Field label="تاريخ التعيين"><Input type="date" className="tnum" value={empForm.hireDate} onChange={(e) => setEmpForm({ ...empForm, hireDate: e.target.value })} /></Field>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Field label="الجنس"><Select value={empForm.gender} onChange={(e) => setEmpForm({ ...empForm, gender: e.target.value })}><option value="">—</option><option value="male">ذكر</option><option value="female">أنثى</option></Select></Field>
+            <Field label="البريد الإلكتروني"><Input type="email" dir="ltr" value={empForm.email} onChange={(e) => setEmpForm({ ...empForm, email: e.target.value })} /></Field>
+            <Field label="العنوان"><Input value={empForm.address} onChange={(e) => setEmpForm({ ...empForm, address: e.target.value })} /></Field>
           </div>
           <label className="flex items-center gap-2 text-t-sm font-bold text-text-dim">
             <Switch checked={empForm.isSaudi} onChange={(v) => setEmpForm({ ...empForm, isSaudi: v })} />
@@ -593,11 +712,11 @@ export default function HrPage() {
           </label>
           <div className="grid gap-2 sm:grid-cols-3">
             <Field label="رقم الهوية / الإقامة">
-              <Input value={empForm.iqamaNumber} className="tnum" onChange={(e) => setEmpForm({ ...empForm, iqamaNumber: e.target.value })} />
+              <Input value={empForm.iqamaNumber} className="tnum" disabled={!canIdentity} onChange={(e) => setEmpForm({ ...empForm, iqamaNumber: e.target.value })} />
             </Field>
             {!empForm.isSaudi && (
               <Field label="تاريخ انتهاء الإقامة" hint="لتنبيهات التجديد المبكرة">
-                <Input type="date" className="tnum" value={empForm.iqamaExpiryDate} onChange={(e) => setEmpForm({ ...empForm, iqamaExpiryDate: e.target.value })} />
+                <Input type="date" className="tnum" disabled={!canIdentity} value={empForm.iqamaExpiryDate} onChange={(e) => setEmpForm({ ...empForm, iqamaExpiryDate: e.target.value })} />
               </Field>
             )}
             <Field label="رمز اعتماد أوامر العمل" hint="4-6 أرقام فريدة — يدخله الموظف على التابلت. فارغ = بدون رمز">
@@ -624,27 +743,38 @@ export default function HrPage() {
             </Field>
           )}
           <div className="grid gap-2 sm:grid-cols-3">
-            <Field label="الراتب الأساسي"><Input type="number" min={0} step="0.01" className="tnum" value={empForm.basicSalary} onChange={(e) => setEmpForm({ ...empForm, basicSalary: +e.target.value || 0 })} /></Field>
-            <Field label="البدلات الشهرية" hint="سكن/نقل/أخرى — تُضاف لصافي الراتب">
-              <Input type="number" min={0} step="0.01" className="tnum" value={empForm.allowances} onChange={(e) => setEmpForm({ ...empForm, allowances: +e.target.value || 0 })} />
-            </Field>
-            <Field label="رقم الآيبان"><Input value={empForm.iban} className="tnum" onChange={(e) => setEmpForm({ ...empForm, iban: e.target.value })} /></Field>
+            <Field label="رقم التسجيل في التأمينات" hint="للمتابعة فقط — لا يغيّر الحساب"><Input value={empForm.gosiNumber} className="tnum" onChange={(e) => setEmpForm({ ...empForm, gosiNumber: e.target.value })} /></Field>
+            <Field label="حالة الاشتراك"><Select value={empForm.gosiStatus} onChange={(e) => setEmpForm({ ...empForm, gosiStatus: e.target.value })}>
+              <option value="">غير محدد</option><option value="مسجّل">مسجّل</option><option value="غير مسجّل">غير مسجّل</option><option value="موقوف">موقوف</option></Select></Field>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <Field label="عمولة المبيعات">
-              <Select value={empForm.commissionType}
-                      onChange={(e) => setEmpForm({ ...empForm, commissionType: e.target.value as CommissionType })}>
-                {Object.entries(COMMISSION_TYPE_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
-              </Select>
-            </Field>
-            {empForm.commissionType !== "none" && (
-              <Field label="نسبة العمولة %" hint="تُحسب تلقائياً عند تشغيل الرواتب">
-                <Input type="number" min={0} max={100} step="0.1" className="tnum" value={empForm.commissionPct}
-                       onChange={(e) => setEmpForm({ ...empForm, commissionPct: +e.target.value || 0 })} />
+          {canSalary ? (<>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Field label="الراتب الأساسي"><Input type="number" min={0} step="0.01" className="tnum" value={empForm.basicSalary} onChange={(e) => setEmpForm({ ...empForm, basicSalary: +e.target.value || 0 })} /></Field>
+              <Field label="رقم الآيبان"><Input value={empForm.iban} className="tnum" dir="ltr" onChange={(e) => setEmpForm({ ...empForm, iban: e.target.value })} /></Field>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Field label="بدل السكن"><Input type="number" min={0} step="0.01" className="tnum" value={empForm.housingAllowance} onChange={(e) => setEmpForm({ ...empForm, housingAllowance: +e.target.value || 0 })} /></Field>
+              <Field label="بدل النقل"><Input type="number" min={0} step="0.01" className="tnum" value={empForm.transportAllowance} onChange={(e) => setEmpForm({ ...empForm, transportAllowance: +e.target.value || 0 })} /></Field>
+              <Field label="بدلات أخرى" hint="الإجمالي يُحسب في الخادم ويُضاف لصافي الراتب"><Input type="number" min={0} step="0.01" className="tnum" value={empForm.otherAllowance} onChange={(e) => setEmpForm({ ...empForm, otherAllowance: +e.target.value || 0 })} /></Field>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Field label="عمولة المبيعات">
+                <Select value={empForm.commissionType}
+                        onChange={(e) => setEmpForm({ ...empForm, commissionType: e.target.value as CommissionType })}>
+                  {Object.entries(COMMISSION_TYPE_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                </Select>
               </Field>
-            )}
-          </div>
-          {empForm.commissionType !== "none" && !empForm.linkedUserId && (
+              {empForm.commissionType !== "none" && (
+                <Field label="نسبة العمولة %" hint="تُحسب تلقائياً عند تشغيل الرواتب">
+                  <Input type="number" min={0} max={100} step="0.1" className="tnum" value={empForm.commissionPct}
+                         onChange={(e) => setEmpForm({ ...empForm, commissionPct: +e.target.value || 0 })} />
+                </Field>
+              )}
+            </div>
+          </>) : (
+            <div className="rounded-lg bg-ink-3 p-2.5 text-t-xs font-bold text-text-dim">الراتب والبدلات والآيبان والعمولة محجوبة — تحتاج صلاحية «عرض الرواتب والبدلات والآيبان».</div>
+          )}
+          {canSalary && empForm.commissionType !== "none" && !empForm.linkedUserId && (
             <div className="rounded-lg bg-brass-soft p-2.5 text-t-xs font-bold text-brass">
               العمولة تُحسَب من فواتير الكاشير المرتبط بحساب دخول — اربط حساب دخول للموظف بالأعلى ليُحسب له شيء.
             </div>
@@ -673,8 +803,9 @@ export default function HrPage() {
           )}
           <div className="grid grid-cols-2 gap-2">
             <Field label="نوع الإجازة">
-              <Select value={leaveForm.leaveType} onChange={(e) => setLeaveForm({ ...leaveForm, leaveType: e.target.value as LeaveType })}>
+              <Select value={leaveForm.leaveType} onChange={(e) => setLeaveForm({ ...leaveForm, leaveType: e.target.value })}>
                 {Object.entries(LEAVE_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                {leaveTypes.filter((t) => t.is_active).map((t) => <option key={t.code} value={t.code}>{t.name}</option>)}
               </Select>
             </Field>
             <Field label="عدد الأيام"><div className="pt-2 tnum text-t-md text-text-dim">
@@ -873,6 +1004,7 @@ export default function HrPage() {
                     <th className="px-2 py-2 text-right">سلفة</th>
                     <th className="px-2 py-2 text-right">تأمينات (موظف)</th>
                     <th className="px-2 py-2 text-right">الصافي</th>
+                    <th className="w-16 px-2 py-2" />
                   </tr>
                 </thead>
                 <tbody>
@@ -885,6 +1017,7 @@ export default function HrPage() {
                       <td className="px-2 py-1.5 tnum text-ember">{s.advance_deduction > 0 ? `-${money(s.advance_deduction)}` : "—"}</td>
                       <td className="px-2 py-1.5 tnum text-text-dim">{s.gosi_employee > 0 ? `-${money(s.gosi_employee)}` : "—"}</td>
                       <td className="px-2 py-1.5 tnum font-bold">{money(s.net_pay)}</td>
+                      <td className="px-2 py-1.5"><Button variant="ghost" size="xs" onClick={() => printPayslip(s, viewPayslips.run)}>طباعة</Button></td>
                     </tr>
                   ))}
                 </tbody>

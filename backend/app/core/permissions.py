@@ -79,6 +79,8 @@ PERMISSIONS = [
         {"key": "hr.payroll",       "label": "الرواتب"},
         {"key": "hr.custody",          "label": "عهد الموظفين (مالية وعينية)"},
         {"key": "hr.requests_approve", "label": "اعتماد طلبات الموظفين العامة (نقل/مستلزمات/بلاغ عطل)"},
+        {"key": "hr.salary.view",      "label": "عرض الرواتب والبدلات والآيبان"},
+        {"key": "hr.identity.view",    "label": "عرض أرقام الهوية والإقامة"},
     ]},
     {"group": "مركز ملاحظات الخدمة", "items": [
         {"key": "service_notes.view",   "label": "عرض الملاحظات والمحادثات"},
