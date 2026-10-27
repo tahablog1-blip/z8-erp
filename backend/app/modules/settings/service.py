@@ -637,21 +637,22 @@ async def list_audit_log(company_id: str, page: int = 1, page_size: int = 50,
     if user_id:
         _add("user_id = ${n}", user_id)
     if entity:
-        _add("entity = ${n}", entity)
+        _add("COALESCE(entity, scope) = ${n}", entity)
     if date_from:
         _add("created_at >= ${n}::timestamptz", date_from)
     if date_to:
         _add("created_at < (${n}::date + interval '1 day')", date_to)
     if q:
-        _add("(user_email ILIKE ${n} OR action ILIKE ${n} OR entity ILIKE ${n} "
-             "OR COALESCE(new_value,'') ILIKE ${n} OR COALESCE(reason,'') ILIKE ${n})", f"%{q}%")
+        _add("(COALESCE(user_email, actor_name, '') ILIKE ${n} OR action ILIKE ${n} OR COALESCE(entity, scope, '') ILIKE ${n} "
+             "OR COALESCE(new_value, details, '') ILIKE ${n} OR COALESCE(reason,'') ILIKE ${n})", f"%{q}%")
 
     where_sql = " AND ".join(where)
     total_row = await fetchrow(f"SELECT count(*) AS c FROM audit_log WHERE {where_sql}", *args)
     offset = (page - 1) * page_size
     rows = await fetch(
-        f"""SELECT id, branch_id, user_id, user_email, action, entity, entity_id,
-                   old_value, new_value, reason, created_at
+        f"""SELECT id, branch_id, user_id, COALESCE(user_email, actor_name) AS user_email, action,
+                   COALESCE(entity, scope) AS entity, entity_id,
+                   old_value, COALESCE(new_value, details) AS new_value, reason, created_at
             FROM audit_log WHERE {where_sql}
             ORDER BY created_at DESC LIMIT {page_size} OFFSET {offset}""",
         *args)
@@ -668,8 +669,8 @@ async def list_audit_log(company_id: str, page: int = 1, page_size: int = 50,
 async def audit_log_entities(company_id: str) -> list[str]:
     """قيم entity المميّزة — تُستخدم في فلتر "النوع" بالواجهة."""
     rows = await fetch(
-        "SELECT DISTINCT entity FROM audit_log WHERE company_id=$1 ORDER BY entity", company_id)
-    return [r["entity"] for r in rows]
+        "SELECT DISTINCT COALESCE(entity, scope) AS e FROM audit_log WHERE company_id=$1 AND COALESCE(entity, scope) IS NOT NULL ORDER BY 1", company_id)
+    return [r["e"] for r in rows]
 
 
 # ══════════════════ البريد الإلكتروني (SMTP) — جزء محرك الإشعارات ══════════════════

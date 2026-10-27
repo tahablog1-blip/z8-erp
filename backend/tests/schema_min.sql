@@ -34,7 +34,7 @@ CREATE TABLE stocktake_items (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), ses
   product_id UUID NOT NULL REFERENCES products(id), snapshot_qty INTEGER NOT NULL DEFAULT 0, counted_qty INTEGER, note TEXT, unit_cost numeric(12,2) NOT NULL DEFAULT 0, item_condition VARCHAR,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), UNIQUE (session_id, product_id));
 CREATE TABLE audit_log (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), company_id UUID NOT NULL, branch_id UUID, actor_id text, actor_name TEXT, action TEXT NOT NULL,
-  scope TEXT, car_id uuid, details TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+  scope TEXT, car_id uuid, details TEXT, user_id UUID, user_email TEXT, entity TEXT, entity_id TEXT, old_value TEXT, new_value TEXT, reason TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
 CREATE TABLE stocktake_count_log (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), session_id UUID NOT NULL REFERENCES stocktake_sessions(id) ON DELETE CASCADE, product_id UUID NOT NULL,
   counted_qty INTEGER NOT NULL, item_condition VARCHAR, note TEXT, counted_by UUID, counted_by_name TEXT, counted_at TIMESTAMPTZ NOT NULL DEFAULT now());
 
