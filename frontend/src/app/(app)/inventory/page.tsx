@@ -9,7 +9,14 @@ import { useAuth } from "@/lib/auth";
 import { DataTable, Column } from "@/components/DataTable";
 import { StockItemsEditor, StockLine } from "@/components/StockItemsEditor";
 import { Product } from "@/modules/products/types";
+import Link from "next/link";
 import { MIcon } from "@/components/m-icon";
+import { StockCenter } from "@/components/inventory/StockCenter";
+import { MovementsPanel } from "@/components/inventory/MovementsPanel";
+import { AlertsPanel } from "@/components/inventory/AlertsPanel";
+import { AnalyticsPanel } from "@/components/inventory/AnalyticsPanel";
+import { PeriodPicker, defaultPeriod, type Period } from "@/components/inventory/shared";
+import type { Loc as InvLoc } from "@/lib/inventory/types";
 import {
   Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch, Tabs,
 } from "@/components/ui";
@@ -49,21 +56,12 @@ type VoucherDetail = {
   items: { productId: string; productLabel: string; barcode: string | null; qty: number }[];
 };
 
-type Move = {
-  id: string; move_type: string; to_loc_type: string; to_loc_id: string;
-  product_label: string | null; qty: number; move_no: string | null;
-  supplier_name: string | null; unit_cost: number | null; created_at: string;
-};
-
 const dateFmt = (s: string) =>
   new Date(s).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), {
     year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
   });
 
 export default function InventoryPage() {
-  // ── 🔔 نقطة إعادة الطلب ──
-  const [reorder, setReorder] = useState<{ productId: string; name: string; barcode: string | null; onHand: number; minQty: number; suggestedQty: number; lastSupplier: string | null }[] | null>(null);
-  useEffect(() => { api<typeof reorder>("/inventory/reorder-suggestions").then(setReorder).catch(() => setReorder([])); }, []);
   const { hasPerm, user } = useAuth();
   const canManageStock = hasPerm("products.view_stock");
   const canRequest = hasPerm("inventory.request");
@@ -146,23 +144,27 @@ export default function InventoryPage() {
     pending: { label: "بانتظار الموافقة", tone: "warn" },
     approved: { label: "تمت الموافقة", tone: "info" },
     rejected: { label: "مرفوض", tone: "neutral" },
-    fulfilled: { label: "تم التنفيذ ✓", tone: "good" },
+    fulfilled: { label: "تم التنفيذ", tone: "good" },
   };
 
   const canReceive = hasPerm("products.view_stock", "purchasing.invoices");
 
-  const [tab, setTab] = useState<"levels" | "vouchers" | "moves" | "requests">("levels");
+  type Tab = "levels" | "vouchers" | "moves" | "requests" | "alerts" | "analytics";
+  const [tab, setTab] = useState<Tab>("levels");
   useEffect(() => { if (tab === "requests") loadRequests(); }, [tab, reqFilter]);
-  const [levels, setLevels] = useState<Level[]>([]);
+  const [levels, setLevels] = useState<Level[]>([]);   // لا يُحمَّل إلا عند فتح نموذج التحويل/السند (لتحذير الرصيد)
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
-  const [moves, setMoves] = useState<Move[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [suppliers, setSuppliers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [pageErr, setPageErr] = useState("");
-  const [onlyLow, setOnlyLow] = useState(false);
-  const [locFilter, setLocFilter] = useState("");
+  // مركز القيادة: الموقع والفترة مشتركان بين كل الأقسام. الفترة للحركة فقط — الرصيد الحالي لحظي.
+  const [loc, setLoc] = useState("");
+  const [locs, setLocs] = useState<InvLoc[]>([]);
+  const [period, setPeriod] = useState<Period>(defaultPeriod());
+  const [deadDays, setDeadDays] = useState(90);
+  const [moveProduct, setMoveProduct] = useState<{ id: string; label: string } | null>(null);
 
   // ── نماذج السندات ──
   const [receiveOpen, setReceiveOpen] = useState(false);
@@ -179,15 +181,15 @@ export default function InventoryPage() {
   async function load() {
     setLoading(true);
     try {
-      const [lv, vo, mv, pr, br, sp] = await Promise.all([
-        api<Level[]>("/inventory/levels"),
+      const [vo, pr, br, sp, lc] = await Promise.all([
         api<Voucher[]>("/inventory/vouchers"),
-        api<Move[]>("/inventory/moves?limit=100"),
         api<Product[]>("/products").then((ps) => ps.filter((p) => !p.is_service)),
         api<Branch[]>("/branches"),
         api<string[]>("/inventory/suppliers"),
+        api<InvLoc[]>("/inventory/overview/locations"),
       ]);
-      setLevels(lv); setVouchers(vo); setMoves(mv);
+      setVouchers(vo); setLocs(lc);
+      if (lc.length === 1) setLoc(lc[0].value);
       setProducts(pr); setBranches(br); setSuppliers(sp);
       setPageErr("");
     } catch (e: any) { setPageErr(e.message); }
@@ -210,30 +212,25 @@ export default function InventoryPage() {
     return map;
   }, [levels, fromLoc]);
 
-  const visibleLevels = useMemo(() => levels.filter((l) =>
-    (!onlyLow || l.is_low) &&
-    (!locFilter || `${l.loc_type}:${l.loc_id}` === locFilter)
-  ), [levels, onlyLow, locFilter]);
 
-  const lowItems = useMemo(
-    () => levels.filter((l) => l.is_low).sort((a, b) => (a.min_qty - a.qty < b.min_qty - b.qty ? 1 : -1)),
-    [levels],
-  );
-  const lowCount = lowItems.length;
-  const [showLowPanel, setShowLowPanel] = useState(false);
 
   // ── فتح النماذج ──
   function openReceive() {
     setLines([]); setSupplierName(""); setNote(""); setErr(""); setReceiveOpen(true);
   }
-  function openTransfer() {
-    setLines([]); setNote(""); setErr("");
-    setFromLoc(`warehouse:${WAREHOUSE_LOC_ID}`);
+  async function loadLevels() {
+    try { setLevels(await api<Level[]>("/inventory/levels")); } catch { /* التحذير المبكر اختياري؛ الباك اند هو من يرفض الرصيد غير الكافي */ }
+  }
+  function openTransfer(preset?: { productId: string; productLabel: string; barcode: string | null }[], from?: string) {
+    loadLevels();
+    setLines((preset ?? []).map((p) => ({ productId: p.productId, productLabel: p.productLabel, barcode: p.barcode, qty: 1 })));
+    setNote(""); setErr("");
+    setFromLoc(from || `warehouse:${WAREHOUSE_LOC_ID}`);
     setToLoc(branches[0] ? `branch:${branches[0].id}` : "");
     setTransferOpen(true);
   }
   async function openVoucher(moveNo: string) {
-    setErr("");
+    setErr(""); loadLevels();
     try {
       const v = await api<VoucherDetail>(`/inventory/vouchers/${moveNo}`);
       setVoucher(v);
@@ -309,70 +306,6 @@ export default function InventoryPage() {
     finally { setBusy(false); }
   }
 
-  async function saveShelfLocation(l: Level, value: string) {
-    try {
-      await api("/inventory/shelf-location", {
-        method: "PUT",
-        body: JSON.stringify({
-          locType: l.loc_type, locId: l.loc_id, productId: l.product_id,
-          shelfLocation: value || null,
-        }),
-      });
-      setLevels((prev) => prev.map((x) =>
-        x.loc_type === l.loc_type && x.loc_id === l.loc_id && x.product_id === l.product_id
-          ? { ...x, shelf_location: value || null } : x
-      ));
-    } catch (e: any) { await appAlert(e.message); }
-  }
-
-  // ══════════════════ الأعمدة ══════════════════
-
-  const levelCols: Column<Level>[] = [
-    {
-      key: "name", title: "الصنف",
-      render: (l) => (
-        <div>
-          <div className="font-extrabold">{l.name}{l.spec ? ` — ${l.spec}` : ""}</div>
-          <div className="text-[11px] text-text-dim">{l.category}</div>
-        </div>
-      ),
-    },
-    { key: "loc_name", title: "الموقع", width: "180px" },
-    {
-      key: "qty", title: "الرصيد", width: "100px",
-      render: (l) => (
-        <span className={`tnum text-[14px] font-black ${l.is_low ? "text-ember" : ""}`}>{l.qty}</span>
-      ),
-    },
-    { key: "unit", title: "الوحدة", width: "80px", render: (l) => l.unit || "—" },
-    {
-      key: "min_qty", title: "حد الانخفاض", width: "100px",
-      render: (l) => l.min_qty > 0 ? <span className="tnum">{l.min_qty}</span>
-                                   : <span className="text-text-dim">—</span>,
-    },
-    {
-      key: "is_low", title: "الحالة", width: "110px",
-      render: (l) => l.is_low
-        ? <Badge tone="warn">يحتاج تزويد</Badge>
-        : <Badge tone="good">كافٍ</Badge>,
-    },
-    {
-      key: "shelf_location", title: "موقع الرف", width: "130px",
-      render: (l) => (
-        <Input
-          defaultValue={l.shelf_location || ""}
-          placeholder="رف A-3"
-          className="!h-7 !py-1 !text-[11.5px]"
-          onBlur={(e) => {
-            const v = e.target.value.trim();
-            if (v === (l.shelf_location || "")) return;
-            saveShelfLocation(l, v);
-          }}
-        />
-      ),
-    },
-  ];
-
   const voucherCols: Column<Voucher>[] = [
     {
       key: "moveNo", title: "رقم السند", width: "130px",
@@ -410,33 +343,6 @@ export default function InventoryPage() {
     },
   ];
 
-  const moveCols: Column<Move>[] = [
-    {
-      key: "created_at", title: "التاريخ", width: "160px",
-      render: (m) => <span className="text-[12px] text-text-dim">{dateFmt(m.created_at)}</span>,
-    },
-    {
-      key: "move_no", title: "السند", width: "120px",
-      render: (m) => <span className="tnum">{m.move_no || "—"}</span>,
-    },
-    {
-      key: "move_type", title: "النوع", width: "90px",
-      render: (m) => m.move_type === "receive"
-        ? <Badge tone="good">استلام</Badge>
-        : m.move_type === "adjust" ? <Badge tone="warn">تسوية جرد</Badge>
-        : <Badge tone="info">تحويل</Badge>,
-    },
-    { key: "product_label", title: "الصنف" },
-    {
-      key: "qty", title: "الكمية", width: "80px",
-      render: (m) => <span className="tnum font-bold">{m.qty}</span>,
-    },
-    {
-      key: "supplier_name", title: "المورد", width: "140px",
-      render: (m) => m.supplier_name || <span className="text-text-dim">—</span>,
-    },
-  ];
-
   function printVoucher() {
     if (!voucher) return;
     const body =
@@ -463,100 +369,72 @@ export default function InventoryPage() {
                 `سند رقم ${voucher.moveNo}`, body);
   }
 
+  const locName = locs.find((l) => l.value === loc)?.name;
+  const canTransfer = canManageStock;
+  const canStocktake = hasPerm("inventory.stocktake");
+  const canPurchase = hasPerm("purchasing.orders", "purchasing.invoices");
+  const TABS = [
+    { key: "levels", label: "الأرصدة" },
+    { key: "moves", label: "حركة المخزون" },
+    { key: "vouchers", label: "السندات والتحويلات" },
+    { key: "alerts", label: "التنبيهات وإعادة الطلب" },
+    { key: "analytics", label: "التحليلات" },
+    ...((canRequest || canApproveRequests) ? [{ key: "requests", label: "طلبات الفروع" }] : []),
+  ] as { key: Tab; label: string }[];
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-[19px] font-extrabold">المخزون</h1>
-
-      {/* ══════════ 🔔 نقطة إعادة الطلب التلقائية ══════════ */}
-      {reorder && reorder.length > 0 && (
-        <div className="rounded-card border border-brass/40 bg-brass-soft/50 p-4 shadow-card">
-          <h2 className="mb-2 flex items-center gap-1.5 text-[13.5px] font-black text-brass">
-            🔔 أصناف وصلت حد إعادة الطلب ({reorder.length})
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-[12px]">
-              <thead className="text-[11px] font-black text-text-dim">
-                <tr>
-                  <th className="px-2 py-1.5 text-right">الصنف</th>
-                  <th className="px-2 py-1.5">الرصيد</th>
-                  <th className="px-2 py-1.5">الحد الأدنى</th>
-                  <th className="px-2 py-1.5">اقتراح الطلب</th>
-                  <th className="px-2 py-1.5 text-left">آخر مورد</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reorder.slice(0, 15).map((r) => (
-                  <tr key={r.productId} className="border-t border-line/60">
-                    <td className="px-2 py-1.5 font-bold">{r.name}</td>
-                    <td className="tnum px-2 py-1.5 text-center font-black text-ember">{r.onHand}</td>
-                    <td className="tnum px-2 py-1.5 text-center text-text-dim">{r.minQty}</td>
-                    <td className="tnum px-2 py-1.5 text-center font-black text-emerald">+{r.suggestedQty}</td>
-                    <td className="px-2 py-1.5 text-left text-text-dim">{r.lastSupplier || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="mt-2 text-[10.5px] text-text-dim">الاقتراح = ضِعف الحد الأدنى − الرصيد الحالي · حدّد الحد الأدنى لكل صنف من شاشة الأصناف</p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-t-3xl font-black">المخزون</h1>
+          <p className="mt-1 text-t-sm text-text-dim">إدارة ومتابعة المخزون والكميات والحركات والفروع والمستودعات.</p>
         </div>
-      )}
-        <div className="flex gap-2">
-          {canReceive && <Button onClick={openReceive}>+ استلام من مورد</Button>}
-          {canManageStock && <Button variant="ghost" onClick={openTransfer}>تحويل مخزون</Button>}
-          {canRequest && <Button onClick={openRequestModal}>+ طلب أصناف لفرعي</Button>}
+        <div className="flex flex-wrap gap-2">
+          {canReceive && <Button onClick={openReceive}><MIcon name="move_to_inbox" className="!text-[16px]" />استلام مخزون</Button>}
+          {canTransfer && <Button variant="outline" onClick={() => openTransfer()}><MIcon name="swap_horiz" className="!text-[16px]" />تحويل مخزون</Button>}
+          {canStocktake && <Link href="/inventory/stocktake" className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-[13px] font-semibold text-text hover:border-petrol hover:text-petrol"><MIcon name="fact_check" className="!text-[16px]" />جرد وتسوية</Link>}
+          {hasPerm("products.create") && <Link href="/products" className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-[13px] font-semibold text-text-dim hover:border-petrol hover:text-petrol"><MIcon name="add" className="!text-[16px]" />إضافة صنف</Link>}
+          {canRequest && <Button variant="ghost" onClick={openRequestModal}>طلب أصناف لفرعي</Button>}
         </div>
-      </div>
+      </header>
 
       <ErrorNote msg={pageErr} />
 
-      {lowCount > 0 && (
-        <div className="rounded-lg border border-ember/30 bg-ember-bg px-4 py-2.5 text-[12.5px]">
-          <button
-            onClick={() => setShowLowPanel((v) => !v)}
-            className="flex w-full items-center justify-between font-bold text-ember"
-          >
-            <span>⚠ {lowCount} رصيد وصل حد الانخفاض أو أقل — موزّعة على المواقع أدناه</span>
-            <span className="text-[11px]">{showLowPanel ? "إخفاء ▲" : "عرض التفاصيل ▼"}</span>
-          </button>
-          {showLowPanel && (
-            <div className="mt-2.5 max-h-64 overflow-y-auto rounded-lg bg-ink-3/40">
-              <table className="w-full text-[12px]">
-                <thead className="sticky top-0 bg-ink-1/80 text-[11px] font-black text-text-dim">
-                  <tr>
-                    <th className="px-2 py-1.5 text-right">الصنف</th>
-                    <th className="px-2 py-1.5 text-right">الموقع</th>
-                    <th className="px-2 py-1.5 text-center">الرصيد</th>
-                    <th className="px-2 py-1.5 text-center">الحد الأدنى</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lowItems.map((l) => (
-                    <tr key={`${l.loc_type}:${l.loc_id}:${l.product_id}`} className="border-t border-line/40">
-                      <td className="px-2 py-1.5 font-bold">{l.name}</td>
-                      <td className="px-2 py-1.5 text-text-dim">{l.loc_name}</td>
-                      <td className={`tnum px-2 py-1.5 text-center font-black ${l.qty <= 0 ? "text-ember" : ""}`}>{l.qty}</td>
-                      <td className="tnum px-2 py-1.5 text-center text-text-dim">{l.min_qty}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-line bg-ink-2 px-3 py-2 shadow-card">
+        <PeriodPicker value={period} onChange={setPeriod} />
+        <label className="flex items-center gap-1.5 text-t-xs font-bold text-text-dim">راكد بعد
+          <Select value={String(deadDays)} onChange={(e) => setDeadDays(Number(e.target.value))} aria-label="مدة الركود" className="!w-auto !py-1">
+            {[30, 60, 90, 180].map((d) => <option key={d} value={d}>{d} يوماً</option>)}
+          </Select>
+        </label>
+        <p className="text-t-xs text-text-dim">الفترة للحركة فقط؛ الأرصدة والقيم لحظية من النظام.</p>
+      </div>
+
+      <Tabs value={tab} onChange={setTab} items={TABS} />
+
+      <div>
+        {tab === "levels" && (
+          <StockCenter loc={loc} locs={locs} onLoc={setLoc} period={period} deadDays={deadDays} canTransfer={canTransfer} canStocktake={canStocktake}
+            onTransfer={(lns, from) => openTransfer(lns, from)} onShowMoves={(id, label) => { setMoveProduct({ id, label }); setTab("moves"); }} />
+        )}
+        {tab === "moves" && (
+          <MovementsPanel loc={loc} period={period} product={moveProduct} onClearProduct={() => setMoveProduct(null)} canCost={canManageStock} />
+        )}
+        {tab === "alerts" && <AlertsPanel loc={loc} deadDays={deadDays} canPurchase={canPurchase} canCost={canManageStock} />}
+        {tab === "analytics" && <AnalyticsPanel loc={loc} period={period} deadDays={deadDays} onPickLoc={(v) => { setLoc(v); setTab("levels"); }} onPickCategory={() => setTab("levels")} />}
+        {(tab === "vouchers" || tab === "requests") && (
+          <Card className="!p-0"><div className="p-5">
+          {tab === "vouchers" && (
+            <DataTable
+              columns={voucherCols}
+              rows={vouchers}
+              loading={loading}
+              searchKeys={["moveNo", "from", "to"]}
+              searchPlaceholder="بحث برقم السند أو الموقع..."
+              emptyText="لا توجد سندات بعد"
+            />
           )}
-        </div>
-      )}
 
-      <Card className="!p-0">
-        <div className="px-5 pt-4">
-          <Tabs value={tab} onChange={setTab} items={[
-            { key: "levels", label: "الأرصدة" },
-            { key: "vouchers", label: "السندات" },
-            { key: "moves", label: "سجل الحركات" },
-            ...(((canRequest || canApproveRequests) ? [{ key: "requests", label: "طلبات الفروع" }] : []) as { key: "requests"; label: string }[]),
-          ] as { key: "levels" | "vouchers" | "moves" | "requests"; label: string }[]} />
-        </div>
-
-        <div className="p-5">
           {tab === "requests" && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -610,55 +488,9 @@ export default function InventoryPage() {
               </div>
             </div>
           )}
-          {tab === "levels" && (
-            <DataTable
-              columns={levelCols}
-              rows={visibleLevels}
-              loading={loading}
-              searchKeys={["name", "category", "spec", "barcode", "loc_name", "shelf_location"]}
-              searchPlaceholder="بحث بالصنف أو الموقع..."
-              emptyText="لا توجد أرصدة بعد — سجّل أول استلام من مورد"
-              toolbar={
-                <div className="flex items-center gap-2">
-                  <Select value={locFilter} onChange={(e) => setLocFilter(e.target.value)}
-                          className="!w-48">
-                    <option value="">كل المواقع</option>
-                    {locations.map((l) => (
-                      <option key={l.value} value={l.value}>{l.label}</option>
-                    ))}
-                  </Select>
-                  <label className="flex cursor-pointer items-center gap-1.5 text-[12.5px] font-bold text-text-dim">
-                    <Switch size="sm" checked={onlyLow} onChange={setOnlyLow} />
-                    الناقص فقط
-                  </label>
-                </div>
-              }
-            />
-          )}
-
-          {tab === "vouchers" && (
-            <DataTable
-              columns={voucherCols}
-              rows={vouchers}
-              loading={loading}
-              searchKeys={["moveNo", "from", "to"]}
-              searchPlaceholder="بحث برقم السند أو الموقع..."
-              emptyText="لا توجد سندات بعد"
-            />
-          )}
-
-          {tab === "moves" && (
-            <DataTable
-              columns={moveCols}
-              rows={moves}
-              loading={loading}
-              searchKeys={["product_label", "move_no", "supplier_name"]}
-              searchPlaceholder="بحث بالصنف أو رقم السند..."
-              emptyText="لا توجد حركات بعد"
-            />
-          )}
-        </div>
-      </Card>
+          </div></Card>
+        )}
+      </div>
 
       {/* ══════════ سند استلام من مورد ══════════ */}
       <Modal open={receiveOpen} size="full" onClose={() => setReceiveOpen(false)}
