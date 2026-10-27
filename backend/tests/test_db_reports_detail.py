@@ -25,7 +25,7 @@ def world(db_ready):
     async def go():
         async with db.pool().acquire() as c:
             await c.execute("TRUNCATE invoices, invoice_items, invoice_returns, products, users, customers, cars, branches, accounts, journal_entries, journal_lines, stock_moves, "
-                            "hr_employees, hr_attendance, hr_leave_requests, hr_contracts, hr_work_schedules, hr_departments, hr_payroll_runs, hr_payslips, treasury_vouchers, inventory, invoice_payments, audit_log RESTART IDENTITY CASCADE")
+                            "hr_employees, hr_attendance, hr_leave_requests, hr_contracts, hr_work_schedules, hr_departments, hr_payroll_runs, hr_payslips, treasury_vouchers, inventory, invoice_payments, audit_log, customer_ledger, supplier_ledger RESTART IDENTITY CASCADE")
             b1, b2, u1, p1, p2, car = (uuid.uuid4() for _ in range(6))
             await c.execute("INSERT INTO branches (id, company_id, name) VALUES ($1,$3,'الرياض'),($2,$3,'جدة')", b1, b2, CID)
             await c.execute("INSERT INTO users (id, company_id, full_name) VALUES ($1,$2,'كاشير أ')", u1, CID)
@@ -145,7 +145,7 @@ def test_reconciliation_covers_treasury_and_inventory(world):
     from app.modules.reports import detail
     r = run(lambda: detail.reconciliation(U(role="admin"), None, None, None))
     c = {x["key"]: x for x in r["checks"]}
-    assert {"revenue", "vat", "cogs", "treasury", "inventory"} <= set(c)
+    assert {"revenue", "vat", "cogs", "treasury", "inventory", "receivables", "payables"} <= set(c)
     assert c["treasury"]["ok"] and c["treasury"]["invoices"] == 0                      # لا سندات ولا قيود خزينة
     assert c["inventory"]["ok"] and c["inventory"]["invoices"] == 0 and c["inventory"]["ledger"] == 0
 
@@ -201,3 +201,25 @@ def test_pdf_export_same_permissions_and_content(world):
         full, limited = text(U(role="admin")), text(U(perms=["reports.sales"]))
         assert "300.00" in full and "180.00" in full                                  # التكلفة تظهر لصاحب الصلاحية المالية
         assert "180.00" not in limited and "300.00" in limited                        # ولا تظهر لغيره في الملف
+
+
+def test_reconciliation_receivables_and_payables(world):
+    from app.core import db
+    from app.modules.reports import detail
+
+    async def seed():
+        ar, ap = uuid.uuid4(), uuid.uuid4()
+        await db.execute("INSERT INTO accounts (id,company_id,code,name,type) VALUES ($1,$3,'1020','ذمم مدينة','asset'),($2,$3,'2020','ذمم دائنة','liability')", ar, ap, CID)
+        je = uuid.uuid4()
+        await db.execute("INSERT INTO journal_entries (id,company_id,entry_date) VALUES ($1,$2,CURRENT_DATE)", je, CID)
+        await db.execute("INSERT INTO journal_lines (entry_id,account_id,debit,credit) VALUES ($1,$2,700,0),($1,$3,0,300)", je, ar, ap)       # مدين 700 / دائن 300
+        await db.execute("INSERT INTO customer_ledger (company_id,customer_id,entry_type,amount) VALUES ($1,$2,'invoice',1000),($1,$2,'payment',-300)", CID, uuid.uuid4())   # 700 ✓
+        await db.execute("INSERT INTO supplier_ledger (company_id,supplier_id,entry_type,amount) VALUES ($1,$2,'invoice',350)", CID, uuid.uuid4())                              # 350 مقابل 300 ✗
+    run(seed)
+    r = run(lambda: detail.reconciliation(U(role="admin"), None, None, None))
+    c = {x["key"]: x for x in r["checks"]}
+    assert c["receivables"]["invoices"] == 700 and c["receivables"]["ledger"] == 700 and c["receivables"]["ok"]
+    assert c["payables"]["invoices"] == 350 and c["payables"]["ledger"] == 300 and c["payables"]["diff"] == 50 and not c["payables"]["ok"]
+    assert "الذمم الدائنة" in r["warning"]
+    scoped = run(lambda: detail.reconciliation(U(perms=["accounting.view_reports"], branch=world["b1"]), None, None, None))
+    assert {x["key"]: x for x in scoped["checks"]}["payables"]["ok"] is None          # الدفاتر على مستوى الشركة
