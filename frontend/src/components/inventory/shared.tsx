@@ -11,20 +11,23 @@ export function StatusPill({ s }: { s: ItemStatus }) {
 
 export const fmtN = (n: number | null | undefined) => (n == null ? "—" : Number(n).toLocaleString("en-US"));
 export const fmtM = (n: number | null | undefined) => (n == null ? "—" : Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+/** مبلغ بإشارة صحيحة داخل سياق RTL (السالب يظهر -123 لا 123-) */
+export const Money = ({ v }: { v: number | null | undefined }) => <span dir="ltr" className="inline-block">{fmtM(v)}</span>;
 export const fmtD = (s: string | null | undefined) => (s ? new Date(s).toLocaleDateString("en-GB") : "—");
 export const fmtDT = (s: string | null | undefined) => (s ? new Date(s).toLocaleString("en-GB", { hour12: false, dateStyle: "short", timeStyle: "short" }) : "—");
 
 export type Period = { key: PeriodKey; from: string; to: string };
 export const defaultPeriod = (): Period => ({ key: "month", ...rangeFor("month") });
-const QUICK = PERIODS.filter((p) => ["today", "week", "month"].includes(p.key));
+const DEFAULT_KEYS = ["today", "week", "month"];
 
 /** فترة الحركة فقط — لا تؤثر على الرصيد الحالي (الرصيد دائماً لحظي من السيرفر) */
-export function PeriodPicker({ value, onChange }: { value: Period; onChange: (p: Period) => void }) {
+export function PeriodPicker({ value, onChange, keys = DEFAULT_KEYS }: { value: Period; onChange: (p: Period) => void; keys?: string[] }) {
   const [custom, setCustom] = useState(value.key === "custom");
+  const QUICK = PERIODS.filter((p) => keys.includes(p.key));
   return (
     <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="فترة الحركة">
       {QUICK.map((p) => (
-        <button key={p.key} aria-pressed={value.key === p.key} onClick={() => { setCustom(false); onChange({ key: p.key, ...rangeFor(p.key as "today" | "week" | "month") }); }}
+        <button key={p.key} aria-pressed={value.key === p.key} onClick={() => { setCustom(false); onChange({ key: p.key, ...rangeFor(p.key) }); }}
           className={`rounded-full border px-3 py-1 text-t-xs font-bold ${value.key === p.key ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol"}`}>{p.ar}</button>
       ))}
       <button aria-pressed={custom || value.key === "custom"} onClick={() => setCustom((c) => !c)}
