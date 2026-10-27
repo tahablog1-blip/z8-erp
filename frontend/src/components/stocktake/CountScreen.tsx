@@ -9,9 +9,10 @@ import { appConfirm } from "@/components/dialog";
 import { fmtMoney } from "@/lib/dashboard/format";
 import { downloadCsv, fmtDT } from "@/lib/customers/format";
 import { kpisHTML, printReport, tableHTML } from "@/lib/print";
+import Link from "next/link";
 import {
-  ACTION_LABEL, STATUS_LABEL, STATUS_TONE, VAR_BG, VAR_LABEL, VAR_TEXT, signed, varState,
-  type ImportPreview, type StocktakeDetail, type StocktakeItem, type TimelineEvent, type VarState,
+  ACTION_LABEL, CONDITION_LABEL, COUNT_TYPE_LABEL, STATUS_LABEL, STATUS_TONE, VAR_BG, VAR_LABEL, VAR_TEXT, signed, varState,
+  type CountRound, type ImportPreview, type StocktakeDetail, type StocktakeItem, type TimelineEvent, type VarState,
 } from "@/lib/stocktake/types";
 
 const PAGE = 60;
@@ -45,6 +46,8 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
   const [shown, setShown] = useState(PAGE);
   const [draft, setDraft] = useState<Record<string, string>>({});       // كميات مُدخلة لم تُحفظ بعد
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [conds, setConds] = useState<Record<string, string>>({});
+  const [hist, setHist] = useState<{ item: StocktakeItem; rows: CountRound[] | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
@@ -96,10 +99,10 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
   useEffect(() => setShown(PAGE), [q, filter, cat, tab]);
 
   // حفظ كمية صنف: الاستجابة تحمل الجلسة كاملة بأرقام الباك اند (اللقطة/الفرق/القيمة)
-  const save = useCallback((productId: string, qty: number, note?: string | null) => {
+  const save = useCallback((productId: string, qty: number, note?: string | null, condition?: string | null) => {
     const run = async () => {
       const d = await api<StocktakeDetail>(`/inventory/stocktakes/${detail.id}/items/${productId}`, {
-        method: "PUT", body: JSON.stringify({ countedQty: qty, note: note?.trim() || null }),
+        method: "PUT", body: JSON.stringify({ countedQty: qty, note: note?.trim() || null, condition: condition || null }),
       });
       onChange(d);
       setDraft((o) => { const n = { ...o }; delete n[productId]; return n; });
@@ -114,7 +117,7 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
     const raw = (draft[it.productId] ?? (it.countedQty == null ? "" : String(it.countedQty))).trim();
     if (raw === "" || !/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw))) { setErr("أدخل كمية صحيحة (عدد صحيح، صفر أو أكثر)."); return; }
     setErr(""); setMsg("");
-    try { await save(it.productId, Number(raw), notes[it.productId] ?? it.note); setMsg(`تم حفظ: ${it.name}`); }
+    try { await save(it.productId, Number(raw), notes[it.productId] ?? it.note, conds[it.productId] ?? it.condition); setMsg(`تم حفظ: ${it.name}`); }
     catch (e) { setErr(e instanceof Error ? e.message : "تعذر حفظ الكمية"); }
   }
 
@@ -124,7 +127,8 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
       for (const k of dirty) {
         const raw = (draft[k] ?? "").trim();
         if (!/^\d+$/.test(raw)) throw new Error("توجد كمية غير صحيحة — صحّحها أولاً");
-        await save(k, Number(raw), notes[k] ?? items.find((x) => x.productId === k)?.note);
+        const cur = items.find((x) => x.productId === k);
+        await save(k, Number(raw), notes[k] ?? cur?.note, conds[k] ?? cur?.condition);
       }
       setMsg("تم حفظ كل التغييرات.");
     } catch (e) { setErr(e instanceof Error ? e.message : "تعذر الحفظ"); } finally { setBusy(false); }
@@ -138,7 +142,7 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
     if (!it) { setScanHit(null); setScanMiss(c); return; }
     setScanMiss(""); setErr("");
     try {
-      const d = await save(it.productId, (it.countedQty ?? 0) + 1, it.note);
+      const d = await save(it.productId, (it.countedQty ?? 0) + 1, it.note, it.condition);
       setScanHit((d as StocktakeDetail).items.find((x) => x.productId === it.productId) ?? it);
     } catch (e) { setErr(e instanceof Error ? e.message : "تعذر تسجيل المسح"); }
   }
@@ -179,6 +183,12 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
   }
   useEffect(() => { if (tab === "log" && timeline === null) loadLog(); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  async function showHistory(it: StocktakeItem) {
+    setHist({ item: it, rows: null });
+    try { setHist({ item: it, rows: await api<CountRound[]>(`/inventory/stocktakes/${detail.id}/items/${it.productId}/history`) }); }
+    catch (e) { setErr(e instanceof Error ? e.message : "تعذر تحميل سجل العدّ"); setHist(null); }
+  }
+
   async function pickFile(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]; e.target.value = "";
     if (!f || busy) return;
@@ -210,8 +220,8 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
 
   function exportCsv() {
     downloadCsv(`stocktake-${detail.id.slice(0, 8)}.csv`,
-      ["الصنف", "الباركود", "التصنيف", "النظام", "الفعلي", "الفرق", "التكلفة", "قيمة الفرق", "الحالة", "ملاحظة"],
-      items.map((i) => [i.name, i.barcode, i.category, i.expectedQty, i.countedQty, i.difference, i.unitCost, i.diffValue, VAR_LABEL[varState(i)], i.note]));
+      ["الصنف", "الباركود", "التصنيف", "النظام", "الفعلي", "الفرق", "التكلفة", "قيمة الفرق", "الحالة", "حالة الصنف", "ملاحظة"],
+      items.map((i) => [i.name, i.barcode, i.category, i.expectedQty, i.countedQty, i.difference, i.unitCost, i.diffValue, VAR_LABEL[varState(i)], i.condition ? CONDITION_LABEL[i.condition] : "", i.note]));
   }
   function printMinutes() {
     const rows = reportRows.map((i) => [i.name, i.barcode || "—", i.expectedQty, i.countedQty ?? "—", signed(i.difference), fmtMoney(i.unitCost), fmtMoney(i.diffValue ?? 0), i.note || ""]);
@@ -235,12 +245,15 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
             <button onClick={onClose} className="mb-1 inline-flex items-center gap-1 text-t-sm font-bold text-petrol hover:underline">
               <MIcon name="arrow_forward" className="!text-[16px]" /> جرد المخزون
             </button>
-            <h2 className="text-t-2xl font-black">جرد {locName}</h2>
+            <h2 className="text-t-2xl font-black">{detail.name || `جرد ${locName}`}</h2>
             <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-t-xs text-text-dim">
               <Badge tone={STATUS_TONE[detail.status]}>{STATUS_LABEL[detail.status] || detail.status}</Badge>
               <span className="tnum" dir="ltr">#{detail.id.slice(0, 8)}</span>
               <span>{fmtDT(detail.createdAt)}</span>
               <span>المسؤول: {detail.createdByName || "—"}</span>
+              <span>{detail.name ? `${locName} · ` : ""}{COUNT_TYPE_LABEL[detail.countType ?? "full"]}{detail.categoryFilter ? `: ${detail.categoryFilter}` : ""}</span>
+              {detail.submittedByName && <span>أُرسل للمراجعة: {detail.submittedByName} · {fmtDT(detail.submittedAt)}</span>}
+              {detail.reopenCount > 0 && <span>أُعيد عدّه {detail.reopenCount} مرة{detail.lastReopenReason ? ` (آخرها: ${detail.lastReopenReason})` : ""}</span>}
               {detail.approvedByName && <span>اعتمده: {detail.approvedByName} · {fmtDT(detail.approvedAt)}</span>}
             </p>
             {detail.note && <p className="mt-1 text-t-sm text-text-dim">{detail.note}</p>}
@@ -266,7 +279,18 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
           </div>
         </div>
         {detail.status === "review" && !canApprove && <p className="mt-3 rounded-lg bg-brass-soft p-2.5 text-t-sm font-bold text-brass">بانتظار مستخدم لديه صلاحية اعتماد الجرد.</p>}
-        {detail.status === "approved" && <p className="mt-3 rounded-lg bg-emerald-bg p-2.5 text-t-sm font-bold text-emerald">تمت التسوية — الجلسة مقفلة ولا تقبل التعديل.</p>}
+        {detail.status === "approved" && (
+          <div className="mt-3 space-y-2">
+            <p className="rounded-lg bg-emerald-bg p-2.5 text-t-sm font-bold text-emerald">تمت التسوية — الجلسة مقفلة ولا تقبل التعديل.</p>
+            {(detail.adjustInNo || detail.adjustOutNo) && (
+              <p className="text-t-sm">سندات حركة المخزون الناتجة:{" "}
+                {[detail.adjustInNo, detail.adjustOutNo].filter(Boolean).map((n) => <Link key={n} href="/inventory" className="tnum me-3 font-black text-petrol hover:underline" dir="ltr">{n}</Link>)}
+                <span className="text-t-xs text-text-dim">(تبويب «السندات» في صفحة المخزون)</span></p>
+            )}
+            {detail.adjustNote && <p className="rounded-lg bg-brass-soft p-2.5 text-t-sm font-bold text-brass">{detail.adjustNote} — الأرصدة سُوّيت لكن لم يُسجَّل لها سند حركة؛ راجع مدير النظام.</p>}
+          </div>
+        )}
+        {detail.status === "cancelled" && <p className="mt-3 rounded-lg bg-ink-3 p-2.5 text-t-sm text-text-dim">أُلغيت بواسطة {detail.cancelledByName || "—"} · {fmtDT(detail.cancelledAt)}{detail.cancelReason ? ` — السبب: ${detail.cancelReason}` : ""}</p>}
 
         {/* التقدم */}
         <div className="mt-4">
@@ -330,9 +354,9 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
                       </div>
                       <div className="mt-2 flex justify-center gap-2">
                         <Button size="sm" variant="outline" aria-label="إنقاص واحد" disabled={(scanHit.countedQty ?? 0) <= 0}
-                          onClick={() => save(scanHit.productId, (scanHit.countedQty ?? 0) - 1, scanHit.note).then((d) => setScanHit(d.items.find((x) => x.productId === scanHit.productId) ?? null)).catch((e) => setErr(e.message))}>−</Button>
+                          onClick={() => save(scanHit.productId, (scanHit.countedQty ?? 0) - 1, scanHit.note, scanHit.condition).then((d) => setScanHit(d.items.find((x) => x.productId === scanHit.productId) ?? null)).catch((e) => setErr(e.message))}>−</Button>
                         <Button size="sm" aria-label="زيادة واحد"
-                          onClick={() => save(scanHit.productId, (scanHit.countedQty ?? 0) + 1, scanHit.note).then((d) => setScanHit(d.items.find((x) => x.productId === scanHit.productId) ?? null)).catch((e) => setErr(e.message))}>+</Button>
+                          onClick={() => save(scanHit.productId, (scanHit.countedQty ?? 0) + 1, scanHit.note, scanHit.condition).then((d) => setScanHit(d.items.find((x) => x.productId === scanHit.productId) ?? null)).catch((e) => setErr(e.message))}>+</Button>
                       </div>
                     </div>
                   )}
@@ -377,9 +401,17 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
                           <p className="font-bold">{it.name}</p>
                           <p className="mt-0.5 text-t-xs text-text-dim">{[it.category, it.spec, it.unit].filter(Boolean).join(" • ") || "—"}</p>
                           {canEditRow
-                            ? <input className="mt-1.5 w-full rounded-md border border-line bg-ink-2 p-1.5 text-t-xs" placeholder="ملاحظة (اختياري)" aria-label={`ملاحظة ${it.name}`}
-                                value={notes[it.productId] ?? it.note ?? ""} onChange={(e) => setNotes((o) => ({ ...o, [it.productId]: e.target.value }))} />
-                            : it.note && <p className="mt-1 text-t-xs text-text-dim">{it.note}</p>}
+                            ? <div className="mt-1.5 flex gap-1.5">
+                                <input className="min-w-0 flex-1 rounded-md border border-line bg-ink-2 p-1.5 text-t-xs" placeholder="ملاحظة (اختياري)" aria-label={`ملاحظة ${it.name}`}
+                                  value={notes[it.productId] ?? it.note ?? ""} onChange={(e) => setNotes((o) => ({ ...o, [it.productId]: e.target.value }))} />
+                                <select className="rounded-md border border-line bg-ink-2 p-1.5 text-t-xs" aria-label={`حالة ${it.name}`}
+                                  value={conds[it.productId] ?? it.condition ?? ""} onChange={(e) => setConds((o) => ({ ...o, [it.productId]: e.target.value }))}>
+                                  <option value="">الحالة</option>{Object.entries(CONDITION_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                </select>
+                              </div>
+                            : <>{it.condition && <span className="mt-1 inline-block rounded-full bg-ink-3 px-2 py-0.5 text-t-xs font-bold text-text-dim">{CONDITION_LABEL[it.condition]}</span>}{it.note && <p className="mt-1 text-t-xs text-text-dim">{it.note}</p>}</>}
+                          {it.countEntries > 1 && <button className="mt-1 text-t-xs font-bold text-petrol hover:underline" onClick={() => showHistory(it)}>عُدّ {it.countEntries} مرات — عرض السجل</button>}
+                          {it.countEntries === 1 && <button className="mt-1 text-t-xs text-text-dim hover:underline" onClick={() => showHistory(it)}>سجل العدّ</button>}
                         </td>
                         <td className="tnum p-2.5 text-t-xs" dir="ltr">{it.barcode || "—"}</td>
                         <td className="tnum p-2.5 font-bold">{it.expectedQty}</td>
@@ -458,6 +490,21 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
               </ol>}
         </div>
       )}
+
+      <Modal open={!!hist} title={hist ? `سجل عدّ: ${hist.item.name}` : ""} onClose={() => setHist(null)}>
+        {hist?.rows == null ? <p className="text-t-sm text-text-dim">جارٍ التحميل…</p> : (
+          <ol className="space-y-2">
+            {hist.rows.map((r) => (
+              <li key={r.round} className="rounded-lg bg-ink-3 p-2.5 text-t-sm">
+                <b>العدّ {r.round}:</b> <span className="tnum font-black">{r.countedQty}</span>
+                {r.condition && <span className="ms-2 text-t-xs">({CONDITION_LABEL[r.condition]})</span>}
+                <p className="text-t-xs text-text-dim">{r.countedByName || "—"} · {fmtDT(r.countedAt)}{r.note ? ` · ${r.note}` : ""}</p>
+              </li>
+            ))}
+            <p className="text-t-xs text-text-dim">القيمة المعتمدة للتسوية هي آخر عدّ؛ العدّات السابقة محفوظة ولا تُحذف.</p>
+          </ol>
+        )}
+      </Modal>
 
       <Modal open={reason !== null} title={reason === "reopen" ? "طلب إعادة العدّ" : "إلغاء جلسة الجرد"} onClose={() => { setReason(null); setReasonText(""); }}>
         <p className="mb-2 text-t-sm text-text-dim">{reason === "reopen" ? "ترجع الجلسة إلى «جاري الجرد» مع الإبقاء على الكميات المعدودة. السبب إلزامي ويُسجَّل." : "لن يتغير أي رصيد. يُسجَّل المستخدم والسبب ولا يُحذف شيء من التاريخ."}</p>

@@ -168,6 +168,9 @@ class StocktakeCreateBody(BaseModel):
     locType: str
     locId: str
     note: str | None = None
+    name: str | None = None
+    countType: str = "full"          # full | category
+    category: str | None = None
 
 
 class StocktakeReasonBody(BaseModel):
@@ -177,6 +180,7 @@ class StocktakeReasonBody(BaseModel):
 class StocktakeCountBody(BaseModel):
     countedQty: int
     note: str | None = None
+    condition: str | None = None     # good | damaged | expired | missing | unknown (معلومة فقط)
 
 
 def _check_stocktake_location(user: CurrentUser, loc_type: str, loc_id: str):
@@ -234,6 +238,7 @@ async def create_stocktake_api(
     return await service.create_stocktake(
         user.company_id, user.user_id, user.full_name,
         body.locType, body.locId, body.note,
+        name=body.name, count_type=body.countType, category=body.category,
     )
 
 
@@ -268,7 +273,19 @@ async def count_stocktake_item_api(
     return await service.count_stocktake_item(
         user.company_id, session_id, product_id,
         body.countedQty, body.note,
+        user_id=user.user_id, actor_name=user.full_name, condition=body.condition,
     )
+
+
+@router.get("/stocktakes/{session_id}/items/{product_id}/history")
+async def stocktake_item_history_api(
+    session_id: str,
+    product_id: str,
+    user: CurrentUser = Depends(require_permission("inventory.stocktake")),
+):
+    """سجل عدّ صنف داخل الجلسة (العدّ الأول والثاني…) — للقراءة فقط."""
+    await _check_stocktake_scope(user, session_id)
+    return await service.stocktake_item_history(user.company_id, session_id, product_id)
 
 
 @router.post("/stocktakes/{session_id}/review")
@@ -378,4 +395,5 @@ async def import_stocktake_api(
     scanned = _parse_barcodes(file.filename or "", data)
     return await service.import_stocktake_counts(
         user.company_id, session_id, scanned, commit, zeroRest,
+        user.user_id, user.full_name,
     )

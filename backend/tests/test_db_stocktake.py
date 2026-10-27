@@ -8,6 +8,7 @@ from conftest import CO, run
 
 pytestmark = pytest.mark.db
 CID = uuid.UUID(CO)
+U = str(uuid.uuid4())
 
 
 @pytest.fixture
@@ -17,7 +18,7 @@ def world(db_ready):
 
     async def go():
         async with db.pool().acquire() as c:
-            await c.execute("TRUNCATE stocktake_sessions, audit_log, inventory, products, branches RESTART IDENTITY CASCADE")
+            await c.execute("TRUNCATE stocktake_sessions, audit_log, inventory, products, branches, stock_moves RESTART IDENTITY CASCADE")
             oil, flt = uuid.uuid4(), uuid.uuid4()
             await c.execute("INSERT INTO products (id,company_id,name,barcode,cost_price) VALUES ($1,$3,'زيت','111',30),($2,$3,'فلتر','222',10)", oil, flt, CID)
             await c.execute("INSERT INTO inventory (company_id,loc_type,loc_id,product_id,qty) VALUES ($1,'warehouse','main',$2,10),($1,'warehouse','main',$3,4)", CID, oil, flt)
@@ -72,11 +73,11 @@ def test_reopen_requires_reason_and_keeps_counts(world):
         sid = (await _start())["id"]
         await s.count_stocktake_item(CO, sid, world["oil"], 9)
         with pytest.raises(HTTPException) as e:                       # لا إعادة عدّ لجلسة لم تُرسل للمراجعة
-            await s.reopen_stocktake(CO, sid, "u", "مدير", "سبب")
+            await s.reopen_stocktake(CO, sid, U, "مدير", "سبب")
         assert e.value.status_code == 409
-        await s.submit_stocktake_for_review(CO, sid, "u", "أمين")
+        await s.submit_stocktake_for_review(CO, sid, U, "أمين")
         with pytest.raises(HTTPException) as e:
-            await s.reopen_stocktake(CO, sid, "u", "مدير", "  ")
+            await s.reopen_stocktake(CO, sid, U, "مدير", "  ")
         assert e.value.status_code == 400
         back = await s.reopen_stocktake(CO, sid, str(uuid.uuid4()), "مدير", "فرق كبير في الزيت")
         assert back["status"] == "in_progress"
@@ -128,10 +129,98 @@ def test_approve_blocked_when_stock_moved_since_snapshot(world):
         from app.core import db
         sid = (await _start())["id"]
         await s.count_stocktake_item(CO, sid, world["oil"], 8)
-        await s.submit_stocktake_for_review(CO, sid, "u", "أمين")
+        await s.submit_stocktake_for_review(CO, sid, U, "أمين")
         await db.execute("UPDATE inventory SET qty=qty-1 WHERE product_id=$1", uuid.UUID(world["oil"]))   # بيع أثناء الجرد
         with pytest.raises(HTTPException) as e:
-            await s.approve_stocktake(CO, "u", "مدير", sid)
+            await s.approve_stocktake(CO, U, "مدير", sid)
         assert e.value.status_code == 409
         assert (await db.fetchrow("SELECT qty FROM inventory WHERE product_id=$1", uuid.UUID(world["oil"])))["qty"] == 9   # لم يُمسّ
+    run(go)
+
+
+def _sql(q, *a):
+    from app.core import db
+    return db.fetch(q, *a)
+
+
+def test_approval_records_stock_move_vouchers_and_links_session(world):
+    s = _svc()
+
+    async def go():
+        sid = (await _start())["id"]
+        await s.count_stocktake_item(CO, sid, world["oil"], 7)      # عجز 3
+        await s.count_stocktake_item(CO, sid, world["flt"], 6)      # زيادة 2
+        await s.submit_stocktake_for_review(CO, sid, U, "أمين")
+        done = await s.approve_stocktake(CO, str(uuid.uuid4()), "مدير", sid)
+        assert done["adjustInNo"].startswith("STI-") and done["adjustOutNo"].startswith("STO-") and done["adjustNote"] is None
+        moves = {r["move_no"]: r for r in await _sql("SELECT * FROM stock_moves WHERE move_type='adjust'")}
+        i, o = moves[done["adjustInNo"]], moves[done["adjustOutNo"]]
+        assert (i["qty"], i["from_loc_type"], i["to_loc_type"]) == (2, None, "warehouse")
+        assert (o["qty"], o["from_loc_type"], o["to_loc_type"]) == (3, "warehouse", None)
+        assert float(o["unit_cost"]) == 30.0
+        v = await s.get_voucher(CO, done["adjustOutNo"])
+        assert v["type"] == "adjust" and v["from"] == s.WAREHOUSE_LABEL and "عجز" in v["to"]
+        with pytest.raises(HTTPException) as e:                      # لا تعديل لسند تسوية
+            await s.edit_voucher(CO, U, "x", done["adjustOutNo"], [])
+        assert e.value.status_code == 409
+        tl = await s.stocktake_timeline(CO, sid)
+        assert done["adjustInNo"] in tl[-1]["details"]
+    run(go)
+
+
+def test_approval_survives_stock_move_rejection_and_reports_it(world):
+    s = _svc()
+
+    async def go():
+        from app.core import db
+        await db.execute("ALTER TABLE stock_moves ADD CONSTRAINT only_rt CHECK (move_type IN ('receive','transfer'))")
+        try:
+            sid = (await _start())["id"]
+            await s.count_stocktake_item(CO, sid, world["oil"], 7)
+            await s.submit_stocktake_for_review(CO, sid, U, "أمين")
+            done = await s.approve_stocktake(CO, U, "مدير", sid)
+            assert done["status"] == "approved" and done["adjustInNo"] is None and done["adjustOutNo"] is None
+            assert "تعذر تسجيل حركة المخزون" in done["adjustNote"]
+            assert (await db.fetchrow("SELECT qty FROM inventory WHERE product_id=$1", uuid.UUID(world["oil"])))["qty"] == 7
+        finally:
+            await db.execute("ALTER TABLE stock_moves DROP CONSTRAINT only_rt")
+    run(go)
+
+
+def test_count_history_keeps_every_round_and_condition(world):
+    s = _svc()
+
+    async def go():
+        sid = (await _start())["id"]
+        await s.count_stocktake_item(CO, sid, world["oil"], 7, "عبوات تالفة", U, "أمين", "damaged")
+        await s.submit_stocktake_for_review(CO, sid, U, "أمين")
+        await s.reopen_stocktake(CO, sid, U, "مدير", "تحقق")
+        d = await s.count_stocktake_item(CO, sid, world["oil"], 9, None, U, "أمين 2")
+        h = await s.stocktake_item_history(CO, sid, world["oil"])
+        assert [(x["round"], x["countedQty"], x["countedByName"]) for x in h] == [(1, 7, "أمين"), (2, 9, "أمين 2")]
+        assert h[0]["condition"] == "damaged" and h[0]["note"] == "عبوات تالفة"
+        it = next(i for i in d["items"] if i["productId"] == world["oil"])
+        assert it["countEntries"] == 2 and it["countedQty"] == 9
+        assert d["reopenCount"] == 1 and d["lastReopenReason"] == "تحقق" and d["submittedByName"] == "أمين"
+        with pytest.raises(HTTPException) as e:
+            await s.count_stocktake_item(CO, sid, world["oil"], 1, None, None, None, "bogus")
+        assert e.value.status_code == 400
+    run(go)
+
+
+def test_category_stocktake_scopes_items_and_cancel_fields(world):
+    s = _svc()
+
+    async def go():
+        from app.core import db
+        await db.execute("UPDATE products SET category='زيوت' WHERE name='زيت'")
+        await db.execute("UPDATE products SET category='فلاتر' WHERE name='فلتر'")
+        st = await s.create_stocktake(CO, U, "أمين", "warehouse", "main", None, "جرد الزيوت", "category", "زيوت")
+        assert st["totalItems"] == 1 and st["items"][0]["name"] == "زيت" and st["name"] == "جرد الزيوت" and st["countType"] == "category"
+        with pytest.raises(HTTPException):
+            await s.create_stocktake(CO, U, "أمين", "warehouse", "main", None, None, "category", None)
+        with pytest.raises(HTTPException):
+            await s.create_stocktake(CO, U, "أمين", "warehouse", "main", None, None, "category", "غير موجود")
+        c = await s.cancel_stocktake(CO, st["id"], U, "مدير", "خطأ")
+        assert (c["cancelledByName"], c["cancelReason"]) == ("مدير", "خطأ") and c["cancelledAt"]
     run(go)
