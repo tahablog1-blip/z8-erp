@@ -93,6 +93,7 @@ PERMISSIONS = [
         {"key": "settings.company", "label": "بيانات الشركة والمظهر"},
         {"key": "settings.users",   "label": "إدارة حسابات الموظفين"},
         {"key": "settings.whatsapp","label": "إعدادات واتساب"},
+        {"key": "settings.manage",  "label": "إعدادات النظام المتقدمة (المشرف الذكي...)"},
         {"key": "support.manage",   "label": "إدارة تذاكر الدعم"},
     ]},
 ]

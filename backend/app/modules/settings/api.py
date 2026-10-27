@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from ...core.db import execute, fetchrow
 from ...core.deps import CurrentUser, get_current_user, require_permission
 from ...core.audit import log_action
-from . import service
+from . import overview, service
 from .schemas import (
     CompanyOut, CompanyIn, LogoIn, RoleOut, RoleIn, SettingsDashboardOut,
     PrintingSettingsOut, PrintingSettingsIn, SystemSettingsOut, SystemSettingsIn,
@@ -426,3 +426,26 @@ async def set_ai_supervisor(body: AiSupervisorIn,
     await execute("UPDATE companies SET ai_supervisor_enabled=$1 WHERE id=$2",
                   body.enabled, user.company_id)
     return {"enabled": body.enabled}
+
+
+# ══════════════════ مركز الإعدادات: الحالة الفعلية + التفضيلات ══════════════════
+
+@router.get("/status")
+async def settings_status(user: CurrentUser = Depends(get_current_user)):
+    """حالة النظام الفعلية وتنبيهات الأمان — كل قسم يُرجَع فقط لمن يملك صلاحيته (وإلا null)"""
+    return await overview.status(user)
+
+
+class SettingsPrefsIn(BaseModel):
+    favorites: list[str] | None = None
+    recent: str | None = None
+
+
+@router.get("/prefs")
+async def settings_prefs(user: CurrentUser = Depends(get_current_user)):
+    return await overview.get_prefs(user)
+
+
+@router.put("/prefs")
+async def settings_prefs_put(body: SettingsPrefsIn, user: CurrentUser = Depends(get_current_user)):
+    return await overview.put_prefs(user, body.favorites, body.recent)

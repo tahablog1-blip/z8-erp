@@ -210,6 +210,11 @@ async def dashboard_status(company_id: str) -> dict:
         company_id)
     roles = await fetchrow("SELECT COUNT(*) AS n FROM roles WHERE company_id=$1", company_id)
 
+    pr = await fetchrow("SELECT COUNT(*)::int AS n FROM company_settings WHERE company_id=$1 AND key LIKE 'print.%'", company_id)
+    printing_ok = pr["n"] > 0
+    from . import overview as _ov
+    _app, _dump = _ov._app_backups(company_id), _ov._latest_db_dump()
+    backup_ok = bool(_app["count"] or (_dump and _dump["count"]))
     company_ok = bool(company and company["name"] and company["vat_number"] and company["cr_number"])
     branches_ok = bool(branches and branches["n"] > 0)
     users_ok = bool(users and users["n"] > 1)  # أكتر من حساب المالك نفسه
@@ -222,10 +227,13 @@ async def dashboard_status(company_id: str) -> dict:
         "usersActive": (users or {}).get("active", 0),
         "rolesCount": (roles or {}).get("n", 0),
         "setup": [
-            {"key": "company", "label": "بيانات المنشأة", "ok": company_ok},
-            {"key": "branches", "label": "الفروع", "ok": branches_ok},
-            {"key": "users", "label": "المستخدمون", "ok": users_ok},
-            {"key": "roles", "label": "الأدوار والصلاحيات", "ok": roles_ok},
+            {"key": "company", "label": "بيانات المنشأة", "ok": company_ok, "path": "/settings/company",
+             "hint": "الاسم والرقم الضريبي والسجل التجاري" + ("" if company_ok else " — ناقصة")},
+            {"key": "branches", "label": "الفروع", "ok": branches_ok, "path": "/branches", "hint": "فرع نشط واحد على الأقل"},
+            {"key": "users", "label": "المستخدمون", "ok": users_ok, "path": "/settings/users", "hint": "حساب غير حساب المالك"},
+            {"key": "roles", "label": "الأدوار والصلاحيات", "ok": roles_ok, "path": "/settings/roles", "hint": "دور واحد على الأقل"},
+            {"key": "printing", "label": "الطباعة", "ok": printing_ok, "path": "/settings/printing", "hint": "حُفظت إعدادات الطباعة مرة على الأقل"},
+            {"key": "backup", "label": "النسخ الاحتياطي", "ok": backup_ok, "path": "/settings/system", "hint": "توجد نسخة احتياطية واحدة على الأقل"},
         ],
     }
 
