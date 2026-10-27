@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from ...core.deps import CurrentUser, get_current_user, require_permission
+from . import overview as ov
 from . import service
 from .schemas import (
     LevelOut, MoveOut, MoveResult, QtyOut, ReceiveBody, ShelfLocationIn,
@@ -20,6 +21,57 @@ router = APIRouter()
 async def list_levels(user: CurrentUser = Depends(require_permission("products.view_stock"))):
     """أرصدة كل الأصناف في المستودع وكل الفروع"""
     return await service.list_levels(user.company_id)
+
+
+# ══════════ مركز قيادة المخزون (قراءة فقط) ══════════
+# كلها خلف products.view_stock (نفس صلاحية /levels) وتُقيَّد بفرع الموظف المربوط بفرع.
+
+@router.get("/overview")
+async def overview_api(
+    loc: str | None = Query(default=None), q: str | None = None, category: str | None = None, brand: str | None = None,
+    supplier: str | None = None, status: str | None = None, movement: str | None = None, sort: str | None = None,
+    dir: str | None = None, page: int = 1, pageSize: int = 25, qtyMin: str | None = None, qtyMax: str | None = None,
+    deadDays: int = 90, date_from: str | None = Query(default=None, alias="from"), date_to: str | None = Query(default=None, alias="to"),
+    user: CurrentUser = Depends(require_permission("products.view_stock")),
+):
+    """جدول الأرصدة (صنف × نطاق الموقع) مُصفّح من السيرفر + مؤشرات + حالة المخزون."""
+    return await ov.overview(user.company_id, user, {
+        "loc": loc, "q": q, "category": category, "brand": brand, "supplier": supplier, "status": status, "movement": movement,
+        "sort": sort, "dir": dir, "page": page, "pageSize": pageSize, "qtyMin": qtyMin, "qtyMax": qtyMax,
+        "deadDays": deadDays, "from": date_from, "to": date_to,
+    })
+
+
+@router.get("/overview/locations")
+async def overview_locations_api(user: CurrentUser = Depends(require_permission("products.view_stock"))):
+    return await ov.locations(user.company_id, user)
+
+
+@router.get("/overview/analytics")
+async def overview_analytics_api(
+    loc: str | None = None, deadDays: int = 90,
+    date_from: str | None = Query(default=None, alias="from"), date_to: str | None = Query(default=None, alias="to"),
+    user: CurrentUser = Depends(require_permission("products.view_stock")),
+):
+    return await ov.analytics(user.company_id, user, {"loc": loc, "deadDays": deadDays, "from": date_from, "to": date_to})
+
+
+@router.get("/overview/product/{product_id}")
+async def overview_product_api(product_id: str, user: CurrentUser = Depends(require_permission("products.view_stock"))):
+    return await ov.product_inventory(user.company_id, user, product_id)
+
+
+@router.get("/movements")
+async def movements_api(
+    loc: str | None = None, type: str | None = None, q: str | None = None, product: str | None = None,
+    page: int = 1, pageSize: int = 25,
+    date_from: str | None = Query(default=None, alias="from"), date_to: str | None = Query(default=None, alias="to"),
+    user: CurrentUser = Depends(require_permission("products.view_stock")),
+):
+    """سجل حركات المخزون (stock_moves) مُصفّح ومفلتر من السيرفر."""
+    return await ov.movements(user.company_id, user, {
+        "loc": loc, "type": type, "q": q, "product": product, "page": page, "pageSize": pageSize, "from": date_from, "to": date_to,
+    })
 
 
 @router.get("/qty", response_model=QtyOut)
