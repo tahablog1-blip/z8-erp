@@ -37,3 +37,14 @@ CREATE TABLE audit_log (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), company_i
   scope TEXT, car_id uuid, details TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
 CREATE TABLE stocktake_count_log (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), session_id UUID NOT NULL REFERENCES stocktake_sessions(id) ON DELETE CASCADE, product_id UUID NOT NULL,
   counted_qty INTEGER NOT NULL, item_condition VARCHAR, note TEXT, counted_by UUID, counted_by_name TEXT, counted_at TIMESTAMPTZ NOT NULL DEFAULT now());
+
+-- الموردون/المشتريات (أعمدة تقرؤها شاشة الموردين فقط)
+CREATE TABLE suppliers (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, name text, phone text, vat_number text, address text, payment_terms_days int DEFAULT 0,
+  category text, rating numeric, rating_note text, is_active boolean DEFAULT true, created_at timestamptz DEFAULT now(), updated_at timestamptz);
+CREATE TABLE purchase_invoices (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, supplier_id uuid, invoice_no text, supplier_invoice_ref text, invoice_date date DEFAULT CURRENT_DATE,
+  payment_terms text, due_date date, subtotal numeric(12,2) DEFAULT 0, vat_total numeric(12,2) DEFAULT 0, total numeric(12,2) DEFAULT 0, paid_total numeric(12,2) DEFAULT 0, status text DEFAULT 'unpaid',
+  created_by uuid, created_at timestamptz DEFAULT now());
+CREATE TABLE purchase_invoice_items (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), invoice_id uuid, product_id uuid, product_label text, qty int, unit_cost numeric(12,2), line_total numeric(12,2));
+CREATE TABLE supplier_ledger (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, supplier_id uuid, entry_type text, invoice_id uuid, amount numeric(12,2), note text, created_by uuid, created_at timestamptz DEFAULT now());
+CREATE TABLE supplier_payments (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, supplier_id uuid, invoice_id uuid, method text, amount numeric(12,2), note text, created_by uuid, created_at timestamptz DEFAULT now());
+CREATE TABLE journal_entries (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, entry_date date DEFAULT CURRENT_DATE, source_type text, source_id text);
