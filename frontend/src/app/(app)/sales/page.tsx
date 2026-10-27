@@ -827,9 +827,9 @@ export default function SalesPage() {
                       <td className="px-3 py-1.5">
                         {it.label}
                         {it.returned_qty > 0 && (
-                          <span className="mr-1.5 rounded-full bg-ember-bg px-2 py-0.5 text-t-xs font-bold text-ember">
+                          <Badge tone="danger" className="mr-1.5">
                             مرتجع {it.returned_qty}
-                          </span>
+                          </Badge>
                         )}
                       </td>
                       <td className="px-2 py-1.5 tnum">{it.qty}</td>
@@ -1064,7 +1064,7 @@ export default function SalesPage() {
         <div className="relative">
           <button onClick={() => setGearOpen((v) => !v)} aria-label="الإعدادات" title="الإعدادات — الوردية والتقارير"
                   className="flex items-center justify-center rounded-full p-1.5 transition hover:rotate-45"
-                  style={{ color: "#152647" }}>
+                  style={{ color: "var(--text-dim)" }}>
             <MIcon name="settings" className="!text-[24px]" />
           </button>
           {gearOpen && (
@@ -1110,9 +1110,9 @@ export default function SalesPage() {
       {posMode === "service" && screen === "pos" && (
       <div className="grid grid-cols-3 gap-2">
         {[
-          { icon: "schedule", label: "الانتظار", value: stats?.cars.queued ?? "…", sub: "", color: "#B07E14", onClick: () => openSvc("waiting"), href: "" },
-          { icon: "build", label: "في الخدمة", value: stats?.cars.inService ?? "…", sub: "", color: "#D06018", onClick: () => openSvc("in_service"), href: "" },
-          { icon: "task_alt", label: "خرجت اليوم", value: stats?.cars.doneToday ?? "…", sub: "", color: "#157F4C", onClick: () => {}, href: "/cars" },
+          { icon: "schedule", label: "الانتظار", value: stats?.cars.queued ?? "…", sub: "", color: "var(--brass)", onClick: () => openSvc("waiting"), href: "" },
+          { icon: "build", label: "في الخدمة", value: stats?.cars.inService ?? "…", sub: "", color: "var(--petrol)", onClick: () => openSvc("in_service"), href: "" },
+          { icon: "task_alt", label: "خرجت اليوم", value: stats?.cars.doneToday ?? "…", sub: "", color: "var(--emerald)", onClick: () => {}, href: "/cars" },
         ].map((t) => {
           const inner = (
             <div className="flex h-full flex-col items-center justify-center gap-0.5 rounded-card border border-line bg-ink-2 px-2 py-2 text-center shadow-card transition hover:-translate-y-0.5 hover:shadow-panel"
@@ -1328,7 +1328,7 @@ export default function SalesPage() {
                     </div>
                     <div className="mt-1 flex items-center justify-between">
                       {l.isService ? (
-                        <span className="rounded-full bg-brass-soft px-2 py-0.5 text-t-xs font-bold text-brass">خدمة — كمية ثابتة</span>
+                        <Badge tone="warning">خدمة — كمية ثابتة</Badge>
                       ) : (
                         <div className="flex items-center gap-1">
                           <button onClick={() => cartonDown(l.productId)} title="− كرتونة (12 قطعة)"
@@ -1533,9 +1533,9 @@ export default function SalesPage() {
                           <span><b className="tnum">{row.plate || "بدون لوحة"}</b>
                             <span className="mr-2 text-text-dim">{row.customer_name || "—"}</span>
                             {row.prepared_items && row.prepared_items.length > 0 && (
-                              <span className="mr-2 rounded-full bg-emerald-bg px-2 py-0.5 text-t-xs font-black text-emerald">
+                              <Badge tone="success" className="mr-2">
                                 فاتورة جاهزة
-                              </span>
+                              </Badge>
                             )}</span>
                           <span className="tnum text-t-xs text-text-dim">#{row.queue_no}</span>
                         </button>
@@ -1677,13 +1677,13 @@ export default function SalesPage() {
                         <td className="tnum px-3 py-3 font-black">{row.plate || "—"}</td>
                         <td className="px-3 py-3">
                           {row.prepared_items && row.prepared_items.length > 0 ? (
-                            <span className="rounded-full bg-emerald-bg px-2.5 py-1 text-t-xs font-black text-emerald">
+                            <Badge tone="success">
                               جاهزة — {row.prepared_items.length} صنف
-                            </span>
+                            </Badge>
                           ) : (
-                            <span className="rounded-full bg-ink-3 px-2.5 py-1 text-t-xs font-bold text-text-dim">
+                            <Badge tone="neutral">
                               بدون تجهيز
-                            </span>
+                            </Badge>
                           )}
                         </td>
                         <td className="tnum px-3 py-3 text-t-md font-black text-petrol">
@@ -1740,7 +1740,7 @@ export default function SalesPage() {
                     <span className="mr-2 tnum text-t-xs text-text-dim">
                       {new Date(inv.issued_at).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"))}
                     </span>
-                    {inv.is_returned && <span className="mr-2 rounded-full bg-ember-bg px-2 py-0.5 text-t-xs font-bold text-ember">مرتجعة</span>}
+                    {inv.is_returned && <Badge tone="danger" className="mr-2">مرتجعة</Badge>}
                   </span>
                   <span className="flex items-center gap-2">
                     <b className="tnum text-petrol">{money(Number(inv.total_inc))} ر.س</b>
@@ -1772,7 +1772,7 @@ export default function SalesPage() {
                 <span className={`mr-2 rounded-full px-2 py-0.5 text-t-xs font-bold ${i.source === "car" ? "bg-petrol-soft text-petrol" : "bg-ink-3 text-text-dim"}`}>
                   {i.source === "car" ? "خدمة" : "بيع"}
                 </span>
-                {i.is_returned && <span className="mr-1 rounded-full bg-ember-bg px-2 py-0.5 text-t-xs font-bold text-ember">مرتجعة</span>}
+                {i.is_returned && <Badge tone="danger" className="mr-1">مرتجعة</Badge>}
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="tnum font-bold">{money(i.total_inc)}</span>

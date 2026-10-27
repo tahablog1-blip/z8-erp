@@ -7,7 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { MIcon } from "@/components/m-icon";
-import { Button, EmptyState, Input } from "@/components/ui";
+import { Button, EmptyState, Input, Badge } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import { KpiCard, KpiSkeleton } from "@/components/dashboard/KpiCard";
 import { Skeleton } from "@/components/dashboard/Widget";
@@ -121,7 +121,7 @@ export default function ProductProfilePage() {
                 {p.brand && <span>العلامة: <b className="text-text">{p.brand}</b></span>}{p.category && <span>التصنيف: <b className="text-text">{p.category}</b></span>}
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                {p.isActive ? <span className="rounded-full bg-emerald-bg px-2 py-0.5 text-t-xs font-extrabold text-emerald">نشط</span> : <span className="rounded-full bg-ink-3 px-2 py-0.5 text-t-xs font-extrabold text-text-dim">غير نشط</span>}
+                {p.isActive ? <Badge tone="success">نشط</Badge> : <Badge tone="neutral">غير نشط</Badge>}
                 <StockBadge status={stockTone} /><TypeChips p={p} />
               </div>
             </div>
@@ -269,7 +269,7 @@ export default function ProductProfilePage() {
         <Card title="الباركود" icon="barcode" actions={<Button size="sm" onClick={() => setLabels(true)}><MIcon name="print" className="!text-[16px]" />طباعة الملصقات</Button>}>
           {!(p.barcode || p.sku) ? <EmptyState icon="barcode" title="لا يوجد باركود ولا SKU لهذا الصنف" description="أضف باركوداً من نموذج التعديل." action={canEdit ? <Button onClick={() => setEdit(true)}>تعديل الصنف</Button> : undefined} /> : (
             <div className="flex flex-wrap items-center gap-6">
-              <div className="rounded-card border border-line bg-white p-4 text-center" dangerouslySetInnerHTML={{ __html: barcodeSvg((p.barcode || p.sku)!, { height: 70, module: 1.8 }) + `<div style="font:600 13px monospace;direction:ltr;margin-top:4px">${(p.barcode || p.sku)!.replace(/[<>&]/g, "")}</div>` }} />
+              <div className="rounded-card border border-line bg-ink-2 p-4 text-center" dangerouslySetInnerHTML={{ __html: barcodeSvg((p.barcode || p.sku)!, { height: 70, module: 1.8 }) + `<div style="font:600 13px monospace;direction:ltr;margin-top:4px">${(p.barcode || p.sku)!.replace(/[<>&]/g, "")}</div>` }} />
               <div className="flex flex-col gap-2"><span className="text-t-sm text-text-dim">النوع: Code 128</span>
                 <div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => copy((p.barcode || p.sku)!)}><MIcon name="content_copy" className="!text-[16px]" />نسخ</Button><Button size="sm" variant="outline" onClick={downloadSvg}><MIcon name="download" className="!text-[16px]" />تنزيل SVG</Button></div></div>
             </div>)}

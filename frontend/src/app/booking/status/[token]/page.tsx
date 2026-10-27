@@ -36,7 +36,7 @@ export default function StatusTokenPage() {
 
   return (
     <div dir="rtl" className="grid min-h-screen place-items-center px-4" style={{ background: "var(--ink3)" }}>
-      <div className="w-full max-w-sm rounded-card bg-white p-6 text-center shadow-lg">
+      <div className="w-full max-w-sm rounded-card bg-ink-2 p-6 text-center shadow-lg">
         <div className="text-t-lg font-black" style={{ color: NAVY }}>مصدر الزيوت</div>
         {!err ? (
           <p className="mt-2 text-t-md font-bold" style={{ color: DIM }}>جارِ فتح المحادثة…</p>

@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { Button, IconButton, Input, Select } from "@/components/ui";
+import { Button, IconButton, Input, Select, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 import { PlateBadge } from "@/components/PlateBadge";
 import { CarBrandMark } from "@/components/CarBrandMark";
@@ -262,19 +262,9 @@ export default function ServiceNotesPage() {
   return (
     <div className="mx-auto max-w-[1200px] space-y-4">
       {/* ═══ العنوان ═══ */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2.5 page-title">
-            المحادثات والملاحظات
-            {totalUnread > 0 && (
-              <span className="rounded-full bg-emerald px-2.5 py-0.5 text-t-sm font-black text-white tnum">{totalUnread} غير مقروءة</span>
-            )}
-          </h1>
-          <p className="page-desc">
-            محادثات العملاء وملاحظات الخدمة في مكان واحد. الرسائل غير المقروءة تظهر أولاً.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHeader title={<>المحادثات والملاحظات{totalUnread > 0 && (
+              <span className="ms-2.5 rounded-full bg-emerald px-2.5 py-0.5 align-middle text-t-sm font-black text-white tnum">{totalUnread} غير مقروءة</span>
+            )}</>} description="محادثات العملاء وملاحظات الخدمة في مكان واحد. الرسائل غير المقروءة تظهر أولاً." actions={<><div className="flex items-center gap-2">
           <div className="flex rounded-card border border-line bg-ink-2 p-0.5" role="tablist" aria-label="طريقة العرض">
             {([["threads", "المحادثات", "forum"], ["table", "جدول الملاحظات", "table_rows"]] as const).map(([k, label, icon]) => (
               <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)}
@@ -287,8 +277,7 @@ export default function ServiceNotesPage() {
           <IconButton label="تحديث" onClick={() => load(true)} disabled={refreshing}>
             <MIcon name="refresh" className={`!text-[19px] ${refreshing ? "animate-spin" : ""}`} />
           </IconButton>
-        </div>
-      </div>
+        </div></>} />
 
       {/* ═══ البحث + الفلاتر ═══ */}
       <div className="space-y-3">
@@ -318,7 +307,7 @@ export default function ServiceNotesPage() {
               <button key={f.key} role="tab" aria-selected={on} onClick={() => setFilter(f.key)}
                 className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-t-sm font-bold transition
                   ${on ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol"}`}>
-                {f.key !== "all" && <span className={`h-2 w-2 rounded-full ${on ? "bg-white" : f.tone}`} aria-hidden />}
+                {f.key !== "all" && <span className={`h-2 w-2 rounded-full ${on ? "bg-ink-2" : f.tone}`} aria-hidden />}
                 {f.label}
                 <span className={`tnum rounded-full px-1.5 text-t-xs ${on ? "bg-white/20" : "bg-ink-3"}`}>{chipCount[f.key]}</span>
               </button>

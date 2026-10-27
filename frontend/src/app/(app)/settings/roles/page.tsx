@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Button, Card, ErrorNote, Field, Input, Switch, Textarea, PageHeader } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, Switch, Textarea, PageHeader, Badge } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type Role = {
@@ -121,7 +121,7 @@ export default function RolesSettingsPage() {
                   </div>
                 </div>
                 {r.is_system && (
-                  <span className="shrink-0 rounded-full bg-ink-3 px-2 py-0.5 text-t-xs font-bold text-text-dim">أساسي</span>
+                  <Badge tone="neutral">أساسي</Badge>
                 )}
               </div>
               {r.description && <p className="mt-2 text-t-xs text-text-dim">{r.description}</p>}

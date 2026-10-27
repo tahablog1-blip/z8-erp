@@ -104,7 +104,7 @@ function ProductPicker({ products, onPick, placeholder }: {
         </div>
       )}
       {q.trim() !== "" && results.length > 0 && (
-        <div className="max-h-56 overflow-y-auto rounded-lg border border-line bg-white">
+        <div className="max-h-56 overflow-y-auto rounded-lg border border-line bg-ink-2">
           {results.map((p, idx) => (
             <button
               key={p.id}

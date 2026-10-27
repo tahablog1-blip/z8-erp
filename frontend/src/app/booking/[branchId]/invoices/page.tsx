@@ -81,12 +81,12 @@ export default function MyInvoicesPage() {
         </div>
 
         {err && (
-          <p className="rounded-card bg-white px-4 py-3 text-center text-t-sm font-bold shadow" style={{ color: "var(--ember)" }}>{err}</p>
+          <p className="rounded-card bg-ink-2 px-4 py-3 text-center text-t-sm font-bold shadow" style={{ color: "var(--ember)" }}>{err}</p>
         )}
 
         {invoices === null && <p className="py-8 text-center text-t-md" style={{ color: DIM }}>جارِ التحميل...</p>}
         {invoices !== null && invoices.length === 0 && !err && (
-          <div className="rounded-card bg-white p-8 text-center shadow-lg">
+          <div className="rounded-card bg-ink-2 p-8 text-center shadow-lg">
             <MIcon name="receipt_long" className="!text-[42px]" />
             <p className="mt-2 text-t-md font-bold" style={{ color: DIM }}>لا توجد فواتير مسجلة بجوالك بعد</p>
           </div>
@@ -95,7 +95,7 @@ export default function MyInvoicesPage() {
         {(invoices || []).map((inv) => {
           const st = STATUS_META[inv.status] || null;
           return (
-            <div key={inv.id} className="kiosk-pop space-y-3 rounded-card bg-white p-4 shadow-lg">
+            <div key={inv.id} className="kiosk-pop space-y-3 rounded-card bg-ink-2 p-4 shadow-lg">
               {(inv.plate || inv.carLabel) && (
                 <div className="flex items-center gap-2 rounded-card px-3 py-2" style={{ background: "var(--ink3)" }}>
                   {inv.plate && (

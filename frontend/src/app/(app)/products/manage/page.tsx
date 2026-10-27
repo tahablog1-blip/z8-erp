@@ -6,7 +6,7 @@ import { api, getToken } from "@/lib/api";
 import { MIcon } from "@/components/m-icon";
 import { useAuth } from "@/lib/auth";
 import { DataTable, Column } from "@/components/DataTable";
-import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch, PageHeader } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import { Product, ProductLink, productLabel, money } from "@/modules/products/types";
 import ProductCards from "@/components/ProductCards";
@@ -45,13 +45,13 @@ function SearchSelect({ value, onChange, options, placeholder, disabled }: {
     <div className="relative" ref={boxRef}>
       <button type="button" disabled={disabled}
         onClick={() => { setOpen(!open); setQ(""); }}
-        className="flex w-full items-center justify-between rounded-card border border-line bg-white px-3 py-2 text-t-sm font-bold disabled:opacity-50"
+        className="flex w-full items-center justify-between rounded-card border border-line bg-ink-2 px-3 py-2 text-t-sm font-bold disabled:opacity-50"
         style={{ minHeight: 38 }}>
         <span className={value ? "" : "text-text-dim"}>{value || placeholder || "— اختر —"}</span>
         <MIcon name={open ? "expand_less" : "expand_more"} className="!text-[16px] text-text-dim" />
       </button>
       {open && !disabled && (
-        <div className="absolute z-30 mt-1 w-full rounded-card border border-line bg-white shadow-lg">
+        <div className="absolute z-30 mt-1 w-full rounded-card border border-line bg-ink-2 shadow-lg">
           <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
             placeholder="بحث..." className="w-full border-b border-line px-3 py-2 text-t-sm outline-none" />
           <div className="max-h-56 overflow-y-auto">
@@ -112,7 +112,7 @@ function ProductSearchSelect({ value, onChange, products, placeholder, disabled 
     <div className="relative" ref={boxRef}>
       <button type="button" disabled={disabled}
         onClick={() => { setOpen(!open); setQ(""); }}
-        className="flex w-full items-center justify-between rounded-card border border-line bg-white px-3 py-2 text-t-sm font-bold disabled:opacity-50"
+        className="flex w-full items-center justify-between rounded-card border border-line bg-ink-2 px-3 py-2 text-t-sm font-bold disabled:opacity-50"
         style={{ minHeight: 38 }}>
         <span className={selected ? "" : "text-text-dim"}>
           {selected ? productLabel(selected) : (placeholder || "— اختر —")}
@@ -120,7 +120,7 @@ function ProductSearchSelect({ value, onChange, products, placeholder, disabled 
         <MIcon name={open ? "expand_less" : "expand_more"} className="!text-[16px] text-text-dim" />
       </button>
       {open && !disabled && (
-        <div className="absolute z-30 mt-1 w-full rounded-card border border-line bg-white shadow-lg">
+        <div className="absolute z-30 mt-1 w-full rounded-card border border-line bg-ink-2 shadow-lg">
           <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
             placeholder="بحث بالاسم أو الباركود..."
             className="w-full border-b border-line px-3 py-2 text-t-sm outline-none" />
@@ -854,18 +854,15 @@ export default function ProductsPage() {
           <button onClick={() => setImportMsg("")} className="mr-2 opacity-60 hover:opacity-100"><MIcon name="close" className="!text-[15px]" /></button>
         </div>
       )}
-      <div className="flex items-center justify-between">
-        <h1 className="page-title">الأصناف</h1>
-        <div className="flex items-center gap-3">
+      <PageHeader title="الأصناف" description="إدارة الأصناف والتصنيفات والأدوات الجماعية." actions={<><div className="flex items-center gap-3">
           <span className="text-t-sm text-text-dim tnum">{rows.length} صنف نشط</span>
           <div className="flex overflow-hidden rounded-card border border-line">
             <button type="button" onClick={() => setView("cards")}
-              className={`px-3 py-1.5 text-t-sm font-bold ${view === "cards" ? "bg-petrol text-white" : "bg-white"}`}>كروت</button>
+              className={`px-3 py-1.5 text-t-sm font-bold ${view === "cards" ? "bg-petrol text-white" : "bg-ink-2"}`}>كروت</button>
             <button type="button" onClick={() => setView("table")}
-              className={`px-3 py-1.5 text-t-sm font-bold ${view === "table" ? "bg-petrol text-white" : "bg-white"}`}>جدول</button>
+              className={`px-3 py-1.5 text-t-sm font-bold ${view === "table" ? "bg-petrol text-white" : "bg-ink-2"}`}>جدول</button>
           </div>
-        </div>
-      </div>
+        </div></>} />
 
       <ErrorNote msg={pageErr} />
 
@@ -1429,8 +1426,8 @@ export default function ProductsPage() {
                     <div className="flex items-center justify-between text-t-sm">
                       <span className="font-black">
                         {c.category}
-                        {c.isOil && <span className="mr-1.5 rounded-full bg-brass-soft px-2 py-0.5 text-t-xs font-bold text-brass">زيت</span>}
-                        {c.isOilFilter && <span className="mr-1.5 rounded-full bg-petrol-soft px-2 py-0.5 text-t-xs font-bold text-petrol">فلتر زيت</span>}
+                        {c.isOil && <Badge tone="warning" className="mr-1.5">زيت</Badge>}
+                        {c.isOilFilter && <Badge tone="info" className="mr-1.5">فلتر زيت</Badge>}
                       </span>
                       <span className="tnum font-black text-petrol">{c.count}</span>
                     </div>
@@ -1570,7 +1567,7 @@ export default function ProductsPage() {
                   }} />
                 <span className="flex-1 font-bold">{productLabel(r)}</span>
                 {r.oil_brand && r.oil_brand !== assignFor?.name && (
-                  <span className="rounded-full bg-ink-3 px-2 py-0.5 text-t-xs text-text-dim">حالياً: {r.oil_brand}</span>
+                  <Badge tone="neutral">حالياً: {r.oil_brand}</Badge>
                 )}
               </label>
             ))}
@@ -1644,9 +1641,9 @@ export default function ProductsPage() {
                   }} />
                 <span className="flex-1 font-bold">{productLabel(r)}</span>
                 {r.oil_type && r.oil_type !== typeAssignFor && (
-                  <span className="rounded-full bg-ink-3 px-2 py-0.5 text-t-xs text-text-dim">
+                  <Badge tone="neutral">
                     حالياً: {OIL_TYPES[r.oil_type] || r.oil_type}
-                  </span>
+                  </Badge>
                 )}
               </label>
             ))}
@@ -1747,9 +1744,9 @@ export default function ProductsPage() {
           <div className="max-h-72 divide-y divide-line overflow-y-auto rounded-lg border border-line">
             {carFilters.map((f) => (
               <div key={f.id} className="flex items-center gap-2 px-3 py-2 text-t-sm">
-                <span className="rounded-full bg-ink-3 px-2 py-0.5 text-t-xs font-black text-text-dim">
+                <Badge tone="neutral">
                   {FILTER_KINDS[f.filter_kind] || f.filter_kind}
-                </span>
+                </Badge>
                 <span className="flex-1">
                   <b>{f.brand}</b> {f.model} <span className="text-text-dim">({f.year_from}–{f.year_to}{f.cylinders ? ` · ${f.cylinders} سلندر` : ""})</span>
                   {" ← "}
@@ -1821,7 +1818,7 @@ export default function ProductsPage() {
                   {(r.year_from || r.year_to) && (
                     <span className="tnum text-text-dim"> · {r.year_from || "..."}-{r.year_to || "..."}</span>
                   )}
-                  <span className="mr-2 rounded-full bg-ink-3 px-2 py-0.5 text-t-xs text-text-dim">{r.product_name}</span>
+                  <Badge tone="neutral" className="mr-2">{r.product_name}</Badge>
                 </span>
                 <span className="flex items-center gap-2">
                   <b className="tnum text-petrol">{r.price.toFixed(2)} ر.س</b>
@@ -1873,7 +1870,7 @@ export default function ProductsPage() {
             {qtyRules.map((r) => (
               <div key={r.id} className="flex items-center justify-between px-3 py-2 text-t-sm">
                 <span>
-                  <span className="rounded-full bg-ink-3 px-2 py-0.5 text-t-xs text-text-dim">{r.product_name}</span>
+                  <Badge tone="neutral">{r.product_name}</Badge>
                   <span className="tnum mr-2"> كمية ≥ {r.min_qty}</span>
                 </span>
                 <span className="flex items-center gap-2">
@@ -1955,7 +1952,7 @@ export default function ProductsPage() {
                 <div className="mb-1 font-black text-ember">يوجد عمود غير متعرف عليه — هذه عناوين ملفك حرفياً:</div>
                 <div className="tnum flex flex-wrap gap-1.5">
                   {(preview.rawHeaders || []).map((h, i) => (
-                    <span key={i} className="rounded-md bg-white px-2 py-0.5 font-bold text-text">{h || "(فارغ)"}</span>
+                    <span key={i} className="rounded-md bg-ink-2 px-2 py-0.5 font-bold text-text">{h || "(فارغ)"}</span>
                   ))}
                 </div>
                 <div className="mt-1.5 text-text-dim">صوّر هذا الصندوق وأرسله — إضافة الاسم الناقص للمطابقة سطر واحد.</div>

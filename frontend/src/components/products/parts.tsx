@@ -26,7 +26,7 @@ export function StockCell({ stock, status, unit }: { stock: number | null; statu
 export function Thumb({ id, has, size = 40, name }: { id: string; has: boolean; size?: number; name?: string }) {
   return has ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={`/api/products/public/product-image/${id}`} alt="" loading="lazy" width={size} height={size} style={{ width: size, height: size }} className="shrink-0 rounded-lg border border-line bg-white object-contain" />
+    <img src={`/api/products/public/product-image/${id}`} alt="" loading="lazy" width={size} height={size} style={{ width: size, height: size }} className="shrink-0 rounded-lg border border-line bg-ink-2 object-contain" />
   ) : (
     <span aria-hidden title={name} style={{ width: size, height: size }} className="grid shrink-0 place-items-center rounded-lg border border-dashed border-line bg-ink-3 text-text-dim"><MIcon name="inventory_2" className="!text-[20px]" /></span>
   );

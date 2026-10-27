@@ -18,8 +18,7 @@ import { AnalyticsPanel } from "@/components/inventory/AnalyticsPanel";
 import { PeriodPicker, defaultPeriod, type Period } from "@/components/inventory/shared";
 import type { Loc as InvLoc } from "@/lib/inventory/types";
 import {
-  Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch, Tabs,
-} from "@/components/ui";
+  Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch, Tabs, PageHeader } from "@/components/ui";
 
 const WAREHOUSE_LOC_ID = "main";
 
@@ -384,19 +383,11 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-4">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="page-title">المخزون</h1>
-          <p className="page-desc">إدارة ومتابعة المخزون والكميات والحركات والفروع والمستودعات.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {canReceive && <Button onClick={openReceive}><MIcon name="move_to_inbox" className="!text-[16px]" />استلام مخزون</Button>}
+      <PageHeader title="المخزون" description="إدارة ومتابعة المخزون والكميات والحركات والفروع والمستودعات." actions={<>{canReceive && <Button onClick={openReceive}><MIcon name="move_to_inbox" className="!text-[16px]" />استلام مخزون</Button>}
           {canTransfer && <Button variant="outline" onClick={() => openTransfer()}><MIcon name="swap_horiz" className="!text-[16px]" />تحويل مخزون</Button>}
           {canStocktake && <Link href="/inventory/stocktake" className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-t-md font-semibold text-text hover:border-petrol hover:text-petrol"><MIcon name="fact_check" className="!text-[16px]" />جرد وتسوية</Link>}
           {hasPerm("products.create") && <Link href="/products" className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-t-md font-semibold text-text-dim hover:border-petrol hover:text-petrol"><MIcon name="add" className="!text-[16px]" />إضافة صنف</Link>}
-          {canRequest && <Button variant="ghost" onClick={openRequestModal}>طلب أصناف لفرعي</Button>}
-        </div>
-      </header>
+          {canRequest && <Button variant="ghost" onClick={openRequestModal}>طلب أصناف لفرعي</Button>}</>} />
 
       <ErrorNote msg={pageErr} />
 

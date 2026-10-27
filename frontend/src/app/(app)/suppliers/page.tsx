@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { MIcon } from "@/components/m-icon";
-import { Badge, Button, EmptyState, ErrorNote, Input, Select, Tabs } from "@/components/ui";
+import { Badge, Button, EmptyState, ErrorNote, Input, Select, Tabs, PageHeader } from "@/components/ui";
 import { KpiCard, KpiSkeleton } from "@/components/dashboard/KpiCard";
 import { Skeleton } from "@/components/dashboard/Widget";
 import { appAlert, appConfirm } from "@/components/dialog";
@@ -140,18 +140,10 @@ export default function SuppliersPage() {
 
   return (
     <div className="space-y-4">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="page-title">الموردون</h1>
-          <p className="page-desc">إدارة الموردين والمشتريات والأرصدة والحسابات المستحقة والمدفوعات.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {canEdit && <Button onClick={openCreate}><MIcon name="add" className="!text-[16px]" />إضافة مورد</Button>}
+      <PageHeader title="الموردون" description="إدارة الموردين والمشتريات والأرصدة والحسابات المستحقة والمدفوعات." actions={<>{canEdit && <Button onClick={openCreate}><MIcon name="add" className="!text-[16px]" />إضافة مورد</Button>}
           {canInvoice && <Link href="/purchases" className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-t-md font-semibold text-text hover:border-petrol hover:text-petrol"><MIcon name="receipt_long" className="!text-[16px]" />تسجيل فاتورة شراء</Link>}
           <Button variant="tool" onClick={() => exportCsv()} disabled={!ov?.total}><MIcon name="download" className="!text-[16px]" />تصدير</Button>
-          <Button variant="tool" onClick={printList} disabled={!ov?.total}><MIcon name="print" className="!text-[16px]" />طباعة</Button>
-        </div>
-      </header>
+          <Button variant="tool" onClick={printList} disabled={!ov?.total}><MIcon name="print" className="!text-[16px]" />طباعة</Button></>} />
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-line bg-ink-2 px-3 py-2 shadow-card">
         <PeriodPicker value={period} onChange={setPeriod} keys={PERIOD_KEYS} />
@@ -276,7 +268,7 @@ export default function SuppliersPage() {
                 <tbody>{pay.data.map((p) => (
                   <tr key={p.id} onClick={() => router.push(`/suppliers/${p.supplierId}?tab=invoices`)} className="cursor-pointer border-t border-line hover:bg-ink-3/50">
                     <td className="p-2.5 font-bold">{p.supplier}</td><td className="tnum p-2.5">{p.invoiceNo}</td><td className="p-2.5 text-t-xs">{fmtD(p.date)}</td><td className="p-2.5 text-t-xs">{p.dueDate ? fmtD(p.dueDate) : "—"}</td>
-                    <td className="p-2.5">{p.daysLate > 0 ? <span className="rounded-full bg-ember-bg px-2 py-0.5 text-t-xs font-bold text-ember">{p.daysLate} يوم</span> : <span className="text-t-xs text-text-dim">غير متأخر</span>}</td>
+                    <td className="p-2.5">{p.daysLate > 0 ? <Badge tone="danger">{p.daysLate} يوم</Badge> : <span className="text-t-xs text-text-dim">غير متأخر</span>}</td>
                     <td className="tnum p-2.5">{fmtM(p.total)}</td><td className="tnum p-2.5">{fmtM(p.paid)}</td><td className="tnum p-2.5 font-black">{fmtM(p.outstanding)}</td></tr>))}</tbody></table>
             </div>
           )}

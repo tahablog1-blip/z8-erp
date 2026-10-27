@@ -1,7 +1,7 @@
 "use client";
 // لوحة القيادة التنفيذية — طلب واحد /reports/executive يغذّي كل الأقسام، والأقسام تظهر حسب صلاحيات المستخدم
 // (data.access). التصميم: فلتر شامل → مؤشرات → رسوم وتحليلات → جداول → تنبيهات/إجراءات. RTL أولاً والإنجليزية جاهزة.
-import { Button } from "@/components/ui";
+import { Button, PageHeader } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -89,14 +89,7 @@ export default function DashboardPage() {
   // ترتيب الجوال: مؤشرات ← تنبيهات ← مبيعات ← نقدية ← ذمم ← تحليلات ← جداول؛ على الشاشات الكبيرة الترتيب الطبيعي
   return (
     <div className="mx-auto w-full max-w-[1600px] space-y-4 pb-8">
-      <header className="flex flex-wrap items-end justify-between gap-2">
-        <div className="min-w-0">
-          <h1 className="page-title">{d("title")}</h1>
-          <p className="page-desc">
-            {user?.fullName ? `${user.fullName} · ` : ""}{branchName ? `${branchName} · ` : ""}{formatDateLong(new Date().toISOString())}
-          </p>
-        </div>
-      </header>
+      <PageHeader title={d("title")} description={<>{user?.fullName ? `${user.fullName} · ` : ""}{branchName ? `${branchName} · ` : ""}{formatDateLong(new Date().toISOString())}</>} />
 
       <GlobalFilters value={filter} branches={branches} onChange={change} onRefresh={reload} refreshing={refreshing} lastUpdated={updated} />
 

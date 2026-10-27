@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { api } from "@/lib/api";
-import { Button, Card, ErrorNote, Field, Input, PageHeader } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, PageHeader, Badge } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type TotpStatus = { enabled: boolean; backupCodesLeft: number };
@@ -138,7 +138,7 @@ export default function SecuritySettingsPage() {
           <form onSubmit={confirmSetup} className="space-y-3">
             <p className="text-t-sm text-text-dim">افتح تطبيق المصادقة ومسح الكود، أو أدخل السر يدوياً:</p>
             <div className="flex flex-wrap items-center gap-4">
-              {qrUrl && <img src={qrUrl} alt="QR" className="h-40 w-40 rounded-lg border border-line bg-white p-2" />}
+              {qrUrl && <img src={qrUrl} alt="QR" className="h-40 w-40 rounded-lg border border-line bg-ink-2 p-2" />}
               <div className="min-w-0">
                 <div className="text-t-xs font-bold text-text-dim">السر (إدخال يدوي)</div>
                 <code dir="ltr" className="mt-1 block max-w-[220px] break-all rounded-lg bg-ink-3 px-2 py-1.5 text-t-xs">
@@ -187,7 +187,7 @@ export default function SecuritySettingsPage() {
                 <div className="flex items-center gap-2 text-t-sm font-bold">
                   {s.deviceLabel || "جهاز غير معروف"}
                   {s.isCurrent && (
-                    <span className="rounded-full bg-emerald-bg px-2 py-0.5 text-t-xs font-extrabold text-emerald">هذا الجهاز</span>
+                    <Badge tone="success">هذا الجهاز</Badge>
                   )}
                 </div>
                 <div className="mt-0.5 text-t-xs text-text-dim" dir="ltr">

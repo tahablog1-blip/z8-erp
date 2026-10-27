@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { printReport, tableHTML, kpisHTML } from "@/lib/print";
 import { MIcon } from "@/components/m-icon";
-import { Button, EmptyState, Input } from "@/components/ui";
+import { Button, EmptyState, Input, PageHeader, Badge } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import { GlobalFilters, type FilterState } from "@/components/dashboard/GlobalFilters";
 import { KpiCard, KpiSkeleton } from "@/components/dashboard/KpiCard";
@@ -238,15 +238,13 @@ export default function ProductsPage() {
       case "profit": return r.unitProfit == null ? <span className="text-text-dim">—</span> : <div className="tnum"><b className={r.unitProfit < 0 ? "text-ember" : ""}>{fmtCurrency(r.unitProfit, 2)}</b><div className={`text-t-xs ${(r.margin ?? 0) < 0 ? "text-ember" : "text-text-dim"}`}>{r.margin}%</div></div>;
       case "sales": return r.periodRevenue == null ? "—" : <div className="tnum"><b>{fmtCurrency(r.periodRevenue, 2)}</b><div className="text-t-xs text-text-dim">{fmtMoney(r.periodQty, 0)} وحدة</div></div>;
       case "last": return <span className="whitespace-nowrap text-text-dim">{ago(r.lastSaleAt)}</span>;
-      case "status": return r.isActive ? (r.stockStatus === "service" ? <span className="rounded-full bg-emerald-bg px-2 py-0.5 text-t-xs font-extrabold text-emerald">نشط</span> : <StockBadge status={r.stockStatus} />) : <span className="rounded-full bg-ink-3 px-2 py-0.5 text-t-xs font-extrabold text-text-dim">غير نشط</span>;
+      case "status": return r.isActive ? (r.stockStatus === "service" ? <Badge tone="success">نشط</Badge> : <StockBadge status={r.stockStatus} />) : <Badge tone="neutral">غير نشط</Badge>;
     }
   }
 
   return (
     <div className="cx-enter mx-auto w-full max-w-[1600px] space-y-4 pb-8" onClick={() => menu && setMenu("")}>
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0"><h1 className="page-title">الأصناف</h1><p className="page-desc">إدارة المنتجات والمخزون والأسعار والتكلفة والربحية.</p></div>
-        <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
+      <PageHeader title="الأصناف" description="إدارة المنتجات والمخزون والأسعار والتكلفة والربحية." actions={<><div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
           <Link href="/products/manage" className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-3.5 py-2 text-t-md font-semibold hover:border-petrol hover:text-petrol"><MIcon name="build" className="!text-[17px]" />استيراد وأدوات متقدمة</Link>
           <div className="relative">
             <Button variant="outline" loading={busy} aria-haspopup="menu" aria-expanded={menu === "export"} onClick={() => setMenu(menu === "export" ? "" : "export")}><MIcon name="download" className="!text-[18px]" />تصدير / طباعة</Button>
@@ -257,8 +255,7 @@ export default function ProductsPage() {
               </div>)}
           </div>
           {canCreate && <Button onClick={() => setForm({ product: null })}><MIcon name="add" className="!text-[18px]" />إضافة صنف</Button>}
-        </div>
-      </header>
+        </div></>} />
 
       <GlobalFilters value={period} branches={null} onChange={(v) => setPeriod(v.period === "custom" ? v : { ...v, ...rangeFor(v.period) })} onRefresh={() => load(true)} refreshing={refreshing} lastUpdated={updated} />
 

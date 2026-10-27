@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, getToken } from "@/lib/api";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, Badge } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type Msg = {
@@ -209,7 +209,7 @@ export default function ChatRoomPage() {
               <div key={m.id}>
                 {sep && (
                   <div className="my-2 text-center">
-                    <span className="rounded-full bg-ink-3 px-3 py-1 text-t-xs font-bold text-text-dim">{day}</span>
+                    <Badge tone="neutral">{day}</Badge>
                   </div>
                 )}
                 {noteCard ? (
