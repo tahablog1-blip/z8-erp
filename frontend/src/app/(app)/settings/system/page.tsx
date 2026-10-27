@@ -7,6 +7,8 @@ import { useAuth } from "@/lib/auth";
 import { setFormatSettings } from "@/lib/format";
 import { Button, Card, ErrorNote, Field, Input, Select, Switch, PageHeader } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
+import { SaveBar } from "@/components/settings/SettingsContext";
+import { toast } from "@/components/toast";
 import { NAV_MODULES } from "@/modules/registry";
 
 type SystemSettings = {
@@ -53,6 +55,8 @@ export default function SystemSettingsPage() {
   const { user } = useAuth();
   const [health, setHealth] = useState<boolean | null>(null);
   const [form, setForm] = useState<SystemSettings>(DEFAULT);
+  const [initial, setInitial] = useState(JSON.stringify(DEFAULT));   // آخر حالة محفوظة
+  const dirty = JSON.stringify(form) !== initial;
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -60,7 +64,7 @@ export default function SystemSettingsPage() {
 
   useEffect(() => {
     api("/health").then(() => setHealth(true)).catch(() => setHealth(false));
-    api<SystemSettings>("/settings/system").then((r) => { setForm(r); setLoaded(true); })
+    api<SystemSettings>("/settings/system").then((r) => { setForm(r); setInitial(JSON.stringify(r)); setLoaded(true); })
       .catch((e) => { setErr(e.message); setLoaded(true); });
   }, []);
 
@@ -145,9 +149,9 @@ export default function SystemSettingsPage() {
     setErr(""); setOk(""); setBusy(true);
     try {
       const saved = await api<SystemSettings>("/settings/system", { method: "PUT", body: JSON.stringify(form) });
-      setForm(saved);
+      setForm(saved); setInitial(JSON.stringify(saved));
       setFormatSettings({ dateCalendar: saved.dateCalendar, numberFormat: saved.numberFormat });
-      setOk("تم الحفظ");
+      toast.success("تم حفظ التغييرات بنجاح.");
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
   }
@@ -367,11 +371,8 @@ export default function SystemSettingsPage() {
         )}
       </Card>
 
-      <ErrorNote msg={err} />
-      {ok && <p className="text-t-sm font-bold text-emerald">{ok}</p>}
-      <div className="flex justify-end pb-6">
-        <Button onClick={save} disabled={busy}>{busy ? "جارِ الحفظ..." : "حفظ إعدادات النظام"}</Button>
-      </div>
+      {!dirty && <ErrorNote msg={err} />}
+      <SaveBar dirty={dirty} busy={busy} error={dirty && err ? err : ""} onSave={save} onCancel={() => setForm(JSON.parse(initial))} />
     </div>
   );
 }

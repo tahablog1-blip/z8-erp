@@ -213,6 +213,13 @@ async def lifespan(app: FastAPI):
              created_at TIMESTAMPTZ NOT NULL DEFAULT now()
            )""",
         "CREATE INDEX IF NOT EXISTS idx_audit_company_time ON audit_log (company_id, created_at DESC)",
+        # الكود يكتب في audit_log بمجموعتي أعمدة (user_id/entity/old_value... و actor_id/scope/details...) — نضمن وجودهما معاً
+        "ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS actor_id TEXT",
+        "ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS actor_name TEXT",
+        "ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS scope TEXT",
+        "ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS car_id UUID",
+        "ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS details TEXT",
+        "ALTER TABLE audit_log ALTER COLUMN entity DROP NOT NULL",
         # ════════ أعمدة customers اللي بيكتب فيها التسجيل والحجز ════════
         "ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_type text NOT NULL DEFAULT 'individual'",
         "ALTER TABLE customers ADD COLUMN IF NOT EXISTS vat_number text",

@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from ...core.db import execute, fetchrow
 from ...core.deps import CurrentUser, get_current_user, require_permission
 from ...core.audit import log_action
-from . import overview, service
+from . import audit_diff, overview, service
 from .schemas import (
     CompanyOut, CompanyIn, LogoIn, RoleOut, RoleIn, SettingsDashboardOut,
     PrintingSettingsOut, PrintingSettingsIn, SystemSettingsOut, SystemSettingsIn,
@@ -29,8 +29,10 @@ async def get_company(user: CurrentUser = Depends(get_current_user)):
 @router.put("/company", response_model=CompanyOut)
 async def update_company(body: CompanyIn,
                          user: CurrentUser = Depends(require_permission("settings.company"))):
+    before = await service.get_company(user.company_id)
     row = await service.update_company(user.company_id, body)
-    await log_action(user, "edit", "settings", details="تحديث بيانات المنشأة")
+    if not await audit_diff.log_settings_change(user, "company", "تحديث بيانات المنشأة", before, row, ignore=("has_logo", "logo_url", "logo_version")):
+        await log_action(user, "edit", "settings", details="تحديث بيانات المنشأة (بلا تغيير في القيم)")
     return row
 
 
@@ -68,14 +70,16 @@ async def list_roles(user: CurrentUser = Depends(require_permission(_ROLES_PERM)
 @router.post("/roles", response_model=RoleOut, status_code=201)
 async def create_role(body: RoleIn, user: CurrentUser = Depends(require_permission(_ROLES_PERM))):
     row = await service.create_role(user.company_id, body.name, body.icon, body.description, body.permissions)
-    await log_action(user, "edit", "settings", details=f"إنشاء دور: {body.name}")
+    await audit_diff.log_settings_change(user, f"role:{row['id']}", f"إنشاء دور: {body.name}", {}, row, fields=["name", "icon", "description", "permissions"])
     return row
 
 
 @router.put("/roles/{role_id}", response_model=RoleOut)
 async def update_role(role_id: str, body: RoleIn, user: CurrentUser = Depends(require_permission(_ROLES_PERM))):
+    before = next((r for r in await service.list_roles(user.company_id) if str(r["id"]) == role_id), None)
     row = await service.update_role(user.company_id, role_id, body.name, body.icon, body.description, body.permissions)
-    await log_action(user, "edit", "settings", details=f"تعديل دور: {body.name}")
+    if not await audit_diff.log_settings_change(user, f"role:{role_id}", f"تعديل دور: {body.name}", before, row, fields=["name", "icon", "description", "permissions"]):
+        await log_action(user, "edit", "settings", details=f"تعديل دور: {body.name} (بلا تغيير في القيم)")
     return row
 
 
@@ -141,17 +145,23 @@ async def create_user(body: UserCreateIn,
     row = await service.create_user(
         user.company_id, body.email, body.password, body.fullName, body.role,
         body.branchId, body.permissions, body.roleId)
-    await log_action(user, "edit", "settings", details=f"إنشاء موظف: {body.fullName}")
+    await audit_diff.log_settings_change(user, f"user:{row['id']}", f"إنشاء موظف: {body.fullName}", {}, row,
+                                         fields=["full_name", "role", "branch_id", "permissions", "is_active", "role_id"])
     return row
 
 
 @router.put("/users/{user_id}", response_model=UserRowOut)
 async def update_user(user_id: str, body: UserUpdateIn,
                       user: CurrentUser = Depends(require_permission(_USERS_PERM))):
+    before = next((u for u in await service.list_users(user.company_id) if str(u["id"]) == user_id), None)
     row = await service.update_user(
         user.company_id, user.user_id, user_id, body.fullName, body.role,
         body.branchId, body.permissions, body.isActive, body.newPassword, body.roleId)
-    await log_action(user, "edit", "settings", details=f"تعديل موظف: {row['full_name']}")
+    # كلمة المرور لا تُسجَّل قيمتها أبداً — يُسجَّل فقط أنها أُعيد تعيينها
+    extra = {"password_reset": True} if body.newPassword else None
+    if not await audit_diff.log_settings_change(user, f"user:{user_id}", f"تعديل موظف: {row['full_name']}", before, row,
+                                                fields=["full_name", "role", "branch_id", "permissions", "is_active", "role_id"], extra_new=extra):
+        await log_action(user, "edit", "settings", details=f"تعديل موظف: {row['full_name']} (بلا تغيير في القيم)")
     return row
 
 
@@ -180,8 +190,10 @@ async def get_printing_settings(user: CurrentUser = Depends(get_current_user)):
 @router.put("/printing", response_model=PrintingSettingsOut)
 async def update_printing_settings(body: PrintingSettingsIn,
                                    user: CurrentUser = Depends(require_permission("settings.company"))):
+    before = await service.get_printing_settings(user.company_id)
     row = await service.update_printing_settings(user.company_id, body)
-    await log_action(user, "edit", "settings", details="تحديث إعدادات الطباعة")
+    if not await audit_diff.log_settings_change(user, "printing", "تحديث إعدادات الطباعة", before, row):
+        await log_action(user, "edit", "settings", details="تحديث إعدادات الطباعة (بلا تغيير في القيم)")
     return row
 
 
@@ -208,8 +220,10 @@ async def get_system_settings(user: CurrentUser = Depends(get_current_user)):
 @router.put("/system", response_model=SystemSettingsOut)
 async def update_system_settings(body: SystemSettingsIn,
                                  user: CurrentUser = Depends(require_permission("settings.company"))):
+    before = await service.get_system_settings(user.company_id)
     row = await service.update_system_settings(user.company_id, body)
-    await log_action(user, "edit", "settings", details="تحديث إعدادات النظام")
+    if not await audit_diff.log_settings_change(user, "system", "تحديث إعدادات النظام", before, row):
+        await log_action(user, "edit", "settings", details="تحديث إعدادات النظام (بلا تغيير في القيم)")
     return row
 
 
@@ -378,8 +392,10 @@ async def get_design_settings(user: CurrentUser = Depends(get_current_user)):
 @router.put("/design", response_model=DesignSettingsOut)
 async def update_design_settings(body: DesignSettingsIn,
                                   user: CurrentUser = Depends(require_permission("settings.company"))):
+    before = await service.get_design_settings(user.company_id)
     row = await service.update_design_settings(user.company_id, body)
-    await log_action(user, "edit", "settings", details="تحديث إعدادات التصميم")
+    if not await audit_diff.log_settings_change(user, "design", "تحديث إعدادات التصميم", before, row):
+        await log_action(user, "edit", "settings", details="تحديث إعدادات التصميم (بلا تغيير في القيم)")
     return row
 
 
