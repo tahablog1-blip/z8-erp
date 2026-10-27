@@ -2,7 +2,7 @@
 // منخفض / نافد / إعادة الطلب / راكد — قراءة فقط؛ إعادة الطلب تعتمد منطق /inventory/reorder-suggestions القائم (ضعف الحد الأدنى − الرصيد).
 import { useState } from "react";
 import Link from "next/link";
-import { Button, EmptyState, ErrorNote, Tabs } from "@/components/ui";
+import { Button, EmptyState, ErrorNote, Tabs, Badge } from "@/components/ui";
 import { Skeleton } from "@/components/dashboard/Widget";
 import { MIcon } from "@/components/m-icon";
 import { downloadCsv } from "@/lib/customers/format";
@@ -60,7 +60,7 @@ export function AlertsPanel({ loc, deadDays, canPurchase, canCost }: { loc: stri
               <tbody>{lowRows.map((r) => (
                 <tr key={`${r.locType}${r.locId}${r.productId}`} className="border-t border-line"><td className="p-2.5 font-bold">{r.name}</td><td className="p-2.5 text-t-xs">{r.locName}</td>
                   <td className={`tnum p-2.5 font-black ${r.outOfStock ? "text-ember" : "text-brass"}`}>{fmtN(r.qty)}</td><td className="tnum p-2.5">{fmtN(r.minQty)}</td><td className="tnum p-2.5">{fmtN(r.deficit)}</td>
-                  <td className="p-2.5"><span className={`rounded-full px-2 py-0.5 text-t-xs font-bold ${r.outOfStock ? "bg-ember-bg text-ember" : "bg-brass-bg text-brass"}`}>{r.outOfStock ? "نافد" : "منخفض"}</span></td></tr>))}</tbody></table>))}
+                  <td className="p-2.5"><Badge tone={r.outOfStock ? "danger" : "warning"}>{r.outOfStock ? "نافد" : "منخفض"}</Badge></td></tr>))}</tbody></table>))}
           {tab === "out" && (!out.data || out.data.items.length === 0 ? <EmptyState icon="task_alt" title="لا أصناف نافدة" /> : (
             <table className="w-full min-w-[520px] text-t-sm"><thead className="bg-ink-3 text-t-xs text-text-dim"><tr>{["الصنف", "الباركود", "آخر بيع", "آخر حركة", "الحد الأدنى"].map((h) => <th key={h} className="p-2.5 text-start font-bold">{h}</th>)}</tr></thead>
               <tbody>{out.data.items.map((i) => <tr key={i.id} className="border-t border-line"><td className="p-2.5 font-bold">{i.name}</td><td className="p-2.5 text-t-xs" dir="ltr">{i.barcode || "—"}</td><td className="p-2.5 text-t-xs">{fmtD(i.lastSale)}</td><td className="p-2.5 text-t-xs">{fmtD(i.lastMove)}</td><td className="tnum p-2.5">{i.minQty || "—"}</td></tr>)}</tbody></table>))}

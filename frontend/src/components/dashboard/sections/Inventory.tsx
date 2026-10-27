@@ -4,6 +4,7 @@ import type { Executive } from "@/lib/dashboard/types";
 import { fmtCurrency, fmtMoney } from "@/lib/dashboard/format";
 import { useDx } from "@/lib/dashboard/i18n";
 import { Widget, SectionEmpty } from "../Widget";
+import { Badge } from "@/components/ui";
 import { HBars } from "../charts/HBars";
 import { StackedBar } from "../charts/StackedBar";
 
@@ -43,7 +44,7 @@ export function InventoryCenter({ data, loading }: { data: Executive | null; loa
                   {v.lowItems.map((x, i) => (
                     <li key={i} className="flex items-center justify-between gap-2 text-t-sm">
                       <span className="min-w-0 truncate font-bold">{x.name}<span className="ms-1 text-t-xs font-normal text-text-dim">{x.locName}</span></span>
-                      <span className={`tnum shrink-0 rounded-full px-2 py-0.5 text-t-xs font-extrabold ${x.outOfStock ? "bg-ember-bg text-ember" : "bg-brass-bg text-brass"}`}>{fmtMoney(x.qty, 0)} / {fmtMoney(x.minQty, 0)}</span>
+                      <Badge tone={x.outOfStock ? "danger" : "warning"} className="tnum shrink-0">{fmtMoney(x.qty, 0)} / {fmtMoney(x.minQty, 0)}</Badge>
                     </li>
                   ))}
                 </ul>

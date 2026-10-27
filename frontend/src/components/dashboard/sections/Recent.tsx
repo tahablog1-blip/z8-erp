@@ -4,9 +4,10 @@ import type { Executive } from "@/lib/dashboard/types";
 import { fmtCurrency } from "@/lib/dashboard/format";
 import { useDx } from "@/lib/dashboard/i18n";
 import { Widget, SectionEmpty } from "../Widget";
+import { Badge } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
-const STATUS_TONE: Record<string, string> = { paid: "bg-emerald-bg text-emerald", partial: "bg-brass-bg text-brass", credit: "bg-brass-bg text-brass", refunded: "bg-ember-bg text-ember" };
+const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = { paid: "success", partial: "warning", credit: "warning", refunded: "danger" };
 
 function when(iso: string, _isEn?: boolean) {
   const d = new Date(iso); if (isNaN(+d)) return iso;
@@ -38,7 +39,7 @@ export function RecentTransactions({ data, loading }: { data: Executive | null; 
                     <td className="px-2 py-2 text-text-dim">{r.source === "car" ? d("rc.service") : d("rc.retail")}</td>
                     <td className="px-2 py-2 text-text-dim">{r.branch ?? "—"}</td>
                     <td className="tnum px-2 py-2 text-end font-extrabold">{fmtCurrency(r.total, 2)}</td>
-                    <td className="px-2 py-2"><span className={`rounded-full px-2 py-0.5 text-t-xs font-extrabold ${STATUS_TONE[r.status] ?? "bg-ink-3"}`}>{d(`st.${r.status}` as any)}</span></td>
+                    <td className="px-2 py-2"><Badge tone={STATUS_TONE[r.status] ?? "neutral"}>{d(`st.${r.status}` as any)}</Badge></td>
                     <td className="tnum px-2 py-2 text-t-xs text-text-dim">{when(r.at, isEn)}</td>
                     <td className="px-5 py-2 text-end"><Link href={`/sales/history?invoiceNo=${encodeURIComponent(r.invoiceNo)}`} aria-label={`${d("view")} ${r.invoiceNo}`} className="inline-grid h-8 w-8 place-items-center rounded-md text-petrol hover:bg-petrol-soft"><MIcon name="visibility" className="!text-[18px]" /></Link></td>
                   </tr>
@@ -58,7 +59,7 @@ export function RecentTransactions({ data, loading }: { data: Executive | null; 
                   </span>
                   <span className="shrink-0 text-end">
                     <span className="tnum block text-t-sm font-extrabold">{fmtCurrency(r.total, 2)}</span>
-                    <span className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-t-xs font-extrabold ${STATUS_TONE[r.status] ?? "bg-ink-3"}`}>{d(`st.${r.status}` as any)}</span>
+                    <Badge tone={STATUS_TONE[r.status] ?? "neutral"} className="mt-0.5">{d(`st.${r.status}` as any)}</Badge>
                   </span>
                 </Link>
               </li>
