@@ -712,6 +712,8 @@ async def lifespan(app: FastAPI):
            )""",
         """CREATE INDEX IF NOT EXISTS idx_stocktake_items_session
              ON stocktake_items (session_id)""",
+        # تكلفة الوحدة وقت اللقطة — الكود (create_stocktake/get_stocktake) يقرؤها ويكتبها؛ ADD IF NOT EXISTS لا يغيّر شيئاً إن كان العمود موجوداً
+        "ALTER TABLE stocktake_items ADD COLUMN IF NOT EXISTS unit_cost NUMERIC(12,2) NOT NULL DEFAULT 0",
         # ══ مركز الإعدادات — المرحلة 1: بيانات منشأة كاملة + شعار + أدوار حقيقية ══
         # (idempotent زي كل اللي فوق — بتتطبق تلقائياً مع كل إقلاع للباك-إند،
         #  بدون أي خطوة psql يدوية. عمود permissions الفعلي اللي core/deps.py

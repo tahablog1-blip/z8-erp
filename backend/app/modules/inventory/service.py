@@ -624,6 +624,33 @@ async def reorder_suggestions(company_id: str) -> list[dict]:
 
 # ══════════════════ الجرد الفعلي ══════════════════
 
+async def _stocktake_audit(conn, company_id: str, user_id: str | None, actor_name: str | None,
+                           action: str, session_id: str, text: str) -> None:
+    """سجل تدقيق لمراحل الجرد — يبدأ نصه دائماً بـ «جلسة <id>» ليُجمع في خط زمني للجلسة."""
+    await conn.execute(
+        """INSERT INTO audit_log (company_id, actor_id, actor_name, action, scope, details)
+           VALUES ($1,$2,$3,$4,'stock',$5)""",
+        company_id, user_id, actor_name, action, f"جلسة {session_id} — {text}",
+    )
+
+
+async def stocktake_timeline(company_id: str, session_id: str) -> list[dict]:
+    """الخط الزمني للجلسة من سجل التدقيق (إنشاء/مراجعة/إعادة عدّ/إلغاء/اعتماد)."""
+    rows = await fetch(
+        """SELECT action, actor_name, details, created_at FROM audit_log
+           WHERE company_id=$1 AND scope='stock' AND action LIKE 'stocktake\\_%'
+             AND details LIKE $2
+           ORDER BY created_at ASC""",
+        company_id, f"جلسة {session_id} —%",
+    )
+    return [{
+        "action": r["action"],
+        "actorName": r["actor_name"],
+        "details": (r["details"] or "").split(" — ", 1)[-1],
+        "at": r["created_at"].isoformat() if r["created_at"] else None,
+    } for r in rows]
+
+
 async def create_stocktake(
     company_id: str, user_id: str, actor_name: str,
     loc_type: str, loc_id: str, note: str | None = None,
@@ -680,6 +707,10 @@ async def create_stocktake(
                    ON CONFLICT (session_id,product_id) DO NOTHING""",
                 session["id"], loc_type, loc_id, company_id,
             )
+            await _stocktake_audit(
+                conn, company_id, user_id, actor_name, "stocktake_created", str(session["id"]),
+                f"إنشاء جلسة جرد — الموقع {loc_type}:{loc_id}" + (f" — {note.strip()}" if (note or "").strip() else ""),
+            )
 
     return await get_stocktake(company_id, str(session["id"]))
 
@@ -694,7 +725,13 @@ async def list_stocktakes(company_id: str, loc_type: str | None = None) -> list[
                   s.created_by_name, s.created_at, s.approved_by_name,
                   s.approved_at,
                   COUNT(i.id)::int AS total_items,
-                  COUNT(i.counted_qty)::int AS counted_items
+                  COUNT(i.counted_qty)::int AS counted_items,
+                  COUNT(*) FILTER (WHERE i.counted_qty IS NOT NULL
+                                     AND i.counted_qty<>i.snapshot_qty)::int AS diff_items,
+                  COALESCE(SUM((i.counted_qty-i.snapshot_qty)*i.unit_cost)
+                           FILTER (WHERE i.counted_qty>i.snapshot_qty),0) AS surplus_value,
+                  COALESCE(SUM((i.snapshot_qty-i.counted_qty)*i.unit_cost)
+                           FILTER (WHERE i.counted_qty<i.snapshot_qty),0) AS shortage_value
            FROM stocktake_sessions s
            LEFT JOIN stocktake_items i ON i.session_id=s.id
            WHERE s.company_id=$1
@@ -716,9 +753,34 @@ async def list_stocktakes(company_id: str, loc_type: str | None = None) -> list[
             "approvedAt": r["approved_at"].isoformat() if r["approved_at"] else None,
             "totalItems": r["total_items"],
             "countedItems": r["counted_items"],
+            "diffItems": r["diff_items"],
+            "surplusValue": round(float(r["surplus_value"]), 2),
+            "shortageValue": round(float(r["shortage_value"]), 2),
         }
         for r in rows
     ]
+
+
+async def stocktake_summary(company_id: str, branch_id: str | None = None) -> dict:
+    """مؤشرات صفحة الجرد — محسوبة بالكامل هنا من جلسات الجرد الحقيقية.
+    branch_id: يقيّد على فرع واحد (للموظف المربوط بفرع)؛ None = كل المواقع.
+    قيم الزيادة/العجز تخص الجلسات المعتمدة فقط (الأثر الفعلي على المخزون)."""
+    rows = await list_stocktakes(company_id)
+    if branch_id is not None:
+        rows = [r for r in rows if r["locType"] == "branch" and str(r["locId"]) == str(branch_id)]
+    approved = [r for r in rows if r["status"] == "approved"]
+    surplus = round(sum(r["surplusValue"] for r in approved), 2)
+    shortage = round(sum(r["shortageValue"] for r in approved), 2)
+    return {
+        "total": len(rows),
+        "open": sum(1 for r in rows if r["status"] == "in_progress"),
+        "review": sum(1 for r in rows if r["status"] == "review"),
+        "approved": len(approved),
+        "cancelled": sum(1 for r in rows if r["status"] == "cancelled"),
+        "surplusValue": surplus,
+        "shortageValue": shortage,
+        "netValue": round(surplus - shortage, 2),
+    }
 
 
 async def get_stocktake(company_id: str, session_id: str) -> dict:
@@ -825,7 +887,8 @@ async def count_stocktake_item(
     return await get_stocktake(company_id, session_id)
 
 
-async def submit_stocktake_for_review(company_id: str, session_id: str) -> dict:
+async def submit_stocktake_for_review(company_id: str, session_id: str,
+                                      user_id: str | None = None, actor_name: str | None = None) -> dict:
     """نقل الجلسة للمراجعة بعد إدخال كمية فعلية لصنف واحد على الأقل."""
     async with transaction() as conn:
         async with conn.transaction():
@@ -852,6 +915,10 @@ async def submit_stocktake_for_review(company_id: str, session_id: str) -> dict:
                 """UPDATE stocktake_sessions SET status='review'
                    WHERE id=$1 AND company_id=$2""",
                 session_id, company_id,
+            )
+            await _stocktake_audit(
+                conn, company_id, user_id, actor_name, "stocktake_submitted", session_id,
+                f"إرسال للمراجعة — معدود {counts['counted']} من {counts['total']}",
             )
 
     return await get_stocktake(company_id, session_id)
@@ -977,7 +1044,9 @@ async def approve_stocktake(
 
 # ══════════ إلغاء جلسة الجرد + استيراد الكميات من ملف ══════════
 
-async def cancel_stocktake(company_id: str, session_id: str) -> dict:
+async def cancel_stocktake(company_id: str, session_id: str,
+                           user_id: str | None = None, actor_name: str | None = None,
+                           reason: str | None = None) -> dict:
     """إلغاء جلسة جرد غير معتمدة؛ لا يغيّر أي رصيد."""
     async with transaction() as conn:
         async with conn.transaction():
@@ -996,6 +1065,39 @@ async def cancel_stocktake(company_id: str, session_id: str) -> dict:
                 """UPDATE stocktake_sessions SET status='cancelled'
                    WHERE id=$1 AND company_id=$2""",
                 session_id, company_id,
+            )
+            await _stocktake_audit(
+                conn, company_id, user_id, actor_name, "stocktake_cancelled", session_id,
+                "إلغاء الجلسة" + (f" — السبب: {reason.strip()}" if (reason or "").strip() else ""),
+            )
+    return await get_stocktake(company_id, session_id)
+
+
+async def reopen_stocktake(company_id: str, session_id: str, user_id: str,
+                           actor_name: str, reason: str) -> dict:
+    """إرجاع جلسة «قيد المراجعة» إلى «جاري الجرد» لإعادة العدّ. السبب إلزامي ويُسجَّل؛
+    الكميات المعدودة تبقى كما هي ولا يتغير أي رصيد."""
+    reason = (reason or "").strip()
+    if not reason:
+        raise HTTPException(400, "اكتب سبب إعادة العدّ")
+    async with transaction() as conn:
+        async with conn.transaction():
+            session = await conn.fetchrow(
+                """SELECT id, status FROM stocktake_sessions
+                   WHERE id=$1 AND company_id=$2 FOR UPDATE""",
+                session_id, company_id,
+            )
+            if not session:
+                raise HTTPException(404, "جلسة الجرد غير موجودة")
+            if session["status"] != "review":
+                raise HTTPException(409, "يمكن طلب إعادة العدّ للجلسات قيد المراجعة فقط")
+            await conn.execute(
+                "UPDATE stocktake_sessions SET status='in_progress' WHERE id=$1 AND company_id=$2",
+                session_id, company_id,
+            )
+            await _stocktake_audit(
+                conn, company_id, user_id, actor_name, "stocktake_reopened", session_id,
+                f"طلب إعادة العدّ — السبب: {reason}",
             )
     return await get_stocktake(company_id, session_id)
 
