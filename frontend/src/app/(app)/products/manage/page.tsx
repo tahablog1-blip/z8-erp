@@ -194,6 +194,7 @@ export default function ProductsPage() {
     try {
       const data = await callImport(pendingFile, false);
       setImportMsg(`✅ استيراد ناجح: ${data.added} صنف جديد + ${data.updated} تحديث` +
+        (data.warningsTotal ? ` — ℹ ${data.warningsTotal} صف حُدّث سعره/تكلفته فقط لأن اسمه وفئته مكرران مع صنف آخر (مثال: ${(data.warnings || [])[0]})` : "") +
         (data.errorsTotal ? ` — ⚠ ${data.errorsTotal} صف فيه مشكلة: ${(data.errors || []).slice(0, 3).join(" | ")}` : ""));
       setPreview(null); setPendingFile(null);
       load();

@@ -750,6 +750,7 @@ async def ai_clean_names(company_id: str, apply: bool, only_oils: bool, limit: i
 async def import_products_rows(company_id: str, rows: list[dict]) -> dict:
     added = updated = 0
     errors: list[str] = []
+    warnings: list[str] = []
     for i, r in enumerate(rows, start=2):  # الصف 1 عناوين
         try:
             name = (r.get("name") or "").strip()
@@ -787,15 +788,35 @@ async def import_products_rows(company_id: str, rows: list[dict]) -> dict:
                     company_id, name)
 
             if existing:
-                await execute(
-                    """UPDATE products SET
-                         name=$2, barcode=COALESCE($3, barcode),
-                         price=COALESCE($4, price), cost_price=COALESCE($5, cost_price),
-                         unit=$6, category=CASE WHEN $7 <> '' THEN $7 ELSE category END,
-                         is_active=TRUE
-                       WHERE id=$1""",
-                    existing["id"], name, barcode, price_ex, cost_val, unit, category)
-                pid = existing["id"]; updated += 1
+                # صنف آخر بنفس (الفئة + الاسم + المواصفة) يكسر القيد الفريد uq_products_combo لو أعدنا تسمية هذا الصنف.
+                # حينها نحدّث السعر/التكلفة/الوحدة/الباركود فقط ونُبقي الاسم والفئة، ونُبلغ بتحذير مقروء بدل خطأ قاعدة بيانات.
+                clash = await fetchrow(
+                    """SELECT o.name FROM products p1
+                       JOIN products o ON o.company_id=p1.company_id AND o.id<>p1.id
+                        AND o.category = (CASE WHEN $3<>'' THEN $3 ELSE p1.category END)
+                        AND o.name=$2 AND COALESCE(o.spec,'')=COALESCE(p1.spec,'')
+                       WHERE p1.id=$1 LIMIT 1""",
+                    existing["id"], name, category)
+                if clash:
+                    await execute(
+                        """UPDATE products SET
+                             barcode=COALESCE($2, barcode),
+                             price=COALESCE($3, price), cost_price=COALESCE($4, cost_price),
+                             unit=$5, is_active=TRUE
+                           WHERE id=$1""",
+                        existing["id"], barcode, price_ex, cost_val, unit)
+                    pid = existing["id"]; updated += 1
+                    warnings.append(f"صف {i}: «{name}» موجود بنفس الفئة والاسم لصنف آخر — حُدّث السعر/التكلفة فقط وبقي الاسم والفئة كما هما")
+                else:
+                    await execute(
+                        """UPDATE products SET
+                             name=$2, barcode=COALESCE($3, barcode),
+                             price=COALESCE($4, price), cost_price=COALESCE($5, cost_price),
+                             unit=$6, category=CASE WHEN $7 <> '' THEN $7 ELSE category END,
+                             is_active=TRUE
+                           WHERE id=$1""",
+                        existing["id"], name, barcode, price_ex, cost_val, unit, category)
+                    pid = existing["id"]; updated += 1
             else:
                 row_new = await fetchrow(
                     """INSERT INTO products
@@ -817,7 +838,7 @@ async def import_products_rows(company_id: str, rows: list[dict]) -> dict:
         except Exception as e:
             errors.append(f"صف {i}: {type(e).__name__}: {e}")
     return {"added": added, "updated": updated, "errors": errors[:20],
-            "errorsTotal": len(errors)}
+            "errorsTotal": len(errors), "warnings": warnings[:20], "warningsTotal": len(warnings)}
 
 
 async def wipe_all_products(company_id: str) -> dict:
