@@ -33,6 +33,18 @@ class EmployeeCreate(BaseModel):
     allowances: float = Field(default=0, ge=0)   # البدلات الشهرية — تدخل في صافي الراتب
     commissionType: CommissionType = "none"    # عمولة مبيعات: من صافي المبيعات أو من الربح الإجمالي
     commissionPct: float = Field(default=0, ge=0, le=100)
+    departmentId: str | None = None
+    positionId: str | None = None
+    managerId: str | None = None
+    scheduleId: str | None = None
+    gender: Literal["male", "female"] | None = None
+    email: str | None = None
+    address: str | None = None
+    gosiNumber: str | None = None
+    gosiStatus: str | None = None
+    housingAllowance: float | None = Field(default=None, ge=0)
+    transportAllowance: float | None = Field(default=None, ge=0)
+    otherAllowance: float | None = Field(default=None, ge=0)
 
 
 class EmployeeUpdate(BaseModel):
@@ -56,6 +68,18 @@ class EmployeeUpdate(BaseModel):
     allowances: float | None = Field(default=None, ge=0)
     commissionType: CommissionType | None = None
     commissionPct: float | None = Field(default=None, ge=0, le=100)
+    departmentId: str | None = None
+    positionId: str | None = None
+    managerId: str | None = None
+    scheduleId: str | None = None
+    gender: Literal["male", "female"] | None = None
+    email: str | None = None
+    address: str | None = None
+    gosiNumber: str | None = None
+    gosiStatus: str | None = None
+    housingAllowance: float | None = Field(default=None, ge=0)
+    transportAllowance: float | None = Field(default=None, ge=0)
+    otherAllowance: float | None = Field(default=None, ge=0)
 
 
 class EmployeeOut(BaseModel):
@@ -65,7 +89,7 @@ class EmployeeOut(BaseModel):
     linked_user_id: str | None = None
     linked_email: str | None = None
     full_name: str
-    national_id: str | None = None
+    national_id: str | None = None          # مُقنَّع (****1234) لمن لا يملك hr.identity.view
     nationality: str | None = None
     is_saudi: bool
     birth_date: date | None = None
@@ -74,25 +98,40 @@ class EmployeeOut(BaseModel):
     contract_type: str
     hire_date: date
     termination_date: date | None = None
-    basic_salary: float
-    iban: str | None = None
-    iqama_number: str | None = None
+    basic_salary: float | None = None       # None لمن لا يملك hr.salary.view
+    iban: str | None = None                 # None لمن لا يملك hr.salary.view
+    iqama_number: str | None = None         # مُقنَّع لمن لا يملك hr.identity.view
     iqama_expiry_date: date | None = None
-    approval_pin: str | None = None   # ظاهر لمشرفي HR فقط — الصفحة كلها خلف hr.view/hr.manage
-    allowances: float = 0
+    approval_pin: str | None = None         # لمن يملك hr.manage فقط
+    allowances: float | None = None
+    housing_allowance: float | None = None
+    transport_allowance: float | None = None
+    other_allowance: float | None = None
     commission_type: CommissionType = "none"
-    commission_pct: float = 0
+    commission_pct: float | None = None
+    department_id: str | None = None
+    department_name: str | None = None
+    position_id: str | None = None
+    position_name: str | None = None
+    manager_id: str | None = None
+    schedule_id: str | None = None
+    gender: str | None = None
+    email: str | None = None
+    address: str | None = None
+    gosi_number: str | None = None
+    gosi_status: str | None = None
     is_active: bool
 
 
 class EndOfServiceOut(BaseModel):
     totalYears: float
-    amount: float
+    amount: float | None = None
     note: str
 
 
 class TerminateBody(BaseModel):
     terminationDate: str | None = None
+    reason: str | None = None
 
 
 class TerminateOut(BaseModel):
@@ -120,6 +159,12 @@ class AttendanceOut(BaseModel):
     check_in: datetime | None = None
     check_out: datetime | None = None
     notes: str | None = None
+    schedule_name: str | None = None
+    worked_minutes: int | None = None
+    late_minutes: int | None = None
+    early_minutes: int | None = None
+    overtime_minutes: int | None = None
+    day_status: str | None = None   # present | late | early_leave | absent
 
 
 class CheckInBody(BaseModel):
@@ -130,7 +175,7 @@ class CheckInBody(BaseModel):
 
 class LeaveCreate(BaseModel):
     employeeId: str
-    leaveType: LeaveType = "annual"
+    leaveType: str = "annual"   # أحد الأنواع الأساسية أو نوع مُعرَّف في إعدادات الموارد البشرية
     startDate: str
     endDate: str
     reason: str | None = None
@@ -161,6 +206,7 @@ class LeaveBalanceOut(BaseModel):
     used: int
     remaining: int
     note: str
+    byType: list[dict] = []   # استخدام كل نوع إجازة هذا العام (والمتبقي لما له حصة سنوية معرّفة)
 
 
 # ══════════════════ المخالفات ══════════════════
@@ -306,3 +352,68 @@ class EmployeeRequestOut(BaseModel):
     decided_at: datetime | None = None
     decision_note: str | None = None
     created_at: datetime
+
+
+# ══════════════════ الهيكل التنظيمي / العقود / المستندات / الإعدادات ══════════════════
+
+class DepartmentBody(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    isActive: bool | None = None
+
+
+class PositionBody(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    departmentId: str | None = None
+    isActive: bool | None = None
+
+
+class ScheduleBody(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    startTime: str
+    endTime: str
+    graceMinutes: int = Field(default=0, ge=0, le=240)
+    weeklyOff: list[int] = [5]
+    isActive: bool | None = None
+
+
+class ContractBody(BaseModel):
+    employeeId: str
+    contractType: ContractType = "full_time"
+    startDate: str
+    endDate: str | None = None
+    basicSalary: float | None = Field(default=None, ge=0)
+    notes: str | None = None
+
+
+class ReasonBody(BaseModel):
+    reason: str | None = None
+
+
+class DocumentBody(BaseModel):
+    employeeId: str | None = None
+    docType: str = Field(min_length=1, max_length=80)
+    docNumber: str | None = None
+    issueDate: str | None = None
+    expiryDate: str | None = None
+    notes: str | None = None
+
+
+class LeaveTypeBody(BaseModel):
+    code: str | None = None
+    name: str = Field(min_length=2, max_length=80)
+    annualDays: int | None = Field(default=None, ge=0, le=365)
+    isPaid: bool | None = None
+    isActive: bool | None = None
+
+
+class HrSettingsBody(BaseModel):
+    eosFirstYearsMonths: float | None = None
+    eosAfterMonths: float | None = None
+    eosThresholdYears: float | None = None
+    leaveDaysBefore: int | None = None
+    leaveDaysAfter: int | None = None
+    leaveThresholdYears: float | None = None
+    gosiSaudiEmployeePct: float | None = None
+    gosiSaudiEmployerPct: float | None = None
+    gosiNonsaudiEmployerPct: float | None = None
+    gosiBasis: Literal["basic", "basic_allowances"] | None = None
