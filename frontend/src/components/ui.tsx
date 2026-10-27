@@ -157,6 +157,18 @@ export function Badge({ tone = "neutral", dot = false, className = "", children 
 }
 export { Badge as StatusBadge };
 
+/** شبكة الصفحة: 12 عموداً ≥1024px، 8 ≥768px، 4 على الجوال. المسافة ثابتة gap-4 (16px). */
+export function Grid({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <div className={`grid grid-cols-4 gap-4 md:grid-cols-8 lg:grid-cols-12 ${className}`}>{children}</div>;
+}
+const COL_LG: Record<number, string> = { 3: "lg:col-span-3", 4: "lg:col-span-4", 6: "lg:col-span-6", 8: "lg:col-span-8", 9: "lg:col-span-9", 12: "lg:col-span-12" };
+const COL_MD: Record<number, string> = { 4: "md:col-span-4", 8: "md:col-span-8" };
+/** span = عدد الأعمدة على الشاشة الكبيرة (3/4/6/8/9/12)؛ md = 4 (نصف) أو 8 (كامل) على التابلت؛ الجوال دائماً عرض كامل. */
+export function Col({ span = 12, md = 8, children, className = "" }:
+  { span?: 3 | 4 | 6 | 8 | 9 | 12; md?: 4 | 8; children: ReactNode; className?: string }) {
+  return <div className={`col-span-4 min-w-0 ${COL_MD[md]} ${COL_LG[span]} ${className}`}>{children}</div>;
+}
+
 /** ترويسة صفحة موحّدة: عنوان + وصف + إجراءات (الأساسي أولاً) */
 export function PageHeader({ title, description, actions, breadcrumb }:
   { title: ReactNode; description?: ReactNode; actions?: ReactNode; breadcrumb?: ReactNode }) {
