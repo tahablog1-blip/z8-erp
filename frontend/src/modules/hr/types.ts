@@ -7,7 +7,7 @@ export type Employee = {
   linked_user_id: string | null;
   linked_email: string | null;
   full_name: string;
-  national_id: string | null;
+  national_id: string | null;          // مُقنَّع من الخادم لمن لا يملك hr.identity.view
   nationality: string | null;
   is_saudi: boolean;
   birth_date: string | null;
@@ -16,12 +16,28 @@ export type Employee = {
   contract_type: "full_time" | "part_time" | "temporary";
   hire_date: string;
   termination_date: string | null;
-  basic_salary: number;
+  basic_salary: number | null;         // null = لا يملك المستخدم hr.salary.view
   iban: string | null;
   iqama_number: string | null;
   iqama_expiry_date: string | null;
+  approval_pin?: string | null;
+  allowances?: number | null;
+  housing_allowance?: number | null;
+  transport_allowance?: number | null;
+  other_allowance?: number | null;
   commission_type: CommissionType;
-  commission_pct: number;
+  commission_pct: number | null;
+  department_id?: string | null;
+  department_name?: string | null;
+  position_id?: string | null;
+  position_name?: string | null;
+  manager_id?: string | null;
+  schedule_id?: string | null;
+  gender?: string | null;
+  email?: string | null;
+  address?: string | null;
+  gosi_number?: string | null;
+  gosi_status?: string | null;
   is_active: boolean;
 };
 
@@ -52,10 +68,16 @@ export type Attendance = {
   check_in: string | null;
   check_out: string | null;
   notes: string | null;
+  schedule_name?: string | null;
+  worked_minutes?: number | null;
+  late_minutes?: number | null;
+  early_minutes?: number | null;
+  overtime_minutes?: number | null;
+  day_status?: "present" | "late" | "early_leave" | "absent";
 };
 
-export type LeaveType = "annual" | "sick" | "unpaid" | "other";
-export const LEAVE_TYPE_LABELS: Record<LeaveType, string> = {
+export type LeaveType = string;   // أساسي (annual/sick/unpaid/other) أو رمز نوع مُعرَّف في إعدادات HR
+export const LEAVE_TYPE_LABELS: Record<string, string> = {
   annual: "سنوية", sick: "مرضية", unpaid: "بدون راتب", other: "أخرى",
 };
 
@@ -78,6 +100,7 @@ export type LeaveBalance = {
   used: number;
   remaining: number;
   note: string;
+  byType?: { code: string; name: string; used: number; entitlement: number | null; remaining: number | null }[];
 };
 
 export type Violation = {
@@ -87,7 +110,7 @@ export type Violation = {
   violation_date: string;
   violation_type: string;
   description: string | null;
-  deduction_amount: number;
+  deduction_amount: number | null;
   issued_by_name: string | null;
 };
 
