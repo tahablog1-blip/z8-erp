@@ -127,6 +127,8 @@ class SetupStatus(BaseModel):
     key: str
     label: str
     ok: bool
+    path: str = ""
+    hint: str = ""
 
 
 class SettingsDashboardOut(BaseModel):

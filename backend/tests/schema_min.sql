@@ -1,7 +1,7 @@
 -- tests/schema_min.sql — مخطط أدنى لاختبارات الاستعلامات (أعمدة الجداول التي تقرأها شاشات العملاء والأصناف فقط).
 -- ليس نسخة من مخطط الإنتاج؛ لو تغيّر عمود تعتمد عليه الاستعلامات حدّثه هنا.
 CREATE TABLE branches (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, name text, is_active boolean DEFAULT true);
-CREATE TABLE users (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, full_name text, email text, permissions jsonb DEFAULT '[]'::jsonb);
+CREATE TABLE users (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, full_name text, email text, permissions jsonb DEFAULT '[]'::jsonb, role text DEFAULT 'employee', is_active boolean DEFAULT true, totp_enabled boolean DEFAULT false, locked_until timestamptz);
 CREATE TABLE customers (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, name text, customer_type text DEFAULT 'individual',
   phone text, email text, vat_number text, cr_number text, is_active boolean DEFAULT true, credit_limit numeric, loyalty_points int DEFAULT 0,
   created_at timestamptz DEFAULT now(), updated_at timestamptz);
@@ -50,7 +50,7 @@ CREATE TABLE supplier_payments (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), c
 CREATE TABLE journal_entries (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, entry_date date DEFAULT CURRENT_DATE, source_type text, source_id text, branch_id uuid);
 
 -- الموارد البشرية (أعمدة تقرؤها اختبارات HR) — companies/users مبسّطة
-CREATE TABLE companies (id uuid PRIMARY KEY, name text,
+CREATE TABLE companies (id uuid PRIMARY KEY, name text, vat_number text, cr_number text,
   gosi_saudi_employee_pct numeric(5,2) NOT NULL DEFAULT 9.75, gosi_saudi_employer_pct numeric(5,2) NOT NULL DEFAULT 11.75, gosi_nonsaudi_employer_pct numeric(5,2) NOT NULL DEFAULT 2.00,
   eos_first_years_months numeric(5,2) NOT NULL DEFAULT 0.5, eos_after_months numeric(5,2) NOT NULL DEFAULT 1, eos_threshold_years numeric(5,2) NOT NULL DEFAULT 5,
   leave_days_before int NOT NULL DEFAULT 21, leave_days_after int NOT NULL DEFAULT 30, leave_threshold_years numeric(5,2) NOT NULL DEFAULT 5, gosi_basis text NOT NULL DEFAULT 'basic');
@@ -82,3 +82,6 @@ CREATE TABLE treasury_vouchers (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), c
 CREATE TABLE accounts (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, code text, name text, type text);
 CREATE TABLE journal_lines (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), entry_id uuid, account_id uuid, debit numeric(12,2) DEFAULT 0, credit numeric(12,2) DEFAULT 0);
 CREATE TABLE cars (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, brand text, name text, model_year text);
+CREATE TABLE user_sessions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid, company_id uuid, created_at timestamptz DEFAULT now(), last_seen_at timestamptz DEFAULT now(), revoked_at timestamptz);
+CREATE TABLE integration_log (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, provider text, event text, status text, detail text, created_at timestamptz DEFAULT now());
+CREATE TABLE roles (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, name text);

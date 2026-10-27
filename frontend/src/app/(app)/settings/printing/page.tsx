@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { cachePrinting } from "@/lib/printing";
-import { Button, Card, ErrorNote, Field, Input, Select, Switch, PageHeader } from "@/components/ui";
+import { Card, ErrorNote, Field, Input, Select, Switch, PageHeader } from "@/components/ui";
+import { SaveBar } from "@/components/settings/SettingsContext";
+import { toast } from "@/components/toast";
 
 type Printing = {
   autoPrint: boolean; footer: string; footerReturn: string;
@@ -20,13 +22,15 @@ const DEFAULT: Printing = {
 
 export default function PrintingSettingsPage() {
   const [form, setForm] = useState<Printing>(DEFAULT);
+  const [initial, setInitial] = useState(JSON.stringify(DEFAULT));   // آخر حالة محفوظة
+  const dirty = JSON.stringify(form) !== initial;
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
 
   useEffect(() => {
-    api<Printing>("/settings/printing").then((r) => { setForm(r); setLoaded(true); })
+    api<Printing>("/settings/printing").then((r) => { setForm(r); setInitial(JSON.stringify(r)); setLoaded(true); })
       .catch((e) => { setErr(e.message); setLoaded(true); });
   }, []);
 
@@ -34,9 +38,9 @@ export default function PrintingSettingsPage() {
     setErr(""); setOk(""); setBusy(true);
     try {
       const saved = await api<Printing>("/settings/printing", { method: "PUT", body: JSON.stringify(form) });
-      setForm(saved);
+      setForm(saved); setInitial(JSON.stringify(saved));
       cachePrinting(saved); // تحديث فوري للكاش — الفاتورة الجاية تطبّق القيم الجديدة بلا إعادة تحميل الصفحة
-      setOk("تم الحفظ — الفواتير الجاية هتطبق الإعدادات دي");
+      toast.success("تم حفظ التغييرات بنجاح — الفواتير القادمة ستطبّق هذه الإعدادات.");
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
   }
@@ -107,13 +111,10 @@ export default function PrintingSettingsPage() {
             صيغ الطباعة المتاحة في كل النظام: <b>حراري 80مم</b> للكاشير والتذاكر، و<b>A4 رسمي</b> للفواتير الضريبية والتقارير وكشوف الحساب — الاختيار بيظهر عند عرض أي فاتورة.
           </div>
 
-          <ErrorNote msg={err} />
-          {ok && <p className="text-t-sm font-bold text-emerald">{ok}</p>}
-          <div className="flex justify-end">
-            <Button onClick={save} disabled={busy}>{busy ? "جارِ الحفظ..." : "حفظ إعدادات الطباعة"}</Button>
-          </div>
+          {!dirty && <ErrorNote msg={err} />}
         </div>
       </Card>
+      <SaveBar dirty={dirty} busy={busy} error={dirty && err ? err : ""} onSave={save} onCancel={() => setForm(JSON.parse(initial))} />
     </div>
   );
 }

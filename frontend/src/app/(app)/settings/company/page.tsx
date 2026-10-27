@@ -6,6 +6,8 @@ import { useAuth } from "@/lib/auth";
 import { cacheCompany } from "@/lib/company";
 import { Button, Card, ErrorNote, Field, Input, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
+import { SaveBar } from "@/components/settings/SettingsContext";
+import { toast } from "@/components/toast";
 
 type Company = {
   name: string; name_en: string | null; trade_name: string | null;
@@ -31,6 +33,8 @@ export default function CompanySettingsPage() {
   const canCompany = hasPerm("settings.company");
 
   const [form, setForm] = useState<Company>(EMPTY);
+  const [initial, setInitial] = useState<string>(JSON.stringify(EMPTY));   // لقطة آخر حالة محفوظة — لكشف التغييرات غير المحفوظة
+  const dirty = JSON.stringify(form) !== initial;
   const [coBusy, setCoBusy] = useState(false);
   const [coErr, setCoErr] = useState("");
   const [coOk, setCoOk] = useState("");
@@ -54,7 +58,7 @@ export default function CompanySettingsPage() {
 
   useEffect(() => {
     if (!canCompany) return;
-    api<Company>("/settings/company").then(setForm).catch((e) => setCoErr(e.message));
+    api<Company>("/settings/company").then((c) => { setForm(c); setInitial(JSON.stringify(c)); }).catch((e) => setCoErr(e.message));
     api<{ waInstance: string; waToken: string }>("/auth/wa-settings")
       .then((r) => { setWaInstance(r.waInstance); setWaToken(r.waToken); }).catch(() => {});
     api<{ earnPerSar: number; redeemValue: number }>("/settings/loyalty")
@@ -79,13 +83,13 @@ export default function CompanySettingsPage() {
     setCoErr(""); setCoOk(""); setCoBusy(true);
     try {
       const saved = await api<Company>("/settings/company", { method: "PUT", body: JSON.stringify(form) });
-      setForm(saved);
+      setForm(saved); setInitial(JSON.stringify(saved));
       cacheCompany({
         name: saved.name, vat: saved.vat_number || "", cr: saved.cr_number || "",
         address: saved.address || "", phone: saved.phone || "",
         logoUrl: saved.logo_url || "",
       });
-      setCoOk("تم الحفظ — كل المطبوعات هتستخدم البيانات الجديدة فوراً");
+      toast.success("تم حفظ التغييرات بنجاح — ستستخدم المطبوعات البيانات الجديدة فوراً.");
     } catch (e: any) { setCoErr(e.message); }
     finally { setCoBusy(false); }
   }
@@ -237,17 +241,8 @@ export default function CompanySettingsPage() {
         </div>
       </Card>
 
-      <Card>
-        <div className="flex max-w-3xl items-center justify-between gap-3">
-          <ErrorNote msg={coErr} />
-          {coOk && <p className="text-t-sm font-bold text-emerald">{coOk}</p>}
-          <div className="mr-auto flex justify-end">
-            <Button onClick={saveCompany} disabled={coBusy || !form.name.trim()}>
-              {coBusy ? "جارِ الحفظ..." : "حفظ البيانات"}
-            </Button>
-          </div>
-        </div>
-      </Card>
+      <SaveBar dirty={dirty} busy={coBusy} error={coErr && dirty ? coErr : ""} onSave={saveCompany} onCancel={() => setForm(JSON.parse(initial))} />
+      {coErr && !dirty && <ErrorNote msg={coErr} />}
 
       <Card>
         <h2 className="mb-2 text-t-md font-black">إشعارات واتساب للعملاء</h2>
