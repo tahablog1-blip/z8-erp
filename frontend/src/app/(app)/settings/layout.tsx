@@ -69,13 +69,13 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
     <nav className="space-y-4">
       {visibleGroups.map((g) => (
         <div key={g.title}>
-          <div className="mb-1.5 px-2 text-[11px] font-extrabold tracking-wide text-text-dim">{g.title}</div>
+          <div className="mb-1.5 px-2 text-t-xs font-extrabold tracking-wide text-text-dim">{g.title}</div>
           <div className="space-y-0.5">
             {g.items.map((it) => {
               const active = pathname === it.path || pathname.startsWith(it.path + "/");
               return (
                 <button key={it.path} onClick={() => router.push(it.path)}
-                        className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-right text-[12.5px] font-bold transition
+                        className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-right text-t-sm font-bold transition
                           ${active ? "bg-petrol text-white" : "text-text-dim hover:bg-ink-3 hover:text-text"}`}>
                   <MIcon name={it.icon} className="!text-[18px]" />
                   <span className="flex-1">{it.label}</span>
@@ -98,7 +98,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                         transition-transform duration-200 lg:sticky lg:top-0 lg:z-0 lg:block lg:w-56 lg:shrink-0 lg:translate-x-0 lg:rounded-card lg:border lg:p-3
                         ${drawerOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}`}>
         <div className="mb-3 flex items-center justify-between lg:hidden">
-          <span className="text-[13px] font-extrabold">الإعدادات</span>
+          <span className="text-t-md font-extrabold">الإعدادات</span>
           <button onClick={() => setDrawerOpen(false)} aria-label="إغلاق" className="grid h-8 w-8 place-items-center rounded-lg hover:bg-ink-3">
             <MIcon name="close" />
           </button>
@@ -108,7 +108,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
 
       <div className="min-w-0 flex-1 space-y-3">
         <button onClick={() => setDrawerOpen(true)}
-                className="flex items-center gap-2 rounded-lg border border-line bg-ink-2 px-3 py-2 text-[12.5px] font-bold text-text-dim lg:hidden">
+                className="flex items-center gap-2 rounded-lg border border-line bg-ink-2 px-3 py-2 text-t-sm font-bold text-text-dim lg:hidden">
           <MIcon name="tune" className="!text-[18px]" /> أقسام الإعدادات
         </button>
         {children}

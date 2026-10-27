@@ -109,8 +109,8 @@ export default function Supplier360Page() {
         <div className="rounded-card border border-line bg-ink-2 p-4 shadow-card">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="text-t-2xl font-black">{s.name}</h1>
-              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-t-xs text-text-dim">
+              <h1 className="page-title">{s.name}</h1>
+              <p className="page-desc">
                 <Badge tone={s.active ? "good" : "neutral"}>{s.active ? "نشط" : "غير نشط"}</Badge>
                 {s.category && <span>{s.category}</span>}{s.vatNumber && <span dir="ltr">VAT: {s.vatNumber}</span>}{s.phone && <span dir="ltr">{s.phone}</span>}
                 {s.termsDays > 0 && <span>سداد خلال {s.termsDays} يوم</span>}{s.rating != null && <span>التقييم اليدوي {s.rating}/5</span>}
@@ -118,7 +118,7 @@ export default function Supplier360Page() {
               {s.address && <p className="mt-1 text-t-sm text-text-dim">{s.address}</p>}
             </div>
             <div className="flex flex-wrap gap-2">
-              {canInvoice && <Link href="/purchases" className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-3 py-1.5 text-[12px] font-semibold text-text hover:border-petrol hover:text-petrol"><MIcon name="receipt_long" className="!text-[16px]" />فاتورة شراء</Link>}
+              {canInvoice && <Link href="/purchases" className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-3 py-1.5 text-t-sm font-semibold text-text hover:border-petrol hover:text-petrol"><MIcon name="receipt_long" className="!text-[16px]" />فاتورة شراء</Link>}
               {canEdit && s.active && <Button size="sm" onClick={() => setPayOpen(true)}><MIcon name="payments" className="!text-[16px]" />دفعة</Button>}
               <Button size="sm" variant="outline" onClick={() => setTab("ledger")}><MIcon name="description" className="!text-[16px]" />كشف الحساب</Button>
               {canEdit && <Button size="sm" variant="tool" onClick={() => setEditOpen(true)}>تعديل</Button>}

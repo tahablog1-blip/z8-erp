@@ -13,10 +13,10 @@ export function Button({ variant = "primary", size = "md", className = "", loadi
   }) {
   const base = "m3 z8-anim-btn inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg font-semibold transition-colors duration-150 disabled:opacity-45 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-petrol";
   const sizes = {
-    lg: "px-5 py-2.5 text-[14px]",
-    md: "px-4 py-2 text-[13px]",
-    sm: "px-3 py-1.5 text-[12px]",
-    xs: "px-2 py-1 text-[11px]",
+    lg: "h-10 px-5 text-t-md",
+    md: "h-9 px-4 text-t-sm",
+    sm: "h-8 px-3 text-t-sm",
+    xs: "h-7 px-2.5 text-t-xs",
   }[size];
   const styles = {
     primary:   "bg-petrol text-white hover:brightness-110",
@@ -82,8 +82,8 @@ export function ToggleRow({ title, hint, checked, onChange, tone, disabled }: {
   return (
     <label className="flex cursor-pointer items-center justify-between gap-3">
       <div>
-        <div className="text-[13px] font-bold">{title}</div>
-        {hint && <div className="text-[11.5px] text-text-dim">{hint}</div>}
+        <div className="text-t-md font-bold">{title}</div>
+        {hint && <div className="text-t-xs text-text-dim">{hint}</div>}
       </div>
       <Switch checked={checked} onChange={onChange} tone={tone} disabled={disabled} label={title} />
     </label>
@@ -93,9 +93,9 @@ export function ToggleRow({ title, hint, checked, onChange, tone, disabled }: {
 export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[12px] font-bold text-text-dim">{label}</span>
+      <span className="mb-1.5 block text-t-sm font-bold text-text-dim">{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-[11px] text-text-dim">{hint}</span>}
+      {hint && <span className="mt-1 block text-t-xs text-text-dim">{hint}</span>}
     </label>
   );
 }
@@ -103,7 +103,7 @@ export function Field({ label, children, hint }: { label: string; children: Reac
 export function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement> & { ref?: React.Ref<HTMLInputElement> }) {
   return (
     <input
-      className={`w-full rounded-xl border border-line bg-ink-2 px-3.5 py-2.5 text-[13px] transition-all duration-200 text-text placeholder:text-text-dim/60 focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15 disabled:bg-ink-3 disabled:text-text-dim ${className}`}
+      className={`h-9 w-full rounded-lg border border-line bg-ink-2 px-3 text-t-sm text-text transition-colors duration-150 placeholder:text-text-dim/60 focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15 disabled:bg-ink-3 disabled:text-text-dim ${className}`}
       {...props}
     />
   );
@@ -112,7 +112,7 @@ export function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInpu
 export function Select({ className = "", children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
-      className={`w-full rounded-xl border border-line bg-ink-2 px-3.5 py-2.5 text-[13px] transition-all duration-200 text-text focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15 disabled:bg-ink-3 disabled:text-text-dim ${className}`}
+      className={`h-9 w-full rounded-lg border border-line bg-ink-2 px-3 text-t-sm text-text transition-colors duration-150 focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15 disabled:bg-ink-3 disabled:text-text-dim ${className}`}
       {...props}
     >
       {children}
@@ -124,7 +124,7 @@ export function Textarea({ className = "", ...props }: TextareaHTMLAttributes<HT
   return (
     <textarea
       rows={2}
-      className={`w-full rounded-xl border border-line bg-ink-2 px-3.5 py-2.5 text-[13px] transition-all duration-200 text-text placeholder:text-text-dim/60 focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15 ${className}`}
+      className={`w-full rounded-card border border-line bg-ink-2 px-3.5 py-2.5 text-t-md transition-all duration-200 text-text placeholder:text-text-dim/60 focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15 ${className}`}
       {...props}
     />
   );
@@ -134,15 +134,42 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
   return <div className={`rounded-card border border-line bg-ink-2 p-5 shadow-card transition-shadow duration-200 ${className}`}>{children}</div>;
 }
 
-export function Badge({ tone = "neutral", children }:
-  { tone?: "neutral" | "good" | "warn" | "info"; children: ReactNode }) {
-  const styles = {
-    neutral: "bg-ink-3 text-text-dim",
-    good:    "bg-emerald-bg text-emerald",
-    warn:    "bg-ember-bg text-ember",
-    info:    "bg-brass-soft text-brass",
-  }[tone];
-  return <span className={`inline-block rounded-full px-2.5 py-1 text-[11px] font-bold ${styles}`}>{children}</span>;
+export type Tone = "success" | "warning" | "danger" | "info" | "neutral";
+const TONE_CLASS: Record<Tone, string> = {
+  success: "bg-success-soft text-success",
+  warning: "bg-warning-soft text-warning",
+  danger:  "bg-danger-soft text-danger",
+  info:    "bg-info-soft text-info",
+  neutral: "bg-ink-3 text-text-dim",
+};
+/** أسماء قديمة (good/warn) تبقى مدعومة: good = success · warn = danger (كانت حمراء في النظام) */
+const LEGACY: Record<string, Tone> = { good: "success", warn: "danger" };
+
+/** شارة حالة موحّدة لكل النظام — نفس الشكل والألوان الدلالية في كل صفحة */
+export function Badge({ tone = "neutral", dot = false, children }:
+  { tone?: Tone | "good" | "warn"; dot?: boolean; children: ReactNode }) {
+  const t = (LEGACY[tone] ?? tone) as Tone;
+  return (
+    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-t-xs font-bold ${TONE_CLASS[t]}`}>
+      {dot && <i aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />}{children}
+    </span>
+  );
+}
+export { Badge as StatusBadge };
+
+/** ترويسة صفحة موحّدة: عنوان + وصف + إجراءات (الأساسي أولاً) */
+export function PageHeader({ title, description, actions, breadcrumb }:
+  { title: string; description?: string; actions?: ReactNode; breadcrumb?: ReactNode }) {
+  return (
+    <header className="flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0">
+        {breadcrumb}
+        <h1 className="page-title page-title">{title}</h1>
+        {description && <p className="page-desc">{description}</p>}
+      </div>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    </header>
+  );
 }
 
 export function Tabs<T extends string>({ value, onChange, items }:
@@ -153,7 +180,7 @@ export function Tabs<T extends string>({ value, onChange, items }:
         <button
           key={t.key} role="tab" aria-selected={value === t.key}
           onClick={() => onChange(t.key)}
-          className={`-mb-px shrink-0 whitespace-nowrap border-b-2 px-4 py-2 text-[13px] font-bold transition
+          className={`-mb-px shrink-0 whitespace-nowrap border-b-2 px-4 py-2 text-t-md font-bold transition
             ${value === t.key
               ? "border-petrol text-petrol"
               : "border-transparent text-text-dim hover:text-text"}`}>
@@ -178,14 +205,14 @@ export function Modal({ open, title, children, onClose, size = "md" }:
   if (size === "full") return <FullScreenModal title={title} onClose={onClose}>{children}</FullScreenModal>;
   const width = size === "lg" ? "max-w-3xl" : "max-w-md";
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-[3px]" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-label={title}
-           className={`z8-pop w-full ${width} max-h-[90vh] overflow-y-auto rounded-2xl border border-line bg-ink-2 p-4 shadow-panel sm:rounded-[28px] sm:p-6`}
+           className={`z8-pop w-full ${width} max-h-[90vh] overflow-y-auto rounded-card border border-line bg-ink-2 p-4 shadow-panel sm:p-6`}
            onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-[15px] font-extrabold text-text">{title}</h3>
+          <h3 className="card-title">{title}</h3>
           <button onClick={onClose} aria-label="إغلاق"
-                  className="grid h-8 w-8 place-items-center rounded-full text-text-dim transition-all duration-200 hover:rotate-90 hover:bg-ink-3 hover:text-text">
+                  className="grid h-8 w-8 place-items-center rounded-lg text-text-dim transition-colors duration-150 hover:bg-ink-3 hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol">
             <MIcon name="close" className="!text-[18px]" />
           </button>
         </div>
@@ -197,7 +224,7 @@ export function Modal({ open, title, children, onClose, size = "md" }:
 
 export function ErrorNote({ msg }: { msg: string }) {
   if (!msg) return null;
-  return <div className="rounded-lg border border-ember/30 bg-ember-bg px-3 py-2 text-[12.5px] font-semibold text-ember">{msg}</div>;
+  return <div role="alert" className="rounded-lg border border-danger/30 bg-danger-soft px-3 py-2 text-t-sm font-semibold text-danger">{msg}</div>;
 }
 
 import { MIcon } from "@/components/m-icon";
@@ -207,11 +234,11 @@ export function EmptyState({ icon = "inbox", title, description, action }:
   { icon?: string; title: string; description?: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 px-6 py-12 text-center">
-      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-ink-3 text-text-dim">
+      <span className="grid h-12 w-12 place-items-center rounded-card bg-ink-3 text-text-dim">
         <MIcon name={icon} className="!text-[26px]" />
       </span>
-      <div className="text-[13.5px] font-extrabold text-text">{title}</div>
-      {description && <div className="max-w-xs text-[12.5px] leading-relaxed text-text-dim">{description}</div>}
+      <div className="text-t-md font-extrabold text-text">{title}</div>
+      {description && <div className="max-w-xs text-t-sm leading-relaxed text-text-dim">{description}</div>}
       {action && <div className="mt-2">{action}</div>}
     </div>
   );
@@ -227,7 +254,7 @@ export function Tooltip({ label, children, side = "end" }:
     <span className="group relative inline-flex">
       {children}
       <span role="tooltip"
-            className={`pointer-events-none absolute z-[90] whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 ${pos}`}>
+            className={`pointer-events-none absolute z-[90] whitespace-nowrap rounded-md bg-text px-2 py-1 text-t-xs font-bold text-ink-2 opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 ${pos}`}>
         {label}
       </span>
     </span>
@@ -237,7 +264,7 @@ export function Tooltip({ label, children, side = "end" }:
 /** شريط فتات الخبز (Breadcrumb) — يستخدم فوق عنوان الصفحة في الهيدر */
 export function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
   return (
-    <nav aria-label="breadcrumb" className="flex items-center gap-1.5 text-[11.5px] text-text-dim">
+    <nav aria-label="breadcrumb" className="flex items-center gap-1.5 text-t-xs text-text-dim">
       {items.map((it, i) => (
         <span key={i} className="flex items-center gap-1.5">
           {i > 0 && <span className="opacity-50">/</span>}

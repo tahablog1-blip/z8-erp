@@ -13,7 +13,7 @@ const BASE_CSS = `
   th { background:#eef3f4; border:1px solid #c9d4d6; padding:6px 8px; font-size:11.5px; }
   td { border:1px solid #dbe3e4; padding:5px 8px; font-size:11.5px; }
   .r { text-align:right; } .c { text-align:center; } .b { font-weight:700; }
-  h2.sec { font-size:13px; margin:14px 0 6px; border-right:4px solid #0C5E66; padding-right:8px; }
+  h2.sec { font-size:13px; margin:14px 0 6px; border-right:4px solid #1E3A8A; padding-right:8px; }
   .kpis { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
   .kpi { flex:1; min-width:120px; border:1px solid #c9d4d6; border-radius:8px; padding:8px; text-align:center; }
   .kpi .v { font-size:15px; font-weight:800; } .kpi .t { font-size:10.5px; color:#556; }
@@ -28,8 +28,8 @@ function reportShell(title: string, subtitle: string, bodyHTML: string) {
   @page { size:A4; margin:12mm; }
   body { font-size:12px; }
   .head { display:flex; justify-content:space-between; align-items:flex-start;
-          border-bottom:2px solid #0C5E66; padding-bottom:8px; margin-bottom:10px; }
-  .head h1 { font-size:17px; color:#0C5E66; }
+          border-bottom:2px solid #1E3A8A; padding-bottom:8px; margin-bottom:10px; }
+  .head h1 { font-size:17px; color:#1E3A8A; }
   .head .sub { font-size:10.5px; color:#445; margin-top:2px; }
   .title { font-size:15px; font-weight:800; margin:6px 0 2px; }
   .subtitle { font-size:11px; color:#556; margin-bottom:10px; }

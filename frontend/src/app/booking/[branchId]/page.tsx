@@ -2,7 +2,7 @@
 // حجز الدور الذاتي — رحلة العميل الكاملة:
 // جوال/لوحة → جراجه المحفوظ (بياناته ما بتضيعش) → أو تسجيل جديد بثلاث فئات → تذكرة حية
 //
-// ⚠️ قاعدة مهمة في هذا الملف:
+// قاعدة مهمة في هذا الملف:
 // كل كومبوننت (TInput / Section / EntryCard / GarageCard / RegisterForm) معرّف
 // خارج الكومبوننت الأب. لو اتعرّف جوه، React بيعتبره "نوع جديد" كل render
 // فبيهد الحقول ويعيد بناءها → الفوكس بيضيع وتضطر تضغط قبل كل حرف.
@@ -40,7 +40,7 @@ const ENGINE_SIZE_SUGGESTIONS = [
   "2.7", "3.0", "3.3", "3.5", "3.6", "4.0", "4.6", "5.0", "5.3", "5.7", "6.2",
 ];
 
-const NAVY = "#0F2D52", GREEN = "#16A34A", DIM = "#51617A", LINE = "#E2E8F0";
+const NAVY = "var(--petrol-deep)", GREEN = "var(--emerald)", DIM = "var(--text-dim)", LINE = "var(--line)";
 const TYPE_META: Record<SType, { title: string; desc: string; icon: string }> = {
   basic: { title: "خارج الضمان", desc: "بيانات مختصرة وسريعة", icon: "directions_car" },
   warranty: { title: "تحت الضمان", desc: "بيانات السيارة كاملة", icon: "verified_user" },
@@ -67,13 +67,13 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 
 /* ═══════════ كومبوننتات ثابتة (module scope) ═══════════ */
 
-const inputCls = `w-full rounded-xl border px-4 py-3 text-[14px] font-bold outline-none transition focus:border-[#0F2D52] focus:ring-2 focus:ring-[#0F2D52]/15`;
+const inputCls = `w-full rounded-card border px-4 py-3 text-t-md font-bold outline-none transition focus:border-petrol focus:ring-2 focus:ring-[var(--petrol-deep)]/15`;
 
 function TInput(props: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
   const { label, className = "", ...rest } = props;
   return (
     <label className="block text-right">
-      <span className="mb-1 block text-[11.5px] font-black" style={{ color: NAVY }}>{label}</span>
+      <span className="mb-1 block text-t-xs font-black" style={{ color: NAVY }}>{label}</span>
       <input {...rest} style={{ borderColor: LINE }} className={`${inputCls} ${className}`} />
     </label>
   );
@@ -103,7 +103,7 @@ function Combobox({ label, value, onChange, options, placeholder, allowCustom = 
 
   return (
     <div className="relative block text-right" ref={boxRef}>
-      <span className="mb-1 block text-[11.5px] font-black" style={{ color: NAVY }}>{label}</span>
+      <span className="mb-1 block text-t-xs font-black" style={{ color: NAVY }}>{label}</span>
       <input
         value={value}
         onChange={(e) => { if (allowCustom) onChange(e.target.value); setOpen(true); }}
@@ -114,10 +114,10 @@ function Combobox({ label, value, onChange, options, placeholder, allowCustom = 
         className={inputCls}
       />
       {open && (options.length > 0 || value.trim()) && (
-        <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-xl border bg-white shadow-lg"
+        <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-card border bg-white shadow-lg"
           style={{ borderColor: LINE }}>
           {filtered.length === 0 ? (
-            <div className="px-4 py-2.5 text-[12.5px] font-bold" style={{ color: DIM }}>
+            <div className="px-4 py-2.5 text-t-sm font-bold" style={{ color: DIM }}>
               {allowCustom ? "لا يوجد مطابق — تقدر تكتب اسماً جديداً" : "لا يوجد مطابق"}
             </div>
           ) : filtered.map((o) => (
@@ -129,7 +129,7 @@ function Combobox({ label, value, onChange, options, placeholder, allowCustom = 
                 onChange(o);
                 setOpen(false);
               }}
-              className="block w-full px-4 py-2.5 text-right text-[13px] font-bold transition hover:bg-[#F1F5F9]"
+              className="block w-full px-4 py-2.5 text-right text-t-md font-bold transition hover:bg-ink-3"
               style={{ color: value === o ? GREEN : NAVY }}
             >
               {o}
@@ -143,8 +143,8 @@ function Combobox({ label, value, onChange, options, placeholder, allowCustom = 
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-2.5 rounded-xl p-3" style={{ background: "#F6F8FA" }}>
-      <div className="text-[12px] font-black" style={{ color: GREEN }}>{title}</div>
+    <div className="space-y-2.5 rounded-card p-3" style={{ background: "var(--ink3)" }}>
+      <div className="text-t-sm font-black" style={{ color: GREEN }}>{title}</div>
       {children}
     </div>
   );
@@ -153,8 +153,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function ErrBox({ msg }: { msg: string }) {
   if (!msg) return null;
   return (
-    <p className="rounded-lg px-3 py-2 text-center text-[12px] font-bold"
-      style={{ background: "rgba(220,38,38,.08)", color: "#DC2626" }}>{msg}</p>
+    <p className="rounded-lg px-3 py-2 text-center text-t-sm font-bold"
+      style={{ background: "var(--ember-bg)", color: "var(--ember)" }}>{msg}</p>
   );
 }
 
@@ -206,13 +206,13 @@ function OtpEntryCard({ branchId, otp, onVerified }: {
   }
 
   const tabCls = (on: boolean) =>
-    `flex-1 rounded-lg py-2 text-[13px] font-black transition ${on ? "text-white shadow" : ""}`;
+    `flex-1 rounded-lg py-2 text-t-md font-black transition ${on ? "text-white shadow" : ""}`;
 
   if (step === "code") {
     return (
-      <div className="kiosk-step space-y-3 rounded-2xl bg-white p-5 shadow-lg">
-        <h2 className="text-center text-[15px] font-black" style={{ color: NAVY }}>أدخل رمز التحقق</h2>
-        <p className="text-center text-[12px] leading-relaxed" style={{ color: DIM }}>
+      <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+        <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>أدخل رمز التحقق</h2>
+        <p className="text-center text-t-sm leading-relaxed" style={{ color: DIM }}>
           أرسلنا رمزاً من 6 أرقام {channel === "phone" ? "على واتساب" : "إلى بريدك"}{" "}
           <b className="tnum" dir="ltr" style={{ color: NAVY }}>{maskedTo}</b>
         </p>
@@ -223,15 +223,15 @@ function OtpEntryCard({ branchId, otp, onVerified }: {
             setCode(v);
             if (v.length === 6) verify(v);
           }}
-          className={`${inputCls} tnum text-center text-[26px] tracking-[0.5em]`} style={{ borderColor: LINE }} />
+          className={`${inputCls} tnum text-center text-t-3xl tracking-[0.5em]`} style={{ borderColor: LINE }} />
         <ErrBox msg={err} />
         <button onClick={() => verify(code)} disabled={busy || code.length !== 6}
-          className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-black text-white shadow-lg transition active:scale-[.98] disabled:opacity-40"
+          className="flex w-full items-center justify-center gap-2 rounded-card py-3.5 text-t-lg font-black text-white shadow-lg transition active:scale-[.98] disabled:opacity-40"
           style={{ background: GREEN }}>
           <MIcon name="verified_user" className="!text-[20px] text-white" />
           {busy ? "جارِ التحقق..." : "تأكيد الرمز"}
         </button>
-        <div className="flex items-center justify-between text-[12px] font-bold">
+        <div className="flex items-center justify-between text-t-sm font-bold">
           <button onClick={() => { setStep("enter"); setErr(""); setCode(""); }} style={{ color: DIM }}>
             ‹ تغيير {channel === "phone" ? "الرقم" : "البريد"}
           </button>
@@ -244,13 +244,13 @@ function OtpEntryCard({ branchId, otp, onVerified }: {
   }
 
   return (
-    <div className="kiosk-step space-y-3 rounded-2xl bg-white p-5 shadow-lg">
-      <h2 className="text-center text-[15px] font-black" style={{ color: NAVY }}>أهلاً بك 👋</h2>
-      <p className="text-center text-[12px]" style={{ color: DIM }}>
+    <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>أهلاً بك</h2>
+      <p className="text-center text-t-sm" style={{ color: DIM }}>
         سجّل دخولك برقم جوالك أو بريدك — هنبعتلك رمز تحقق، ولو سجّلت قبل كده هنرجّع بياناتك وسياراتك فوراً
       </p>
       {otp.phone && otp.email && (
-        <div className="flex gap-1 rounded-xl p-1" style={{ background: "#F1F5F9" }} role="tablist">
+        <div className="flex gap-1 rounded-card p-1" style={{ background: "var(--ink3)" }} role="tablist">
           {([["phone", "رقم الجوال"], ["email", "البريد الإلكتروني"]] as const).map(([k, label]) => (
             <button key={k} role="tab" aria-selected={channel === k}
               onClick={() => { setChannel(k); setValue(""); setErr(""); }}
@@ -269,7 +269,7 @@ function OtpEntryCard({ branchId, otp, onVerified }: {
       )}
       <ErrBox msg={err} />
       <button onClick={send} disabled={busy || !validValue}
-        className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-black text-white shadow-lg transition active:scale-[.98] disabled:opacity-40"
+        className="flex w-full items-center justify-center gap-2 rounded-lg py-3.5 text-t-lg font-black text-white shadow-lg transition active:scale-[.98] disabled:opacity-40"
         style={{ background: GREEN }}>
         <MIcon name="sms" className="!text-[20px] text-white" />
         {busy ? "جارِ الإرسال..." : "إرسال رمز التحقق"}
@@ -287,19 +287,19 @@ function EntryCard({ busy, err, onSubmit }: {
   const blocked = busy || (phone.replace(/\D/g, "").length < 9 && plate.trim().length < 4);
 
   return (
-    <div className="kiosk-step space-y-3 rounded-2xl bg-white p-5 shadow-lg">
-      <h2 className="text-center text-[15px] font-black" style={{ color: NAVY }}>أهلاً بك 👋</h2>
-      <p className="text-center text-[12px]" style={{ color: DIM }}>
+    <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>أهلاً بك</h2>
+      <p className="text-center text-t-sm" style={{ color: DIM }}>
         أدخل جوالك أو رقم لوحتك — لو سجّلت قبل كده هنرجّع بياناتك وسياراتك فوراً
       </p>
       <TInput label="رقم الجوال" inputMode="tel" placeholder="05xxxxxxxx" className="tnum"
         value={phone} onChange={(e) => setPhone(e.target.value)} />
-      <div className="text-center text-[11px] font-bold" style={{ color: DIM }}>— أو —</div>
+      <div className="text-center text-t-xs font-bold" style={{ color: DIM }}>— أو —</div>
       <TInput label="رقم اللوحة (أرقام وحروف)" placeholder="1288HHR" dir="ltr" className="tnum text-center uppercase"
         value={plate} onChange={(e) => setPlate(e.target.value)} />
       <ErrBox msg={err} />
       <button onClick={() => onSubmit(phone, plate)} disabled={blocked}
-        className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-black text-white shadow-lg transition active:scale-[.98] disabled:opacity-40"
+        className="flex w-full items-center justify-center gap-2 rounded-card py-3.5 text-t-lg font-black text-white shadow-lg transition active:scale-[.98] disabled:opacity-40"
         style={{ background: GREEN }}>
         <MIcon name="arrow_back" className="!text-[20px] text-white" />
         {busy ? "جارِ البحث..." : "متابعة"}
@@ -317,33 +317,33 @@ function GarageCard({ profile, busy, err, onBook, onAddNew }: {
   const [quickOdo, setQuickOdo] = useState("");
 
   return (
-    <div className="kiosk-step space-y-3 rounded-2xl bg-white p-5 shadow-lg">
-      <h2 className="text-center text-[15px] font-black" style={{ color: NAVY }}>
-        أهلاً {profile.customer?.name} 👋
+    <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>
+        أهلاً {profile.customer?.name}
       </h2>
-      <p className="text-center text-[12px]" style={{ color: DIM }}>اختر سيارتك لحجز الدور بضغطة</p>
+      <p className="text-center text-t-sm" style={{ color: DIM }}>اختر سيارتك لحجز الدور بضغطة</p>
       <div className="space-y-2">
         {(profile.cars || []).map((c) => (
           <button key={c.id} onClick={() => { setQuickCar(c); setQuickOdo(""); }}
-            className="flex w-full items-center gap-3 rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
-            style={{ borderColor: quickCar?.id === c.id ? GREEN : LINE, background: quickCar?.id === c.id ? "rgba(22,163,74,.06)" : "#fff" }}>
+            className="flex w-full items-center gap-3 rounded-card border-2 p-3 text-right transition active:scale-[.98]"
+            style={{ borderColor: quickCar?.id === c.id ? GREEN : LINE, background: quickCar?.id === c.id ? "var(--emerald-bg)" : "var(--ink2)" }}>
             <MIcon name={TYPE_META[(c.service_type as SType) || "basic"]?.icon || "directions_car"} className="!text-[26px]" />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13.5px] font-black">{[c.brand, c.name, c.model_year].filter(Boolean).join(" ") || "سيارة"}</span>
-              <span className="text-[11px] font-bold" style={{ color: DIM }}>
+              <span className="block truncate text-t-md font-black">{[c.brand, c.name, c.model_year].filter(Boolean).join(" ") || "سيارة"}</span>
+              <span className="text-t-xs font-bold" style={{ color: DIM }}>
                 {TYPE_META[(c.service_type as SType) || "basic"]?.title}
               </span>
             </span>
-            <span className="tnum shrink-0 rounded-lg px-2.5 py-1 text-[13px] font-black text-white" style={{ background: NAVY }}>{c.plate}</span>
+            <span className="tnum shrink-0 rounded-lg px-2.5 py-1 text-t-md font-black text-white" style={{ background: NAVY }}>{c.plate}</span>
           </button>
         ))}
       </div>
       {quickCar && (
-        <div className="kiosk-pop space-y-2 rounded-xl p-3" style={{ background: "#F6F8FA" }}>
+        <div className="kiosk-pop space-y-2 rounded-card p-3" style={{ background: "var(--ink3)" }}>
           <TInput label={`ممشى ${quickCar.plate} الحالي (كم)`} inputMode="numeric" className="tnum" placeholder="مثال: 84500"
             value={quickOdo} onChange={(e) => setQuickOdo(e.target.value.replace(/\D/g, ""))} autoFocus />
           <button onClick={() => onBook(quickCar, quickOdo)} disabled={busy || !quickOdo}
-            className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-[14px] font-black text-white transition active:scale-[.98] disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-card py-3 text-t-md font-black text-white transition active:scale-[.98] disabled:opacity-40"
             style={{ background: GREEN }}>
             <MIcon name="confirmation_number" className="!text-[19px] text-white" />
             {busy ? "جارِ الحجز..." : `تأكيد حجز ${quickCar.plate}`}
@@ -352,7 +352,7 @@ function GarageCard({ profile, busy, err, onBook, onAddNew }: {
       )}
       <ErrBox msg={err} />
       <button onClick={onAddNew}
-        className="flex w-full items-center justify-center gap-1.5 rounded-xl border-2 border-dashed py-3 text-[13px] font-black transition active:scale-[.98]"
+        className="flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed py-3 text-t-md font-black transition active:scale-[.98]"
         style={{ borderColor: LINE, color: NAVY }}>
         <MIcon name="add_circle" className="!text-[18px]" /> إضافة سيارة أخرى
       </button>
@@ -389,19 +389,19 @@ function RegisterForm({ sType, initial, busy, err, branchId, lockPhone, onBack, 
     };
 
   return (
-    <div className="kiosk-step space-y-3 rounded-2xl bg-white p-5 shadow-lg">
+    <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
       <div className="flex items-center justify-between">
-        <button onClick={() => onBack(f)} className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-[12px] font-black text-slate-700 hover:bg-slate-200 transition">
+        <button onClick={() => onBack(f)} className="flex items-center gap-1.5 rounded-lg bg-ink-3 px-3 py-1.5 text-t-sm font-black text-text hover:bg-ink-4 transition">
           <MIcon name="arrow_forward" className="!text-[15px]" /> رجوع
         </button>
-        <span className="rounded-full px-3 py-1 text-[11px] font-black text-white" style={{ background: NAVY }}>
+        <span className="rounded-full px-3 py-1 text-t-xs font-black text-white" style={{ background: NAVY }}>
           {TYPE_META[sType].title}
         </span>
       </div>
 
       <Section title="بياناتك">
         <TInput label="الاسم" value={f.name} onChange={set("name")} />
-        <TInput label={lockPhone ? "رقم الجوال (موثَّق ✓)" : "رقم الجوال"} inputMode="tel" className="tnum" placeholder="05xxxxxxxx"
+        <TInput label={lockPhone ? "رقم الجوال (موثَّق)" : "رقم الجوال"} inputMode="tel" className="tnum" placeholder="05xxxxxxxx"
           value={f.phone} onChange={set("phone")} readOnly={lockPhone} />
       </Section>
 
@@ -441,7 +441,7 @@ function RegisterForm({ sType, initial, busy, err, branchId, lockPhone, onBack, 
 
           <div className="text-right">
             <label
-              className="mb-1 block text-[11.5px] font-black"
+              className="mb-1 block text-t-xs font-black"
               style={{ color: NAVY }}
             >
               عدد السلندرات
@@ -468,7 +468,7 @@ function RegisterForm({ sType, initial, busy, err, branchId, lockPhone, onBack, 
           {/* حجم الماكينة بجانب السلندرات: اختياري، ويحسّن مطابقة الفلتر لما الموديل
               عنده أكتر من محرك بنفس عدد السلندرات (مثال: 2.0 و2.5). مقترحات + كتابة حرة. */}
           <label className="block text-right">
-            <span className="mb-1 block text-[11.5px] font-black" style={{ color: NAVY }}>حجم الماكينة (لتر) — اختياري</span>
+            <span className="mb-1 block text-t-xs font-black" style={{ color: NAVY }}>حجم الماكينة (لتر) — اختياري</span>
             <input list="engine-size-suggestions" value={f.engineSize} onChange={set("engineSize")}
               inputMode="decimal" dir="ltr" placeholder="2.5" style={{ borderColor: LINE }} className={`${inputCls} tnum text-right`} />
             <datalist id="engine-size-suggestions">
@@ -485,7 +485,7 @@ function RegisterForm({ sType, initial, busy, err, branchId, lockPhone, onBack, 
             {/* الفئة (تريم) تتفاوت باختلاف الماركة والموديل بشكل كبير جداً — قائمة
                 مقترحات قابلة للكتابة (datalist) بدل قائمة مغلقة تمنع فئات نادرة */}
             <label className="block text-right">
-              <span className="mb-1 block text-[11.5px] font-black" style={{ color: NAVY }}>الفئة</span>
+              <span className="mb-1 block text-t-xs font-black" style={{ color: NAVY }}>الفئة</span>
               <input list="car-category-suggestions" value={f.carCategory} onChange={set("carCategory")}
                 placeholder="GLX / فل كامل" style={{ borderColor: LINE }} className={inputCls} />
               <datalist id="car-category-suggestions">
@@ -524,18 +524,18 @@ function RegisterForm({ sType, initial, busy, err, branchId, lockPhone, onBack, 
 
       <ErrBox msg={err} />
       {!f.cylinders && (
-        <p className="text-center text-[11px] font-bold" style={{ color: "#B45309" }}>
+        <p className="text-center text-t-xs font-bold" style={{ color: "var(--brass)" }}>
           حدّد عدد السلندرات فوق قبل المتابعة — ضروري لمطابقة الفلتر الصحيح لسيارتك.
         </p>
       )}
       <button onClick={() => onSubmit(f)} disabled={busy || !f.cylinders}
-        className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-black text-white shadow-lg transition active:scale-[.98] disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-card py-3.5 text-t-lg font-black text-white shadow-lg transition active:scale-[.98] disabled:opacity-50"
         style={{ background: GREEN }}>
         <MIcon name="confirmation_number" className="!text-[20px] text-white" />
         {busy ? "جارِ الحجز..." : "حفظ السيارة وحجز الدور"}
       </button>
-      <p className="text-center text-[10px]" style={{ color: DIM }}>
-        سيارتك بتتحفظ في ملفك — المرة الجاية حجزك بضغطة واحدة، وبياناتك محفوظة حتى لو غيّرت جوالك ✨
+      <p className="text-center text-t-xs" style={{ color: DIM }}>
+        سيارتك بتتحفظ في ملفك — المرة الجاية حجزك بضغطة واحدة، وبياناتك محفوظة حتى لو غيّرت جوالك
       </p>
     </div>
   );
@@ -544,10 +544,10 @@ function RegisterForm({ sType, initial, busy, err, branchId, lockPhone, onBack, 
 /* ═══════════ محادثة مركز الخدمة (مرحلة 3) — module scope ═══════════ */
 
 const QUICK_REPLIES = [
-  "موافق — نفّذوا الخدمة ✅",
-  "غير موافق حالياً ❌",
+  "موافق — نفّذوا الخدمة",
+  "غير موافق حالياً",
   "كم التكلفة الإضافية؟",
-  "اتصلوا بي من فضلكم 📞",
+  "اتصلوا بي من فضلكم",
 ];
 
 function fmtChatTime(iso: string): string {
@@ -584,8 +584,8 @@ function ChatBubble({ m }: { m: ChatMsg }) {
   const mine = m.sender_type === "customer";
   return (
     <div className={`flex ${mine ? "justify-start" : "justify-end"}`}>
-      <div className={`max-w-[82%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${mine ? "rounded-bl-sm text-white" : "rounded-br-sm border bg-white"}`}
-        style={mine ? { background: GREEN } : { borderColor: LINE, color: "#1E293B" }}>
+      <div className={`max-w-[82%] rounded-card px-3.5 py-2 text-t-md leading-relaxed ${mine ? "rounded-bl-sm text-white" : "rounded-br-sm border bg-white"}`}
+        style={mine ? { background: GREEN } : { borderColor: LINE, color: "var(--text)" }}>
         {m.attachment_url && (m.message_type === "voice" || m.attachment_url.endsWith(".wav")) ? (
           <audio controls preload="metadata" src={m.attachment_url} className="my-0.5 w-[215px] max-w-full" />
         ) : m.attachment_url ? (
@@ -595,7 +595,7 @@ function ChatBubble({ m }: { m: ChatMsg }) {
         {(!m.attachment_url || m.message_type !== "voice") && (
           <p className="whitespace-pre-wrap break-words font-bold">{m.message}</p>
         )}
-        <p className="mt-0.5 text-[9.5px]" style={{ color: mine ? "rgba(255,255,255,.75)" : DIM }}>
+        <p className="mt-0.5 text-t-xs" style={{ color: mine ? "rgba(255,255,255,.75)" : DIM }}>
           {mine ? "أنت" : "مركز الخدمة"} · {fmtChatTime(m.created_at)}
         </p>
       </div>
@@ -605,15 +605,15 @@ function ChatBubble({ m }: { m: ChatMsg }) {
 
 function ChatNoteCard({ n, labels }: { n: ChatNote; labels: Record<string, string> }) {
   return (
-    <div className="rounded-xl border px-3.5 py-2.5" style={{ borderColor: "#FDE68A", background: "#FFFBEB" }}>
+    <div className="rounded-card border px-3.5 py-2.5" style={{ borderColor: "var(--brass-soft)", background: "var(--brass-soft)" }}>
       <div className="flex items-center justify-between gap-2">
-        <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-black" style={{ background: "#FDE68A", color: "#92400E" }}>
+        <span className="rounded-full px-2.5 py-0.5 text-t-xs font-black" style={{ background: "var(--brass-soft)", color: "var(--brass)" }}>
           {labels[n.type] ?? n.type}
         </span>
-        <span className="tnum text-[10px] font-bold" style={{ color: "#B45309" }}>{n.note_number}</span>
+        <span className="tnum text-t-xs font-bold" style={{ color: "var(--brass)" }}>{n.note_number}</span>
       </div>
-      {n.title && <p className="mt-1 text-[12.5px] font-black" style={{ color: NAVY }}>{n.title}</p>}
-      {n.description && <p className="mt-0.5 text-[12.5px] font-bold" style={{ color: "#334155" }}>{n.description}</p>}
+      {n.title && <p className="mt-1 text-t-sm font-black" style={{ color: NAVY }}>{n.title}</p>}
+      {n.description && <p className="mt-0.5 text-t-sm font-bold" style={{ color: "var(--text)" }}>{n.description}</p>}
     </div>
   );
 }
@@ -720,7 +720,7 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
         if (s >= 60) stopRec(true); // حد أقصى دقيقة
       }, 500);
     } catch {
-      setCErr("اسمح بالوصول للمايكروفون من المتصفح أولاً 🎤");
+      setCErr("اسمح بالوصول للمايكروفون من المتصفح أولاً");
     }
   }
 
@@ -748,13 +748,13 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
   if (!token) return null;
 
   return (
-    <div className="kiosk-pop space-y-2.5 rounded-2xl bg-white p-4 shadow-lg">
+    <div className="kiosk-pop space-y-2.5 rounded-card bg-white p-4 shadow-lg">
       <div className="flex items-center justify-between">
-        <h3 className="flex items-center gap-1.5 text-[13.5px] font-black" style={{ color: NAVY }}>
+        <h3 className="flex items-center gap-1.5 text-t-md font-black" style={{ color: NAVY }}>
           <MIcon name="forum" className="!text-[19px]" /> تواصل مع مركز الخدمة
         </h3>
         {data?.car?.plate && (
-          <span className="tnum rounded-lg px-2 py-0.5 text-[11px] font-black text-white" style={{ background: NAVY }}>{data.car.plate}</span>
+          <span className="tnum rounded-lg px-2 py-0.5 text-t-xs font-black text-white" style={{ background: NAVY }}>{data.car.plate}</span>
         )}
       </div>
 
@@ -764,10 +764,10 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
         </div>
       )}
 
-      <div className="max-h-[42vh] space-y-2 overflow-y-auto rounded-xl p-2.5" style={{ background: "#F6F8FA" }}>
+      <div className="max-h-[42vh] space-y-2 overflow-y-auto rounded-card p-2.5" style={{ background: "var(--ink3)" }}>
         {(!data || data.messages.length === 0) && (
-          <p className="py-5 text-center text-[11.5px] font-bold" style={{ color: DIM }}>
-            اكتب رسالتك وسيصلك الرد هنا — أي تحديث عن سيارتك هيظهر في نفس المكان 💬
+          <p className="py-5 text-center text-t-xs font-bold" style={{ color: DIM }}>
+            اكتب رسالتك وسيصلك الرد هنا — أي تحديث عن سيارتك هيظهر في نفس المكان
           </p>
         )}
         {data?.messages.map((m) => <ChatBubble key={m.id} m={m} />)}
@@ -777,8 +777,8 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
       <div className="flex flex-wrap gap-1.5">
         {QUICK_REPLIES.map((q) => (
           <button key={q} disabled={sending} onClick={() => sendMsg(q)}
-            className="rounded-full border px-3 py-1.5 text-[11px] font-black transition active:scale-[.97] disabled:opacity-40"
-            style={{ borderColor: LINE, color: NAVY, background: "#fff" }}>
+            className="rounded-full border px-3 py-1.5 text-t-xs font-black transition active:scale-[.97] disabled:opacity-40"
+            style={{ borderColor: LINE, color: NAVY, background: "var(--ink2)" }}>
             {q}
           </button>
         ))}
@@ -787,33 +787,33 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
       {!recOn ? (
         <div className="flex gap-2">
           <button onClick={startRec} disabled={sending} title="تسجيل رسالة صوتية"
-            className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-xl border transition active:scale-[.95] disabled:opacity-40"
+            className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-lg border transition active:scale-[.95] disabled:opacity-40"
             style={{ borderColor: LINE, color: NAVY }}>
             <MIcon name="mic" className="!text-[21px]" />
           </button>
           <input value={text} onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") sendMsg(); }}
             placeholder="اكتب رسالتك هنا…" maxLength={2000}
-            className="min-w-0 flex-1 rounded-xl border px-3.5 py-2.5 text-[13px] font-bold outline-none focus:border-[#0F2D52]"
+            className="min-w-0 flex-1 rounded-card border px-3.5 py-2.5 text-t-md font-bold outline-none focus:border-petrol"
             style={{ borderColor: LINE }} />
           <button onClick={() => sendMsg()} disabled={sending || !text.trim()}
-            className="flex items-center gap-1 rounded-xl px-4 py-2.5 text-[13px] font-black text-white transition active:scale-[.97] disabled:opacity-40"
+            className="flex items-center gap-1 rounded-card px-4 py-2.5 text-t-md font-black text-white transition active:scale-[.97] disabled:opacity-40"
             style={{ background: GREEN }}>
             <MIcon name="send" className="!text-[17px] text-white" />
             {sending ? "…" : "إرسال"}
           </button>
         </div>
       ) : (
-        <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: "rgba(220,38,38,.07)" }}>
-          <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full" style={{ background: "#DC2626" }} />
-          <span className="tnum min-w-0 flex-1 text-[12px] font-black" style={{ color: "#DC2626" }}>
+        <div className="flex items-center gap-2 rounded-card px-3 py-2.5" style={{ background: "var(--ember-bg)" }}>
+          <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full" style={{ background: "var(--ember)" }} />
+          <span className="tnum min-w-0 flex-1 text-t-sm font-black" style={{ color: "var(--ember)" }}>
             جارِ التسجيل… {recSec} ث / 60
           </span>
           <button onClick={() => stopRec(true)}
-            className="rounded-lg px-3.5 py-2 text-[12px] font-black text-white active:scale-[.97]"
+            className="rounded-lg px-3.5 py-2 text-t-sm font-black text-white active:scale-[.97]"
             style={{ background: GREEN }}>إيقاف وإرسال</button>
           <button onClick={() => stopRec(false)}
-            className="rounded-lg border px-3 py-2 text-[12px] font-black active:scale-[.97]"
+            className="rounded-lg border px-3 py-2 text-t-sm font-black active:scale-[.97]"
             style={{ borderColor: LINE, color: DIM }}>إلغاء</button>
         </div>
       )}
@@ -860,7 +860,7 @@ function brandLogoFor(name: string, logos: BrandLogo[]): string | null {
   return null;
 }
 
-/* ═══════════ 🛢 زيت سيارتك — الكمية المعتمدة لموديلك (تُحدد مرة واحدة) ═══════════ */
+/* ═══════════ زيت سيارتك — الكمية المعتمدة لموديلك (تُحدد مرة واحدة) ═══════════ */
 function OilCard({ carId }: { carId: string }) {
   const [open, setOpen] = useState(false);
   const [info, setInfo] = useState<{ oilQty: number | null; oilType: string; brand?: string; model?: string; modelYear?: string } | null>(null);
@@ -879,31 +879,31 @@ function OilCard({ carId }: { carId: string }) {
   }
 
   return (
-    <div className="kiosk-pop rounded-2xl bg-white p-4 shadow-lg">
+    <div className="kiosk-pop rounded-card bg-white p-4 shadow-lg">
       <button onClick={toggle}
         className="flex w-full items-center justify-between text-right">
-        <span className="flex items-center gap-1.5 text-[13.5px] font-black" style={{ color: NAVY }}>
+        <span className="flex items-center gap-1.5 text-t-md font-black" style={{ color: NAVY }}>
           زيت سيارتك
         </span>
-        <span className="text-[13px] font-black" style={{ color: DIM }}>{open ? "▴" : "▾"}</span>
+        <span className="text-t-md font-black" style={{ color: DIM }}>{open ? "▴" : "▾"}</span>
       </button>
       {open && (
         <div className="mt-3">
-          {loading && <p className="text-[12px] font-bold" style={{ color: DIM }}>جارِ التحميل…</p>}
+          {loading && <p className="text-t-sm font-bold" style={{ color: DIM }}>جارِ التحميل…</p>}
           {!loading && info && info.oilQty != null && (
-            <div className="rounded-xl p-3" style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
-              <p className="text-[13px] font-black" style={{ color: "#166534" }}>
+            <div className="rounded-card p-3" style={{ background: "var(--emerald-bg)", border: "1px solid var(--emerald-bg)" }}>
+              <p className="text-t-md font-black" style={{ color: "var(--emerald)" }}>
                 الكمية المعتمدة لموديل سيارتك: {info.oilQty} لتر
                 {info.oilType && <> — {info.oilType}</>}
               </p>
-              <p className="mt-0.5 text-[11px] font-bold" style={{ color: "#15803D" }}>
+              <p className="mt-0.5 text-t-xs font-bold" style={{ color: "var(--emerald)" }}>
                 {[info.brand, info.model, info.modelYear].filter(Boolean).join(" ")}
               </p>
             </div>
           )}
           {!loading && (!info || info.oilQty == null) && (
-            <p className="rounded-xl p-3 text-[12px] font-bold"
-              style={{ background: "#F6F8FA", color: DIM }}>
+            <p className="rounded-card p-3 text-t-sm font-bold"
+              style={{ background: "var(--ink3)", color: DIM }}>
               لم تُحدد كمية الزيت لموديل سيارتك بعد — سيحددها الفني عند الخدمة وتظهر هنا تلقائياً لكل زياراتك القادمة.
             </p>
           )}
@@ -978,35 +978,35 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
     : !brandPick || ((o.brand || "").trim() || "أخرى") === brandPick));
 
   return (
-    <div className="kiosk-step space-y-3 rounded-2xl bg-white p-5 shadow-lg">
-      <h2 className="text-center text-[15px] font-black" style={{ color: NAVY }}>🛢 اختيار الزيت</h2>
+    <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>اختيار الزيت</h2>
 
       {mode === "choose" && (
         <div className="space-y-2.5">
           <button onClick={openRepeat}
-            className="flex w-full items-center gap-3 rounded-xl border-2 p-3.5 text-right transition active:scale-[.98]"
+            className="flex w-full items-center gap-3 rounded-lg border-2 p-3.5 text-right transition active:scale-[.98]"
             style={{ borderColor: LINE }}>
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white" style={{ background: GREEN }}>
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-card text-white" style={{ background: GREEN }}>
               <MIcon name="replay" className="!text-[22px] text-white" />
             </span>
             <span>
-              <span className="block text-[14px] font-black" style={{ color: NAVY }}>تكرار فاتورة سابقة</span>
-              <span className="text-[11.5px] font-bold" style={{ color: DIM }}>نفس زيت آخر زيارة — أسرع طريقة</span>
+              <span className="block text-t-md font-black" style={{ color: NAVY }}>تكرار فاتورة سابقة</span>
+              <span className="text-t-xs font-bold" style={{ color: DIM }}>نفس زيت آخر زيارة — أسرع طريقة</span>
             </span>
           </button>
           <button onClick={() => setMode("list")}
-            className="flex w-full items-center gap-3 rounded-xl border-2 p-3.5 text-right transition active:scale-[.98]"
+            className="flex w-full items-center gap-3 rounded-card border-2 p-3.5 text-right transition active:scale-[.98]"
             style={{ borderColor: LINE }}>
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white" style={{ background: NAVY }}>
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-card text-white" style={{ background: NAVY }}>
               <MIcon name="oil_barrel" className="!text-[22px] text-white" />
             </span>
             <span>
-              <span className="block text-[14px] font-black" style={{ color: NAVY }}>اختيار زيت آخر</span>
-              <span className="text-[11.5px] font-bold" style={{ color: DIM }}>تصفح الزيوت المتاحة واختر المناسب</span>
+              <span className="block text-t-md font-black" style={{ color: NAVY }}>اختيار زيت آخر</span>
+              <span className="text-t-xs font-bold" style={{ color: DIM }}>تصفح الزيوت المتاحة واختر المناسب</span>
             </span>
           </button>
           <button onClick={onNext}
-            className="w-full rounded-xl py-2.5 text-[12px] font-black" style={{ color: DIM }}>
+            className="w-full rounded-lg py-2.5 text-t-sm font-black" style={{ color: DIM }}>
             التحديد عند الوصول — تخطي ›
           </button>
         </div>
@@ -1014,28 +1014,28 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
 
       {mode === "repeat" && (
         <div className="space-y-2">
-          {loadingInv && <p className="py-4 text-center text-[12px]" style={{ color: DIM }}>جارِ تحميل فواتيرك...</p>}
+          {loadingInv && <p className="py-4 text-center text-t-sm" style={{ color: DIM }}>جارِ تحميل فواتيرك...</p>}
           {!loadingInv && invoices !== null && invoices.length === 0 && (
-            <p className="rounded-xl p-3 text-center text-[12px] font-bold" style={{ background: "#F6F8FA", color: DIM }}>
+            <p className="rounded-card p-3 text-center text-t-sm font-bold" style={{ background: "var(--ink3)", color: DIM }}>
               لا توجد فواتير سابقة بهذا الجوال — اختر زيتاً من القائمة
             </p>
           )}
           {(invoices || []).map((inv) => (
             <button key={inv.id} onClick={() => repeatInvoice(inv)}
-              className="flex w-full items-center justify-between rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
+              className="flex w-full items-center justify-between rounded-card border-2 p-3 text-right transition active:scale-[.98]"
               style={{ borderColor: LINE }}>
               <span>
-                <span className="tnum block text-[13px] font-black" style={{ color: NAVY }}>{inv.invoiceNo}</span>
-                <span className="tnum text-[11px] font-bold" style={{ color: DIM }}>
+                <span className="tnum block text-t-md font-black" style={{ color: NAVY }}>{inv.invoiceNo}</span>
+                <span className="tnum text-t-xs font-bold" style={{ color: DIM }}>
                   {new Date(inv.issuedAt).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"))}
                   {inv.odometer != null && <> · عداد {inv.odometer.toLocaleString("en")}</>}
                 </span>
               </span>
-              <span className="tnum text-[13px] font-black" style={{ color: GREEN }}>{money(inv.total)} ر.س</span>
+              <span className="tnum text-t-md font-black" style={{ color: GREEN }}>{money(inv.total)} ر.س</span>
             </button>
           ))}
           {err && <ErrBox msg={err} />}
-          <button onClick={() => setMode("choose")} className="mx-auto flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-[12px] font-black text-slate-700 hover:bg-slate-200 transition">
+          <button onClick={() => setMode("choose")} className="mx-auto flex items-center gap-1.5 rounded-lg bg-ink-3 px-3 py-1.5 text-t-sm font-black text-text hover:bg-ink-4 transition">
             <MIcon name="arrow_forward" className="!text-[15px]" /> رجوع
           </button>
         </div>
@@ -1044,29 +1044,29 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
       {mode === "list" && (
         <div className="space-y-2.5">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث: اسم / ماركة / لزوجة"
-            className="w-full rounded-xl border-2 px-3.5 py-2.5 text-[13px] font-bold outline-none"
+            className="w-full rounded-card border-2 px-3.5 py-2.5 text-t-md font-bold outline-none"
             style={{ borderColor: LINE }} />
-          {oils === null && <p className="py-4 text-center text-[12px]" style={{ color: DIM }}>جارِ التحميل...</p>}
+          {oils === null && <p className="py-4 text-center text-t-sm" style={{ color: DIM }}>جارِ التحميل...</p>}
 
           {/* ═══ الشركات أولاً — شبكة منظمة 3 أعمدة (الاسم + الشعار) ═══ */}
           {!ql && !brandPick && oils !== null && (
             <div className="grid grid-cols-3 gap-2">
               {brands.map((b) => (
                 <button key={b.name} onClick={() => setBrandPick(b.name)}
-                  className="flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition active:scale-[.97]"
-                  style={{ borderColor: LINE, background: "#fff" }}>
+                  className="flex flex-col items-center gap-1.5 rounded-card border-2 p-3 transition active:scale-[.97]"
+                  style={{ borderColor: LINE, background: "var(--ink2)" }}>
                   {(() => {
                     const lg = brandLogoFor(b.name, brandLogos);
                     return lg
                       ? <img src={lg} alt="" loading="lazy"
-                        className="h-11 w-11 rounded-full object-contain" style={{ background: "#EEF3F9" }} />
-                      : <span className="grid h-11 w-11 place-items-center rounded-full text-[20px]"
-                        style={{ background: "#EEF3F9", color: NAVY }}>
+                        className="h-11 w-11 rounded-full object-contain" style={{ background: "var(--ink3)" }} />
+                      : <span className="grid h-11 w-11 place-items-center rounded-full text-t-2xl"
+                        style={{ background: "var(--ink3)", color: NAVY }}>
                         <MIcon name="oil_barrel" className="!text-[22px]" />
                       </span>;
                   })()}
-                  <span className="line-clamp-1 text-[11.5px] font-black" style={{ color: NAVY }}>{b.name}</span>
-                  <span className="tnum text-[9.5px] font-bold" style={{ color: DIM }}>{b.count} منتج</span>
+                  <span className="line-clamp-1 text-t-xs font-black" style={{ color: NAVY }}>{b.name}</span>
+                  <span className="tnum text-t-xs font-bold" style={{ color: DIM }}>{b.count} منتج</span>
                 </button>
               ))}
             </div>
@@ -1074,9 +1074,9 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
 
           {/* شريط الشركة المختارة + رجوع للشركات */}
           {!ql && brandPick && (
-            <div className="flex items-center justify-between rounded-xl px-3.5 py-2" style={{ background: "#F1F4F8" }}>
-              <span className="text-[12.5px] font-black" style={{ color: NAVY }}>🏷 {brandPick}</span>
-              <button onClick={() => setBrandPick(null)} className="text-[11.5px] font-black" style={{ color: GREEN }}>
+            <div className="flex items-center justify-between rounded-card px-3.5 py-2" style={{ background: "var(--ink3)" }}>
+              <span className="text-t-sm font-black" style={{ color: NAVY }}>{brandPick}</span>
+              <button onClick={() => setBrandPick(null)} className="text-t-xs font-black" style={{ color: GREEN }}>
                 ‹ كل الشركات
               </button>
             </div>
@@ -1087,17 +1087,17 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
               const active = sel.oil?.id === o.id;
               return (
                 <button key={o.id} onClick={() => setSel({ ...sel, oil: o, fromInvoice: null })}
-                  className="flex flex-col gap-2 rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
-                  style={{ borderColor: active ? GREEN : LINE, background: active ? "rgba(22,163,74,.06)" : "#fff" }}>
+                  className="flex flex-col gap-2 rounded-card border-2 p-3 text-right transition active:scale-[.98]"
+                  style={{ borderColor: active ? GREEN : LINE, background: active ? "var(--emerald-bg)" : "var(--ink2)" }}>
                   {/* الصف العلوي: الصورة + الاسم كاملاً بلا قطع (يلف على أكثر من سطر) */}
                   <span className="flex w-full items-start gap-3">
                     {o.image
-                      ? <img src={o.image} alt="" className="h-12 w-12 shrink-0 rounded-lg object-contain" style={{ background: "#F6F8FA" }} />
-                      : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg" style={{ background: "#F6F8FA" }}><MIcon name="oil_barrel" className="!text-[22px]" /></span>}
+                      ? <img src={o.image} alt="" className="h-12 w-12 shrink-0 rounded-lg object-contain" style={{ background: "var(--ink3)" }} />
+                      : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg" style={{ background: "var(--ink3)" }}><MIcon name="oil_barrel" className="!text-[22px]" /></span>}
                     <span className="min-w-0 flex-1">
                       {/* بلا truncate: الاسم يظهر كاملاً حتى لو طال، يلف على سطرين+ */}
-                      <span className="block text-[13px] font-black leading-snug" style={{ color: NAVY }}>{o.name}</span>
-                      <span className="text-[10.5px] font-bold" style={{ color: DIM }}>
+                      <span className="block text-t-md font-black leading-snug" style={{ color: NAVY }}>{o.name}</span>
+                      <span className="text-t-xs font-bold" style={{ color: DIM }}>
                         {[o.brand, o.spec, o.unit].filter(Boolean).join(" · ")}
                       </span>
                     </span>
@@ -1105,39 +1105,39 @@ function OilPicker({ branchId, phone, sel, setSel, onNext, onBack }: {
                   </span>
                   {/* الصف السفلي: السعر بشارة بارزة بعرض كامل — لا يفوته أحد أثناء المرور السريع */}
                   <span className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5"
-                    style={{ background: "rgba(22,163,74,.08)" }}>
-                    <span className="text-[9.5px] font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
-                    <span className="tnum text-[15px] font-black" style={{ color: GREEN }}>{money(o.price)} ر.س</span>
+                    style={{ background: "var(--emerald-bg)" }}>
+                    <span className="text-t-xs font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
+                    <span className="tnum text-t-lg font-black" style={{ color: GREEN }}>{money(o.price)} ر.س</span>
                   </span>
                 </button>
               );
             })}
             {oils !== null && shown.length === 0 && (
-              <p className="py-4 text-center text-[12px]" style={{ color: DIM }}>لا نتائج مطابقة</p>
+              <p className="py-4 text-center text-t-sm" style={{ color: DIM }}>لا نتائج مطابقة</p>
             )}
           </div>
           {sel.oil && (
-            <div className="flex items-center justify-between rounded-xl px-4 py-2.5" style={{ background: "#F1F4F8" }}>
-              <span className="text-[12px] font-black" style={{ color: NAVY }}>الكمية (عبوة)</span>
+            <div className="flex items-center justify-between rounded-card px-4 py-2.5" style={{ background: "var(--ink3)" }}>
+              <span className="text-t-sm font-black" style={{ color: NAVY }}>الكمية (عبوة)</span>
               <span className="flex items-center gap-3">
                 <button onClick={() => setSel({ ...sel, oilQty: Math.max(1, sel.oilQty - 1) })}
-                  className="grid h-9 w-9 place-items-center rounded-full text-[18px] font-black text-white" style={{ background: NAVY }}>−</button>
-                <b className="tnum w-6 text-center text-[16px]">{sel.oilQty}</b>
+                  className="grid h-9 w-9 place-items-center rounded-full text-t-xl font-black text-white" style={{ background: NAVY }}>−</button>
+                <b className="tnum w-6 text-center text-t-lg">{sel.oilQty}</b>
                 <button onClick={() => setSel({ ...sel, oilQty: Math.min(9, sel.oilQty + 1) })}
-                  className="grid h-9 w-9 place-items-center rounded-full text-[18px] font-black text-white" style={{ background: GREEN }}>+</button>
+                  className="grid h-9 w-9 place-items-center rounded-full text-t-xl font-black text-white" style={{ background: GREEN }}>+</button>
               </span>
             </div>
           )}
-          <button onClick={() => setMode("choose")} className="mx-auto flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-[12px] font-black text-slate-700 hover:bg-slate-200 transition">
+          <button onClick={() => setMode("choose")} className="mx-auto flex items-center gap-1.5 rounded-lg bg-ink-3 px-3 py-1.5 text-t-sm font-black text-text hover:bg-ink-4 transition">
             <MIcon name="arrow_forward" className="!text-[15px]" /> رجوع
           </button>
         </div>
       )}
 
       <div className="flex gap-2 pt-1">
-        <button onClick={onBack} className="rounded-xl px-4 py-3 text-[13px] font-black bg-slate-100 text-slate-700 hover:bg-slate-200 transition">رجوع</button>
+        <button onClick={onBack} className="rounded-lg px-4 py-3 text-t-md font-black bg-ink-3 text-text hover:bg-ink-4 transition">رجوع</button>
         <button onClick={onNext} disabled={mode === "list" && !sel.oil}
-          className="flex-1 rounded-xl py-3 text-[14px] font-black text-white transition active:scale-[.98] disabled:opacity-40"
+          className="flex-1 rounded-lg py-3 text-t-md font-black text-white transition active:scale-[.98] disabled:opacity-40"
           style={{ background: GREEN }}>
           {sel.oil ? "التالي — فلتر الزيت ‹" : "متابعة بدون تحديد ‹"}
         </button>
@@ -1186,22 +1186,22 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
   const [showAllFilters, setShowAllFilters] = useState(false);
 
   return (
-    <div className="kiosk-step space-y-3 rounded-2xl bg-white p-5 shadow-lg">
-      <h2 className="text-center text-[15px] font-black" style={{ color: NAVY }}>هل تريد تغيير فلتر الزيت؟</h2>
+    <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>هل تريد تغيير فلتر الزيت؟</h2>
       <div className="grid grid-cols-2 gap-2">
         <button onClick={() => setSel({ ...sel, withFilter: true })}
-          className="flex items-center justify-center gap-1 rounded-xl border-2 py-3.5 text-[13.5px] font-black transition active:scale-[.98]"
+          className="flex items-center justify-center gap-1 rounded-card border-2 py-3.5 text-t-md font-black transition active:scale-[.98]"
           style={{
             borderColor: sel.withFilter === true ? GREEN : LINE,
-            background: sel.withFilter === true ? "rgba(22,163,74,.06)" : "#fff", color: NAVY
+            background: sel.withFilter === true ? "var(--emerald-bg)" : "var(--ink2)", color: NAVY
           }}>
           <MIcon name="check" className="!text-[15px]" /> مع فلتر الزيت
         </button>
         <button onClick={() => setSel({ ...sel, withFilter: false, filter: null })}
-          className="rounded-xl border-2 py-3.5 text-[13.5px] font-black transition active:scale-[.98]"
+          className="rounded-card border-2 py-3.5 text-t-md font-black transition active:scale-[.98]"
           style={{
             borderColor: sel.withFilter === false ? NAVY : LINE,
-            background: sel.withFilter === false ? "#E9EEF6" : "#fff", color: NAVY
+            background: sel.withFilter === false ? "var(--ink4)" : "var(--ink2)", color: NAVY
           }}>
           بدون فلتر الزيت
         </button>
@@ -1213,26 +1213,26 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
             // ── تطابق دقيق موجود: نعرض الفلتر الصحيح فقط بثقة، بدل قائمة
             //    كاملة بماركات عشوائية غير متعلقة بسيارة العميل خالص. ──
             <div className="space-y-2">
-              <p className="rounded-lg px-3 py-2 text-[11.5px] font-bold" style={{ background: "rgba(22,163,74,.08)", color: GREEN }}>
-                ✓ هذا هو الفلتر الأصلي المطابق لسيارتك — محدد تلقائياً.
+              <p className="rounded-lg px-3 py-2 text-t-xs font-bold" style={{ background: "var(--emerald-bg)", color: GREEN }}>
+                هذا هو الفلتر الأصلي المطابق لسيارتك — محدد تلقائياً.
               </p>
-              <div className="flex flex-col gap-2 rounded-xl border-2 p-3 text-right"
-                style={{ borderColor: GREEN, background: "rgba(22,163,74,.06)" }}>
+              <div className="flex flex-col gap-2 rounded-card border-2 p-3 text-right"
+                style={{ borderColor: GREEN, background: "var(--emerald-bg)" }}>
                 <span className="flex w-full items-start gap-3">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-[18px]" style={{ background: "#F6F8FA" }}>⭕</span>
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-t-xl" style={{ background: "var(--ink3)" }}><MIcon name="filter_alt" /></span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-black leading-snug" style={{ color: NAVY }}>{matchedFilter.name}</span>
-                    {matchedFilter.spec && <span className="tnum text-[10.5px] font-bold" style={{ color: DIM }}>{matchedFilter.spec}</span>}
+                    <span className="block text-t-md font-black leading-snug" style={{ color: NAVY }}>{matchedFilter.name}</span>
+                    {matchedFilter.spec && <span className="tnum text-t-xs font-bold" style={{ color: DIM }}>{matchedFilter.spec}</span>}
                   </span>
                   <MIcon name="check_circle" filled className="!text-[18px] shrink-0" />
                 </span>
-                <span className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5" style={{ background: "rgba(22,163,74,.08)" }}>
-                  <span className="text-[9.5px] font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
-                  <span className="tnum text-[14px] font-black" style={{ color: GREEN }}>{money(matchedFilter.price)} ر.س</span>
+                <span className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5" style={{ background: "var(--emerald-bg)" }}>
+                  <span className="text-t-xs font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
+                  <span className="tnum text-t-md font-black" style={{ color: GREEN }}>{money(matchedFilter.price)} ر.س</span>
                 </span>
               </div>
               <button onClick={() => setShowAllFilters(true)}
-                className="w-full text-center text-[11.5px] font-bold underline" style={{ color: DIM }}>
+                className="w-full text-center text-t-xs font-bold underline" style={{ color: DIM }}>
                 عايز فلتر تاني؟ اعرض كل الخيارات
               </button>
             </div>
@@ -1240,43 +1240,43 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
             <>
               {matchedFilter && (
                 <button onClick={() => setShowAllFilters(false)}
-                  className="flex items-center gap-1 text-[11px] font-bold underline" style={{ color: GREEN }}>
+                  className="flex items-center gap-1 text-t-xs font-bold underline" style={{ color: GREEN }}>
                   <MIcon name="arrow_forward" className="!text-[13px]" /> الرجوع للفلتر الأصلي المطابق لسيارتك
                 </button>
               )}
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث عن الفلتر المناسب لسيارتك"
-                className="w-full rounded-xl border-2 px-3.5 py-2.5 text-[13px] font-bold outline-none"
+                className="w-full rounded-card border-2 px-3.5 py-2.5 text-t-md font-bold outline-none"
                 style={{ borderColor: LINE }} />
-              {filters === null && <p className="py-3 text-center text-[12px]" style={{ color: DIM }}>جارِ التحميل...</p>}
+              {filters === null && <p className="py-3 text-center text-t-sm" style={{ color: DIM }}>جارِ التحميل...</p>}
               <div className="grid max-h-[38vh] gap-2 overflow-y-auto">
                 {shown.map((f) => {
                   const active = sel.filter?.id === f.id;
                   return (
                     <button key={f.id} onClick={() => setSel({ ...sel, filter: f })}
-                      className="flex flex-col gap-2 rounded-xl border-2 p-3 text-right transition active:scale-[.98]"
-                      style={{ borderColor: active ? GREEN : LINE, background: active ? "rgba(22,163,74,.06)" : "#fff" }}>
+                      className="flex flex-col gap-2 rounded-card border-2 p-3 text-right transition active:scale-[.98]"
+                      style={{ borderColor: active ? GREEN : LINE, background: active ? "var(--emerald-bg)" : "var(--ink2)" }}>
                       <span className="flex w-full items-start gap-3">
-                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg" style={{ background: "#F6F8FA" }}><MIcon name="filter_alt" className="!text-[18px]" /></span>
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg" style={{ background: "var(--ink3)" }}><MIcon name="filter_alt" className="!text-[18px]" /></span>
                         <span className="min-w-0 flex-1">
-                          <span className="block text-[13px] font-black leading-snug" style={{ color: NAVY }}>{f.name}</span>
-                          {f.spec && <span className="tnum text-[10.5px] font-bold" style={{ color: DIM }}>{f.spec}</span>}
+                          <span className="block text-t-md font-black leading-snug" style={{ color: NAVY }}>{f.name}</span>
+                          {f.spec && <span className="tnum text-t-xs font-bold" style={{ color: DIM }}>{f.spec}</span>}
                           {matchedFilter?.id === f.id && (
-                            <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[9.5px] font-black"
-                              style={{ background: GREEN, color: "#fff" }}>الأصلي لسيارتك</span>
+                            <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-t-xs font-black"
+                              style={{ background: GREEN, color: "var(--ink2)" }}>الأصلي لسيارتك</span>
                           )}
                         </span>
                         {active && <MIcon name="check_circle" filled className="!text-[18px] shrink-0" />}
                       </span>
                       <span className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5"
-                        style={{ background: "rgba(22,163,74,.08)" }}>
-                        <span className="text-[9.5px] font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
-                        <span className="tnum text-[14px] font-black" style={{ color: GREEN }}>{money(f.price)} ر.س</span>
+                        style={{ background: "var(--emerald-bg)" }}>
+                        <span className="text-t-xs font-bold" style={{ color: DIM }}>السعر شامل الضريبة</span>
+                        <span className="tnum text-t-md font-black" style={{ color: GREEN }}>{money(f.price)} ر.س</span>
                       </span>
                     </button>
                   );
                 })}
                 {filters !== null && shown.length === 0 && (
-                  <p className="py-3 text-center text-[12px]" style={{ color: DIM }}>لا فلاتر مطابقة للبحث</p>
+                  <p className="py-3 text-center text-t-sm" style={{ color: DIM }}>لا فلاتر مطابقة للبحث</p>
                 )}
               </div>
             </>
@@ -1285,9 +1285,9 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
       )}
 
       <div className="flex gap-2 pt-1">
-        <button onClick={onBack} className="rounded-xl px-4 py-3 text-[13px] font-black bg-slate-100 text-slate-700 hover:bg-slate-200 transition">رجوع</button>
+        <button onClick={onBack} className="rounded-lg px-4 py-3 text-t-md font-black bg-ink-3 text-text hover:bg-ink-4 transition">رجوع</button>
         <button onClick={onNext} disabled={sel.withFilter === null || (sel.withFilter === true && !sel.filter)}
-          className="flex-1 rounded-xl py-3 text-[14px] font-black text-white transition active:scale-[.98] disabled:opacity-40"
+          className="flex-1 rounded-lg py-3 text-t-md font-black text-white transition active:scale-[.98] disabled:opacity-40"
           style={{ background: GREEN }}>
           التالي — إضافات أخرى ‹
         </button>
@@ -1297,20 +1297,21 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
 }
 
 /* ═══════════ خطوة المنتجات والخدمات الإضافية — خريطة الأصناف الكاملة ═══════════ */
-function catIcon(name: string): string {
+function catIcon(name: string): string {   // أسماء أيقونات Material Symbols
   const n = name || "";
-  if (n === "الخدمات") return "🛠";
-  if (/فلتر|فلاتر/.test(n)) return "⭕";
-  if (/زيت/.test(n)) return "🛢";
-  if (/شحم/.test(n)) return "🧴";
-  if (/منظف|ملمع|شامبو/.test(n)) return "🧽";
-  if (/معطر/.test(n)) return "🌸";
-  if (/رديتر|تبريد|مبرد/.test(n)) return "🌡";
-  if (/مكيف|تكييف/.test(n)) return "❄️";
-  if (/إضاف|معالج|سوائل|محسن/.test(n)) return "🧪";
-  if (/أدوات|ملحق|مساح/.test(n)) return "🧰";
-  return "📦";
+  if (n === "الخدمات") return "build";
+  if (/فلتر|فلاتر/.test(n)) return "filter_alt";
+  if (/زيت/.test(n)) return "oil_barrel";
+  if (/شحم/.test(n)) return "science";
+  if (/منظف|ملمع|شامبو/.test(n)) return "cleaning_services";
+  if (/معطر/.test(n)) return "air_freshener";
+  if (/رديتر|تبريد|مبرد/.test(n)) return "device_thermostat";
+  if (/مكيف|تكييف/.test(n)) return "ac_unit";
+  if (/إضاف|معالج|سوائل|محسن/.test(n)) return "science";
+  if (/أدوات|ملحق|مساح/.test(n)) return "handyman";
+  return "inventory_2";
 }
+const CatIcon = ({ name, size = 22 }: { name: string; size?: number }) => <MIcon name={catIcon(name)} style={{ fontSize: size }} />;
 
 function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
   branchId: string; sel: Selection; setSel: (s: Selection) => void;
@@ -1359,37 +1360,37 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
   const total = sel.extras.reduce((s, e) => s + e.p.price * e.qty, 0);
 
   return (
-    <div className="kiosk-step space-y-3 rounded-2xl bg-white p-5 shadow-lg">
-      <h2 className="text-center text-[15px] font-black" style={{ color: NAVY }}>🗂 منتجات وخدمات إضافية</h2>
-      <p className="text-center text-[11.5px] font-bold" style={{ color: DIM }}>
+    <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>منتجات وخدمات إضافية</h2>
+      <p className="text-center text-t-xs font-bold" style={{ color: DIM }}>
         اختياري — تصفح كل الأقسام وأضف ما تحتاجه لسيارتك
       </p>
 
       {pick === null && (
         <div className="space-y-2.5">
-          {cats === null && <p className="py-4 text-center text-[12px]" style={{ color: DIM }}>جارِ التحميل...</p>}
+          {cats === null && <p className="py-4 text-center text-t-sm" style={{ color: DIM }}>جارِ التحميل...</p>}
           {cats !== null && (
             <div className="grid max-h-[46vh] grid-cols-3 gap-2 overflow-y-auto">
               {services.length > 0 && (
                 <button onClick={() => openCat("الخدمات")}
-                  className="flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition active:scale-[.97]"
-                  style={{ borderColor: LINE, background: "#fff" }}>
-                  <span className="grid h-11 w-11 place-items-center rounded-full" style={{ background: "#EEF3F9" }}><MIcon name="build" className="!text-[20px]" /></span>
-                  <span className="line-clamp-1 text-[11.5px] font-black" style={{ color: NAVY }}>الخدمات</span>
-                  <span className="tnum text-[9.5px] font-bold" style={{ color: DIM }}>{services.length} خدمة</span>
+                  className="flex flex-col items-center gap-1.5 rounded-card border-2 p-3 transition active:scale-[.97]"
+                  style={{ borderColor: LINE, background: "var(--ink2)" }}>
+                  <span className="grid h-11 w-11 place-items-center rounded-full" style={{ background: "var(--ink3)" }}><MIcon name="build" className="!text-[20px]" /></span>
+                  <span className="line-clamp-1 text-t-xs font-black" style={{ color: NAVY }}>الخدمات</span>
+                  <span className="tnum text-t-xs font-bold" style={{ color: DIM }}>{services.length} خدمة</span>
                 </button>
               )}
               {cats.map((c) => (
                 <button key={c.name} onClick={() => openCat(c.name)}
-                  className="flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition active:scale-[.97]"
-                  style={{ borderColor: LINE, background: "#fff" }}>
-                  <span className="grid h-11 w-11 place-items-center rounded-full text-[20px]" style={{ background: "#EEF3F9" }}>{catIcon(c.name)}</span>
-                  <span className="line-clamp-1 text-[11.5px] font-black" style={{ color: NAVY }}>{c.name}</span>
-                  <span className="tnum text-[9.5px] font-bold" style={{ color: DIM }}>{c.count} صنف</span>
+                  className="flex flex-col items-center gap-1.5 rounded-card border-2 p-3 transition active:scale-[.97]"
+                  style={{ borderColor: LINE, background: "var(--ink2)" }}>
+                  <span className="grid h-11 w-11 place-items-center rounded-full text-t-2xl" style={{ background: "var(--ink3)" }}><CatIcon name={c.name} /></span>
+                  <span className="line-clamp-1 text-t-xs font-black" style={{ color: NAVY }}>{c.name}</span>
+                  <span className="tnum text-t-xs font-bold" style={{ color: DIM }}>{c.count} صنف</span>
                 </button>
               ))}
               {cats.length === 0 && services.length === 0 && (
-                <p className="col-span-3 py-4 text-center text-[12px]" style={{ color: DIM }}>لا توجد أقسام متاحة حالياً</p>
+                <p className="col-span-3 py-4 text-center text-t-sm" style={{ color: DIM }}>لا توجد أقسام متاحة حالياً</p>
               )}
             </div>
           )}
@@ -1398,70 +1399,70 @@ function ExtrasPicker({ branchId, sel, setSel, onNext, onBack }: {
 
       {pick !== null && (
         <div className="space-y-2.5">
-          <div className="flex items-center justify-between rounded-xl px-3.5 py-2" style={{ background: "#F1F4F8" }}>
-            <span className="text-[12.5px] font-black" style={{ color: NAVY }}>{catIcon(pick)} {pick}</span>
-            <button onClick={() => { setPick(null); setProds(null); setQ(""); }} className="text-[11.5px] font-black" style={{ color: GREEN }}>
+          <div className="flex items-center justify-between rounded-card px-3.5 py-2" style={{ background: "var(--ink3)" }}>
+            <span className="text-t-sm font-black" style={{ color: NAVY }}><CatIcon name={pick} size={18} /> {pick}</span>
+            <button onClick={() => { setPick(null); setProds(null); setQ(""); }} className="text-t-xs font-black" style={{ color: GREEN }}>
               ‹ كل الأقسام
             </button>
           </div>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث داخل القسم"
-            className="w-full rounded-xl border-2 px-3.5 py-2.5 text-[13px] font-bold outline-none"
+            className="w-full rounded-card border-2 px-3.5 py-2.5 text-t-md font-bold outline-none"
             style={{ borderColor: LINE }} />
-          {prods === null && <p className="py-4 text-center text-[12px]" style={{ color: DIM }}>جارِ التحميل...</p>}
+          {prods === null && <p className="py-4 text-center text-t-sm" style={{ color: DIM }}>جارِ التحميل...</p>}
           <div className="grid max-h-[42vh] gap-2 overflow-y-auto">
             {shown.map((p) => {
               const n = qtyOf(p.id);
               return (
                 <div key={p.id}
-                  className="flex items-center gap-3 rounded-xl border-2 p-3 text-right"
-                  style={{ borderColor: n > 0 ? GREEN : LINE, background: n > 0 ? "rgba(22,163,74,.06)" : "#fff" }}>
+                  className="flex items-center gap-3 rounded-card border-2 p-3 text-right"
+                  style={{ borderColor: n > 0 ? GREEN : LINE, background: n > 0 ? "var(--emerald-bg)" : "var(--ink2)" }}>
                   {p.hasImage
                     ? <img src={`/api/products/public/product-image/${p.id}`} alt="" loading="lazy"
-                      className="h-12 w-12 shrink-0 rounded-lg object-contain" style={{ background: "#F6F8FA" }} />
-                    : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg text-[20px]" style={{ background: "#F6F8FA" }}>{catIcon(pick)}</span>}
+                      className="h-12 w-12 shrink-0 rounded-lg object-contain" style={{ background: "var(--ink3)" }} />
+                    : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg text-t-2xl" style={{ background: "var(--ink3)" }}><CatIcon name={pick} /></span>}
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-black leading-snug" style={{ color: NAVY }}>{p.name}</span>
-                    <span className="text-[10.5px] font-bold" style={{ color: DIM }}>
+                    <span className="block text-t-md font-black leading-snug" style={{ color: NAVY }}>{p.name}</span>
+                    <span className="text-t-xs font-bold" style={{ color: DIM }}>
                       {[p.spec, p.unit].filter(Boolean).join(" · ")}
                     </span>
-                    <span className="tnum block text-[12px] font-black" style={{ color: GREEN }}>
+                    <span className="tnum block text-t-sm font-black" style={{ color: GREEN }}>
                       {p.price > 0 ? `${money(p.price)} ر.س` : "يُحدد عند الخدمة"}
                     </span>
                   </span>
                   {n === 0 ? (
                     <button onClick={() => add(p)}
-                      className="shrink-0 rounded-xl px-3.5 py-2 text-[12px] font-black text-white transition active:scale-[.96]"
+                      className="shrink-0 rounded-card px-3.5 py-2 text-t-sm font-black text-white transition active:scale-[.96]"
                       style={{ background: GREEN }}>+ إضافة</button>
                   ) : (
                     <span className="flex shrink-0 items-center gap-2">
                       <button onClick={() => dec(p)}
-                        className="grid h-8 w-8 place-items-center rounded-full text-[16px] font-black text-white" style={{ background: NAVY }}>−</button>
-                      <b className="tnum w-5 text-center text-[14px]">{n}</b>
+                        className="grid h-8 w-8 place-items-center rounded-full text-t-lg font-black text-white" style={{ background: NAVY }}>−</button>
+                      <b className="tnum w-5 text-center text-t-md">{n}</b>
                       <button onClick={() => add(p)}
-                        className="grid h-8 w-8 place-items-center rounded-full text-[16px] font-black text-white" style={{ background: GREEN }}>+</button>
+                        className="grid h-8 w-8 place-items-center rounded-full text-t-lg font-black text-white" style={{ background: GREEN }}>+</button>
                     </span>
                   )}
                 </div>
               );
             })}
             {prods !== null && shown.length === 0 && (
-              <p className="py-4 text-center text-[12px]" style={{ color: DIM }}>لا أصناف مطابقة</p>
+              <p className="py-4 text-center text-t-sm" style={{ color: DIM }}>لا أصناف مطابقة</p>
             )}
           </div>
         </div>
       )}
 
       {count > 0 && (
-        <div className="flex items-center justify-between rounded-xl px-4 py-2.5" style={{ background: "rgba(22,163,74,.08)" }}>
-          <span className="text-[12px] font-black" style={{ color: NAVY }}>🧺 المضاف: {count} صنف</span>
-          <b className="tnum text-[13.5px]" style={{ color: GREEN }}>{money(total)} ر.س</b>
+        <div className="flex items-center justify-between rounded-card px-4 py-2.5" style={{ background: "var(--emerald-bg)" }}>
+          <span className="text-t-sm font-black" style={{ color: NAVY }}>المضاف: {count} صنف</span>
+          <b className="tnum text-t-md" style={{ color: GREEN }}>{money(total)} ر.س</b>
         </div>
       )}
 
       <div className="flex gap-2 pt-1">
-        <button onClick={onBack} className="rounded-xl px-4 py-3 text-[13px] font-black bg-slate-100 text-slate-700 hover:bg-slate-200 transition">رجوع</button>
+        <button onClick={onBack} className="rounded-lg px-4 py-3 text-t-md font-black bg-ink-3 text-text hover:bg-ink-4 transition">رجوع</button>
         <button onClick={onNext}
-          className="flex-1 rounded-xl py-3 text-[14px] font-black text-white transition active:scale-[.98]"
+          className="flex-1 rounded-lg py-3 text-t-md font-black text-white transition active:scale-[.98]"
           style={{ background: GREEN }}>
           {count > 0 ? "التالي — ملخص الحجز ‹" : "تخطي — ملخص الحجز ‹"}
         </button>
@@ -1486,88 +1487,88 @@ function BookingSummary({ carLabel, plate, odometer, sel, autoService, busy, err
   const vat = totalInc - totalEx;
 
   return (
-    <div className="kiosk-step space-y-3 rounded-2xl bg-white p-5 shadow-lg">
-      <h2 className="text-center text-[15px] font-black" style={{ color: NAVY }}>📋 ملخص الحجز</h2>
+    <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+      <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>ملخص الحجز</h2>
 
-      <div className="space-y-2 rounded-xl p-3.5" style={{ background: "#F6F8FA" }}>
-        <div className="flex justify-between text-[12.5px]"><span style={{ color: DIM }}>السيارة</span><b>{carLabel || "—"}</b></div>
-        <div className="flex justify-between text-[12.5px]"><span style={{ color: DIM }}>اللوحة</span><b className="tnum">{plate || "—"}</b></div>
-        {odometer && <div className="flex justify-between text-[12.5px]"><span style={{ color: DIM }}>العداد</span><b className="tnum">{Number(odometer).toLocaleString("en")}</b></div>}
+      <div className="space-y-2 rounded-card p-3.5" style={{ background: "var(--ink3)" }}>
+        <div className="flex justify-between text-t-sm"><span style={{ color: DIM }}>السيارة</span><b>{carLabel || "—"}</b></div>
+        <div className="flex justify-between text-t-sm"><span style={{ color: DIM }}>اللوحة</span><b className="tnum">{plate || "—"}</b></div>
+        {odometer && <div className="flex justify-between text-t-sm"><span style={{ color: DIM }}>العداد</span><b className="tnum">{Number(odometer).toLocaleString("en")}</b></div>}
       </div>
 
       {sel.fromInvoice && (
-        <p className="rounded-xl px-3.5 py-2 text-[11.5px] font-bold" style={{ background: "rgba(22,163,74,.08)", color: GREEN }}>
+        <p className="rounded-card px-3.5 py-2 text-t-xs font-bold" style={{ background: "var(--emerald-bg)", color: GREEN }}>
           ↻ مُكرر من الفاتورة {sel.fromInvoice} — يمكنك التعديل بالرجوع
         </p>
       )}
 
       <div className="space-y-2">
         {sel.oil ? (
-          <div className="flex items-center justify-between rounded-xl border-2 p-3" style={{ borderColor: LINE }}>
+          <div className="flex items-center justify-between rounded-card border-2 p-3" style={{ borderColor: LINE }}>
             <span className="min-w-0">
-              <span className="block truncate text-[13px] font-black" style={{ color: NAVY }}>🛢 {sel.oil.name}</span>
-              <span className="text-[10.5px] font-bold" style={{ color: DIM }}>
+              <span className="block truncate text-t-md font-black" style={{ color: NAVY }}>{sel.oil.name}</span>
+              <span className="text-t-xs font-bold" style={{ color: DIM }}>
                 {[sel.oil.brand, sel.oil.spec, sel.oil.unit].filter(Boolean).join(" · ")} × {sel.oilQty}
               </span>
             </span>
-            <b className="tnum text-[13.5px]" style={{ color: NAVY }}>{money(oilTotal)}</b>
+            <b className="tnum text-t-md" style={{ color: NAVY }}>{money(oilTotal)}</b>
           </div>
         ) : (
-          <p className="rounded-xl px-3.5 py-2.5 text-[12px] font-bold" style={{ background: "#F6F8FA", color: DIM }}>
-            🛢 الزيت: سيُحدد عند الوصول مع الفني
+          <p className="rounded-card px-3.5 py-2.5 text-t-sm font-bold" style={{ background: "var(--ink3)", color: DIM }}>
+            الزيت: سيُحدد عند الوصول مع الفني
           </p>
         )}
         {sel.withFilter === true && sel.filter && (
-          <div className="flex items-center justify-between rounded-xl border-2 p-3" style={{ borderColor: LINE }}>
+          <div className="flex items-center justify-between rounded-card border-2 p-3" style={{ borderColor: LINE }}>
             <span className="min-w-0">
-              <span className="block truncate text-[13px] font-black" style={{ color: NAVY }}>⭕ {sel.filter.name}</span>
-              {sel.filter.spec && <span className="tnum text-[10.5px] font-bold" style={{ color: DIM }}>{sel.filter.spec}</span>}
+              <span className="block truncate text-t-md font-black" style={{ color: NAVY }}>{sel.filter.name}</span>
+              {sel.filter.spec && <span className="tnum text-t-xs font-bold" style={{ color: DIM }}>{sel.filter.spec}</span>}
             </span>
-            <b className="tnum text-[13.5px]" style={{ color: NAVY }}>{money(filterTotal)}</b>
+            <b className="tnum text-t-md" style={{ color: NAVY }}>{money(filterTotal)}</b>
           </div>
         )}
         {sel.withFilter === false && (
-          <p className="rounded-xl px-3.5 py-2 text-[11.5px] font-bold" style={{ background: "#F6F8FA", color: DIM }}>بدون فلتر الزيت</p>
+          <p className="rounded-card px-3.5 py-2 text-t-xs font-bold" style={{ background: "var(--ink3)", color: DIM }}>بدون فلتر الزيت</p>
         )}
         {svc && (
-          <div className="flex items-center justify-between rounded-xl border-2 p-3" style={{ borderColor: LINE, background: "rgba(22,163,74,.04)" }}>
+          <div className="flex items-center justify-between rounded-card border-2 p-3" style={{ borderColor: LINE, background: "var(--emerald-bg)" }}>
             <span className="min-w-0">
-              <span className="block truncate text-[13px] font-black" style={{ color: NAVY }}>🛠 {svc.name}</span>
-              <span className="text-[10.5px] font-bold" style={{ color: DIM }}>أُضيفت تلقائياً مع اختيار الزيت</span>
+              <span className="block truncate text-t-md font-black" style={{ color: NAVY }}>{svc.name}</span>
+              <span className="text-t-xs font-bold" style={{ color: DIM }}>أُضيفت تلقائياً مع اختيار الزيت</span>
             </span>
-            <b className="tnum text-[13.5px]" style={{ color: NAVY }}>{svc.price > 0 ? money(svc.price) : "يُحدد عند الخدمة"}</b>
+            <b className="tnum text-t-md" style={{ color: NAVY }}>{svc.price > 0 ? money(svc.price) : "يُحدد عند الخدمة"}</b>
           </div>
         )}
         {sel.extras.map((e) => (
-          <div key={e.p.id} className="flex items-center justify-between rounded-xl border-2 p-3" style={{ borderColor: LINE }}>
+          <div key={e.p.id} className="flex items-center justify-between rounded-card border-2 p-3" style={{ borderColor: LINE }}>
             <span className="min-w-0">
-              <span className="block truncate text-[13px] font-black" style={{ color: NAVY }}>{catIcon("")} {e.p.name}</span>
-              <span className="text-[10.5px] font-bold" style={{ color: DIM }}>
+              <span className="block truncate text-t-md font-black" style={{ color: NAVY }}><CatIcon name="" size={18} /> {e.p.name}</span>
+              <span className="text-t-xs font-bold" style={{ color: DIM }}>
                 {[e.p.spec, e.p.unit].filter(Boolean).join(" · ")} × {e.qty}
               </span>
             </span>
-            <b className="tnum text-[13.5px]" style={{ color: NAVY }}>{e.p.price > 0 ? money(e.p.price * e.qty) : "يُحدد عند الخدمة"}</b>
+            <b className="tnum text-t-md" style={{ color: NAVY }}>{e.p.price > 0 ? money(e.p.price * e.qty) : "يُحدد عند الخدمة"}</b>
           </div>
         ))}
       </div>
 
       {totalInc > 0 && (
-        <div className="space-y-1.5 rounded-xl p-3.5" style={{ background: "#F1F4F8" }}>
-          <div className="flex justify-between text-[12px]"><span style={{ color: DIM }}>السعر قبل الضريبة</span><b className="tnum">{money(totalEx)} ر.س</b></div>
-          <div className="flex justify-between text-[12px]"><span style={{ color: DIM }}>الضريبة (15%)</span><b className="tnum">{money(vat)} ر.س</b></div>
-          <div className="flex justify-between border-t pt-1.5 text-[14px]" style={{ borderColor: LINE }}>
+        <div className="space-y-1.5 rounded-card p-3.5" style={{ background: "var(--ink3)" }}>
+          <div className="flex justify-between text-t-sm"><span style={{ color: DIM }}>السعر قبل الضريبة</span><b className="tnum">{money(totalEx)} ر.س</b></div>
+          <div className="flex justify-between text-t-sm"><span style={{ color: DIM }}>الضريبة (15%)</span><b className="tnum">{money(vat)} ر.س</b></div>
+          <div className="flex justify-between border-t pt-1.5 text-t-md" style={{ borderColor: LINE }}>
             <b style={{ color: NAVY }}>الإجمالي</b><b className="tnum" style={{ color: GREEN }}>{money(totalInc)} ر.س</b>
           </div>
-          <p className="text-[10px] font-bold" style={{ color: DIM }}>الأسعار استرشادية وتُعتمد نهائياً في الفاتورة عند الخدمة</p>
+          <p className="text-t-xs font-bold" style={{ color: DIM }}>الأسعار استرشادية وتُعتمد نهائياً في الفاتورة عند الخدمة</p>
         </div>
       )}
 
       {err && <ErrBox msg={err} />}
       <div className="flex gap-2">
         <button onClick={onBack} disabled={busy}
-          className="rounded-xl px-4 py-3 text-[13px] font-black bg-slate-100 text-slate-700 hover:bg-slate-200 transition">رجوع</button>
+          className="rounded-lg px-4 py-3 text-t-md font-black bg-ink-3 text-text hover:bg-ink-4 transition">رجوع</button>
         <button onClick={onConfirm} disabled={busy}
-          className="flex-1 rounded-xl py-3.5 text-[15px] font-black text-white transition active:scale-[.98] disabled:opacity-50"
+          className="flex-1 rounded-lg py-3.5 text-t-lg font-black text-white transition active:scale-[.98] disabled:opacity-50"
           style={{ background: GREEN }}>
           {busy ? "جارِ الحجز..." : <span className="flex items-center justify-center gap-1"><MIcon name="check" className="!text-[16px]" /> تأكيد الحجز</span>}
         </button>
@@ -1582,17 +1583,17 @@ function ChatFab({ carId, urlToken }: { carId?: string | null; urlToken?: string
   return (
     <>
       <button onClick={() => setOpen(true)}
-        className="fixed bottom-5 left-5 z-40 flex items-center gap-2 rounded-full px-4 py-3.5 text-[13px] font-black text-white shadow-xl transition active:scale-95"
+        className="fixed bottom-5 left-5 z-40 flex items-center gap-2 rounded-full px-4 py-3.5 text-t-md font-black text-white shadow-xl transition active:scale-95"
         style={{ background: GREEN }}>
         <MIcon name="support_agent" className="!text-[20px] text-white" />
         تحدث مع موظف الخدمة
       </button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-md rounded-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-card" onClick={(e) => e.stopPropagation()}>
             <div className="mb-2 flex justify-between px-1">
-              <span className="rounded-full bg-white/90 px-3 py-1 text-[11px] font-black" style={{ color: GREEN }}>● الموظف متاح خلال ساعات العمل</span>
-              <button onClick={() => setOpen(false)} className="flex items-center gap-1 rounded-full bg-white/90 px-3 py-1 text-[12px] font-black" style={{ color: NAVY }}><MIcon name="close" className="!text-[14px]" /> إغلاق</button>
+              <span className="rounded-full bg-white/90 px-3 py-1 text-t-xs font-black" style={{ color: GREEN }}>● الموظف متاح خلال ساعات العمل</span>
+              <button onClick={() => setOpen(false)} className="flex items-center gap-1 rounded-full bg-white/90 px-3 py-1 text-t-sm font-black" style={{ color: NAVY }}><MIcon name="close" className="!text-[14px]" /> إغلاق</button>
             </div>
             <div className="max-h-[75vh] overflow-y-auto">
               <ChatSection carId={carId} urlToken={urlToken} />
@@ -1834,37 +1835,37 @@ export default function PublicBookingPage() {
 
   const stateUi = booking && {
     waiting: {
-      icon: "schedule", color: "#D97706", bg: "#FCF0DE", title: "في الانتظار",
+      icon: "schedule", color: "var(--brass)", bg: "var(--brass-soft)", title: "في الانتظار",
       sub: booking.ahead === 0 ? "أنت التالي — استعد!" : `أمامك ${booking.ahead} سيارة · انتظار متوقع ~${booking.estWaitMinutes} دقيقة`
     },
     in_service: {
-      icon: "build", color: GREEN, bg: "rgba(22,163,74,.1)", title: "سيارتك في الخدمة الآن 🎉",
+      icon: "build", color: GREEN, bg: "var(--emerald-bg)", title: "سيارتك في الخدمة الآن",
       sub: booking.station ? `المحطة: ${booking.station}` : "جاري تنفيذ الخدمة"
     },
-    done: { icon: "task_alt", color: NAVY, bg: "#E9EEF6", title: "اكتملت الخدمة — شكراً لزيارتك", sub: "نسعد بخدمتك دائماً" },
+    done: { icon: "task_alt", color: NAVY, bg: "var(--ink4)", title: "اكتملت الخدمة — شكراً لزيارتك", sub: "نسعد بخدمتك دائماً" },
   }[booking.state];
 
   return (
-    <div dir="rtl" className="min-h-screen px-4 py-6" style={{ background: "#EEF2F6" }}>
+    <div dir="rtl" className="min-h-screen px-4 py-6" style={{ background: "var(--ink3)" }}>
       <div className="mx-auto max-w-md space-y-4">
-        <div className="rounded-2xl px-5 py-4 text-center text-white shadow-lg" style={{ background: NAVY }}>
-          <div className="text-[18px] font-black">مصدر الزيوت</div>
-          <div className="text-[12px] text-white/70">{info?.branchName || "..."} — حجز الدور الذاتي</div>
+        <div className="rounded-card px-5 py-4 text-center text-white shadow-lg" style={{ background: NAVY }}>
+          <div className="text-t-xl font-black">مصدر الزيوت</div>
+          <div className="text-t-sm text-white/70">{info?.branchName || "..."} — حجز الدور الذاتي</div>
           {info && view !== "ticket" && (
-            <div className="mx-auto mt-2 flex w-fit gap-4 rounded-full bg-white/10 px-4 py-1 text-[10.5px] font-bold">
-              <span>⏳ {info.waiting} منتظر</span><span>🔧 {info.inService} في الخدمة</span><span>~{info.estWaitMinutes} دقيقة</span>
+            <div className="mx-auto mt-2 flex w-fit gap-4 rounded-full bg-white/10 px-4 py-1 text-t-xs font-bold">
+              <span>{info.waiting} منتظر</span><span>{info.inService} في الخدمة</span><span>~{info.estWaitMinutes} دقيقة</span>
             </div>
           )}
         </div>
 
-        {view === "loading" && <p className="py-10 text-center text-[13px]" style={{ color: DIM }}>جارِ التحميل...</p>}
+        {view === "loading" && <p className="py-10 text-center text-t-md" style={{ color: DIM }}>جارِ التحميل...</p>}
 
         {view === "entry" && otpInfo === null && (
-          <p className="py-10 text-center text-[13px]" style={{ color: DIM }}>جارِ التحميل...</p>
+          <p className="py-10 text-center text-t-md" style={{ color: DIM }}>جارِ التحميل...</p>
         )}
         {view === "entry" && otpInfo?.required && (
           <>
-            {err && <p className="rounded-lg px-3 py-2 text-center text-[12px] font-bold" style={{ background: "rgba(220,38,38,.08)", color: "#DC2626" }}>{err}</p>}
+            {err && <p className="rounded-lg px-3 py-2 text-center text-t-sm font-bold" style={{ background: "var(--ember-bg)", color: "var(--ember)" }}>{err}</p>}
             <OtpEntryCard branchId={branchId} otp={otpInfo} onVerified={onOtpVerified} />
           </>
         )}
@@ -1879,41 +1880,41 @@ export default function PublicBookingPage() {
               onAddNew={() => { setErr(""); setSType("basic"); setView("type"); }} />
             <div className="grid grid-cols-2 gap-2">
               <a href={`/booking/${branchId}/invoices`}
-                className="flex items-center justify-center gap-1.5 rounded-xl border-2 bg-white py-3 text-[13px] font-black shadow transition active:scale-[.98]"
+                className="flex items-center justify-center gap-1.5 rounded-lg border-2 bg-white py-3 text-t-md font-black shadow transition active:scale-[.98]"
                 style={{ borderColor: LINE, color: NAVY }}>
                 <MIcon name="receipt_long" className="!text-[18px]" /> فواتيري
               </a>
               <a href={APP_URL} target="_blank" rel="noopener"
-                className="flex items-center justify-center gap-1.5 rounded-xl py-3 text-[13px] font-black text-white shadow transition active:scale-[.98]"
+                className="flex items-center justify-center gap-1.5 rounded-lg py-3 text-t-md font-black text-white shadow transition active:scale-[.98]"
                 style={{ background: GREEN }}>
                 <MIcon name="download" className="!text-[18px] text-white" /> تحميل التطبيق
               </a>
             </div>
             <button onClick={() => { dropOtp(); setView("entry"); }}
-              className="w-full py-1 text-center text-[12px] font-bold" style={{ color: DIM }}>
+              className="w-full py-1 text-center text-t-sm font-bold" style={{ color: DIM }}>
               مش حسابك؟ تبديل الحساب
             </button>
           </>
         )}
 
         {view === "type" && (
-          <div className="kiosk-step space-y-3 rounded-2xl bg-white p-5 shadow-lg">
-            <h2 className="text-center text-[15px] font-black" style={{ color: NAVY }}>نوع تسجيل السيارة</h2>
+          <div className="kiosk-step space-y-3 rounded-card bg-white p-5 shadow-lg">
+            <h2 className="text-center text-t-lg font-black" style={{ color: NAVY }}>نوع تسجيل السيارة</h2>
             {(Object.keys(TYPE_META) as SType[]).map((t) => (
               <button key={t} onClick={() => { setSType(t); setView("form"); setErr(""); }}
-                className="flex w-full items-center gap-3 rounded-xl border-2 p-3.5 text-right transition hover:-translate-y-0.5 active:scale-[.98]"
+                className="flex w-full items-center gap-3 rounded-card border-2 p-3.5 text-right transition hover:-translate-y-0.5 active:scale-[.98]"
                 style={{ borderColor: LINE }}>
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white" style={{ background: NAVY }}>
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-card text-white" style={{ background: NAVY }}>
                   <MIcon name={TYPE_META[t].icon} className="!text-[22px] text-white" />
                 </span>
                 <span>
-                  <span className="block text-[14px] font-black" style={{ color: NAVY }}>{TYPE_META[t].title}</span>
-                  <span className="text-[11.5px] font-bold" style={{ color: DIM }}>{TYPE_META[t].desc}</span>
+                  <span className="block text-t-md font-black" style={{ color: NAVY }}>{TYPE_META[t].title}</span>
+                  <span className="text-t-xs font-bold" style={{ color: DIM }}>{TYPE_META[t].desc}</span>
                 </span>
               </button>
             ))}
             {profile?.found && (
-              <button onClick={() => setView("garage")} className="mx-auto flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-[12px] font-black text-slate-700 hover:bg-slate-200 transition">
+              <button onClick={() => setView("garage")} className="mx-auto flex items-center gap-1.5 rounded-lg bg-ink-3 px-3 py-1.5 text-t-sm font-black text-text hover:bg-ink-4 transition">
                 <MIcon name="arrow_forward" className="!text-[15px]" /> رجوع لسياراتي
               </button>
             )}
@@ -1968,37 +1969,37 @@ export default function PublicBookingPage() {
 
         {view === "ticket" && booking && stateUi && (
           <div className="kiosk-pop space-y-3">
-            <div className="overflow-hidden rounded-2xl bg-white shadow-lg">
+            <div className="overflow-hidden rounded-card bg-white shadow-lg">
               <div className="px-5 py-5 text-center" style={{ background: stateUi.bg }}>
                 <MIcon name={stateUi.icon} filled className="!text-[44px]" />
-                <div className="mt-1 text-[16px] font-black" style={{ color: stateUi.color }}>{stateUi.title}</div>
-                <div className="text-[12.5px] font-bold" style={{ color: DIM }}>{stateUi.sub}</div>
+                <div className="mt-1 text-t-lg font-black" style={{ color: stateUi.color }}>{stateUi.title}</div>
+                <div className="text-t-sm font-bold" style={{ color: DIM }}>{stateUi.sub}</div>
               </div>
               <div className="space-y-2.5 px-5 py-4">
-                <div className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: "#F1F4F8" }}>
-                  <span className="text-[12.5px] font-bold" style={{ color: DIM }}>رقم دورك</span>
-                  <span className="tnum text-[30px] font-black leading-none" style={{ color: NAVY }}>#{booking.queueNo}</span>
+                <div className="flex items-center justify-between rounded-card px-4 py-3" style={{ background: "var(--ink3)" }}>
+                  <span className="text-t-sm font-bold" style={{ color: DIM }}>رقم دورك</span>
+                  <span className="tnum text-t-3xl font-black leading-none" style={{ color: NAVY }}>#{booking.queueNo}</span>
                 </div>
-                <div className="flex justify-between text-[12.5px]"><span style={{ color: DIM }}>الاسم</span><b>{booking.customerName}</b></div>
-                <div className="flex justify-between text-[12.5px]"><span style={{ color: DIM }}>اللوحة</span><b className="tnum">{booking.plate}</b></div>
-                <div className="flex justify-between text-[12.5px]"><span style={{ color: DIM }}>الفرع</span><b>{booking.branchName}</b></div>
+                <div className="flex justify-between text-t-sm"><span style={{ color: DIM }}>الاسم</span><b>{booking.customerName}</b></div>
+                <div className="flex justify-between text-t-sm"><span style={{ color: DIM }}>اللوحة</span><b className="tnum">{booking.plate}</b></div>
+                <div className="flex justify-between text-t-sm"><span style={{ color: DIM }}>الفرع</span><b>{booking.branchName}</b></div>
               </div>
-              <div className="h-3" style={{ background: "linear-gradient(45deg, #EEF2F6 50%, transparent 50%) 0 100%/12px 12px repeat-x, linear-gradient(-45deg, #EEF2F6 50%, transparent 50%) 6px 100%/12px 12px repeat-x" }} />
+              <div className="h-3" style={{ background: "linear-gradient(45deg, var(--ink3) 50%, transparent 50%) 0 100%/12px 12px repeat-x, linear-gradient(-45deg, var(--ink3) 50%, transparent 50%) 6px 100%/12px 12px repeat-x" }} />
             </div>
             <OilCard carId={booking.bookingId} />
             <a href={`/booking/${branchId}/invoices`}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 bg-white py-3 text-[13.5px] font-black transition active:scale-[.98]"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border-2 bg-white py-3 text-t-md font-black transition active:scale-[.98]"
               style={{ borderColor: LINE, color: NAVY }}>
               <MIcon name="receipt_long" className="!text-[19px]" /> فواتيري
             </a>
-            <p className="text-center text-[10.5px]" style={{ color: DIM }}>الصفحة بتتحدث تلقائياً — سيبها مفتوحة وتابع دورك</p>
+            <p className="text-center text-t-xs" style={{ color: DIM }}>الصفحة بتتحدث تلقائياً — سيبها مفتوحة وتابع دورك</p>
             <button onClick={() => {
               localStorage.removeItem(`z8_booking_${branchId}`);
               const ph = localStorage.getItem("z8_cust_phone");
               setBooking(null);
               ph ? restoreProfile(ph, "") : setView("entry");
             }}
-              className="flex w-full items-center justify-center gap-1.5 rounded-xl border-2 bg-white py-3 text-[13px] font-black transition active:scale-[.98]"
+              className="flex w-full items-center justify-center gap-1.5 rounded-card border-2 bg-white py-3 text-t-md font-black transition active:scale-[.98]"
               style={{ borderColor: LINE, color: NAVY }}>
               <MIcon name="add_circle" className="!text-[18px]" /> حجز جديد — اختر السيارة
             </button>
@@ -2009,7 +2010,7 @@ export default function PublicBookingPage() {
           <ChatFab carId={booking?.bookingId} urlToken={chatToken} />
         )}
 
-        <p className="text-center text-[10px]" style={{ color: DIM }}>منصة Z8 — شركة مصدر الزيوت للتجارة · نسخة الحجز v2</p>
+        <p className="text-center text-t-xs" style={{ color: DIM }}>منصة Z8 — شركة مصدر الزيوت للتجارة · نسخة الحجز v2</p>
       </div>
     </div>
   );

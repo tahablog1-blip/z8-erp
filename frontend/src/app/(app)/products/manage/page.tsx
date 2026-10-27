@@ -45,24 +45,24 @@ function SearchSelect({ value, onChange, options, placeholder, disabled }: {
     <div className="relative" ref={boxRef}>
       <button type="button" disabled={disabled}
         onClick={() => { setOpen(!open); setQ(""); }}
-        className="flex w-full items-center justify-between rounded-xl border border-line bg-white px-3 py-2 text-[12.5px] font-bold disabled:opacity-50"
+        className="flex w-full items-center justify-between rounded-card border border-line bg-white px-3 py-2 text-t-sm font-bold disabled:opacity-50"
         style={{ minHeight: 38 }}>
         <span className={value ? "" : "text-text-dim"}>{value || placeholder || "— اختر —"}</span>
         <MIcon name={open ? "expand_less" : "expand_more"} className="!text-[16px] text-text-dim" />
       </button>
       {open && !disabled && (
-        <div className="absolute z-30 mt-1 w-full rounded-xl border border-line bg-white shadow-lg">
+        <div className="absolute z-30 mt-1 w-full rounded-card border border-line bg-white shadow-lg">
           <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
-            placeholder="بحث..." className="w-full border-b border-line px-3 py-2 text-[12px] outline-none" />
+            placeholder="بحث..." className="w-full border-b border-line px-3 py-2 text-t-sm outline-none" />
           <div className="max-h-56 overflow-y-auto">
             {filtered.length === 0 ? (
-              <div className="px-3 py-2.5 text-[12px] text-text-dim">
+              <div className="px-3 py-2.5 text-t-sm text-text-dim">
                 لا يوجد مطابق — اكتب اسماً جديداً واضغط Enter
               </div>
             ) : filtered.map((o) => (
               <button key={o} type="button"
                 onClick={() => { onChange(o); setOpen(false); setQ(""); }}
-                className="block w-full px-3 py-2 text-right text-[12.5px] font-bold hover:bg-ink-3">
+                className="block w-full px-3 py-2 text-right text-t-sm font-bold hover:bg-ink-3">
                 {o}
               </button>
             ))}
@@ -70,7 +70,7 @@ function SearchSelect({ value, onChange, options, placeholder, disabled }: {
           {q.trim() && (
             <button type="button"
               onClick={() => { onChange(q.trim()); setOpen(false); setQ(""); }}
-              className="block w-full border-t border-line px-3 py-2 text-right text-[11.5px] font-bold text-petrol hover:bg-ink-3">
+              className="block w-full border-t border-line px-3 py-2 text-right text-t-xs font-bold text-petrol hover:bg-ink-3">
               + استخدام "{q.trim()}" كما هو
             </button>
           )}
@@ -112,7 +112,7 @@ function ProductSearchSelect({ value, onChange, products, placeholder, disabled 
     <div className="relative" ref={boxRef}>
       <button type="button" disabled={disabled}
         onClick={() => { setOpen(!open); setQ(""); }}
-        className="flex w-full items-center justify-between rounded-xl border border-line bg-white px-3 py-2 text-[12.5px] font-bold disabled:opacity-50"
+        className="flex w-full items-center justify-between rounded-card border border-line bg-white px-3 py-2 text-t-sm font-bold disabled:opacity-50"
         style={{ minHeight: 38 }}>
         <span className={selected ? "" : "text-text-dim"}>
           {selected ? productLabel(selected) : (placeholder || "— اختر —")}
@@ -120,19 +120,19 @@ function ProductSearchSelect({ value, onChange, products, placeholder, disabled 
         <MIcon name={open ? "expand_less" : "expand_more"} className="!text-[16px] text-text-dim" />
       </button>
       {open && !disabled && (
-        <div className="absolute z-30 mt-1 w-full rounded-xl border border-line bg-white shadow-lg">
+        <div className="absolute z-30 mt-1 w-full rounded-card border border-line bg-white shadow-lg">
           <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
             placeholder="بحث بالاسم أو الباركود..."
-            className="w-full border-b border-line px-3 py-2 text-[12px] outline-none" />
+            className="w-full border-b border-line px-3 py-2 text-t-sm outline-none" />
           <div className="max-h-64 overflow-y-auto">
             {filtered.length === 0 ? (
-              <div className="px-3 py-2.5 text-[12px] text-text-dim">لا يوجد مطابق</div>
+              <div className="px-3 py-2.5 text-t-sm text-text-dim">لا يوجد مطابق</div>
             ) : filtered.map((p) => (
               <button key={p.id} type="button"
                 onClick={() => { onChange(p.id); setOpen(false); setQ(""); }}
                 className="flex w-full items-center justify-between px-3 py-2 text-right hover:bg-ink-3">
-                <span className="text-[12.5px] font-bold">{productLabel(p)}</span>
-                {p.barcode && <span className="tnum text-[10.5px] text-text-dim">{p.barcode}</span>}
+                <span className="text-t-sm font-bold">{productLabel(p)}</span>
+                {p.barcode && <span className="tnum text-t-xs text-text-dim">{p.barcode}</span>}
               </button>
             ))}
           </div>
@@ -150,6 +150,7 @@ export default function ProductsPage() {
   const importRef = useRef<HTMLInputElement>(null);
   const [importBusy, setImportBusy] = useState(false);
   const [importMsg, setImportMsg] = useState("");
+  const [importOk, setImportOk] = useState(false);
   const [productSearch, setProductSearch] = useState("");
   // ── مرحلتان إلزاميتان: معاينة (بلا كتابة) ← اعتماد — لكي مصيبة الأسعار الغلط ما تتكررش ──
   type ImportPreview = {
@@ -181,7 +182,7 @@ export default function ProductsPage() {
       const p = await callImport(file, true);   // معاينة فقط — صفر كتابة
       setPreview(p); setPendingFile(file);
     } catch (e) {
-      setImportMsg(`❌ ${e instanceof Error ? e.message : "فشل قراءة الملف"}`);
+      setImportOk(false); setImportMsg(`${e instanceof Error ? e.message : "فشل قراءة الملف"}`);
     } finally {
       setImportBusy(false);
       if (importRef.current) importRef.current.value = "";
@@ -193,13 +194,13 @@ export default function ProductsPage() {
     setImportBusy(true);
     try {
       const data = await callImport(pendingFile, false);
-      setImportMsg(`✅ استيراد ناجح: ${data.added} صنف جديد + ${data.updated} تحديث` +
-        (data.warningsTotal ? ` — ℹ ${data.warningsTotal} صف حُدّث سعره/تكلفته فقط لأن اسمه وفئته مكرران مع صنف آخر (مثال: ${(data.warnings || [])[0]})` : "") +
-        (data.errorsTotal ? ` — ⚠ ${data.errorsTotal} صف فيه مشكلة: ${(data.errors || []).slice(0, 3).join(" | ")}` : ""));
+      setImportOk(true); setImportMsg(`استيراد ناجح: ${data.added} صنف جديد + ${data.updated} تحديث` +
+        (data.warningsTotal ? ` — ${data.warningsTotal} صف حُدّث سعره/تكلفته فقط لأن اسمه وفئته مكرران مع صنف آخر (مثال: ${(data.warnings || [])[0]})` : "") +
+        (data.errorsTotal ? ` — ${data.errorsTotal} صف فيه مشكلة: ${(data.errors || []).slice(0, 3).join(" | ")}` : ""));
       setPreview(null); setPendingFile(null);
       load();
     } catch (e) {
-      setImportMsg(`❌ ${e instanceof Error ? e.message : "فشل الاستيراد"}`);
+      setImportOk(false); setImportMsg(`${e instanceof Error ? e.message : "فشل الاستيراد"}`);
     } finally { setImportBusy(false); }
   }
 
@@ -211,10 +212,10 @@ export default function ProductsPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "فشل المسح");
-      setImportMsg(`🗑 تم مسح ${data.deactivated} صنف — تاريخ الفواتير محفوظ. ارفع الملف الصحيح الآن.`);
+      setImportOk(true); setImportMsg(`تم مسح ${data.deactivated} صنف — تاريخ الفواتير محفوظ. ارفع الملف الصحيح الآن.`);
       setWipeOpen(false); load();
     } catch (e) {
-      setImportMsg(`❌ ${e instanceof Error ? e.message : "فشل المسح"}`);
+      setImportOk(false); setImportMsg(`${e instanceof Error ? e.message : "فشل المسح"}`);
     } finally { setWipeBusy(false); }
   }
   const canEdit = hasPerm("products.edit");
@@ -421,7 +422,7 @@ export default function ProductsPage() {
       render: (p) => (
         <div>
           <div className="font-extrabold">{p.name}{p.spec ? ` — ${p.spec}` : ""}</div>
-          <div className="text-[11px] text-text-dim">{p.category}</div>
+          <div className="text-t-xs text-text-dim">{p.category}</div>
         </div>
       ),
     },
@@ -429,13 +430,13 @@ export default function ProductsPage() {
     {
       key: "barcode", title: "الباركود", width: "130px",
       render: (p) => p.barcode
-        ? <span className="tnum text-[12px]">{p.barcode}</span>
+        ? <span className="tnum text-t-sm">{p.barcode}</span>
         : <span className="text-text-dim">—</span>,
     },
     {
       key: "sku", title: "SKU", width: "110px",
       render: (p) => p.sku
-        ? <span className="tnum text-[12px] text-text-dim">{p.sku}</span>
+        ? <span className="tnum text-t-sm text-text-dim">{p.sku}</span>
         : <span className="text-text-dim">—</span>,
     },
     {
@@ -467,15 +468,15 @@ export default function ProductsPage() {
       render: (p: Product) => (
         <div className="flex justify-end gap-1.5">
           {canEdit && (
-            <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
+            <Button variant="ghost" size="xs"
               onClick={() => openEdit(p)}>تعديل</Button>
           )}
           {canEdit && (
-            <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
+            <Button variant="ghost" size="xs"
               onClick={() => openLinks(p)}>بدائل/مرتبطة</Button>
           )}
           {canDelete && (
-            <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]"
+            <Button variant="danger" size="xs"
               onClick={() => remove(p)}>حذف</Button>
           )}
         </div>
@@ -848,20 +849,20 @@ export default function ProductsPage() {
   return (
     <div className="space-y-4">
       {importMsg && (
-        <div className={`rounded-lg px-4 py-2.5 text-[12.5px] font-bold ${importMsg.startsWith("✅") ? "bg-emerald-bg text-emerald" : "bg-ember-bg text-ember"}`}>
+        <div className={`rounded-lg px-4 py-2.5 text-t-sm font-bold ${importOk ? "bg-emerald-bg text-emerald" : "bg-ember-bg text-ember"}`}>
           {importMsg}
           <button onClick={() => setImportMsg("")} className="mr-2 opacity-60 hover:opacity-100"><MIcon name="close" className="!text-[15px]" /></button>
         </div>
       )}
       <div className="flex items-center justify-between">
-        <h1 className="text-[19px] font-extrabold">الأصناف</h1>
+        <h1 className="page-title">الأصناف</h1>
         <div className="flex items-center gap-3">
-          <span className="text-[12px] text-text-dim tnum">{rows.length} صنف نشط</span>
-          <div className="flex overflow-hidden rounded-xl border border-line">
+          <span className="text-t-sm text-text-dim tnum">{rows.length} صنف نشط</span>
+          <div className="flex overflow-hidden rounded-card border border-line">
             <button type="button" onClick={() => setView("cards")}
-              className={`px-3 py-1.5 text-[12px] font-bold ${view === "cards" ? "bg-petrol text-white" : "bg-white"}`}>كروت</button>
+              className={`px-3 py-1.5 text-t-sm font-bold ${view === "cards" ? "bg-petrol text-white" : "bg-white"}`}>كروت</button>
             <button type="button" onClick={() => setView("table")}
-              className={`px-3 py-1.5 text-[12px] font-bold ${view === "table" ? "bg-petrol text-white" : "bg-white"}`}>جدول</button>
+              className={`px-3 py-1.5 text-t-sm font-bold ${view === "table" ? "bg-petrol text-white" : "bg-white"}`}>جدول</button>
           </div>
         </div>
       </div>
@@ -877,22 +878,22 @@ export default function ProductsPage() {
 
           {/* النصف الأول: لوحة الفلاتر */}
           <div className="min-w-0">
-            <div className="rounded-xl border border-line bg-ink-3/30">
+            <div className="rounded-card border border-line bg-ink-3/30">
               <button
                 onClick={() => setFltOpen(!fltOpen)}
                 className="flex w-full items-center justify-between px-3 py-2.5"
               >
-                <span className="flex items-center gap-2 text-[12.5px] font-black">
+                <span className="flex items-center gap-2 text-t-sm font-black">
                   <MIcon name="tune" className="!text-[16px]" />
                   الفلاتر
                   {activeFilterCount > 0 && (
-                    <span className="rounded-full bg-petrol px-2 py-0.5 text-[10px] font-black text-white">
+                    <span className="rounded-full bg-petrol px-2 py-0.5 text-t-xs font-black text-white">
                       {activeFilterCount}
                     </span>
                   )}
                 </span>
 
-                <span className="text-[11px] text-text-dim">
+                <span className="text-t-xs text-text-dim">
                   {filteredRows.length} من {rows.length} صنف
                   <MIcon
                     name={fltOpen ? "expand_less" : "expand_more"}
@@ -921,9 +922,9 @@ export default function ProductsPage() {
                       onChange={(e) => setFltKind(e.target.value as any)}
                     >
                       <option value="">الكل</option>
-                      <option value="oil">🛢️ زيت</option>
-                      <option value="oilFilter">🔧 فلتر زيت</option>
-                      <option value="service">🛠 خدمة</option>
+                      <option value="oil">زيت</option>
+                      <option value="oilFilter">فلتر زيت</option>
+                      <option value="service">خدمة</option>
                       <option value="regular">صنف عادي</option>
                     </Select>
                   </Field>
@@ -988,8 +989,7 @@ export default function ProductsPage() {
                   {activeFilterCount > 0 && (
                     <div className="col-span-full flex justify-end">
                       <Button
-                        variant="ghost"
-                        className="!py-1.5 !text-[11.5px] gap-1"
+                        variant="ghost" size="xs" className="gap-1"
                         onClick={clearFilters}
                       >
                         <MIcon name="close" className="!text-[14px]" /> مسح كل الفلاتر
@@ -1032,8 +1032,8 @@ export default function ProductsPage() {
           toolbar={
             <>
               {bulkSel.size > 0 && (
-                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-petrol bg-petrol/10 px-3 py-2">
-                  <span className="text-[12px] font-black">
+                <div className="flex flex-wrap items-center gap-2 rounded-card border border-petrol bg-petrol/10 px-3 py-2">
+                  <span className="text-t-sm font-black">
                     محدد: <b className="tnum">{bulkSel.size}</b> صنف
                   </span>
 
@@ -1046,18 +1046,17 @@ export default function ProductsPage() {
                       {Object.entries(OIL_TYPES).map(([k, v]) => (
                         <option key={"ot:" + k} value={"ot:" + k}>{v}</option>
                       ))}
-                      <option value="__clear_oiltype__">✕ إزالة تصنيف الزيت</option>
+                      <option value="__clear_oiltype__">إزالة تصنيف الزيت</option>
                     </optgroup>
                     <optgroup label="نوع الفلتر">
                       {Object.entries(FILTER_KINDS).map(([k, v]) => (
                         <option key={"fk:" + k} value={"fk:" + k}>{v}</option>
                       ))}
-                      <option value="__clear_filterkind__">✕ إزالة تصنيف الفلتر</option>
+                      <option value="__clear_filterkind__">إزالة تصنيف الفلتر</option>
                     </optgroup>
                   </Select>
 
-                  <Button
-                    className="!py-1.5 !text-[11.5px] gap-1"
+                  <Button size="xs" className="gap-1"
                     disabled={!bulkType || bulkBusy}
                     onClick={applyBulkType}
                   >
@@ -1065,8 +1064,7 @@ export default function ProductsPage() {
                   </Button>
 
                   <Button
-                    variant="ghost"
-                    className="!py-1.5 !text-[11.5px]"
+                    variant="ghost" size="xs"
                     onClick={() => setBulkSel(new Set())}
                   >
                     إلغاء التحديد
@@ -1096,7 +1094,7 @@ export default function ProductsPage() {
 
                   {hasPerm("products.delete") && (
                     <Button variant="danger" onClick={() => setWipeOpen(true)}>
-                      🗑 مسح كل الأصناف
+                      مسح كل الأصناف
                     </Button>
                   )}
 
@@ -1245,8 +1243,8 @@ export default function ProductsPage() {
             </Field>
             <label className="col-span-full flex cursor-pointer items-center justify-between rounded-lg border border-line bg-ink-3 px-3 py-2.5">
               <div>
-                <div className="text-[12.5px] font-bold">صنف خدمة (بدون مخزون)</div>
-                <div className="text-[11px] text-text-dim">
+                <div className="text-t-sm font-bold">صنف خدمة (بدون مخزون)</div>
+                <div className="text-t-xs text-text-dim">
                   خدمة تُقدَّم وليست بضاعة تُشترى — تُباع بكمية ثابتة، ولا تظهر في المشتريات أو التحويلات المخزنية
                 </div>
               </div>
@@ -1254,8 +1252,8 @@ export default function ProductsPage() {
             </label>
             <label className="col-span-full flex cursor-pointer items-center justify-between rounded-lg border border-line bg-ink-3 px-3 py-2.5">
               <div>
-                <div className="text-[12.5px] font-bold">صنف زيت 🛢️</div>
-                <div className="text-[11px] text-text-dim">يظهر كخيار في بوابة اختيار الزيت الذاتية للعميل</div>
+                <div className="text-t-sm font-bold">صنف زيت</div>
+                <div className="text-t-xs text-text-dim">يظهر كخيار في بوابة اختيار الزيت الذاتية للعميل</div>
               </div>
               <Switch checked={form.isOil} onChange={(v) => setForm({ ...form, isOil: v })} />
             </label>
@@ -1265,10 +1263,10 @@ export default function ProductsPage() {
                   {prodImage ? (
                     <img src={`data:image/jpeg;base64,${prodImage}`} alt="صورة" className="h-12 w-12 rounded-lg border border-line object-contain" />
                   ) : (
-                    <span className="grid h-12 w-12 place-items-center rounded-lg border border-dashed border-line text-[20px]"
-                      title={prodImage === undefined ? "الصورة الحالية محفوظة — ارفع لتغييرها" : ""}>🖼️</span>
+                    <span className="grid h-12 w-12 place-items-center rounded-lg border border-dashed border-line text-t-2xl"
+                      title={prodImage === undefined ? "الصورة الحالية محفوظة — ارفع لتغييرها" : ""}></span>
                   )}
-                  <label className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-[11.5px] font-bold hover:border-petrol">
+                  <label className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-t-xs font-bold hover:border-petrol">
                     رفع صورة
                     <input type="file" accept="image/*" hidden
                       onChange={async (e) => {
@@ -1279,7 +1277,7 @@ export default function ProductsPage() {
                   </label>
                   {prodImage && (
                     <button type="button" onClick={() => setProdImage(null)}
-                      className="text-[11px] font-bold text-ember hover:underline">حذف</button>
+                      className="text-t-xs font-bold text-ember hover:underline">حذف</button>
                   )}
                 </div>
               </Field>
@@ -1310,14 +1308,14 @@ export default function ProductsPage() {
             </div>
             <label className="col-span-full flex cursor-pointer items-center justify-between rounded-lg border border-line bg-ink-3 px-3 py-2.5">
               <div>
-                <div className="text-[12.5px] font-bold">فلتر زيت 🔧</div>
-                <div className="text-[11px] text-text-dim">يُضاف تلقائياً لو العميل اختار "مع فلتر" في بوابة الزيت</div>
+                <div className="text-t-sm font-bold">فلتر زيت</div>
+                <div className="text-t-xs text-text-dim">يُضاف تلقائياً لو العميل اختار "مع فلتر" في بوابة الزيت</div>
               </div>
               <Switch checked={form.isOilFilter} onChange={(v) => setForm({ ...form, isOilFilter: v })} />
             </label>
           </div>
 
-          <p className="text-[11px] leading-5 text-text-dim">
+          <p className="text-t-xs leading-5 text-text-dim">
             السعر شامل الضريبة بيتحسب تلقائياً في قاعدة البيانات من سعر البيع ونسبة ضريبة الشركة.
           </p>
 
@@ -1355,15 +1353,15 @@ export default function ProductsPage() {
 
           <div className="divide-y divide-line rounded-lg border border-line">
             {links.length === 0 && (
-              <div className="p-3 text-center text-[12px] text-text-dim">لا توجد أصناف بديلة أو مرتبطة بعد</div>
+              <div className="p-3 text-center text-t-sm text-text-dim">لا توجد أصناف بديلة أو مرتبطة بعد</div>
             )}
             {links.map((l) => (
               <div key={l.id} className="flex items-center justify-between gap-2 p-2.5">
                 <div className="min-w-0">
-                  <div className="truncate text-[12.5px] font-bold">
+                  <div className="truncate text-t-sm font-bold">
                     {l.category} — {l.name}{l.spec ? ` — ${l.spec}` : ""}
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] text-text-dim">
+                  <div className="flex items-center gap-2 text-t-xs text-text-dim">
                     <Badge tone={l.linkType === "substitute" ? "warn" : "info"}>
                       {l.linkType === "substitute" ? "بديل" : "مرتبط"}
                     </Badge>
@@ -1371,7 +1369,7 @@ export default function ProductsPage() {
                     <span className="tnum">مخزون: {l.stock_qty}</span>
                   </div>
                 </div>
-                <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]"
+                <Button variant="danger" size="xs"
                   onClick={() => removeLink(l.id)}>حذف</Button>
               </div>
             ))}
@@ -1384,11 +1382,11 @@ export default function ProductsPage() {
       </Modal>
 
       {/* ══════════ المصنّف الذكي الجماعي ══════════ */}
-      <Modal open={clsOpen} size="lg" onClose={() => setClsOpen(false)} title="🪄 التصنيف الذكي الجماعي">
+      <Modal open={clsOpen} size="lg" onClose={() => setClsOpen(false)} title="التصنيف الذكي الجماعي">
         <div className="space-y-3">
           {!clsPreview && (
             <>
-              <p className="text-[12.5px] leading-relaxed text-text-dim">
+              <p className="text-t-sm leading-relaxed text-text-dim">
                 بيقرأ أسماء كل الأصناف غير المصنفة (تصنيفها "أخرى" أو فارغ) ويصنفها تلقائياً بقواعد
                 مفردات قطاع خدمة السيارات: زيوت، فلاتر زيت/هواء/مكيف، قير ودفرنس، مناشف، سوائل تبريد،
                 بواجي، بطاريات... — <b>وبيفعّل "صنف زيت" و"فلتر زيت" تلقائياً لبوابة اختيار الزيت</b>.
@@ -1404,39 +1402,39 @@ export default function ProductsPage() {
             <>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="rounded-lg bg-ink-3 p-2">
-                  <div className="tnum text-[17px] font-black">{clsPreview.scanned}</div>
-                  <div className="text-[10.5px] text-text-dim">تم فحصها</div>
+                  <div className="tnum text-t-xl font-black">{clsPreview.scanned}</div>
+                  <div className="text-t-xs text-text-dim">تم فحصها</div>
                 </div>
                 <div className="rounded-lg bg-emerald-bg p-2">
-                  <div className="tnum text-[17px] font-black text-emerald">{clsPreview.classified}</div>
-                  <div className="text-[10.5px] text-text-dim">{clsPreview.applied ? "اتصنفت ✓" : "هتتصنف"}</div>
+                  <div className="tnum text-t-xl font-black text-emerald">{clsPreview.classified}</div>
+                  <div className="text-t-xs text-text-dim">{clsPreview.applied ? "اتصنفت" : "هتتصنف"}</div>
                 </div>
                 <div className="rounded-lg bg-ink-3 p-2">
-                  <div className="tnum text-[17px] font-black text-text-dim">{clsPreview.unclassified}</div>
-                  <div className="text-[10.5px] text-text-dim">تحتاج تصنيفاً يدوياً</div>
+                  <div className="tnum text-t-xl font-black text-text-dim">{clsPreview.unclassified}</div>
+                  <div className="text-t-xs text-text-dim">تحتاج تصنيفاً يدوياً</div>
                 </div>
               </div>
               {(clsPreview.aiClassified ?? 0) > 0 && (
-                <p className="rounded-lg bg-petrol-soft px-3 py-1.5 text-[11.5px] font-bold">
-                  🤖 حسم الذكاء الاصطناعي {clsPreview.aiClassified} صنف لم تطابق القواعد — باختيار مغلق من فئاتك
+                <p className="rounded-lg bg-petrol-soft px-3 py-1.5 text-t-xs font-bold">
+                  حسم الذكاء الاصطناعي {clsPreview.aiClassified} صنف لم تطابق القواعد — باختيار مغلق من فئاتك
                 </p>
               )}
               {clsPreview.unclassified > 0 && clsPreview.unclassifiedSamples && clsPreview.unclassifiedSamples.length > 0 && (
-                <p className="text-[11px] text-text-dim">أمثلة المتبقي: {clsPreview.unclassifiedSamples.join(" · ")}</p>
+                <p className="text-t-xs text-text-dim">أمثلة المتبقي: {clsPreview.unclassifiedSamples.join(" · ")}</p>
               )}
 
               <div className="max-h-72 space-y-1.5 overflow-y-auto rounded-lg border border-line p-2">
                 {clsPreview.byCategory.map((c) => (
                   <div key={c.category} className="rounded-lg bg-ink-3 px-3 py-2">
-                    <div className="flex items-center justify-between text-[12.5px]">
+                    <div className="flex items-center justify-between text-t-sm">
                       <span className="font-black">
                         {c.category}
-                        {c.isOil && <span className="mr-1.5 rounded-full bg-brass-soft px-2 py-0.5 text-[9.5px] font-bold text-brass">🛢️ زيت</span>}
-                        {c.isOilFilter && <span className="mr-1.5 rounded-full bg-petrol-soft px-2 py-0.5 text-[9.5px] font-bold text-petrol">🔧 فلتر زيت</span>}
+                        {c.isOil && <span className="mr-1.5 rounded-full bg-brass-soft px-2 py-0.5 text-t-xs font-bold text-brass">زيت</span>}
+                        {c.isOilFilter && <span className="mr-1.5 rounded-full bg-petrol-soft px-2 py-0.5 text-t-xs font-bold text-petrol">فلتر زيت</span>}
                       </span>
                       <span className="tnum font-black text-petrol">{c.count}</span>
                     </div>
-                    <div className="mt-0.5 truncate text-[10.5px] text-text-dim">
+                    <div className="mt-0.5 truncate text-t-xs text-text-dim">
                       أمثلة: {c.samples.join(" · ")}
                     </div>
                   </div>
@@ -1445,8 +1443,8 @@ export default function ProductsPage() {
 
               <ErrorNote msg={clsErr} />
               {clsPreview.applied ? (
-                <div className="rounded-lg bg-emerald-bg px-3 py-2.5 text-center text-[13px] font-black text-emerald">
-                  ✓ تم التطبيق — {clsPreview.classified} صنف اتصنفوا، والمتبقي {clsPreview.unclassified} تصنفهم يدوياً براحتك
+                <div className="rounded-lg bg-emerald-bg px-3 py-2.5 text-center text-t-md font-black text-emerald">
+                  تم التطبيق — {clsPreview.classified} صنف اتصنفوا، والمتبقي {clsPreview.unclassified} تصنفهم يدوياً براحتك
                 </div>
               ) : (
                 <div className="flex gap-2">
@@ -1462,28 +1460,28 @@ export default function ProductsPage() {
       </Modal>
 
       {/* ══════════ مدير شركات الزيوت ══════════ */}
-      <Modal open={brandsOpen} size="lg" onClose={() => setBrandsOpen(false)} title="🏷️ شركات الزيوت (لبوابة العميل)">
+      <Modal open={brandsOpen} size="lg" onClose={() => setBrandsOpen(false)} title="شركات الزيوت (لبوابة العميل)">
         <div className="space-y-3">
-          <p className="text-[12px] text-text-dim">
+          <p className="text-t-sm text-text-dim">
             العميل في بوابة اختيار الزيت بيشوف الشركات دي بشعاراتها أولاً، وبعدها منتجات الشركة اللي يختارها.
           </p>
 
           {/* ── التوزيع التلقائي: كل زيت إلى شركته — قواعد ثم ذكاء ── */}
-          <div className="rounded-xl border border-line bg-ink-3/40 p-3">
+          <div className="rounded-card border border-line bg-ink-3/40 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="text-[12.5px] font-black">⚡ توزيع الزيوت على الشركات تلقائياً</div>
-              <Button variant="ghost" className="!py-1.5 !text-[11.5px]" disabled={autoBrandBusy}
+              <div className="text-t-sm font-black">توزيع الزيوت على الشركات تلقائياً</div>
+              <Button variant="ghost" size="xs" disabled={autoBrandBusy}
                 onClick={() => runAutoBrand(false)}>
                 {autoBrandBusy ? "جارِ الفحص…" : "معاينة التوزيع"}
               </Button>
             </div>
             {autoBrand && (
-              <div className="mt-2 space-y-2 text-[11.5px]">
+              <div className="mt-2 space-y-2 text-t-xs">
                 {autoBrand.error ? <p className="font-bold text-ember">{autoBrand.error}</p> : (
                   <>
                     <p className="font-bold">
                       {autoBrand.scanned} زيت بلا شركة → <span className="text-emerald">{autoBrand.assigned} سيتم توزيعها</span>
-                      {autoBrand.aiAssigned > 0 && <span> (منهم 🤖 {autoBrand.aiAssigned} بالذكاء)</span>}
+                      {autoBrand.aiAssigned > 0 && <span> (منهم {autoBrand.aiAssigned} بالذكاء)</span>}
                       {autoBrand.unassigned > 0 && <span className="text-text-dim"> · {autoBrand.unassigned} يحتاجون تصنيفاً يدوياً</span>}
                     </p>
                     {autoBrand.byBrand.length > 0 && (
@@ -1493,9 +1491,9 @@ export default function ProductsPage() {
                       <p className="text-text-dim">أمثلة: {autoBrand.unassignedSamples.join(" · ")}</p>
                     )}
                     {autoBrand.applied ? (
-                      <p className="font-black text-emerald">✓ اتطبق التوزيع</p>
+                      <p className="font-black text-emerald">اتطبق التوزيع</p>
                     ) : autoBrand.assigned > 0 && (
-                      <Button className="!py-1.5 !text-[11.5px] gap-1" disabled={autoBrandBusy}
+                      <Button size="xs" className="gap-1" disabled={autoBrandBusy}
                         onClick={() => runAutoBrand(true)}>
                         <MIcon name="check" className="!text-[14px]" /> تطبيق التوزيع على {autoBrand.assigned} صنف
                       </Button>
@@ -1510,34 +1508,34 @@ export default function ProductsPage() {
               {brands.map((b) => (
                 <div key={b.id} className="flex flex-col">
                   {/* كارد البراند */}
-                  <div className="flex min-h-[145px] flex-col rounded-xl border border-line bg-ink-2 p-3 text-center">
+                  <div className="flex min-h-[145px] flex-col rounded-card border border-line bg-ink-2 p-3 text-center">
                     {/* مساحة ثابتة للوجو */}
                     <div className="flex h-[75px] w-full items-center justify-center overflow-hidden">
                       {b.logo_base64 ? (<img src={`data:image/png;base64,${b.logo_base64}`} alt={b.name} loading="lazy" decoding="async" className="block h-full w-full object-contain p-1" />) : (<MIcon name="verified" className="!text-[30px] text-[#64748B]" />)}
                     </div>
                     {/* اسم البراند */}
-                    <div className="mt-2 truncate text-[12.5px] font-black"> {b.name}
+                    <div className="mt-2 truncate text-t-sm font-black"> {b.name}
                     </div> </div>
                   {/* الأزرار خارج الكارد وتحت الـ border */}
                   <div className="flex items-center justify-center gap-1.5 pt-2">
-                    <Button onClick={() => openAssign(b)} className="rounded-md bg-petrol px-2.5 py-1.5 text-[10.5px] font-bold text-white transition hover:brightness-110" > تعيين المنتجات </Button>
-                    <button onClick={() => startBrandEdit(b)} className="rounded-md border border-line bg-ink-2 px-2.5 py-1.5 text-[10.5px] font-bold transition hover:border-petrol" > تعديل </button>
-                    <button onClick={() => removeBrand(b)} className="rounded-md px-2.5 py-1.5 text-[10.5px] font-bold text-ember transition hover:bg-ember-bg" > حذف </button>
+                    <Button onClick={() => openAssign(b)} className="rounded-md bg-petrol px-2.5 py-1.5 text-t-xs font-bold text-white transition hover:brightness-110" > تعيين المنتجات </Button>
+                    <button onClick={() => startBrandEdit(b)} className="rounded-md border border-line bg-ink-2 px-2.5 py-1.5 text-t-xs font-bold transition hover:border-petrol" > تعديل </button>
+                    <button onClick={() => removeBrand(b)} className="rounded-md px-2.5 py-1.5 text-t-xs font-bold text-ember transition hover:bg-ember-bg" > حذف </button>
                   </div> </div>
               ))}
             </div>
           )}
           {brandEdit && (
-            <div className="flex items-center justify-between rounded-lg bg-petrol/10 px-3 py-2 text-[11.5px] font-bold">
-              <span>✏ تعديل «{brandEdit.name}» — غيّر الاسم أو ارفع شعاراً جديداً (سيبه فاضي للاحتفاظ بالحالي)</span>
+            <div className="flex items-center justify-between rounded-lg bg-petrol/10 px-3 py-2 text-t-xs font-bold">
+              <span>تعديل «{brandEdit.name}» — غيّر الاسم أو ارفع شعاراً جديداً (سيبه فاضي للاحتفاظ بالحالي)</span>
               <button onClick={cancelBrandEdit} className="font-black text-ember">إلغاء</button>
             </div>
           )}
-          <div className="grid gap-2 rounded-xl border border-dashed border-line p-3 sm:grid-cols-[1fr_auto_auto]">
+          <div className="grid gap-2 rounded-card border border-dashed border-line p-3 sm:grid-cols-[1fr_auto_auto]">
             <Input value={brandName} placeholder="اسم الشركة — مثال: شيل، موبيل، كاسترول"
               onChange={(e) => setBrandName(e.target.value)} />
-            <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-[11.5px] font-bold hover:border-petrol">
-              {brandLogo ? "✓ الشعار جاهز" : "رفع الشعار"}
+            <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-t-xs font-bold hover:border-petrol">
+              {brandLogo ? "الشعار جاهز" : "رفع الشعار"}
               <input type="file" accept="image/*" hidden
                 onChange={async (e) => {
                   const f = e.target.files?.[0]; if (!f) return;
@@ -1557,13 +1555,13 @@ export default function ProductsPage() {
       <Modal open={!!assignFor} size="lg" onClose={() => setAssignFor(null)}
         title={`تعيين الزيوت لشركة «${assignFor?.name || ""}»`}>
         <div className="space-y-3">
-          <p className="text-[12px] text-text-dim">
+          <p className="text-t-sm text-text-dim">
             حدّد المنتجات التابعة للشركة — المطابق لاسم الشركة اتحدد تلقائياً، راجع وعدّل ثم احفظ.
             المحدد: <b className="tnum">{assignSel.size}</b>
           </p>
           <div className="max-h-80 divide-y divide-line overflow-y-auto rounded-lg border border-line">
             {rows.filter((r) => r.is_oil).map((r) => (
-              <label key={r.id} className="flex cursor-pointer items-center gap-2 px-3 py-2 text-[12.5px] hover:bg-ink-3">
+              <label key={r.id} className="flex cursor-pointer items-center gap-2 px-3 py-2 text-t-sm hover:bg-ink-3">
                 <input type="checkbox" checked={assignSel.has(r.id)} className="h-4 w-4 accent-petrol"
                   onChange={(e) => {
                     const next = new Set(assignSel);
@@ -1572,13 +1570,13 @@ export default function ProductsPage() {
                   }} />
                 <span className="flex-1 font-bold">{productLabel(r)}</span>
                 {r.oil_brand && r.oil_brand !== assignFor?.name && (
-                  <span className="rounded-full bg-ink-3 px-2 py-0.5 text-[10px] text-text-dim">حالياً: {r.oil_brand}</span>
+                  <span className="rounded-full bg-ink-3 px-2 py-0.5 text-t-xs text-text-dim">حالياً: {r.oil_brand}</span>
                 )}
               </label>
             ))}
             {rows.filter((r) => r.is_oil).length === 0 && (
-              <p className="p-6 text-center text-[12px] text-text-dim">
-                لا توجد أصناف زيت بعد — شغّل "🪄 تصنيف ذكي" أولاً أو فعّل "صنف زيت" على المنتجات
+              <p className="p-6 text-center text-t-sm text-text-dim">
+                لا توجد أصناف زيت بعد — شغّل "تصنيف ذكي" أولاً أو فعّل "صنف زيت" على المنتجات
               </p>
             )}
           </div>
@@ -1592,9 +1590,9 @@ export default function ProductsPage() {
       </Modal>
 
       {/* ══════════ تصنيف نوع الزيت — الأنواع الخمسة الثابتة ══════════ */}
-      <Modal open={typesOpen} size="lg" onClose={() => setTypesOpen(false)} title="🧪 تصنيف نوع الزيت">
+      <Modal open={typesOpen} size="lg" onClose={() => setTypesOpen(false)} title="تصنيف نوع الزيت">
         <div className="space-y-3">
-          <p className="text-[12px] text-text-dim">
+          <p className="text-t-sm text-text-dim">
             صنّف كل زيت بنوعه (ماكينة/دفرنس/دركسيون/فرامل/قير) بالجملة دفعة واحدة بدل صنف بصنف —
             ونفس النوع يُستخدم لربط الخدمة (مثال: "تغيير زيت الفرامل") بالزيوت المناسبة لها فقط
             في بوابة الحجز، بدل ظهور أي زيت عشوائي.
@@ -1603,13 +1601,13 @@ export default function ProductsPage() {
             {Object.entries(OIL_TYPES).map(([key, label]) => {
               const count = rows.filter((r) => r.is_oil && r.oil_type === key).length;
               return (
-                <div key={key} className="rounded-xl border border-line p-3 text-center">
-                  <div className="text-[12.5px] font-black">{label}</div>
-                  <div className="mt-1 text-[11px] text-text-dim">
+                <div key={key} className="rounded-card border border-line p-3 text-center">
+                  <div className="text-t-sm font-black">{label}</div>
+                  <div className="mt-1 text-t-xs text-text-dim">
                     <b className="tnum">{count}</b> صنف مصنّف
                   </div>
                   <button onClick={() => openTypeAssign(key)}
-                    className="mt-2 w-full rounded-md bg-petrol px-2 py-1.5 text-[10.5px] font-bold text-white hover:brightness-110">
+                    className="mt-2 w-full rounded-md bg-petrol px-2 py-1.5 text-t-xs font-bold text-white hover:brightness-110">
                     تعيين المنتجات
                   </button>
                 </div>
@@ -1619,7 +1617,7 @@ export default function ProductsPage() {
           {(() => {
             const unclassified = rows.filter((r) => r.is_oil && !r.oil_type).length;
             return unclassified > 0 ? (
-              <p className="rounded-lg bg-ink-3/40 px-3 py-2 text-[11.5px] font-bold text-text-dim">
+              <p className="rounded-lg bg-ink-3/40 px-3 py-2 text-t-xs font-bold text-text-dim">
                 {unclassified} صنف زيت لسه من غير نوع محدد.
               </p>
             ) : null;
@@ -1631,13 +1629,13 @@ export default function ProductsPage() {
       <Modal open={!!typeAssignFor} size="lg" onClose={() => setTypeAssignFor(null)}
         title={`تعيين الزيوت لنوع «${(typeAssignFor && OIL_TYPES[typeAssignFor]) || ""}»`}>
         <div className="space-y-3">
-          <p className="text-[12px] text-text-dim">
+          <p className="text-t-sm text-text-dim">
             حدّد كل الأصناف اللي تتبع هذا النوع مرة واحدة ثم احفظ — بديل التعليم الفردي صنف بصنف.
             المحدد: <b className="tnum">{typeAssignSel.size}</b>
           </p>
           <div className="max-h-80 divide-y divide-line overflow-y-auto rounded-lg border border-line">
             {rows.filter((r) => r.is_oil).map((r) => (
-              <label key={r.id} className="flex cursor-pointer items-center gap-2 px-3 py-2 text-[12.5px] hover:bg-ink-3">
+              <label key={r.id} className="flex cursor-pointer items-center gap-2 px-3 py-2 text-t-sm hover:bg-ink-3">
                 <input type="checkbox" checked={typeAssignSel.has(r.id)} className="h-4 w-4 accent-petrol"
                   onChange={(e) => {
                     const next = new Set(typeAssignSel);
@@ -1646,15 +1644,15 @@ export default function ProductsPage() {
                   }} />
                 <span className="flex-1 font-bold">{productLabel(r)}</span>
                 {r.oil_type && r.oil_type !== typeAssignFor && (
-                  <span className="rounded-full bg-ink-3 px-2 py-0.5 text-[10px] text-text-dim">
+                  <span className="rounded-full bg-ink-3 px-2 py-0.5 text-t-xs text-text-dim">
                     حالياً: {OIL_TYPES[r.oil_type] || r.oil_type}
                   </span>
                 )}
               </label>
             ))}
             {rows.filter((r) => r.is_oil).length === 0 && (
-              <p className="p-6 text-center text-[12px] text-text-dim">
-                لا توجد أصناف زيت بعد — شغّل "🪄 تصنيف ذكي" أولاً أو فعّل "صنف زيت" على المنتجات
+              <p className="p-6 text-center text-t-sm text-text-dim">
+                لا توجد أصناف زيت بعد — شغّل "تصنيف ذكي" أولاً أو فعّل "صنف زيت" على المنتجات
               </p>
             )}
           </div>
@@ -1669,9 +1667,9 @@ export default function ProductsPage() {
       </Modal>
 
       {/* ══════════ ربط فلتر السيارة: ماركة/موديل/نطاق سنة ← صنف حقيقي ══════════ */}
-      <Modal open={filtersMapOpen} size="lg" onClose={() => setFiltersMapOpen(false)} title="🔩 فلاتر السيارات">
+      <Modal open={filtersMapOpen} size="lg" onClose={() => setFiltersMapOpen(false)} title="فلاتر السيارات">
         <div className="space-y-4">
-          <p className="text-[12px] text-text-dim">
+          <p className="text-t-sm text-text-dim">
             حدّد نوع الفلتر (زيت/هواء/مكيف) والماركة والموديل ونطاق سنة الصنع، واختر
             الفلتر الصحيح من أصنافك — بمجرد ما العميل يحجز بنفس البيانات، الفلتر ده
             يظهر تلقائياً في فاتورته بدل قائمة عامة.
@@ -1681,7 +1679,7 @@ export default function ProductsPage() {
           <div className="flex gap-2">
             {Object.entries(FILTER_KINDS).map(([k, label]) => (
               <button key={k} onClick={() => { setCfKind(k as any); setCfProductId(""); }}
-                className="rounded-full px-3.5 py-1.5 text-[11.5px] font-black transition"
+                className="rounded-full px-3.5 py-1.5 text-t-xs font-black transition"
                 style={{
                   background: cfKind === k ? "var(--petrol, #0f766e)" : "transparent",
                   color: cfKind === k ? "#fff" : undefined,
@@ -1719,7 +1717,7 @@ export default function ProductsPage() {
               {["3", "4", "5", "6", "8", "10", "12"].map((c) => <option key={c} value={c}>{c} سلندر</option>)}
             </Select>
           </div>
-          <p className="text-[10.5px] text-text-dim">
+          <p className="text-t-xs text-text-dim">
             اترك "أي محرك" إلا لو نفس الموديل والسنة عنده أكثر من خيار محرك بفلاتر مختلفة
             (مثال: فورتشنر 4 أو 6 سلندر) — حينها أضف رابطاً منفصلاً لكل سلندر.
           </p>
@@ -1727,17 +1725,17 @@ export default function ProductsPage() {
               الرئيسي وفلترته، لكن البحث فوق يعمل مباشرة في كل الأصناف بلا
               اشتراطه — فهذا مجرد اقتراح اختياري غير معطِّل لأي شيء. */}
           <div className="flex items-center justify-between gap-3 rounded-lg bg-ink-3/40 px-3 py-2">
-            <p className="text-[10.5px] text-text-dim">
-              💡 نصيحة: صنّف أصنافك بنوع الفلتر (من الجدول الرئيسي) عشان تقدر تفلترها
+            <p className="text-t-xs text-text-dim">
+              نصيحة: صنّف أصنافك بنوع الفلتر (من الجدول الرئيسي) عشان تقدر تفلترها
               وتحلّل تقاريرها لاحقاً — مش شرط للبحث والربط هنا.
             </p>
-            <Button variant="ghost" className="!shrink-0 !py-1.5 !text-[11px]"
+            <Button variant="ghost" size="xs" className="!shrink-0"
               disabled={autoClsBusy} onClick={runAutoClassify}>
               {autoClsBusy ? "جارِ التصنيف..." : "تصنيف تلقائي من الفئة"}
             </Button>
           </div>
           {autoClsMsg && (
-            <p className="rounded-lg bg-petrol/10 px-3 py-2 text-[11px] font-bold text-petrol">
+            <p className="rounded-lg bg-petrol/10 px-3 py-2 text-t-xs font-bold text-petrol">
               {autoClsMsg}
             </p>
           )}
@@ -1748,8 +1746,8 @@ export default function ProductsPage() {
 
           <div className="max-h-72 divide-y divide-line overflow-y-auto rounded-lg border border-line">
             {carFilters.map((f) => (
-              <div key={f.id} className="flex items-center gap-2 px-3 py-2 text-[12px]">
-                <span className="rounded-full bg-ink-3 px-2 py-0.5 text-[10px] font-black text-text-dim">
+              <div key={f.id} className="flex items-center gap-2 px-3 py-2 text-t-sm">
+                <span className="rounded-full bg-ink-3 px-2 py-0.5 text-t-xs font-black text-text-dim">
                   {FILTER_KINDS[f.filter_kind] || f.filter_kind}
                 </span>
                 <span className="flex-1">
@@ -1758,29 +1756,29 @@ export default function ProductsPage() {
                   <span className="font-bold">{f.filter_name}{f.filter_spec ? ` ${f.filter_spec}` : ""}</span>
                 </span>
                 <button onClick={() => removeCarFilter(f.id)}
-                  className="rounded-md px-2 py-1 text-[11px] font-bold text-red-600 hover:bg-red-50">
+                  className="rounded-md px-2 py-1 text-t-xs font-bold text-ember hover:bg-ember-bg">
                   حذف
                 </button>
               </div>
             ))}
             {carFilters.length === 0 && (
-              <p className="p-6 text-center text-[12px] text-text-dim">لا توجد روابط بعد</p>
+              <p className="p-6 text-center text-t-sm text-text-dim">لا توجد روابط بعد</p>
             )}
           </div>
         </div>
       </Modal>
 
       {/* ══════════ قواعد تسعير الخدمة حسب السيارة ══════════ */}
-      <Modal open={rulesOpen} size="lg" onClose={() => setRulesOpen(false)} title="💼 أسعار الخدمة حسب السيارة">
+      <Modal open={rulesOpen} size="lg" onClose={() => setRulesOpen(false)} title="أسعار الخدمة حسب السيارة">
         <div className="space-y-3">
-          <p className="text-[12px] leading-relaxed text-text-dim">
+          <p className="text-t-sm leading-relaxed text-text-dim">
             حدد سعر الخدمة لكل نوع سيارة — والنظام بينزّل الخدمة <b>تلقائياً بالسعر الصح</b> في طلب العميل
             حسب ماركته وموديله وسنة صنعه. <b>الأخص بيكسب</b>: (تويوتا + كامري + 2020-2024) بتغلب (تويوتا) العامة،
             وقاعدة بدون ماركة = السعر الافتراضي لكل السيارات.
           </p>
 
-          <div className="grid gap-2 rounded-xl border border-dashed border-line p-3 sm:grid-cols-2">
-            <Field label="الخدمة (من أصنافك المعلّمة 🛠 خدمة)">
+          <div className="grid gap-2 rounded-card border border-dashed border-line p-3 sm:grid-cols-2">
+            <Field label="الخدمة (من أصنافك المعلّمة خدمة)">
               <Select value={ruleForm.serviceProductId} onChange={(e) => setRuleForm({ ...ruleForm, serviceProductId: e.target.value })}>
                 <option value="">— اختر الخدمة —</option>
                 {serviceProducts.map((p: Product) => <option key={p.id} value={p.id}>{productLabel(p)}</option>)}
@@ -1814,16 +1812,16 @@ export default function ProductsPage() {
           <ErrorNote msg={ruleErr} />
 
           <div className="max-h-64 divide-y divide-line overflow-y-auto rounded-lg border border-line">
-            {rules.length === 0 && <p className="p-5 text-center text-[12px] text-text-dim">لا قواعد بعد — ابدأ بقاعدة افتراضية بدون ماركة</p>}
+            {rules.length === 0 && <p className="p-5 text-center text-t-sm text-text-dim">لا قواعد بعد — ابدأ بقاعدة افتراضية بدون ماركة</p>}
             {rules.map((r) => (
-              <div key={r.id} className="flex items-center justify-between px-3 py-2 text-[12.5px]">
+              <div key={r.id} className="flex items-center justify-between px-3 py-2 text-t-sm">
                 <span>
                   <b>{r.brand || "كل السيارات"}</b>
                   {r.model && <span className="text-text-dim"> · {r.model}</span>}
                   {(r.year_from || r.year_to) && (
                     <span className="tnum text-text-dim"> · {r.year_from || "..."}-{r.year_to || "..."}</span>
                   )}
-                  <span className="mr-2 rounded-full bg-ink-3 px-2 py-0.5 text-[10px] text-text-dim">{r.product_name}</span>
+                  <span className="mr-2 rounded-full bg-ink-3 px-2 py-0.5 text-t-xs text-text-dim">{r.product_name}</span>
                 </span>
                 <span className="flex items-center gap-2">
                   <b className="tnum text-petrol">{r.price.toFixed(2)} ر.س</b>
@@ -1838,14 +1836,14 @@ export default function ProductsPage() {
       </Modal>
 
       {/* ══════════ خصومات حسب الكمية ══════════ */}
-      <Modal open={qtyRulesOpen} size="lg" onClose={() => setQtyRulesOpen(false)} title="📦 خصومات حسب الكمية">
+      <Modal open={qtyRulesOpen} size="lg" onClose={() => setQtyRulesOpen(false)} title="خصومات حسب الكمية">
         <div className="space-y-3">
-          <p className="text-[12px] leading-relaxed text-text-dim">
+          <p className="text-t-sm leading-relaxed text-text-dim">
             حدّد حد كمية لصنف معيّن ونسبة خصم — شاشة البيع بتطبّق أعلى حد تحقّق فيه الكمية المضافة
             تلقائياً على سعر هذا الصنف (قبل أو بعد قائمة الأسعار المخصّصة لو العميل له قائمة).
           </p>
 
-          <div className="grid gap-2 rounded-xl border border-dashed border-line p-3 sm:grid-cols-2">
+          <div className="grid gap-2 rounded-card border border-dashed border-line p-3 sm:grid-cols-2">
             <Field label="الصنف">
               <Select value={qtyRuleForm.productId} onChange={(e) => setQtyRuleForm({ ...qtyRuleForm, productId: e.target.value })}>
                 <option value="">— اختر الصنف —</option>
@@ -1871,11 +1869,11 @@ export default function ProductsPage() {
           <ErrorNote msg={qtyRuleErr} />
 
           <div className="max-h-64 divide-y divide-line overflow-y-auto rounded-lg border border-line">
-            {qtyRules.length === 0 && <p className="p-5 text-center text-[12px] text-text-dim">لا قواعد بعد</p>}
+            {qtyRules.length === 0 && <p className="p-5 text-center text-t-sm text-text-dim">لا قواعد بعد</p>}
             {qtyRules.map((r) => (
-              <div key={r.id} className="flex items-center justify-between px-3 py-2 text-[12.5px]">
+              <div key={r.id} className="flex items-center justify-between px-3 py-2 text-t-sm">
                 <span>
-                  <span className="rounded-full bg-ink-3 px-2 py-0.5 text-[10px] text-text-dim">{r.product_name}</span>
+                  <span className="rounded-full bg-ink-3 px-2 py-0.5 text-t-xs text-text-dim">{r.product_name}</span>
                   <span className="tnum mr-2"> كمية ≥ {r.min_qty}</span>
                 </span>
                 <span className="flex items-center gap-2">
@@ -1891,9 +1889,9 @@ export default function ProductsPage() {
       </Modal>
 
       {/* ══════════ منظف الأسماء الذكي ══════════ */}
-      <Modal open={cleanOpen} size="lg" onClose={() => setCleanOpen(false)} title="🧽 تنظيف أسماء الأصناف بالذكاء">
+      <Modal open={cleanOpen} size="lg" onClose={() => setCleanOpen(false)} title="تنظيف أسماء الأصناف بالذكاء">
         <div className="space-y-3">
-          <p className="text-[12px] leading-relaxed text-text-dim">
+          <p className="text-t-sm leading-relaxed text-text-dim">
             بيعيد صياغة الأسماء المستوردة الفوضوية لأسماء عربية نظيفة ويستخرج اللزوجة والسعة —
             <b> دفعة 120 صنف في المرة</b> (الزيوت أولاً). الاسم الأصلي بيتحفظ ومش بيضيع،
             وبتشوف المعاينة قبل التطبيق. كرر العملية لحد ما "المتبقي" يوصل صفر.
@@ -1907,18 +1905,18 @@ export default function ProductsPage() {
           {cleanRes && (
             <>
               <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-lg bg-ink-3 p-2"><div className="tnum text-[16px] font-black">{cleanRes.scanned}</div><div className="text-[10px] text-text-dim">اتفحصت</div></div>
-                <div className="rounded-lg bg-emerald-bg p-2"><div className="tnum text-[16px] font-black text-emerald">{cleanRes.changed}</div><div className="text-[10px] text-text-dim">{cleanRes.applied ? "اتنظفت ✓" : "هتتنظف"}</div></div>
-                <div className="rounded-lg bg-ink-3 p-2"><div className="tnum text-[16px] font-black text-text-dim">{cleanRes.remaining}</div><div className="text-[10px] text-text-dim">متبقي</div></div>
+                <div className="rounded-lg bg-ink-3 p-2"><div className="tnum text-t-lg font-black">{cleanRes.scanned}</div><div className="text-t-xs text-text-dim">اتفحصت</div></div>
+                <div className="rounded-lg bg-emerald-bg p-2"><div className="tnum text-t-lg font-black text-emerald">{cleanRes.changed}</div><div className="text-t-xs text-text-dim">{cleanRes.applied ? "اتنظفت" : "هتتنظف"}</div></div>
+                <div className="rounded-lg bg-ink-3 p-2"><div className="tnum text-t-lg font-black text-text-dim">{cleanRes.remaining}</div><div className="text-t-xs text-text-dim">متبقي</div></div>
               </div>
               <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-line p-2">
                 {cleanRes.items.map((it) => (
-                  <div key={it.id} className="rounded-lg bg-ink-3 px-3 py-1.5 text-[11.5px]">
+                  <div key={it.id} className="rounded-lg bg-ink-3 px-3 py-1.5 text-t-xs">
                     <div className="truncate text-text-dim line-through">{it.old}</div>
                     <div className="font-black">{it.name}{it.spec ? <span className="mr-2 text-petrol">{it.spec}</span> : null}</div>
                   </div>
                 ))}
-                {cleanRes.items.length === 0 && <p className="p-4 text-center text-[12px] text-text-dim">لا تغييرات في الدفعة دي</p>}
+                {cleanRes.items.length === 0 && <p className="p-4 text-center text-t-sm text-text-dim">لا تغييرات في الدفعة دي</p>}
               </div>
               {cleanRes.applied ? (
                 <Button className="w-full justify-center gap-1" disabled={cleanBusy} onClick={() => runClean(false)}>
@@ -1941,7 +1939,7 @@ export default function ProductsPage() {
         title={`معاينة الاستيراد — ${preview?.totalRows ?? 0} صنف في الملف`}>
         {preview && (
           <div className="space-y-3">
-            <div className="rounded-lg bg-ink-2 p-3 text-[12px]">
+            <div className="rounded-lg bg-ink-2 p-3 text-t-sm">
               <div className="mb-1 font-black">الأعمدة اللي اتقرت من ملفك:</div>
               <div className="grid grid-cols-2 gap-1 text-text-dim">
                 <span>الاسم ← {preview.columns.name}</span>
@@ -1953,8 +1951,8 @@ export default function ProductsPage() {
               </div>
             </div>
             {Object.values(preview.columns).some((v) => v.startsWith("❌")) && (
-              <div className="rounded-lg bg-ember-bg p-3 text-[11.5px]">
-                <div className="mb-1 font-black text-ember">⚠ يوجد عمود غير متعرف عليه — هذه عناوين ملفك حرفياً:</div>
+              <div className="rounded-lg bg-ember-bg p-3 text-t-xs">
+                <div className="mb-1 font-black text-ember">يوجد عمود غير متعرف عليه — هذه عناوين ملفك حرفياً:</div>
                 <div className="tnum flex flex-wrap gap-1.5">
                   {(preview.rawHeaders || []).map((h, i) => (
                     <span key={i} className="rounded-md bg-white px-2 py-0.5 font-bold text-text">{h || "(فارغ)"}</span>
@@ -1964,7 +1962,7 @@ export default function ProductsPage() {
               </div>
             )}
             <div className="overflow-x-auto rounded-lg border border-line">
-              <table className="w-full text-[11.5px]">
+              <table className="w-full text-t-xs">
                 <thead className="bg-ink-2 font-black text-text-dim">
                   <tr>
                     <th className="px-2 py-1.5 text-right">الاسم</th>
@@ -1987,8 +1985,8 @@ export default function ProductsPage() {
                 </tbody>
               </table>
             </div>
-            <p className="text-[11.5px] text-text-dim">
-              ⚠ راجع عمود "شامل الضريبة" — إذا كانت هذه الأرقام مطابقة لأسعار البيع الفعلية لديك، فاعتمد.
+            <p className="text-t-xs text-text-dim">
+              راجع عمود "شامل الضريبة" — إذا كانت هذه الأرقام مطابقة لأسعار البيع الفعلية لديك، فاعتمد.
               الموجود بنفس الباركود سيتم تحديثه، والجديد سيُضاف — دون أي تكرار.
             </p>
             <div className="flex gap-2">
@@ -2006,10 +2004,10 @@ export default function ProductsPage() {
       </Modal>
 
       {/* ══════════ تأكيد المسح الشامل ══════════ */}
-      <Modal open={wipeOpen} onClose={() => setWipeOpen(false)} title="🗑 مسح كل الأصناف">
+      <Modal open={wipeOpen} onClose={() => setWipeOpen(false)} title="مسح كل الأصناف">
         <div className="space-y-3">
-          <p className="text-[13px] font-bold text-ember">هتمسح كل الأصناف النشطة ({rows.length} صنف) من النظام.</p>
-          <p className="text-[12px] text-text-dim">
+          <p className="text-t-md font-bold text-ember">هتمسح كل الأصناف النشطة ({rows.length} صنف) من النظام.</p>
+          <p className="text-t-sm text-text-dim">
             المسح آمن على البيانات التاريخية: الفواتير القديمة وحركات المخزون تبقى كما هي.
             بعد المسح ارفع ملف الإكسل الصحيح وسيبدأ على صفحة نظيفة.
           </p>

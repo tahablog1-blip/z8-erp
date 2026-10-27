@@ -32,7 +32,7 @@ export function QuickActions() {
     <Widget title={d("qa.title")} icon="bolt">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
         {allowed.map((a) => (
-          <Link key={a.path} href={a.path} className="flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-ink px-3 py-2 text-t-sm font-bold transition hover:border-petrol hover:text-petrol focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol">
+          <Link key={a.path} href={a.path} className="flex min-h-[44px] items-center gap-2 rounded-lg border border-line bg-ink px-3 py-2 text-t-sm font-bold transition hover:border-petrol hover:text-petrol focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol">
             <MIcon name={a.icon} className="!text-[19px] text-petrol" /><span className="truncate">{d(a.key)}</span>
           </Link>
         ))}

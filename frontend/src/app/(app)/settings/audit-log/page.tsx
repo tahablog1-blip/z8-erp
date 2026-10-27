@@ -3,7 +3,7 @@
 // بلا أي شاشة لعرضه؛ هنا أول واجهة له: فلاتر + جدول + صفحات)
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Button, Card, EmptyState, ErrorNote, Field, Input, Select } from "@/components/ui";
+import { Button, Card, EmptyState, ErrorNote, Field, Input, Select, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type LogRow = {
@@ -61,8 +61,8 @@ export default function AuditLogPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-[19px] font-extrabold">سجل المراجعة</h1>
-        <p className="mt-0.5 text-[12.5px] text-text-dim">كل العمليات الحساسة المسجَّلة تلقائياً — من سجّلها ومتى وماذا تغيّر.</p>
+        <PageHeader title="سجل المراجعة" description="سجل العمليات الحساسة." />
+        <p className="page-desc">كل العمليات الحساسة المسجَّلة تلقائياً — من سجّلها ومتى وماذا تغيّر.</p>
       </div>
 
       <Card>
@@ -92,14 +92,14 @@ export default function AuditLogPage() {
 
       <Card className="!p-0">
         {loading ? (
-          <div className="p-6 text-center text-[12.5px] text-text-dim">جارِ التحميل...</div>
+          <div className="p-6 text-center text-t-sm text-text-dim">جارِ التحميل...</div>
         ) : items.length === 0 ? (
           <EmptyState icon="history" title="لا توجد سجلات" description="لا توجد عمليات مطابقة للفلاتر المحددة." />
         ) : (
           <div className="overflow-x-auto rounded-lg">
-            <table className="w-full border-collapse text-[12px]">
+            <table className="w-full border-collapse text-t-sm">
               <thead>
-                <tr className="bg-ink-3 text-[11px] font-extrabold text-text-dim">
+                <tr className="bg-ink-3 text-t-xs font-extrabold text-text-dim">
                   <th className="px-3 py-2 text-right">الوقت</th>
                   <th className="px-2 py-2 text-right">المستخدم</th>
                   <th className="px-2 py-2 text-right">الإجراء</th>
@@ -130,7 +130,7 @@ export default function AuditLogPage() {
           <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
             <MIcon name="chevron_right" className="!text-[16px]" /> السابق
           </Button>
-          <span className="text-[12px] font-bold text-text-dim">صفحة {page} من {totalPages}</span>
+          <span className="text-t-sm font-bold text-text-dim">صفحة {page} من {totalPages}</span>
           <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
             التالي <MIcon name="chevron_left" className="!text-[16px]" />
           </Button>

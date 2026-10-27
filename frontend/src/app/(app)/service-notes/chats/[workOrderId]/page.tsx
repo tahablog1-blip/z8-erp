@@ -1,6 +1,6 @@
 "use client";
 // ═══ غرفة المحادثة — نمط واتساب: فقاعات + بطاقات ملاحظات + صوت (تسجيل وتشغيل)
-//     تحديث كل 5 ثوانٍ + فتح الغرفة يعلّم رسائل العميل ✓✓ تلقائياً ═══
+//     تحديث كل 5 ثوانٍ + فتح الغرفة يعلّم رسائل العميل كمقروءة تلقائياً ═══
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, getToken } from "@/lib/api";
@@ -144,7 +144,7 @@ export default function ChatRoomPage() {
         setRecSec(s);
         if (s >= 60) stopRec(true);
       }, 500);
-    } catch { setErr("اسمح بالوصول للمايكروفون من المتصفح أولاً 🎤"); }
+    } catch { setErr("اسمح بالوصول للمايكروفون من المتصفح أولاً"); }
   }
 
   async function stopRec(send: boolean) {
@@ -181,15 +181,15 @@ export default function ChatRoomPage() {
                   className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-ink-2">
             <MIcon name="arrow_forward" className="!text-[18px]" />
           </button>
-          <div className="grid h-10 w-10 place-items-center rounded-full bg-petrol text-[14px] font-black text-white">
+          <div className="grid h-10 w-10 place-items-center rounded-full bg-petrol text-t-md font-black text-white">
             {(car?.customer_name || car?.plate || "؟").trim().charAt(0)}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[13.5px] font-black">
+            <div className="truncate text-t-md font-black">
               {car?.customer_name || "عميل"}
-              {car?.plate && <span className="mr-2 rounded bg-petrol-soft px-1.5 py-0.5 text-[10.5px] font-black text-petrol tnum">{car.plate}</span>}
+              {car?.plate && <span className="mr-2 rounded bg-petrol-soft px-1.5 py-0.5 text-t-xs font-black text-petrol tnum">{car.plate}</span>}
             </div>
-            <div className="truncate text-[11px] text-text-dim">
+            <div className="truncate text-t-xs text-text-dim">
               {[car?.brand, car?.car_name].filter(Boolean).join(" ")}
               {car?.customer_phone && <span className="tnum"> · {car.customer_phone}</span>}
             </div>
@@ -209,26 +209,26 @@ export default function ChatRoomPage() {
               <div key={m.id}>
                 {sep && (
                   <div className="my-2 text-center">
-                    <span className="rounded-full bg-ink-3 px-3 py-1 text-[10.5px] font-bold text-text-dim">{day}</span>
+                    <span className="rounded-full bg-ink-3 px-3 py-1 text-t-xs font-bold text-text-dim">{day}</span>
                   </div>
                 )}
                 {noteCard ? (
-                  <div className="mx-auto max-w-[85%] rounded-xl border border-amber-200 bg-brass-soft px-3.5 py-2.5">
-                    <p className="whitespace-pre-wrap text-[12px] font-bold text-brass">{m.message}</p>
-                    <p className="mt-0.5 text-[9.5px] text-brass">{fmtTime(m.created_at)} · داخلية — لا يراها العميل</p>
+                  <div className="mx-auto max-w-[85%] rounded-card border border-brass/30 bg-brass-soft px-3.5 py-2.5">
+                    <p className="whitespace-pre-wrap text-t-sm font-bold text-brass">{m.message}</p>
+                    <p className="mt-0.5 text-t-xs text-brass">{fmtTime(m.created_at)} · داخلية — لا يراها العميل</p>
                   </div>
                 ) : (
                   <div className={`flex ${mine ? "justify-start" : "justify-end"}`}>
-                    <div className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed
+                    <div className={`max-w-[78%] rounded-card px-3.5 py-2 text-t-md leading-relaxed
                           ${mine ? "rounded-bl-sm bg-petrol text-white" : "rounded-br-sm border border-line bg-ink text-text"}`}>
                       {isVoice(m) ? (
                         <audio controls preload="metadata" src={m.attachment_url as string} className="my-0.5 w-[215px] max-w-full" />
                       ) : (
                         <p className="whitespace-pre-wrap break-words font-bold">{m.message}</p>
                       )}
-                      <p className={`mt-0.5 text-[9.5px] ${mine ? "text-white/70" : "text-text-dim"}`}>
+                      <p className={`mt-0.5 text-t-xs ${mine ? "text-white/70" : "text-text-dim"}`}>
                         {fmtTime(m.created_at)}
-                        {mine && (m.read_at || m.is_read ? " ✓✓" : " ✓")}
+                        {mine && <MIcon name={m.read_at || m.is_read ? "done_all" : "check"} className="!text-[14px] align-middle" />}
                       </p>
                     </div>
                   </div>
@@ -237,13 +237,13 @@ export default function ChatRoomPage() {
             );
           })}
           {msgs.length === 0 && (
-            <p className="py-14 text-center text-[12.5px] text-text-dim">لا رسائل بعد — ابدأ المحادثة مع العميل 💬</p>
+            <p className="py-14 text-center text-t-sm text-text-dim">لا رسائل بعد — ابدأ المحادثة مع العميل</p>
           )}
           <div ref={endRef} />
         </div>
       </Card>
 
-      {err && <p className="rounded-lg bg-ember-bg px-3 py-1.5 text-center text-[12px] font-bold text-ember">{err}</p>}
+      {err && <p className="rounded-lg bg-ember-bg px-3 py-1.5 text-center text-t-sm font-bold text-ember">{err}</p>}
 
       {/* الإدخال */}
       {!recOn ? (
@@ -255,7 +255,7 @@ export default function ChatRoomPage() {
           <input value={text} onChange={(e) => setText(e.target.value)}
                  onKeyDown={(e) => { if (e.key === "Enter") sendText(); }}
                  placeholder="اكتب رسالة…" maxLength={2000}
-                 className="min-w-0 flex-1 rounded-full border border-line bg-ink px-4 py-2.5 text-[13.5px] font-bold outline-none focus:border-petrol" />
+                 className="min-w-0 flex-1 rounded-full border border-line bg-ink px-4 py-2.5 text-t-md font-bold outline-none focus:border-petrol" />
           <Button disabled={busy || !text.trim()} onClick={sendText} className="!rounded-full gap-1">
             {busy ? "…" : <>إرسال <MIcon name="send" className="!text-[15px]" /></>}
           </Button>
@@ -263,7 +263,7 @@ export default function ChatRoomPage() {
       ) : (
         <div className="flex items-center gap-2 rounded-full bg-ember-bg px-4 py-2.5">
           <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-ember" />
-          <span className="tnum min-w-0 flex-1 text-[12.5px] font-black text-ember">جارِ التسجيل… {recSec} ث / 60</span>
+          <span className="tnum min-w-0 flex-1 text-t-sm font-black text-ember">جارِ التسجيل… {recSec} ث / 60</span>
           <Button disabled={busy} onClick={() => stopRec(true)}>إيقاف وإرسال</Button>
           <Button variant="ghost" onClick={() => stopRec(false)}>إلغاء</Button>
         </div>

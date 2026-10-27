@@ -330,13 +330,13 @@ export default function InventoryPage() {
     },
     {
       key: "createdAt", title: "التاريخ", width: "160px",
-      render: (v) => <span className="text-[12px] text-text-dim">{dateFmt(v.createdAt)}</span>,
+      render: (v) => <span className="text-t-sm text-text-dim">{dateFmt(v.createdAt)}</span>,
     },
     {
       key: "actions", title: "", width: "90px",
       render: (v) => (
         <div className="flex justify-end">
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
+          <Button variant="ghost" size="xs"
                   onClick={() => openVoucher(v.moveNo)}>عرض</Button>
         </div>
       ),
@@ -386,14 +386,14 @@ export default function InventoryPage() {
     <div className="space-y-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-t-3xl font-black">المخزون</h1>
-          <p className="mt-1 text-t-sm text-text-dim">إدارة ومتابعة المخزون والكميات والحركات والفروع والمستودعات.</p>
+          <h1 className="page-title">المخزون</h1>
+          <p className="page-desc">إدارة ومتابعة المخزون والكميات والحركات والفروع والمستودعات.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {canReceive && <Button onClick={openReceive}><MIcon name="move_to_inbox" className="!text-[16px]" />استلام مخزون</Button>}
           {canTransfer && <Button variant="outline" onClick={() => openTransfer()}><MIcon name="swap_horiz" className="!text-[16px]" />تحويل مخزون</Button>}
-          {canStocktake && <Link href="/inventory/stocktake" className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-[13px] font-semibold text-text hover:border-petrol hover:text-petrol"><MIcon name="fact_check" className="!text-[16px]" />جرد وتسوية</Link>}
-          {hasPerm("products.create") && <Link href="/products" className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-[13px] font-semibold text-text-dim hover:border-petrol hover:text-petrol"><MIcon name="add" className="!text-[16px]" />إضافة صنف</Link>}
+          {canStocktake && <Link href="/inventory/stocktake" className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-t-md font-semibold text-text hover:border-petrol hover:text-petrol"><MIcon name="fact_check" className="!text-[16px]" />جرد وتسوية</Link>}
+          {hasPerm("products.create") && <Link href="/products" className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-t-md font-semibold text-text-dim hover:border-petrol hover:text-petrol"><MIcon name="add" className="!text-[16px]" />إضافة صنف</Link>}
           {canRequest && <Button variant="ghost" onClick={openRequestModal}>طلب أصناف لفرعي</Button>}
         </div>
       </header>
@@ -439,30 +439,30 @@ export default function InventoryPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex gap-1.5">
-                  <Button variant={reqFilter === "pending" ? "primary" : "ghost"} className="!text-[12px]" onClick={() => setReqFilter("pending")}>معلّقة</Button>
-                  <Button variant={reqFilter === "all" ? "primary" : "ghost"} className="!text-[12px]" onClick={() => setReqFilter("all")}>الكل</Button>
+                  <Button variant={reqFilter === "pending" ? "primary" : "ghost"} size="sm" onClick={() => setReqFilter("pending")}>معلّقة</Button>
+                  <Button variant={reqFilter === "all" ? "primary" : "ghost"} size="sm" onClick={() => setReqFilter("all")}>الكل</Button>
                 </div>
               </div>
-              {requests.length === 0 && <p className="py-10 text-center text-[12.5px] text-text-dim">لا طلبات حالياً</p>}
+              {requests.length === 0 && <p className="py-10 text-center text-t-sm text-text-dim">لا طلبات حالياً</p>}
               <div className="space-y-2">
                 {requests.map((r) => {
                   const ui = REQ_STATUS_UI[r.status];
                   return (
-                    <div key={r.id} className="rounded-xl border border-line p-3.5">
+                    <div key={r.id} className="rounded-card border border-line p-3.5">
                       <div className="flex items-center justify-between">
-                        <div className="text-[13px] font-black">
+                        <div className="text-t-md font-black">
                           {r.requestingBranchName}
                           {r.sourceBranchName && <span className="font-normal text-text-dim"> ← من {r.sourceBranchName}</span>}
                         </div>
                         <Badge tone={ui.tone}>{ui.label}</Badge>
                       </div>
-                      <div className="mt-1 text-[11.5px] text-text-dim">
+                      <div className="mt-1 text-t-xs text-text-dim">
                         بواسطة {r.requestedByName} — {new Date(r.createdAt).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"))}
                         {r.note && <span> · {r.note}</span>}
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {r.items.map((it) => (
-                          <span key={it.id} className="rounded-full bg-ink-3 px-2.5 py-1 text-[11px] font-bold">
+                          <span key={it.id} className="rounded-full bg-ink-3 px-2.5 py-1 text-t-xs font-bold">
                             {it.label} × <span className="tnum">{it.qtyRequested}</span>
                             {r.status !== "pending" && it.qtyApproved !== null && it.qtyApproved !== it.qtyRequested && (
                               <span className="text-text-dim"> (اعتُمد {it.qtyApproved})</span>
@@ -472,13 +472,13 @@ export default function InventoryPage() {
                       </div>
                       {(r.status === "pending" || r.status === "approved") && canApproveRequests && (
                         <div className="mt-2.5">
-                          <Button className="!text-[12px]" onClick={() => openDecide(r)}>
+                          <Button size="sm" onClick={() => openDecide(r)}>
                             {r.status === "approved" ? "إعادة محاولة التنفيذ" : "مراجعة والبت"}
                           </Button>
                         </div>
                       )}
                       {r.decidedByName && (
-                        <div className="mt-1.5 text-[11px] text-text-dim">
+                        <div className="mt-1.5 text-t-xs text-text-dim">
                           البت بواسطة {r.decidedByName}{r.decisionNote && ` — ${r.decisionNote}`}
                         </div>
                       )}
@@ -511,7 +511,7 @@ export default function InventoryPage() {
 
           <StockItemsEditor products={products} items={lines} onChange={setLines} withCost />
 
-          <p className="text-[11px] leading-5 text-text-dim">
+          <p className="text-t-xs leading-5 text-text-dim">
             تكلفة الوحدة بتحدّث سعر تكلفة الصنف، وبيتسجّل قيد يومية تلقائي:
             مدين المخزون / دائن الموردين بإجمالي التكلفة.
           </p>
@@ -530,7 +530,7 @@ export default function InventoryPage() {
       {/* ══════════ إنشاء طلب أصناف لفرعي ══════════ */}
       <Modal open={reqOpen} size="full" onClose={() => setReqOpen(false)} title="+ طلب أصناف لفرعي">
         <div className="space-y-3">
-          <p className="text-[12px] text-text-dim">
+          <p className="text-t-sm text-text-dim">
             حدد الأصناف والكميات اللي فرعك محتاجها — الطلب هيروح لصاحب الصلاحية للموافقة والتنفيذ، مش تحويل مباشر.
           </p>
           <Field label="الفرع الطالب (اللي هيستلم الأصناف)">
@@ -568,7 +568,7 @@ export default function InventoryPage() {
       <Modal open={!!decideOpen} size="lg" onClose={() => setDecideOpen(null)} title="مراجعة طلب الفرع">
         {decideOpen && (
           <div className="space-y-3">
-            <div className="rounded-lg bg-ink-3 px-3 py-2 text-[12.5px]">
+            <div className="rounded-lg bg-ink-3 px-3 py-2 text-t-sm">
               <b>{decideOpen.requestingBranchName}</b> — بواسطة {decideOpen.requestedByName}
               {decideOpen.note && <div className="mt-1 text-text-dim">{decideOpen.note}</div>}
             </div>
@@ -583,13 +583,13 @@ export default function InventoryPage() {
             </Field>
             <div className="space-y-1.5 rounded-lg border border-line p-2.5">
               {decideOpen.items.map((it) => (
-                <div key={it.id} className="flex items-center justify-between gap-2 text-[12.5px]">
+                <div key={it.id} className="flex items-center justify-between gap-2 text-t-sm">
                   <span className="flex-1">{it.label} <span className="tnum text-text-dim">(مطلوب {it.qtyRequested})</span></span>
                   <Input className="!w-20 text-center" inputMode="numeric" value={decideQtys[it.id] || ""}
                          onChange={(e) => setDecideQtys({ ...decideQtys, [it.id]: e.target.value.replace(/\D/g, "") })} />
                 </div>
               ))}
-              <p className="pt-1 text-[10.5px] text-text-dim">عدّل الكمية المعتمدة لأي صنف (موافقة جزئية) — أو سيبها زي المطلوب</p>
+              <p className="pt-1 text-t-xs text-text-dim">عدّل الكمية المعتمدة لأي صنف (موافقة جزئية) — أو سيبها زي المطلوب</p>
             </div>
             <Field label="ملاحظة القرار (اختياري)">
               <Input value={decideNote} onChange={(e) => setDecideNote(e.target.value)} />
@@ -646,9 +646,9 @@ export default function InventoryPage() {
         {voucher && (
           <div className="space-y-3">
             <div className="flex justify-end">
-              <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={printVoucher}>طباعة السند</Button>
+              <Button variant="ghost" size="xs" onClick={printVoucher}>طباعة السند</Button>
             </div>
-            <div className="grid gap-2 rounded-lg bg-ink-3 p-3 text-[12.5px] sm:grid-cols-4">
+            <div className="grid gap-2 rounded-lg bg-ink-3 p-3 text-t-sm sm:grid-cols-4">
               <div><span className="text-text-dim">النوع:</span>{" "}
                 <b>{voucher.type === "receive" ? "استلام" : voucher.type === "adjust" ? "تسوية جرد" : "تحويل"}</b></div>
               <div><span className="text-text-dim">من:</span> <b>{voucher.from}</b></div>
@@ -668,9 +668,9 @@ export default function InventoryPage() {
             />
 
             {voucher.type === "adjust" && (
-              <p className="rounded-lg bg-brass-soft p-2.5 text-[12px] font-bold text-brass">سند تسوية جرد — أثر مُعتمَد لجلسة جرد ولا يُعدَّل. للتصحيح استخدم جلسة جرد جديدة.</p>
+              <p className="rounded-lg bg-brass-soft p-2.5 text-t-sm font-bold text-brass">سند تسوية جرد — أثر مُعتمَد لجلسة جرد ولا يُعدَّل. للتصحيح استخدم جلسة جرد جديدة.</p>
             )}
-            <p className="text-[11px] leading-5 text-text-dim">
+            <p className="text-t-xs leading-5 text-text-dim">
               تعديل السند بيعكس أثر الأصناف القديمة على الأرصدة ويطبّق الجديدة مكانها في عملية واحدة.
             </p>
 

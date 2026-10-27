@@ -44,8 +44,8 @@ export type ImportPreview = {
 export const STATUS_LABEL: Record<string, string> = {
   draft: "مسودة", in_progress: "جاري الجرد", review: "قيد المراجعة", approved: "معتمد (تمت التسوية)", cancelled: "ملغي",
 };
-export const STATUS_TONE: Record<string, "neutral" | "good" | "warn" | "info"> = {
-  draft: "neutral", in_progress: "info", review: "warn", approved: "good", cancelled: "neutral",
+export const STATUS_TONE: Record<string, "neutral" | "success" | "warning" | "danger" | "info"> = {
+  draft: "neutral", in_progress: "info", review: "warning", approved: "success", cancelled: "neutral",
 };
 export const ACTION_LABEL: Record<string, string> = {
   stocktake_created: "إنشاء الجلسة", stocktake_submitted: "إرسال للمراجعة", stocktake_reopened: "طلب إعادة العدّ",
@@ -57,5 +57,5 @@ export const varState = (i: StocktakeItem): VarState =>
   i.countedQty == null ? "uncounted" : (i.difference ?? 0) === 0 ? "match" : (i.difference ?? 0) > 0 ? "surplus" : "shortage";
 export const VAR_LABEL: Record<VarState, string> = { uncounted: "لم يُعدّ", match: "مطابق", surplus: "زيادة", shortage: "عجز" };
 export const VAR_TEXT: Record<VarState, string> = { uncounted: "text-text-dim", match: "text-emerald", surplus: "text-petrol", shortage: "text-ember" };
-export const VAR_BG: Record<VarState, string> = { uncounted: "bg-ink-3 text-text-dim", match: "bg-emerald-bg text-emerald", surplus: "bg-petrol-soft text-petrol", shortage: "bg-ember-bg text-ember" };
+export const VAR_TONE: Record<VarState, "neutral" | "success" | "info" | "danger"> = { uncounted: "neutral", match: "success", surplus: "info", shortage: "danger" };
 export const signed = (n: number | null | undefined) => n == null ? "—" : n > 0 ? `+${n}` : String(n);

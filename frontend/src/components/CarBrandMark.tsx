@@ -21,9 +21,9 @@ export function CarBrandMark({ brand, model, year, size = "md", className = "" }
         <img src={src} alt={brand || ""} title={brand || undefined} loading="lazy" onError={() => setBroken(true)}
           className={`${tile} shrink-0 rounded-lg border border-line bg-white object-contain p-1`} />
       ) : brand ? (
-        <span className="shrink-0 rounded-md bg-ink-3 px-2 py-0.5 text-[12px] font-bold text-text-dim">{brand}</span>
+        <span className="shrink-0 rounded-md bg-ink-3 px-2 py-0.5 text-t-sm font-bold text-text-dim">{brand}</span>
       ) : null}
-      {sub && <span className={`truncate ${size === "lg" ? "text-[15px] font-extrabold text-text" : "text-[12px] text-text-dim"}`}>{sub}</span>}
+      {sub && <span className={`truncate ${size === "lg" ? "text-t-lg font-extrabold text-text" : "text-t-sm text-text-dim"}`}>{sub}</span>}
     </span>
   );
 }

@@ -47,7 +47,7 @@ export function AlertsPanel({ loc, deadDays, canPurchase, canCost }: { loc: stri
           {tab === "dead" && `رصيد موجود ولا بيع ولا حركة مخزون منذ ${deadDays} يوماً — مرتب بالأعلى قيمة.`}
         </p>
         <span className="flex gap-2">
-          {canPurchase && (tab === "reorder" || tab === "low") && <Link href="/purchases" className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg bg-petrol px-3 py-1.5 text-[12px] font-semibold text-white">طلب توريد</Link>}
+          {canPurchase && (tab === "reorder" || tab === "low") && <Link href="/purchases" className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg bg-petrol px-3 py-1.5 text-t-sm font-semibold text-white">طلب توريد</Link>}
           <Button variant="tool" size="sm" onClick={exportCur}><MIcon name="download" className="!text-[16px]" />تصدير</Button>
           <Button variant="tool" size="sm" onClick={printCur}><MIcon name="print" className="!text-[16px]" />طباعة</Button>
         </span>

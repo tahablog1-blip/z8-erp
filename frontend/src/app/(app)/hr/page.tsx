@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { DataTable, Column } from "@/components/DataTable";
-import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch, Tabs, Textarea } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch, Tabs, Textarea, PageHeader } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import {
   Attendance, CommissionPreviewRow, CommissionType, COMMISSION_TYPE_LABELS, CONTRACT_LABELS,
@@ -350,14 +350,14 @@ export default function HrPage() {
 
   const empCols: Column<Employee>[] = [
     { key: "full_name", title: "الاسم", render: (e) => (
-      <div><div className="font-extrabold">{e.full_name}</div><div className="text-[11px] text-text-dim">{e.job_title || "—"}</div></div>
+      <div><div className="font-extrabold">{e.full_name}</div><div className="text-t-xs text-text-dim">{e.job_title || "—"}</div></div>
     ) },
     { key: "branch_name", title: "الفرع", width: "110px", render: (e) => e.branch_name || "—" },
     { key: "linked_email", title: "حساب الدخول", width: "160px", render: (e) => {
       const mail = (e as { linked_email?: string | null }).linked_email;
       return mail
-        ? <span className="tnum text-[11px] font-bold text-petrol" dir="ltr">{mail}</span>
-        : <span className="text-[11px] text-text-dim">غير مرتبط</span>;
+        ? <span className="tnum text-t-xs font-bold text-petrol" dir="ltr">{mail}</span>
+        : <span className="text-t-xs text-text-dim">غير مرتبط</span>;
     } },
     { key: "contract_type", title: "نوع العقد", width: "100px", render: (e) => CONTRACT_LABELS[e.contract_type] },
     { key: "basic_salary", title: "الراتب الأساسي", width: "110px", render: (e) => <span className="tnum font-bold">{money(e.basic_salary)}</span> },
@@ -366,8 +366,8 @@ export default function HrPage() {
       key: "actions", title: "", width: "180px",
       render: (e: Employee) => (
         <div className="flex justify-end gap-1.5">
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => openEditEmp(e)}>تعديل</Button>
-          {e.is_active && <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => terminateEmp(e)}>إنهاء خدمة</Button>}
+          <Button variant="ghost" size="xs" onClick={() => openEditEmp(e)}>تعديل</Button>
+          {e.is_active && <Button variant="danger" size="xs" onClick={() => terminateEmp(e)}>إنهاء خدمة</Button>}
         </div>
       ),
     } satisfies Column<Employee>] : []),
@@ -392,8 +392,8 @@ export default function HrPage() {
       key: "actions", title: "", width: "150px",
       render: (l: LeaveRequest) => l.status === "pending" ? (
         <div className="flex justify-end gap-1.5">
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => decideLeave(l, "approved")}>اعتماد</Button>
-          <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => decideLeave(l, "rejected")}>رفض</Button>
+          <Button variant="ghost" size="xs" onClick={() => decideLeave(l, "approved")}>اعتماد</Button>
+          <Button variant="danger" size="xs" onClick={() => decideLeave(l, "rejected")}>رفض</Button>
         </div>
       ) : null,
     } satisfies Column<LeaveRequest>] : []),
@@ -414,13 +414,13 @@ export default function HrPage() {
       : <Badge tone="warn">مسودة</Badge> },
     { key: "payslip_count", title: "عدد القسائم", width: "100px", render: (r) => <span className="tnum">{r.payslip_count}</span> },
     { key: "total_net", title: "إجمالي الصافي", width: "130px", render: (r) => <span className="tnum font-bold">{money(r.total_net || 0)}</span> },
-    { key: "actions", title: "", width: "90px", render: (r) => <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => openPayslips(r)}>عرض</Button> },
+    { key: "actions", title: "", width: "90px", render: (r) => <Button variant="ghost" size="xs" onClick={() => openPayslips(r)}>عرض</Button> },
   ];
 
   const custodyCols: Column<CustodyItem>[] = [
     { key: "employee_name", title: "الموظف" },
     { key: "item_name", title: "العنصر", render: (c) => (
-      <div><div className="font-extrabold">{c.item_name}</div>{c.description && <div className="text-[11px] text-text-dim">{c.description}</div>}</div>
+      <div><div className="font-extrabold">{c.item_name}</div>{c.description && <div className="text-t-xs text-text-dim">{c.description}</div>}</div>
     ) },
     { key: "estimated_value", title: "القيمة التقديرية", width: "120px", render: (c) => <span className="tnum font-bold">{money(c.estimated_value)}</span> },
     { key: "assigned_date", title: "تاريخ التسليم", width: "110px", render: (c) => dateFmt(c.assigned_date) },
@@ -432,8 +432,8 @@ export default function HrPage() {
       key: "actions", title: "", width: "160px",
       render: (c: CustodyItem) => c.status === "held" ? (
         <div className="flex justify-end gap-1.5">
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => custodyReturn(c, "returned")}>إرجاع</Button>
-          <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => custodyReturn(c, "lost")}>فقد</Button>
+          <Button variant="ghost" size="xs" onClick={() => custodyReturn(c, "returned")}>إرجاع</Button>
+          <Button variant="danger" size="xs" onClick={() => custodyReturn(c, "lost")}>فقد</Button>
         </div>
       ) : null,
     } satisfies Column<CustodyItem>] : []),
@@ -443,11 +443,11 @@ export default function HrPage() {
     { key: "employee_name", title: "الموظف" },
     { key: "request_type", title: "نوع الطلب", width: "110px", render: (r) => REQUEST_TYPE_LABELS[r.request_type] },
     { key: "title", title: "التفاصيل", render: (r) => (
-      <div className="text-[12px] text-text-dim">
+      <div className="text-t-sm text-text-dim">
         {r.request_type === "branch_transfer" && <>نقل إلى فرع: {branches.find((b) => b.id === r.details?.targetBranchId)?.name || "—"}</>}
         {r.request_type === "supplies" && <>{r.details?.items || "—"}</>}
         {r.request_type === "malfunction_report" && <>{r.details?.description || "—"}</>}
-        {r.details?.reason && <div className="text-[11px]">السبب: {r.details.reason}</div>}
+        {r.details?.reason && <div className="text-t-xs">السبب: {r.details.reason}</div>}
       </div>
     ) },
     { key: "status", title: "الحالة", width: "100px", render: (r) =>
@@ -456,8 +456,8 @@ export default function HrPage() {
       key: "actions", title: "", width: "150px",
       render: (r: EmployeeRequest) => r.status === "pending" ? (
         <div className="flex justify-end gap-1.5">
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => decideRequest(r, "approved")}>اعتماد</Button>
-          <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => decideRequest(r, "rejected")}>رفض</Button>
+          <Button variant="ghost" size="xs" onClick={() => decideRequest(r, "approved")}>اعتماد</Button>
+          <Button variant="danger" size="xs" onClick={() => decideRequest(r, "rejected")}>رفض</Button>
         </div>
       ) : null,
     } satisfies Column<EmployeeRequest>] : []),
@@ -467,11 +467,11 @@ export default function HrPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-[19px] font-extrabold">الموارد البشرية</h1>
+      <PageHeader title="الموارد البشرية" description="إدارة الموظفين والحضور والرواتب والإجازات والعهد." />
       <ErrorNote msg={pageErr} />
 
       {canView && iqamaAlerts.length > 0 && (
-        <div className="rounded-lg border border-ember/30 bg-ember-bg px-4 py-2.5 text-[12.5px] font-bold text-ember">
+        <div className="rounded-lg border border-ember/30 bg-ember-bg px-4 py-2.5 text-t-sm font-bold text-ember">
           {iqamaAlerts.length} إقامة قربت تنتهي: {iqamaAlerts.slice(0, 3).map((a) => `${a.full_name} (${a.days_remaining} يوم)`).join("، ")}
           {iqamaAlerts.length > 3 && " ..."}
         </div>
@@ -567,7 +567,7 @@ export default function HrPage() {
           <div className="grid gap-2 sm:grid-cols-3">
             <Field label="المسمى الوظيفي"><Input value={empForm.jobTitle} onChange={(e) => setEmpForm({ ...empForm, jobTitle: e.target.value })} /></Field>
             <Field label="الدور الفني بالورشة" hint="يظهر في قوائم اختيار أمر العمل">
-              <select className="w-full rounded-xl border border-line bg-ink-2 px-3 py-2 text-[13px] font-bold"
+              <select className="w-full rounded-lg border border-line bg-ink-2 px-3 py-2 text-t-md font-bold"
                       value={empForm.techRole}
                       onChange={(e) => setEmpForm({ ...empForm, techRole: e.target.value })}>
                 <option value="">— ليس فنياً —</option>
@@ -587,7 +587,7 @@ export default function HrPage() {
             <Field label="الجنسية"><Input value={empForm.nationality} onChange={(e) => setEmpForm({ ...empForm, nationality: e.target.value })} /></Field>
             <Field label="تاريخ التعيين"><Input type="date" className="tnum" value={empForm.hireDate} onChange={(e) => setEmpForm({ ...empForm, hireDate: e.target.value })} /></Field>
           </div>
-          <label className="flex items-center gap-2 text-[12.5px] font-bold text-text-dim">
+          <label className="flex items-center gap-2 text-t-sm font-bold text-text-dim">
             <Switch checked={empForm.isSaudi} onChange={(v) => setEmpForm({ ...empForm, isSaudi: v })} />
             سعودي الجنسية (يحدد نسب التأمينات في الرواتب)
           </label>
@@ -645,7 +645,7 @@ export default function HrPage() {
             )}
           </div>
           {empForm.commissionType !== "none" && !empForm.linkedUserId && (
-            <div className="rounded-lg bg-brass-soft p-2.5 text-[11.5px] font-bold text-brass">
+            <div className="rounded-lg bg-brass-soft p-2.5 text-t-xs font-bold text-brass">
               العمولة تُحسَب من فواتير الكاشير المرتبط بحساب دخول — اربط حساب دخول للموظف بالأعلى ليُحسب له شيء.
             </div>
           )}
@@ -667,7 +667,7 @@ export default function HrPage() {
             </Select>
           </Field>
           {balance && (
-            <div className="rounded-lg bg-ink-3 p-2.5 text-[11.5px] text-text-dim">
+            <div className="rounded-lg bg-ink-3 p-2.5 text-t-xs text-text-dim">
               رصيد الإجازة السنوية: <b className="tnum text-text">{balance.remaining}</b> من {balance.annualEntitlement} يوم (استُخدم {balance.used})
             </div>
           )}
@@ -677,7 +677,7 @@ export default function HrPage() {
                 {Object.entries(LEAVE_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </Select>
             </Field>
-            <Field label="عدد الأيام"><div className="pt-2 tnum text-[13px] text-text-dim">
+            <Field label="عدد الأيام"><div className="pt-2 tnum text-t-md text-text-dim">
               {leaveForm.startDate && leaveForm.endDate ? Math.max(1, Math.round((new Date(leaveForm.endDate).getTime() - new Date(leaveForm.startDate).getTime()) / 86400000) + 1) : "—"}
             </div></Field>
           </div>
@@ -791,7 +791,7 @@ export default function HrPage() {
       {/* ══════════ معاينة عمولات المبيعات ══════════ */}
       <Modal open={commPreviewOpen} size="lg" onClose={() => setCommPreviewOpen(false)} title="معاينة عمولات المبيعات">
         <div className="space-y-3">
-          <p className="text-[12px] leading-5 text-text-dim">
+          <p className="text-t-sm leading-5 text-text-dim">
             معاينة فقط — لا تُسجَّل ولا تؤثر على أي شيء. العمولة الفعلية تُحسَب تلقائياً عند تشغيل رواتب الشهر لنفس الفترة.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
@@ -805,9 +805,9 @@ export default function HrPage() {
           </div>
           <ErrorNote msg={commErr} />
           <div className="overflow-x-auto rounded-lg border border-line">
-            <table className="w-full border-collapse text-[12.5px]">
+            <table className="w-full border-collapse text-t-sm">
               <thead>
-                <tr className="bg-ink-3 text-[11.5px] font-extrabold text-text-dim">
+                <tr className="bg-ink-3 text-t-xs font-extrabold text-text-dim">
                   <th className="px-3 py-2 text-right">الموظف</th>
                   <th className="px-2 py-2 text-right">نوع العمولة</th>
                   <th className="px-2 py-2 text-right">النسبة</th>
@@ -839,7 +839,7 @@ export default function HrPage() {
       {/* ══════════ تشغيل رواتب ══════════ */}
       <Modal open={payrollModal} onClose={() => setPayrollModal(false)} title="تشغيل رواتب الشهر">
         <div className="space-y-3">
-          <p className="text-[12px] leading-5 text-text-dim">
+          <p className="text-t-sm leading-5 text-text-dim">
             هيتحسب لكل موظف نشط: الراتب الأساسي − خصومات المخالفات في هذا الشهر − حصة الموظف من التأمينات (للسعوديين فقط).
           </p>
           <div className="grid grid-cols-2 gap-2">
@@ -863,9 +863,9 @@ export default function HrPage() {
         {viewPayslips && (
           <div className="space-y-3">
             <div className="overflow-x-auto rounded-lg border border-line">
-              <table className="w-full border-collapse text-[12px]">
+              <table className="w-full border-collapse text-t-sm">
                 <thead>
-                  <tr className="bg-ink-3 text-[11px] font-extrabold text-text-dim">
+                  <tr className="bg-ink-3 text-t-xs font-extrabold text-text-dim">
                     <th className="px-3 py-2 text-right">الموظف</th>
                     <th className="px-2 py-2 text-right">الأساسي</th>
                     <th className="px-2 py-2 text-right">عمولة</th>
@@ -891,7 +891,7 @@ export default function HrPage() {
               </table>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[12.5px] font-bold text-text-dim">
+              <span className="text-t-sm font-bold text-text-dim">
                 {viewPayslips.run.status === "paid" ? <Badge tone="good">مدفوعة {viewPayslips.run.payment_method ? `(${viewPayslips.run.payment_method === "cash" ? "نقد" : viewPayslips.run.payment_method === "card" ? "شبكة" : "تحويل"})` : ""}</Badge>
                  : viewPayslips.run.status === "finalized" ? <Badge tone="info">معتمدة — بانتظار الصرف</Badge>
                  : <Badge tone="warn">مسودة</Badge>}

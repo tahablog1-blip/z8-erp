@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Card } from "@/components/ui";
+import { Card, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type SetupStatus = { key: string; label: string; ok: boolean };
@@ -19,12 +19,12 @@ function StatCard({ icon, label, value, tone = "default" }:
   return (
     <Card className="!p-4">
       <div className="flex items-center gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-petrol-soft text-petrol">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-card bg-petrol-soft text-petrol">
           <MIcon name={icon} className="!text-[20px]" />
         </span>
         <div className="min-w-0">
-          <div className="text-[11px] font-bold text-text-dim">{label}</div>
-          <div className={`text-[17px] font-extrabold ${toneCls}`}>{value}</div>
+          <div className="text-t-xs font-bold text-text-dim">{label}</div>
+          <div className={`text-t-xl font-extrabold ${toneCls}`}>{value}</div>
         </div>
       </div>
     </Card>
@@ -62,13 +62,13 @@ export default function SettingsDashboard() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-[19px] font-extrabold">الإعدادات</h1>
-        <p className="mt-0.5 text-[12.5px] text-text-dim">
+        <PageHeader title="الإعدادات" description="إعدادات النظام والتهيئة." />
+        <p className="page-desc">
           إدارة إعدادات منصة Z8 ERP والفروع والمستخدمين والصلاحيات والأجهزة المتصلة.
         </p>
       </div>
 
-      {err && <Card className="border-ember/30 bg-ember-bg text-[12.5px] font-bold text-ember">{err}</Card>}
+      {err && <Card className="border-ember/30 bg-ember-bg text-t-sm font-bold text-ember">{err}</Card>}
 
       {/* ── بطاقات الحالة ── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -84,15 +84,15 @@ export default function SettingsDashboard() {
 
       {/* ── الإعدادات السريعة ── */}
       <div>
-        <h2 className="mb-2 text-[13.5px] font-extrabold">الإعدادات السريعة</h2>
+        <h2 className="mb-2 text-t-md font-extrabold">الإعدادات السريعة</h2>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           {quickLinks.map((l) => (
             <button key={l.path} onClick={() => router.push(l.path)}
-                    className="flex flex-col items-center gap-1.5 rounded-xl border border-line bg-ink-2 p-3.5 text-center transition hover:border-petrol">
+                    className="flex flex-col items-center gap-1.5 rounded-card border border-line bg-ink-2 p-3.5 text-center transition hover:border-petrol">
               <span className="grid h-9 w-9 place-items-center rounded-lg bg-petrol-soft text-petrol">
                 <MIcon name={l.icon} className="!text-[18px]" />
               </span>
-              <span className="text-[11.5px] font-bold text-text">{l.label}</span>
+              <span className="text-t-xs font-bold text-text">{l.label}</span>
             </button>
           ))}
         </div>
@@ -102,8 +102,8 @@ export default function SettingsDashboard() {
       {data && (
         <Card>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[13.5px] font-extrabold">حالة إعداد المنصة</h2>
-            <span className="text-[12px] font-bold text-text-dim">{doneCount} / {totalCount} مكتمل</span>
+            <h2 className="text-t-md font-extrabold">حالة إعداد المنصة</h2>
+            <span className="text-t-sm font-bold text-text-dim">{doneCount} / {totalCount} مكتمل</span>
           </div>
           <div className="mb-3 h-2 w-full overflow-hidden rounded-full bg-ink-3">
             <div className="h-full rounded-full bg-emerald transition-all" style={{ width: `${pct}%` }} />
@@ -111,8 +111,8 @@ export default function SettingsDashboard() {
           <div className="grid gap-2 sm:grid-cols-2">
             {data.setup.map((s) => (
               <div key={s.key} className="flex items-center gap-2 rounded-lg border border-line px-3 py-2">
-                <span className={`text-[14px] ${s.ok ? "text-emerald" : "text-ember"}`}>{s.ok ? "✓" : "⚠"}</span>
-                <span className="text-[12.5px] font-bold">{s.label}</span>
+                <span className={`text-t-md ${s.ok ? "text-emerald" : "text-ember"}`}>{s.ok ? "" : ""}</span>
+                <span className="text-t-sm font-bold">{s.label}</span>
               </div>
             ))}
           </div>

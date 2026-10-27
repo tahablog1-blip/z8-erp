@@ -142,12 +142,12 @@ export default function SuppliersPage() {
     <div className="space-y-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-t-3xl font-black">الموردون</h1>
-          <p className="mt-1 text-t-sm text-text-dim">إدارة الموردين والمشتريات والأرصدة والحسابات المستحقة والمدفوعات.</p>
+          <h1 className="page-title">الموردون</h1>
+          <p className="page-desc">إدارة الموردين والمشتريات والأرصدة والحسابات المستحقة والمدفوعات.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {canEdit && <Button onClick={openCreate}><MIcon name="add" className="!text-[16px]" />إضافة مورد</Button>}
-          {canInvoice && <Link href="/purchases" className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-[13px] font-semibold text-text hover:border-petrol hover:text-petrol"><MIcon name="receipt_long" className="!text-[16px]" />تسجيل فاتورة شراء</Link>}
+          {canInvoice && <Link href="/purchases" className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-t-md font-semibold text-text hover:border-petrol hover:text-petrol"><MIcon name="receipt_long" className="!text-[16px]" />تسجيل فاتورة شراء</Link>}
           <Button variant="tool" onClick={() => exportCsv()} disabled={!ov?.total}><MIcon name="download" className="!text-[16px]" />تصدير</Button>
           <Button variant="tool" onClick={printList} disabled={!ov?.total}><MIcon name="print" className="!text-[16px]" />طباعة</Button>
         </div>

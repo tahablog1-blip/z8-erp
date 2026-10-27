@@ -127,8 +127,8 @@ const DICT: Record<string, { ar: string; en: string }> = {
   },
   "branches.qrTitle": { ar: "QR حجز الدور", en: "Queue booking QR" },
   "branches.bookBeforeArrival": {
-    ar: "احجز دورك قبل الوصول 🚗",
-    en: "Book your turn before arrival 🚗",
+    ar: "احجز دورك قبل الوصول",
+    en: "Book your turn before arrival",
   },
   "branches.qrStep1": {
     ar: "امسح الكود بكاميرا جوالك",
@@ -143,10 +143,10 @@ const DICT: Record<string, { ar: string; en: string }> = {
     en: "Track your turn directly on your phone",
   },
   "branches.qrStep4": {
-    ar: "عند وصولك يتأكد دخولك تلقائياً ✨",
-    en: "Your arrival will be confirmed automatically ✨",
+    ar: "عند وصولك يتأكد دخولك تلقائياً",
+    en: "Your arrival will be confirmed automatically",
   },
-  "branches.print": { ar: "🖨 طباعة", en: "🖨 Print" },
+  "branches.print": { ar: "طباعة", en: "Print" },
 
 
   // Dashboard — Quick actions

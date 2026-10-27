@@ -70,7 +70,7 @@ function isVoice(m: Msg): boolean {
 
 function Row({ k, v }: { k: string; v: string | number | null | undefined }) {
   return (
-    <div className="flex justify-between border-b border-line/50 py-1.5 text-[13px]">
+    <div className="flex justify-between border-b border-line/50 py-1.5 text-t-md">
       <span className="text-text-dim">{k}</span>
       <span className="font-bold">{v ?? "—"}</span>
     </div>
@@ -95,7 +95,7 @@ export default function NoteDetailsPage() {
   const [chatText, setChatText] = useState("");
   const chatEnd = useRef<HTMLDivElement>(null);
 
-  // التسجيل الصوتي 🎤
+  // التسجيل الصوتي
   const [recOn, setRecOn] = useState(false);
   const [recSec, setRecSec] = useState(0);
   const recRef = useRef<any>(null);
@@ -133,7 +133,7 @@ export default function NoteDetailsPage() {
       try { setTemplates(await api<Template[]>("/service-notes/templates/list")); } catch { /* اختياري */ }
     }
     if (!notifyText && note) {
-      setNotifyText(`⚠️ ملاحظة من موظف الخدمة:\n${note.description}\nسيتم توضيح التفاصيل داخل صفحة الحجز.`);
+      setNotifyText(`ملاحظة من موظف الخدمة:\n${note.description}\nسيتم توضيح التفاصيل داخل صفحة الحجز.`);
     }
   }
 
@@ -193,7 +193,7 @@ export default function NoteDetailsPage() {
         setRecSec(s);
         if (s >= 60) stopRec(true);
       }, 500);
-    } catch { setErr("اسمح بالوصول للمايكروفون من المتصفح أولاً 🎤"); }
+    } catch { setErr("اسمح بالوصول للمايكروفون من المتصفح أولاً"); }
   }
 
   async function stopRec(send: boolean) {
@@ -223,7 +223,7 @@ export default function NoteDetailsPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-[18px] font-black">
+        <h1 className="page-title">
           {note.note_number} <Badge tone="info">{TYPE_LABELS[note.type] ?? note.type}</Badge>{" "}
           <Badge tone={note.status === "new" ? "warn" : note.status === "handled" ? "good" : "neutral"}>
             {STATUS_LABELS[note.status] ?? note.status}
@@ -243,33 +243,33 @@ export default function NoteDetailsPage() {
         </div>
       </div>
 
-      {err && <p className="rounded-lg bg-ember-bg px-3 py-2 text-[12px] font-bold text-ember">{err}</p>}
+      {err && <p className="rounded-lg bg-ember-bg px-3 py-2 text-t-sm font-bold text-ember">{err}</p>}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* ═══ الأقسام (بند 6) ═══ */}
         <div className="space-y-4">
           <Card>
-            <div className="mb-2 text-[13px] font-black text-petrol">بيانات العميل</div>
+            <div className="mb-2 text-t-md font-black text-petrol">بيانات العميل</div>
             <Row k="الاسم" v={note.customer_name} />
             <Row k="الجوال" v={note.customer_phone} />
           </Card>
           <Card>
-            <div className="mb-2 text-[13px] font-black text-petrol">السيارة</div>
+            <div className="mb-2 text-t-md font-black text-petrol">السيارة</div>
             <Row k="اللوحة" v={note.plate} />
             <Row k="الماركة/الموديل" v={[note.brand, note.car_name].filter(Boolean).join(" ")} />
             <Row k="السنة" v={note.model_year} />
           </Card>
           <Card>
-            <div className="mb-2 text-[13px] font-black text-petrol">المنتج</div>
+            <div className="mb-2 text-t-md font-black text-petrol">المنتج</div>
             <Row k="الاسم" v={note.product_name} />
             <Row k="الباركود" v={note.product_barcode} />
             <Row k="الكمية المطلوبة" v={note.required_quantity} />
             <Row k="الكمية المتوفرة" v={note.available_quantity} />
           </Card>
           <Card>
-            <div className="mb-2 text-[13px] font-black text-petrol">الملاحظة</div>
-            <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed">{note.description}</p>
-            <div className="mt-2 text-[11px] text-text-dim">
+            <div className="mb-2 text-t-md font-black text-petrol">الملاحظة</div>
+            <p className="whitespace-pre-wrap text-t-md leading-relaxed">{note.description}</p>
+            <div className="mt-2 text-t-xs text-text-dim">
               {note.employee_name} · {note.branch_name} · {new Date(note.created_at).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA"))}
             </div>
             {note.attachments.length > 0 && (
@@ -279,7 +279,7 @@ export default function NoteDetailsPage() {
                     className="block h-20 w-20 overflow-hidden rounded-lg border border-line">
                     {a.file_type === "image"
                       ? <img src={a.file_url} alt="" className="h-full w-full object-cover" />
-                      : <span className="flex h-full w-full items-center justify-center text-[11px]">📎 ملف</span>}
+                      : <span className="flex h-full w-full items-center justify-center text-t-xs">ملف</span>}
                   </a>
                 ))}
               </div>
@@ -289,13 +289,13 @@ export default function NoteDetailsPage() {
 
         {/* ═══ المحادثة (بند 14) ═══ */}
         <Card className="flex h-[560px] flex-col !p-3">
-          <div className="mb-2 text-[13px] font-black text-petrol">💬 محادثة العميل</div>
-          <div className="flex-1 space-y-2 overflow-y-auto rounded-xl bg-ink-3 p-3">
+          <div className="mb-2 text-t-md font-black text-petrol">محادثة العميل</div>
+          <div className="flex-1 space-y-2 overflow-y-auto rounded-card bg-ink-3 p-3">
             {note.messages.length === 0 && (
-              <p className="py-8 text-center text-[12px] text-text-dim">لا توجد رسائل — ابدأ بإبلاغ العميل</p>
+              <p className="py-8 text-center text-t-sm text-text-dim">لا توجد رسائل — ابدأ بإبلاغ العميل</p>
             )}
             {note.messages.map((m) => (
-              <div key={m.id} className={`max-w-[85%] rounded-xl px-3 py-2 text-[13px] ${
+              <div key={m.id} className={`max-w-[85%] rounded-card px-3 py-2 text-t-md ${
                 m.sender_type === "employee"
                   ? "mr-auto bg-petrol text-white"
                   : "ml-auto border border-line bg-ink-2"}`}>
@@ -304,9 +304,9 @@ export default function NoteDetailsPage() {
                 ) : (
                   <p className="whitespace-pre-wrap">{m.message}</p>
                 )}
-                <div className={`mt-1 text-[10px] ${m.sender_type === "employee" ? "text-white/70" : "text-text-dim"}`}>
+                <div className={`mt-1 text-t-xs ${m.sender_type === "employee" ? "text-white/70" : "text-text-dim"}`}>
                   {new Date(m.created_at).toLocaleTimeString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA"), { hour: "2-digit", minute: "2-digit" })}
-                  {m.sender_type === "employee" && (m.read_at ? " · ✓✓ قُرئت" : " · ✓ أُرسلت")}
+                  {m.sender_type === "employee" && (m.read_at ? " · قُرئت" : " · أُرسلت")}
                 </div>
               </div>
             ))}
@@ -315,7 +315,7 @@ export default function NoteDetailsPage() {
           {!recOn ? (
             <div className="mt-2 flex gap-2">
               <button onClick={startRec} disabled={busy} title="تسجيل رسالة صوتية" aria-label="تسجيل رسالة صوتية"
-                className="grid h-[40px] w-[40px] shrink-0 place-items-center rounded-xl border border-line transition active:scale-[.95] disabled:opacity-40">
+                className="grid h-[40px] w-[40px] shrink-0 place-items-center rounded-lg border border-line transition active:scale-[.95] disabled:opacity-40">
                 <MIcon name="mic" className="!text-[19px]" />
               </button>
               <Input placeholder="اكتب رسالة للعميل…" value={chatText}
@@ -324,9 +324,9 @@ export default function NoteDetailsPage() {
               <Button disabled={busy || !chatText.trim()} onClick={sendChat}>إرسال</Button>
             </div>
           ) : (
-            <div className="mt-2 flex items-center gap-2 rounded-xl bg-ember-bg px-3 py-2.5">
+            <div className="mt-2 flex items-center gap-2 rounded-card bg-ember-bg px-3 py-2.5">
               <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-ember" />
-              <span className="min-w-0 flex-1 text-[12px] font-black text-ember">
+              <span className="min-w-0 flex-1 text-t-sm font-black text-ember">
                 جارِ التسجيل… {recSec} ث / 60
               </span>
               <Button disabled={busy} onClick={() => stopRec(true)}>إيقاف وإرسال</Button>
@@ -342,12 +342,12 @@ export default function NoteDetailsPage() {
           onClick={() => setNotifyOpen(false)}>
           <Card className="w-full max-w-lg" >
             <div onClick={(e) => e.stopPropagation()}>
-              <div className="mb-3 text-[15px] font-black">💬 إبلاغ العميل</div>
+              <div className="mb-3 text-t-lg font-black">إبلاغ العميل</div>
               {templates.length > 0 && (
                 <div className="mb-2 flex flex-wrap gap-1.5">
                   {templates.map((t) => (
                     <button key={t.id}
-                      className="rounded-full border border-line bg-ink-3 px-3 py-1 text-[11px] font-bold hover:border-petrol"
+                      className="rounded-full border border-line bg-ink-3 px-3 py-1 text-t-xs font-bold hover:border-petrol"
                       onClick={() => setNotifyText(t.message)}>
                       {t.title}
                     </button>
@@ -355,9 +355,9 @@ export default function NoteDetailsPage() {
                 </div>
               )}
               <textarea
-                className="h-36 w-full rounded-xl border border-line bg-ink-2 p-3 text-[13px] focus:border-petrol focus:outline-none"
+                className="h-36 w-full rounded-lg border border-line bg-ink-2 p-3 text-t-md focus:border-petrol focus:outline-none"
                 value={notifyText} onChange={(e) => setNotifyText(e.target.value)} />
-              <p className="mt-1 text-[11px] text-text-dim">
+              <p className="mt-1 text-t-xs text-text-dim">
                 سيُرسل إشعار واتساب للعميل برابط صفحة الحجز الآمن — الرسالة نفسها تظهر داخل الصفحة.
               </p>
               <div className="mt-3 flex justify-end gap-2">

@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { api } from "@/lib/api";
-import { Badge, Button, Card, EmptyState, ErrorNote, Field, Input } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type WhatsAppSettings = { waInstance: string | null; hasToken: boolean };
@@ -68,15 +68,15 @@ function WhatsAppGatewayCard() {
   return (
     <Card>
       <div className="flex items-center justify-between">
-        <div className="text-[14px] font-extrabold">واتساب — ربط مباشر (بدون اشتراك)</div>
+        <div className="text-t-md font-extrabold">واتساب — ربط مباشر (بدون اشتراك)</div>
         <Badge tone={tone}>{label}</Badge>
       </div>
-      <p className="mt-1 text-[12px] leading-5 text-text-dim">
+      <p className="mt-1 text-t-sm leading-5 text-text-dim">
         رمز التحقق للحجز والفواتير وإشعارات العملاء بتتبعت من رقم الشركة المربوط هنا. استخدم رقماً مخصصاً للشركة
         (مش رقمك الشخصي) — واتساب ممكن يقيّد الأرقام اللي بترسل بكثرة.
       </p>
       {gw.state === "ready" && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[12.5px]">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-t-sm">
           <span>الرقم المربوط: <b dir="ltr" className="tnum">{gw.number ? `+${gw.number}` : "—"}</b>
             <span className="mx-2 text-text-dim">·</span>رسائل اليوم: <b className="tnum">{gw.sentToday ?? 0}</b></span>
           <Button variant="danger" size="sm" onClick={logout} loading={busy}>فصل الرقم</Button>
@@ -84,8 +84,8 @@ function WhatsAppGatewayCard() {
       )}
       {gw.state === "qr" && qrImg && (
         <div className="mt-3 flex flex-col items-center gap-2">
-          <img src={qrImg} alt="QR ربط واتساب" className="h-[260px] w-[260px] rounded-xl border border-line bg-white p-2" />
-          <ol className="list-decimal space-y-0.5 pe-5 text-[12px] leading-5 text-text-dim">
+          <img src={qrImg} alt="QR ربط واتساب" className="h-[260px] w-[260px] rounded-card border border-line bg-white p-2" />
+          <ol className="list-decimal space-y-0.5 pe-5 text-t-sm leading-5 text-text-dim">
             <li>افتح واتساب على جوال الشركة</li>
             <li>الإعدادات ← الأجهزة المرتبطة ← ربط جهاز</li>
             <li>امسح الرمز (بيتجدد تلقائياً)</li>
@@ -93,7 +93,7 @@ function WhatsAppGatewayCard() {
         </div>
       )}
       {(gw.state === "starting" || gw.state === "disconnected" || gw.state === "unreachable") && (
-        <p className="mt-3 text-[12px] text-text-dim">
+        <p className="mt-3 text-t-sm text-text-dim">
           {gw.state === "unreachable"
             ? "البوابة مش بتستجيب — تأكد إن الخدمة z8-wa شغّالة على السيرفر."
             : "جارِ تجهيز الاتصال… الصفحة بتتحدّث تلقائياً."}
@@ -137,7 +137,7 @@ export default function IntegrationsPage() {
     setTestMsg(""); setTestBusy(true);
     try {
       await api("/settings/whatsapp/test", { method: "POST", body: JSON.stringify({ phone: testPhone }) });
-      setTestMsg("تم الإرسال ✓ تفقّد واتساب الرقم");
+      setTestMsg("تم الإرسال تفقّد واتساب الرقم");
       loadLog();
     } catch (e: any) { setTestMsg(e.message); }
     finally { setTestBusy(false); }
@@ -158,18 +158,18 @@ export default function IntegrationsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-[19px] font-extrabold">التكاملات</h1>
-        <p className="mt-0.5 text-[12.5px] text-text-dim">مفاتيح واتساب (UltraMsg) وسجل أحداث كل التكاملات الخارجية.</p>
+        <PageHeader title="التكاملات" description="ربط الخدمات الخارجية." />
+        <p className="page-desc">مفاتيح واتساب (UltraMsg) وسجل أحداث كل التكاملات الخارجية.</p>
       </div>
 
       <WhatsAppGatewayCard />
 
       <Card>
         <div className="flex items-center justify-between">
-          <div className="text-[14px] font-extrabold">واتساب (UltraMsg)</div>
+          <div className="text-t-md font-extrabold">واتساب (UltraMsg)</div>
           {waForm.waInstance && waForm.hasToken ? <Badge tone="good">مُهيّأ</Badge> : <Badge tone="neutral">غير مُهيّأ</Badge>}
         </div>
-        <p className="mt-1 text-[12px] leading-5 text-text-dim">
+        <p className="mt-1 text-t-sm leading-5 text-text-dim">
           تُستخدم لإشعارات العملاء وإرسال الفواتير عبر واتساب (مركز ملاحظات الخدمة والفواتير).
           بيانات حسابك على <span dir="ltr" className="tnum">ultramsg.com</span>.
         </p>
@@ -188,7 +188,7 @@ export default function IntegrationsPage() {
             <ErrorNote msg={waErr} />
             <div className="flex items-center gap-2">
               <Button onClick={saveWa} disabled={waBusy}>{waBusy ? "جارِ الحفظ..." : "حفظ إعدادات واتساب"}</Button>
-              {waOk && <span className="text-[12px] font-bold text-emerald">{waOk}</span>}
+              {waOk && <span className="text-t-sm font-bold text-emerald">{waOk}</span>}
             </div>
 
             <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
@@ -197,7 +197,7 @@ export default function IntegrationsPage() {
               <Button variant="ghost" onClick={sendTestWa} disabled={testBusy || !testPhone.trim()}>
                 {testBusy ? "جارِ الإرسال..." : "إرسال رسالة اختبار"}
               </Button>
-              {testMsg && <span className="text-[12px] font-bold text-text-dim">{testMsg}</span>}
+              {testMsg && <span className="text-t-sm font-bold text-text-dim">{testMsg}</span>}
             </div>
           </div>
         )}
@@ -205,22 +205,22 @@ export default function IntegrationsPage() {
 
       <Card className="!p-0">
         <div className="flex items-center justify-between px-5 pt-4">
-          <div className="text-[14px] font-extrabold">سجل أحداث التكاملات</div>
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={loadLog}>
+          <div className="text-t-md font-extrabold">سجل أحداث التكاملات</div>
+          <Button variant="ghost" size="xs" onClick={loadLog}>
             <MIcon name="refresh" className="!text-[16px]" /> تحديث
           </Button>
         </div>
         <div className="p-5 pt-3">
           <ErrorNote msg={logErr} />
           {logLoading ? (
-            <div className="py-6 text-center text-[12.5px] text-text-dim">جارِ التحميل...</div>
+            <div className="py-6 text-center text-t-sm text-text-dim">جارِ التحميل...</div>
           ) : log.length === 0 ? (
             <EmptyState icon="hub" title="لا توجد أحداث بعد" description="هتظهر هنا كل محاولات إرسال واتساب وتأكيدات بوابة الدفع تلقائياً." />
           ) : (
             <div className="overflow-x-auto rounded-lg border border-line">
-              <table className="w-full border-collapse text-[12px]">
+              <table className="w-full border-collapse text-t-sm">
                 <thead>
-                  <tr className="bg-ink-3 text-[11px] font-extrabold text-text-dim">
+                  <tr className="bg-ink-3 text-t-xs font-extrabold text-text-dim">
                     <th className="px-3 py-2 text-right">الوقت</th>
                     <th className="px-2 py-2 text-right">المزوّد</th>
                     <th className="px-2 py-2 text-right">الحدث</th>

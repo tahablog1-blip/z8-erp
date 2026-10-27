@@ -36,7 +36,7 @@ export function LoadingScreen({ label, compact = false }: { label?: string; comp
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <p className="text-[13px] font-bold" style={{ color: "var(--text-dim)" }}>{label || "جارِ التحميل"}</p>
+        <p className="text-t-md font-bold" style={{ color: "var(--text-dim)" }}>{label || "جارِ التحميل"}</p>
         <span className="flex gap-1">
           <span className="z8-loader-dot h-1.5 w-1.5 rounded-full" style={{ background: "var(--brass)", animationDelay: "0ms" }} />
           <span className="z8-loader-dot h-1.5 w-1.5 rounded-full" style={{ background: "var(--brass)", animationDelay: "160ms" }} />

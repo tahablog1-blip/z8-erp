@@ -1,6 +1,7 @@
 "use client";
 // لوحة القيادة التنفيذية — طلب واحد /reports/executive يغذّي كل الأقسام، والأقسام تظهر حسب صلاحيات المستخدم
 // (data.access). التصميم: فلتر شامل → مؤشرات → رسوم وتحليلات → جداول → تنبيهات/إجراءات. RTL أولاً والإنجليزية جاهزة.
+import { Button } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -68,9 +69,9 @@ export default function DashboardPage() {
     return (
       <div className="mx-auto max-w-md py-16 text-center" role="alert">
         <MIcon name="cloud_off" className="!text-[44px] text-ember" />
-        <h1 className="mt-2 text-t-xl font-black">{d("loadFail")}</h1>
-        <p className="mt-1 text-t-sm text-text-dim">{error}</p>
-        <button onClick={reload} className="mt-4 rounded-lg bg-petrol px-5 py-2 text-t-sm font-bold text-white">{d("retry")}</button>
+        <h1 className="mt-2 page-title">{d("loadFail")}</h1>
+        <p className="page-desc">{error}</p>
+        <Button className="mt-4" onClick={reload}>{d("retry")}</Button>
       </div>
     );
   }
@@ -78,8 +79,8 @@ export default function DashboardPage() {
     return (
       <div className="mx-auto max-w-md py-16 text-center">
         <MIcon name="lock" className="!text-[44px] text-text-dim" />
-        <h1 className="mt-2 text-t-xl font-black">{d("noPerm")}</h1>
-        <p className="mt-1 text-t-sm text-text-dim">{d("noPermHint")}</p>
+        <h1 className="mt-2 page-title">{d("noPerm")}</h1>
+        <p className="page-desc">{d("noPermHint")}</p>
       </div>
     );
   }
@@ -90,8 +91,8 @@ export default function DashboardPage() {
     <div className="mx-auto w-full max-w-[1600px] space-y-4 pb-8">
       <header className="flex flex-wrap items-end justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="text-t-2xl font-black tracking-tight">{d("title")}</h1>
-          <p className="mt-0.5 text-t-sm text-text-dim">
+          <h1 className="page-title">{d("title")}</h1>
+          <p className="page-desc">
             {user?.fullName ? `${user.fullName} · ` : ""}{branchName ? `${branchName} · ` : ""}{formatDateLong(new Date().toISOString())}
           </p>
         </div>
@@ -100,7 +101,7 @@ export default function DashboardPage() {
       <GlobalFilters value={filter} branches={branches} onChange={change} onRefresh={reload} refreshing={refreshing} lastUpdated={updated} />
 
       {error && data && (
-        <div role="alert" className="flex items-center justify-between gap-2 rounded-xl border border-ember/30 bg-ember-bg px-3 py-2 text-t-sm text-ember">
+        <div role="alert" className="flex items-center justify-between gap-2 rounded-card border border-ember/30 bg-ember-bg px-3 py-2 text-t-sm text-ember">
           <span>{d("loadFail")}</span><button onClick={reload} className="font-bold underline">{d("retry")}</button>
         </div>
       )}

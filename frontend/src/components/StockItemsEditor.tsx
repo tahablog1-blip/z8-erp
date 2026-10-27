@@ -99,7 +99,7 @@ function ProductPicker({ products, onPick, placeholder }: {
         onKeyDown={onKeyDown}
       />
       {msg && (
-        <div role="status" className={`text-[11.5px] font-bold ${msg.ok ? "text-emerald" : "text-ember"}`}>
+        <div role="status" className={`text-t-xs font-bold ${msg.ok ? "text-emerald" : "text-ember"}`}>
           {msg.text}
         </div>
       )}
@@ -111,18 +111,18 @@ function ProductPicker({ products, onPick, placeholder }: {
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => choose(p)}
-              className={`block w-full px-3 py-2 text-right text-[12.5px] ${idx === active ? "bg-ink-3" : "hover:bg-ink-3"}`}
+              className={`block w-full px-3 py-2 text-right text-t-sm ${idx === active ? "bg-ink-3" : "hover:bg-ink-3"}`}
             >
               <div className="font-bold">{productLabel(p)}</div>
               {p.barcode && (
-                <div dir="ltr" className="text-right font-mono text-[11px] text-text-dim">{p.barcode}</div>
+                <div dir="ltr" className="text-right font-mono text-t-xs text-text-dim">{p.barcode}</div>
               )}
             </button>
           ))}
         </div>
       )}
       {q.trim() !== "" && results.length === 0 && (
-        <div className="text-[11.5px] text-text-dim">لا توجد نتائج — اضغط Enter لو ده باركود</div>
+        <div className="text-t-xs text-text-dim">لا توجد نتائج — اضغط Enter لو ده باركود</div>
       )}
     </div>
   );
@@ -202,9 +202,9 @@ export function StockItemsEditor({
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-line">
-        <table className="w-full border-collapse text-[12.5px]">
+        <table className="w-full border-collapse text-t-sm">
           <thead>
-            <tr className="bg-ink-3 text-[11.5px] font-extrabold text-text-dim">
+            <tr className="bg-ink-3 text-t-xs font-extrabold text-text-dim">
               <th className="px-2 py-2 text-right">الصنف</th>
               <th className="w-24 px-2 py-2 text-right">الكمية</th>
               {withCost && <th className="w-28 px-2 py-2 text-right">تكلفة الوحدة</th>}
@@ -229,13 +229,13 @@ export function StockItemsEditor({
                         <div className="min-w-0">
                           <div className="font-bold">{it.productLabel}</div>
                           {it.barcode && (
-                            <div dir="ltr" className="text-right font-mono text-[11px] text-text-dim">{it.barcode}</div>
+                            <div dir="ltr" className="text-right font-mono text-t-xs text-text-dim">{it.barcode}</div>
                           )}
                         </div>
                         <button
                           type="button"
                           onClick={() => setLine(i, { productId: "", productLabel: "", barcode: null })}
-                          className="shrink-0 text-[11px] font-bold text-petrol hover:underline"
+                          className="shrink-0 text-t-xs font-bold text-petrol hover:underline"
                         >
                           تغيير
                         </button>
@@ -248,7 +248,7 @@ export function StockItemsEditor({
                       />
                     )}
                     {avail !== undefined && it.productId && (
-                      <div className={`mt-1 text-[11px] ${short ? "font-bold text-ember" : "text-text-dim"}`}>
+                      <div className={`mt-1 text-t-xs ${short ? "font-bold text-ember" : "text-text-dim"}`}>
                         المتاح في المصدر: <span className="tnum">{avail}</span>
                         {short && " — الكمية المطلوبة أكبر من الرصيد"}
                       </div>
@@ -279,7 +279,7 @@ export function StockItemsEditor({
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Button variant="ghost" onClick={focusTop}>+ إضافة صنف</Button>
-        <div className="text-[12px] text-text-dim">
+        <div className="text-t-sm text-text-dim">
           إجمالي الكميات: <span className="tnum font-bold text-text">{totalQty}</span>
           {withCost && (
             <>

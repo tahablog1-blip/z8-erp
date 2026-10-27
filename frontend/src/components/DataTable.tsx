@@ -56,7 +56,7 @@ export function DataTable<T extends Record<string, any>>({
       value={q}
       onChange={(e) => setQ(e.target.value)}
       placeholder={searchPlaceholder}
-      className={`w-full min-w-0 rounded-xl border border-line bg-ink-2 px-3.5 py-2.5 text-[12.5px] transition-all duration-200 focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15 ${searchClassName ?? ""}`}
+      className={`h-9 w-full min-w-0 rounded-lg border border-line bg-ink-2 px-3 text-t-sm transition-colors duration-150 focus:border-petrol focus:outline-none focus:ring-2 focus:ring-petrol/15 ${searchClassName ?? ""}`}
     />
   ) : null;
 
@@ -74,12 +74,12 @@ export function DataTable<T extends Record<string, any>>({
         {toolbar}
       </div>
       <div className="max-h-[65vh] overflow-auto rounded-card border border-line bg-ink-2 shadow-card">
-        <table className="w-full border-collapse text-[13px]">
+        <table className="w-full border-collapse text-t-sm">
           <thead className="sticky top-0 z-10">
             <tr className="bg-ink-3 text-text-dim">
               {columns.map((c) => (
                 <th key={c.key} style={{ width: c.width }}
-                  className="whitespace-nowrap bg-ink-3 px-3 py-2.5 text-right text-[12px] font-extrabold">
+                  className="whitespace-nowrap bg-ink-3 px-3 py-2.5 text-start text-t-xs font-extrabold">
                   {c.title}
                 </th>
               ))}
@@ -99,7 +99,7 @@ export function DataTable<T extends Record<string, any>>({
                 {q ? "لا توجد نتائج مطابقة للبحث" : emptyText}
               </td></tr>
             ) : shown.map((row, i) => (
-              <tr key={row.id ?? i} className="border-t border-line/70 odd:bg-ink-3/25 transition-colors duration-150 hover:bg-petrol-soft/40">
+              <tr key={row.id ?? i} className="border-t border-line transition-colors duration-150 hover:bg-ink-3/50">
                 {columns.map((c) => (
                   <td key={c.key} className="px-3 py-2.5 align-middle">
                     {c.render ? c.render(row) : String(row[c.key] ?? "—")}
@@ -111,7 +111,7 @@ export function DataTable<T extends Record<string, any>>({
         </table>
       </div>
       {filtered.length > shown.length && (
-        <div className="mt-3 flex items-center justify-center gap-3 text-[12px] text-text-dim">
+        <div className="mt-3 flex items-center justify-center gap-3 text-t-sm text-text-dim">
           <span className="tnum">عرض {shown.length} من {filtered.length}</span>
           <button type="button" onClick={() => setLimit((l) => l + PAGE_SIZE)}
             className="rounded-lg border border-line bg-ink-2 px-3 py-1.5 font-bold text-petrol transition hover:border-petrol">

@@ -106,12 +106,12 @@ export default function LoginPage() {
       <div className="pointer-events-none fixed inset-x-0 top-0 h-32 bg-petrol-deep sm:h-44" />
       <div className="relative w-full max-w-sm">
         <div className="mb-5 flex items-center justify-center gap-3 text-white">
-          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white/10 p-2">
+          <div className="grid h-12 w-12 place-items-center rounded-card bg-white/10 p-2">
             <img src="/logo-white.png" alt="مصدر الزيوت" className="h-full w-full object-contain" />
           </div>
           <div>
-            <div className="text-[17px] font-extrabold">مصدر الزيوت</div>
-            <div className="text-[11px] text-white/65">منصة الإدارة</div>
+            <div className="text-t-xl font-extrabold">مصدر الزيوت</div>
+            <div className="text-t-xs text-white/65">منصة الإدارة</div>
           </div>
         </div>
 
@@ -119,15 +119,15 @@ export default function LoginPage() {
           <form onSubmit={submitTotp}
                 className="space-y-4 rounded-card border border-line bg-ink-2 p-6 shadow-panel">
             <div className="text-center">
-              <div className="text-[14px] font-extrabold">التحقق بخطوتين</div>
-              <p className="mt-1 text-[11.5px] text-text-dim">
+              <div className="text-t-md font-extrabold">التحقق بخطوتين</div>
+              <p className="mt-1 text-t-xs text-text-dim">
                 افتح تطبيق المصادقة واكتب الكود المكوّن من 6 أرقام — أو أحد أكواد الاسترجاع الاحتياطية
               </p>
             </div>
             <Field label="كود التحقق">
               <Input dir="ltr" value={totpCode} required autoFocus maxLength={11}
                      placeholder="000000"
-                     className="text-center text-[18px] tracking-[0.3em]"
+                     className="text-center text-t-xl tracking-[0.3em]"
                      onChange={(e) => setTotpCode(e.target.value)} />
             </Field>
             <ErrorNote msg={err} />
@@ -135,7 +135,7 @@ export default function LoginPage() {
               {busy ? "جارِ التحقق..." : "تأكيد"}
             </Button>
             <button type="button" onClick={() => { setTempToken(null); setTotpCode(""); setErr(""); }}
-                    className="w-full text-center text-[11.5px] font-bold text-text-dim hover:text-text">
+                    className="w-full text-center text-t-xs font-bold text-text-dim hover:text-text">
               ← رجوع لتسجيل الدخول
             </button>
           </form>
@@ -143,7 +143,7 @@ export default function LoginPage() {
         <form onSubmit={submit}
               className="space-y-4 rounded-card border border-line bg-ink-2 p-6 shadow-panel">
           {/* مؤشر حالة الاتصال بالخادم */}
-          <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-bold ${
+          <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-t-sm font-bold ${
             conn === "ok"   ? "bg-emerald-bg text-emerald"
             : conn === "down" ? "bg-ember-bg text-ember"
             : "bg-brass-soft text-brass"}`}>

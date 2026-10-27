@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Button, Card, ErrorNote, Field, Input, Switch, Textarea } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, Switch, Textarea, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
 type Role = {
@@ -94,8 +94,8 @@ export default function RolesSettingsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[19px] font-extrabold">الإعدادات — الأدوار والصلاحيات</h1>
-          <p className="mt-0.5 text-[12px] text-text-dim">
+          <PageHeader title="الإعدادات — الأدوار والصلاحيات" description="الأدوار وصلاحياتها." />
+          <p className="page-desc">
             كل دور مجموعة صلاحيات جاهزة — طبّقه على أي موظف بضغطة من صفحته، وأي تعديل هنا ينعكس فوراً.
           </p>
         </div>
@@ -112,19 +112,19 @@ export default function RolesSettingsPage() {
             <Card key={r.id} className="!p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <span className="text-[22px] leading-none">{r.icon}</span>
+                  <span className="text-t-2xl leading-none">{r.icon}</span>
                   <div className="min-w-0">
-                    <div className="truncate text-[13px] font-extrabold">{r.name}</div>
-                    <div className="text-[11px] text-text-dim">
+                    <div className="truncate text-t-md font-extrabold">{r.name}</div>
+                    <div className="text-t-xs text-text-dim">
                       {r.permissions.length} صلاحية · {r.users_count} موظف
                     </div>
                   </div>
                 </div>
                 {r.is_system && (
-                  <span className="shrink-0 rounded-full bg-ink-3 px-2 py-0.5 text-[10px] font-bold text-text-dim">أساسي</span>
+                  <span className="shrink-0 rounded-full bg-ink-3 px-2 py-0.5 text-t-xs font-bold text-text-dim">أساسي</span>
                 )}
               </div>
-              {r.description && <p className="mt-2 text-[11.5px] text-text-dim">{r.description}</p>}
+              {r.description && <p className="mt-2 text-t-xs text-text-dim">{r.description}</p>}
               <div className="mt-3 flex gap-1.5">
                 <Button variant="outline" size="sm" className="flex-1" onClick={() => openRole(r)}>تعديل</Button>
                 {!r.is_system && (
@@ -142,7 +142,7 @@ export default function RolesSettingsPage() {
       {editing && (
         <Card>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[14px] font-black">
+            <h2 className="text-t-md font-black">
               {selectedId === "new" ? "دور جديد" : `تعديل — ${selectedRole?.name}`}
             </h2>
             <Button variant="ghost" className="gap-1" onClick={closeEditor}><MIcon name="close" className="!text-[14px]" /> إغلاق</Button>
@@ -165,10 +165,10 @@ export default function RolesSettingsPage() {
             <div className="grid gap-3 lg:grid-cols-2">
               {permGroups.map((g) => (
                 <div key={g.group} className="rounded-lg border border-line p-3">
-                  <p className="mb-1.5 text-[12px] font-extrabold text-petrol">{g.group}</p>
+                  <p className="mb-1.5 text-t-sm font-extrabold text-petrol">{g.group}</p>
                   <div className="grid gap-1 sm:grid-cols-2">
                     {g.items.map((it) => (
-                      <label key={it.key} className="flex cursor-pointer items-center gap-2 text-[12px]">
+                      <label key={it.key} className="flex cursor-pointer items-center gap-2 text-t-sm">
                         <Switch size="sm" checked={form.permissions.includes(it.key)} onChange={() => togglePerm(it.key)} />
                         {it.label}
                       </label>
@@ -178,7 +178,7 @@ export default function RolesSettingsPage() {
               ))}
             </div>
           )}
-          <p className="mt-2 text-[11.5px] font-bold text-text-dim">المحدد: {form.permissions.length} صلاحية</p>
+          <p className="mt-2 text-t-xs font-bold text-text-dim">المحدد: {form.permissions.length} صلاحية</p>
 
           <ErrorNote msg={err} />
           <div className="mt-3 flex justify-end gap-2">

@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Button, Card, ErrorNote, Field, Input } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 import { appConfirm } from "@/components/dialog";
 import { PriceList, PriceListItem } from "@/modules/price-lists/types";
@@ -129,8 +129,8 @@ export default function PriceListsSettingsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[19px] font-extrabold">الإعدادات — قوائم الأسعار</h1>
-          <p className="mt-0.5 text-[12px] text-text-dim">
+          <PageHeader title="الإعدادات — قوائم الأسعار" description="قوائم الأسعار." />
+          <p className="page-desc">
             عيّن أسعاراً خاصة لأصناف معيّنة ثم اربط القائمة بعميل من شاشة العملاء — باقي الأصناف تفضل بسعرها العادي.
           </p>
         </div>
@@ -142,15 +142,15 @@ export default function PriceListsSettingsPage() {
       {loading ? (
         <Card>جارِ التحميل…</Card>
       ) : lists.length === 0 ? (
-        <Card className="text-center text-[13px] text-text-dim">لا توجد قوائم أسعار بعد.</Card>
+        <Card className="text-center text-t-md text-text-dim">لا توجد قوائم أسعار بعد.</Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {lists.map((pl) => (
             <Card key={pl.id} className="!p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="truncate text-[13px] font-extrabold">{pl.name}</div>
-                  <div className="text-[11px] text-text-dim">{pl.item_count} صنف مخصّص</div>
+                  <div className="truncate text-t-md font-extrabold">{pl.name}</div>
+                  <div className="text-t-xs text-text-dim">{pl.item_count} صنف مخصّص</div>
                 </div>
               </div>
               <div className="mt-3 flex gap-1.5">
@@ -167,7 +167,7 @@ export default function PriceListsSettingsPage() {
       {editing && (
         <Card>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[14px] font-black">
+            <h2 className="text-t-md font-black">
               {selectedId === "new" ? "قائمة أسعار جديدة" : `تعديل — ${selectedList?.name}`}
             </h2>
             <Button variant="ghost" className="gap-1" onClick={closeEditor}><MIcon name="close" className="!text-[14px]" /> إغلاق</Button>
@@ -191,11 +191,11 @@ export default function PriceListsSettingsPage() {
 
               <div className="mt-3 overflow-x-auto">
                 {itemsLoading ? (
-                  <p className="p-4 text-center text-[13px] text-text-dim">جارِ التحميل…</p>
+                  <p className="p-4 text-center text-t-md text-text-dim">جارِ التحميل…</p>
                 ) : items.length === 0 ? (
-                  <p className="p-4 text-center text-[13px] text-text-dim">لا توجد أصناف مطابقة.</p>
+                  <p className="p-4 text-center text-t-md text-text-dim">لا توجد أصناف مطابقة.</p>
                 ) : (
-                  <table className="w-full text-[12.5px]">
+                  <table className="w-full text-t-sm">
                     <thead>
                       <tr className="border-b border-line text-text-dim">
                         <th className="px-2 py-1.5 text-right">الصنف</th>
@@ -212,7 +212,7 @@ export default function PriceListsSettingsPage() {
                           <tr key={it.product_id} className="border-b border-line/50">
                             <td className="px-2 py-1.5">
                               <div className="font-bold">{[it.category, it.name, it.spec].filter(Boolean).join(" — ")}</div>
-                              {it.barcode && <div dir="ltr" className="text-[10.5px] text-text-dim">[{it.barcode}]</div>}
+                              {it.barcode && <div dir="ltr" className="text-t-xs text-text-dim">[{it.barcode}]</div>}
                             </td>
                             <td className="px-2 py-1.5 tnum text-text-dim">{money(it.base_price_vat)}</td>
                             <td className="px-2 py-1.5">
@@ -222,7 +222,7 @@ export default function PriceListsSettingsPage() {
                                        placeholder={money(it.base_price_vat)}
                                        onChange={(e) => setDrafts((d) => ({ ...d, [it.product_id]: e.target.value }))} />
                                 {it.is_override && !draft && (
-                                  <span className="rounded-full bg-petrol/10 px-1.5 py-0.5 text-[10px] font-bold text-petrol">مخصّص</span>
+                                  <span className="rounded-full bg-petrol/10 px-1.5 py-0.5 text-t-xs font-bold text-petrol">مخصّص</span>
                                 )}
                               </div>
                             </td>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { MIcon } from "@/components/m-icon";
 import { useAuth } from "@/lib/auth";
-import { Button, Card, ErrorNote, Field, Input, Select } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Input, Select, PageHeader } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 
 type Branch = { id: string; name: string };
@@ -80,9 +80,9 @@ function QuickRegisterModal({ scan, onClose, onSaved }: { scan: any; onClose: ()
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl bg-ink-2 p-4" onClick={(e) => e.stopPropagation()}>
-        <h3 className="mb-1 text-[15px] font-black">تسجيل سيارة جديدة</h3>
-        <p className="mb-3 text-[12px] text-text-dim">
+      <div className="w-full max-w-lg rounded-card bg-ink-2 p-4" onClick={(e) => e.stopPropagation()}>
+        <h3 className="mb-1 text-t-lg font-black">تسجيل سيارة جديدة</h3>
+        <p className="mb-3 text-t-sm text-text-dim">
           {scan.sightings > 1 ? `رُصدت اللوحة ${scan.sightings} مرات — أفضل قراءة للحروف تلقائياً، عدّلها لو غير صحيحة` : "أكمل البيانات ليدخل الطابور فوراً"}
         </p>
         <div className="grid gap-2.5 sm:grid-cols-2">
@@ -136,12 +136,12 @@ export default function CamerasSettingsPage() {
   const [snapFor, setSnapFor] = useState<string | null>(null);
   const [snapImg, setSnapImg] = useState<{ name: string; src: string } | null>(null);
 
-  // ── 🩺 فحص كل الكاميرات دفعة واحدة — بدون الدخول على كل كاميرا ──
+  // ── فحص كل الكاميرات دفعة واحدة — بدون الدخول على كل كاميرا ──
   const [healthBusy, setHealthBusy] = useState(false);
   const [health, setHealth] = useState<Record<string, boolean>>({});
   const [healthAt, setHealthAt] = useState<string>("");
 
-  // ═══ 🎛 مركز تحكم البوابة الذكية — كل الإعدادات في مكان واحد منظم ═══
+  // ═══ مركز تحكم البوابة الذكية — كل الإعدادات في مكان واحد منظم ═══
   const [gwOn, setGwOn] = useState<boolean | null>(null);
   const [gwRunning, setGwRunning] = useState(false);
   const [gwCams, setGwCams] = useState<
@@ -247,17 +247,17 @@ export default function CamerasSettingsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-[19px] font-extrabold">الإعدادات — كاميرات المحطات</h1>
-      {/* ═══ 🎛 مركز تحكم البوابة الذكية — رسمي ومنظم في مكان واحد ═══ */}
+      <PageHeader title="الإعدادات — كاميرات المحطات" description="كاميرات المحطات والبوابة الذكية." />
+      {/* ═══ مركز تحكم البوابة الذكية — رسمي ومنظم في مكان واحد ═══ */}
       <Card>
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h2 className="flex items-center gap-2 text-[14.5px] font-black">
-                🎛 البوابة الذكية — الدخول التلقائي
+              <h2 className="flex items-center gap-2 text-t-md font-black">
+                البوابة الذكية — الدخول التلقائي
                 <span className={`inline-block h-2.5 w-2.5 rounded-full ${gwOn && gwRunning ? "animate-pulse bg-emerald" : gwOn === false ? "bg-ember" : "bg-line"}`} />
               </h2>
-              <p className="mt-0.5 text-[11.5px] text-text-dim">
+              <p className="mt-0.5 text-t-xs text-text-dim">
                 أي لوحة معروفة (ملف سابق أو حجز) تظهر أمام الكاميرا = دخول/تأكيد وصول فوري — بلا أي تدخل
               </p>
             </div>
@@ -273,12 +273,12 @@ export default function CamerasSettingsPage() {
           {/* كاميرات البوابة — مفتاح مستقل + مؤشر حي لكل كاميرا */}
           <div className="grid gap-2 sm:grid-cols-2">
             {gwCams.map((c) => (
-              <div key={c.id} className="flex items-center justify-between rounded-xl border border-line bg-ink-2 px-3.5 py-2.5">
+              <div key={c.id} className="flex items-center justify-between rounded-card border border-line bg-ink-2 px-3.5 py-2.5">
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
                         style={{ background: !c.is_active ? "var(--ink4)" : c.ok === null ? "var(--brass)" : c.ok ? "var(--emerald)" : "var(--ember)" }} />
-                  <span className="truncate text-[12.5px] font-bold">{c.name}</span>
-                  {c.last && <span className="tnum shrink-0 text-[10px] text-text-dim">{c.last}</span>}
+                  <span className="truncate text-t-sm font-bold">{c.name}</span>
+                  {c.last && <span className="tnum shrink-0 text-t-xs text-text-dim">{c.last}</span>}
                 </span>
                 <button onClick={() => toggleGwCam(c.id, !c.is_active)}
                         className="relative inline-flex h-6 shrink-0 items-center rounded-full transition-colors"
@@ -289,24 +289,24 @@ export default function CamerasSettingsPage() {
               </div>
             ))}
             {gwCams.length === 0 && (
-              <p className="col-span-full py-2 text-center text-[11.5px] text-text-dim">لا كاميرات مسجلة على محطة الدخول بعد</p>
+              <p className="col-span-full py-2 text-center text-t-xs text-text-dim">لا كاميرات مسجلة على محطة الدخول بعد</p>
             )}
           </div>
 
           {/* نموذج قراءة اللوحات */}
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-ink-2 px-3.5 py-2.5">
-            <span className="text-[12.5px] font-black">🧠 نموذج قراءة اللوحات:</span>
-            <select className="rounded-lg border border-line bg-ink px-3 py-1.5 text-[12px] font-bold"
+          <div className="flex flex-wrap items-center gap-2 rounded-card border border-line bg-ink-2 px-3.5 py-2.5">
+            <span className="text-t-sm font-black">نموذج قراءة اللوحات:</span>
+            <select className="rounded-lg border border-line bg-ink px-3 py-1.5 text-t-sm font-bold"
                     value={visionModel} onChange={(e) => changeModel(e.target.value)}>
               {Object.entries(visionModels).map(([id, label]) => (
                 <option key={id} value={id}>{label}</option>
               ))}
             </select>
-            <span className="text-[10.5px] text-text-dim">يُطبق فوراً ويُحفظ بشكل دائم</span>
+            <span className="text-t-xs text-text-dim">يُطبق فوراً ويُحفظ بشكل دائم</span>
           </div>
 
-          <p className="text-[10.5px] font-bold text-text-dim">
-            🟢 تلتقط · 🔴 لا تستجيب · 🟠 بانتظار أول التقاط · ⚪ موقوفة — تتحدث كل 10 ثوانٍ
+          <p className="text-t-xs font-bold text-text-dim">
+            <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1"><span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-emerald" />تلتقط</span> <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-ember" />لا تستجيب</span> <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-brass" />بانتظار أول التقاط</span> <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-text-dim" />موقوفة</span></span> — تتحدث كل 10 ثوانٍ
           </p>
         </div>
       </Card>
@@ -314,17 +314,17 @@ export default function CamerasSettingsPage() {
       <Card>
         <div className="space-y-3">
           {/* ══ مفتاح المراقبة الذكية — ستايل أندرويد ══ */}
-          <div className={`flex items-center justify-between rounded-2xl border-2 p-4 transition-colors duration-300
+          <div className={`flex items-center justify-between rounded-card border-2 p-4 transition-colors duration-300
               ${aiSup ? "border-emerald/40 bg-emerald-bg" : "border-line bg-ink-3"}`}>
             <div className="min-w-0">
-              <div className="flex items-center gap-2 text-[14px] font-black">
+              <div className="flex items-center gap-2 text-t-md font-black">
                 <MIcon name="smart_toy" filled={!!aiSup} className={`!text-[22px] ${aiSup ? "text-emerald" : "text-text-dim"}`} />
                 المراقبة الذكية بالكاميرات
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${aiSup ? "bg-emerald text-white" : "bg-ink-4 text-text-dim"}`}>
+                <span className={`rounded-full px-2 py-0.5 text-t-xs font-black ${aiSup ? "bg-emerald text-white" : "bg-ink-4 text-text-dim"}`}>
                   {aiSup === null ? "..." : aiSup ? "شغالة" : "متوقفة"}
                 </span>
               </div>
-              <p className="mt-0.5 text-[11.5px] leading-relaxed text-text-dim">
+              <p className="mt-0.5 text-t-xs leading-relaxed text-text-dim">
                 صيد الأخطاء الدوري + لقطة الدخول المرجعية + الفحص الختامي قبل الدفع —
                 إيقافها يوقف كل استهلاك الذكاء للكاميرات فوراً
               </p>
@@ -338,46 +338,46 @@ export default function CamerasSettingsPage() {
             </button>
           </div>
           {/* ══ تشغيل وفحص كل الكاميرات بضغطة — بدون فتح كل كاميرا ══ */}
-          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-ink-2 p-3">
+          <div className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-ink-2 p-3">
             <Button onClick={checkAll} disabled={healthBusy || cameras.length === 0}>
               {healthBusy ? "جارِ فحص الكاميرات…" : "تشغيل وفحص كل الكاميرات"}
             </Button>
             {healthAt && (
-              <span className="text-[12px] font-bold">
+              <span className="text-t-sm font-bold">
                 {Object.values(health).every(Boolean) && Object.keys(health).length > 0
-                  ? <span className="text-emerald">✓ كل الكاميرات تعمل بشكل صحيح</span>
-                  : <span className="text-ember">⚠ {Object.values(health).filter((v) => !v).length} كاميرا لا تستجيب</span>}
+                  ? <span className="text-emerald">كل الكاميرات تعمل بشكل صحيح</span>
+                  : <span className="text-ember">{Object.values(health).filter((v) => !v).length} كاميرا لا تستجيب</span>}
                 <span className="mr-2 text-text-dim">· آخر فحص {healthAt}</span>
               </span>
             )}
           </div>
-          <p className="text-[12px] text-text-dim">
+          <p className="text-t-sm text-text-dim">
             سجّل كاميرا لكل محطة (RTSP) واضغط «اختبار لقطة» للتأكد من التوصيل — دي البنية اللي المراقبة الذكية هتشتغل عليها.
           </p>
           {cameras.length > 0 && (
             <div className="divide-y divide-line rounded-lg border border-line">
               {cameras.map((c) => (
-                <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-[12.5px]">
+                <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-t-sm">
                   <div className="min-w-0">
                     <div className="font-bold">
                       {health[c.id] !== undefined && (
                         <span className={`ml-1.5 inline-block h-2.5 w-2.5 rounded-full ${health[c.id] ? "bg-emerald" : "bg-ember"}`}
-                              title={health[c.id] ? "تعمل ✓" : "لا تستجيب ✗"} />
+                              title={health[c.id] ? "تعمل" : "لا تستجيب"} />
                       )}
                       {c.name}
-                      <span className="mr-2 rounded-full bg-petrol-soft px-2 py-0.5 text-[10.5px] font-bold text-petrol">
+                      <span className="mr-2 rounded-full bg-petrol-soft px-2 py-0.5 text-t-xs font-bold text-petrol">
                         {STATION_LABEL[c.station]}
                       </span>
-                      <span className="mr-2 text-[10.5px] text-text-dim">{c.branch_name}</span>
+                      <span className="mr-2 text-t-xs text-text-dim">{c.branch_name}</span>
                     </div>
-                    <div className="tnum truncate text-[11px] text-text-dim" dir="ltr">{c.rtsp_url}</div>
+                    <div className="tnum truncate text-t-xs text-text-dim" dir="ltr">{c.rtsp_url}</div>
                   </div>
                   <div className="flex shrink-0 gap-1.5">
-                    <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
+                    <Button variant="ghost" size="xs"
                             disabled={snapFor === c.id} onClick={() => testSnapshot(c)}>
                       {snapFor === c.id ? "جارِ الالتقاط..." : "اختبار لقطة"}
                     </Button>
-                    <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => removeCamera(c)}>حذف</Button>
+                    <Button variant="danger" size="xs" onClick={() => removeCamera(c)}>حذف</Button>
                   </div>
                 </div>
               ))}
@@ -385,7 +385,7 @@ export default function CamerasSettingsPage() {
           )}
           {snapImg && (
             <div className="rounded-lg border border-line p-2">
-              <p className="mb-1.5 text-[11.5px] font-bold text-emerald">✓ لقطة حية من «{snapImg.name}»</p>
+              <p className="mb-1.5 text-t-xs font-bold text-emerald">لقطة حية من «{snapImg.name}»</p>
               <img src={snapImg.src} alt="لقطة الكاميرا" className="w-full max-w-xl rounded-md" />
             </div>
           )}

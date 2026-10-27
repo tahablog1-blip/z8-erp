@@ -25,7 +25,7 @@ export function SmartAlerts({ data, loading }: { data: Executive | null; loading
             const t = TONE[a.tone] ?? TONE.info;
             return (
               <li key={a.key}>
-                <Link href={a.href} className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol ${t.box}`}>
+                <Link href={a.href} className={`flex items-center gap-2.5 rounded-card border px-3 py-2.5 transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol ${t.box}`}>
                   <MIcon name={t.icon} filled className={`!text-[20px] ${t.ic}`} />
                   <span className="min-w-0 flex-1 text-t-sm font-bold">{d(`al.${a.key}` as DKey)}</span>
                   <span className="tnum shrink-0 text-t-sm font-black">{a.count != null ? a.count : fmtCurrency(a.amount)}</span>

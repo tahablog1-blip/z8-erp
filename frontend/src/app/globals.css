@@ -12,6 +12,7 @@
   --ember:#EF4444; --ember-bg:rgba(239,68,68,0.09);
   --line:#E5E7EB;
   --text:#0F172A; --text-dim:#64748B;
+  --nav-active:#3B82F6;   /* حالة العنصر النشط في القائمة الجانبية الداكنة */
 
   /* شكل الأزرار/البطاقات — قابل للتخصيص من الإعدادات ← التصميم (حاد/دائري/كبسولة) */
   --radius-sm:6px; --radius:8px; --radius-lg:12px; --radius-xl:16px; --radius-card:16px;
@@ -26,6 +27,7 @@
   --ember:#F0655D; --ember-bg:rgba(240,101,93,0.13);
   --line:#263650;
   --text:#EDF2FA; --text-dim:#93A5C4;
+  --nav-active:#3B82F6;
 }
 [data-theme="dark"] ::selection { background: rgba(46,159,171,0.3); }
 
@@ -46,6 +48,20 @@ a:focus-visible, [role="tab"]:focus-visible, summary:focus-visible {
 /* أهداف لمس مريحة (44px) على الشاشات اللمسية بدون ما نغيّر شكل سطح المكتب */
 @media (pointer: coarse) {
   input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px; } /* يمنع تكبير iOS التلقائي عند التركيز */
+}
+
+/* ══════════ Z8 Design System — أنماط الطباعة والمكوّنات الأساسية (مصدر واحد لكل الصفحات) ══════════
+   سلم الخطوط (من رموز --font-*):  caption 11.5 · small 12.5 · body 13.5 · card-title 15 · section 18 · page-title 22
+   الأوزان: 500 عادي · 600 متوسط · 700 غامق · 800 عناوين. الأيقونات: 16 · 18 · 20 · 24 (Material Symbols).
+   انحناءات: rounded-md (شارات صغيرة) · rounded-lg (أزرار/حقول) · rounded-card (بطاقات/لوحات) · rounded-full (حبوب/أفاتار). */
+@layer components {
+  .page-title   { @apply text-t-2xl font-extrabold text-text tracking-tight; }
+  .page-desc    { @apply mt-1 text-t-sm text-text-dim; }
+  .section-title{ @apply text-t-xl font-extrabold text-text; }
+  .card-title   { @apply text-t-lg font-extrabold text-text; }
+  .table-head   { @apply bg-ink-3 text-t-xs font-extrabold text-text-dim; }
+  /* ارتفاعات التحكم الموحّدة: xs 28 · sm 32 · md 36 · lg 40 */
+  .ctl-md { min-height: 36px; }
 }
 
 /* شريط تصنيفات قابل للتمرير بدون شريط تمرير ظاهر */

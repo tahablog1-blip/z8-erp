@@ -46,7 +46,7 @@ function validate(f: Form): Partial<Record<keyof Form, string>> {
 }
 
 const Section = ({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) => (
-  <fieldset className="space-y-2.5 rounded-xl border border-line p-3.5">
+  <fieldset className="space-y-2.5 rounded-card border border-line p-3.5">
     <legend className="px-1.5 text-t-sm font-extrabold">{title}{hint && <span className="ms-2 text-t-xs font-normal text-text-dim">{hint}</span>}</legend>
     {children}
   </fieldset>
@@ -120,7 +120,7 @@ export function CustomerForm({ open, customer, onClose, onSaved }: {
     <Modal open={open} size="lg" onClose={close} title={customer ? "تعديل العميل" : "إضافة عميل"}>
       <form className="space-y-3" noValidate onSubmit={(e) => { e.preventDefault(); save(); }}>
         {dups.length > 0 && (
-          <div role="alert" className="rounded-xl border border-brass/40 bg-brass-bg p-3 text-t-sm">
+          <div role="alert" className="rounded-card border border-brass/40 bg-brass-bg p-3 text-t-sm">
             <div className="mb-1.5 flex items-center gap-1.5 font-extrabold text-brass"><MIcon name="warning" className="!text-[18px]" />يوجد عميل مشابه بالفعل، هل تريد فتحه بدل إنشاء عميل جديد؟</div>
             <ul className="space-y-1">
               {dups.map((d) => (

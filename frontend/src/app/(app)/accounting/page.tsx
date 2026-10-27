@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { printReport, tableHTML, kpisHTML } from "@/lib/print";
 import { useAuth } from "@/lib/auth";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Tabs } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Tabs, PageHeader } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import {
   Account, ACCOUNT_TYPE_LABELS, BalanceSheet, IncomeStatement, JournalEntry, TrialBalance, money,
@@ -141,7 +141,7 @@ export default function AccountingPage() {
         kpisHTML([
           { label: "إجمالي مدين", value: money(trialBalance.totalDebit) },
           { label: "إجمالي دائن", value: money(trialBalance.totalCredit) },
-          { label: "الحالة", value: trialBalance.balanced ? "متزن ✓" : "غير متزن ✗" },
+          { label: "الحالة", value: trialBalance.balanced ? "متزن" : "غير متزن" },
         ]) +
         tableHTML(["الكود", "الحساب", "النوع", "مدين", "دائن", "الرصيد"],
           trialBalance.rows.map((r) => [
@@ -181,7 +181,7 @@ export default function AccountingPage() {
         sec("حقوق الملكية", balanceSheet.equity) +
         tableHTML(["البند", "القيمة (ر.س)"], [
           ["أرباح الفترة الحالية (غير مُقفلة)", money(balanceSheet.currentEarnings)],
-          ["الميزانية", balanceSheet.balanced ? "متزنة ✓" : "غير متزنة ✗"],
+          ["الميزانية", balanceSheet.balanced ? "متزنة" : "غير متزنة"],
         ], { numericCols: [1] });
       printReport("الميزانية العمومية", `حتى تاريخ ${balanceSheet.asOf}`, body);
     }
@@ -209,12 +209,9 @@ export default function AccountingPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-[19px] font-extrabold">الحسابات</h1>
-        <Button variant="ghost" className="!px-3 !py-1.5 !text-[12px]" onClick={printCurrent}>
+      <PageHeader title="الحسابات" description="دليل الحسابات والقيود اليومية وتقارير المحاسبة." actions={<><Button variant="ghost" size="sm" onClick={printCurrent}>
           طباعة التبويب الحالي
-        </Button>
-      </div>
+        </Button></>} />
       <ErrorNote msg={pageErr} />
 
       <Card className="!p-0">
@@ -249,9 +246,9 @@ export default function AccountingPage() {
           {tab === "trial-balance" && trialBalance && (
             <div className="space-y-2">
               <div className="overflow-x-auto rounded-lg border border-line">
-                <table className="w-full border-collapse text-[12.5px]">
+                <table className="w-full border-collapse text-t-sm">
                   <thead>
-                    <tr className="bg-ink-3 text-[11.5px] font-extrabold text-text-dim">
+                    <tr className="bg-ink-3 text-t-xs font-extrabold text-text-dim">
                       <th className="px-3 py-2 text-right">الكود</th>
                       <th className="px-3 py-2 text-right">الحساب</th>
                       <th className="px-3 py-2 text-right">النوع</th>
@@ -274,7 +271,7 @@ export default function AccountingPage() {
                   </tbody>
                 </table>
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-ink-3 p-3 text-[12.5px]">
+              <div className="flex items-center justify-between rounded-lg bg-ink-3 p-3 text-t-sm">
                 <span>إجمالي مدين: <b className="tnum">{money(trialBalance.totalDebit)}</b> · إجمالي دائن: <b className="tnum">{money(trialBalance.totalCredit)}</b></span>
                 {trialBalance.balanced ? <Badge tone="good">متزن</Badge> : <Badge tone="warn">غير متزن!</Badge>}
               </div>
@@ -284,34 +281,34 @@ export default function AccountingPage() {
           {tab === "income-statement" && incomeStatement && (
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <h3 className="mb-2 text-[13px] font-extrabold text-emerald">الإيرادات</h3>
+                <h3 className="mb-2 text-t-md font-extrabold text-emerald">الإيرادات</h3>
                 <div className="space-y-1">
                   {incomeStatement.revenue.map((r) => (
-                    <div key={r.code} className="flex justify-between text-[12.5px]">
+                    <div key={r.code} className="flex justify-between text-t-sm">
                       <span>{r.name}</span><span className="tnum font-bold">{money(r.amount)}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between border-t border-line pt-1.5 text-[13px] font-bold">
+                  <div className="flex justify-between border-t border-line pt-1.5 text-t-md font-bold">
                     <span>الإجمالي</span><span className="tnum">{money(incomeStatement.totalRevenue)}</span>
                   </div>
                 </div>
               </div>
               <div>
-                <h3 className="mb-2 text-[13px] font-extrabold text-ember">المصروفات</h3>
+                <h3 className="mb-2 text-t-md font-extrabold text-ember">المصروفات</h3>
                 <div className="space-y-1">
                   {incomeStatement.expense.map((r) => (
-                    <div key={r.code} className="flex justify-between text-[12.5px]">
+                    <div key={r.code} className="flex justify-between text-t-sm">
                       <span>{r.name}</span><span className="tnum font-bold">{money(r.amount)}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between border-t border-line pt-1.5 text-[13px] font-bold">
+                  <div className="flex justify-between border-t border-line pt-1.5 text-t-md font-bold">
                     <span>الإجمالي</span><span className="tnum">{money(incomeStatement.totalExpense)}</span>
                   </div>
                 </div>
               </div>
               <div className="sm:col-span-2 flex items-center justify-between rounded-lg bg-petrol-soft p-3">
                 <span className="font-bold text-text-dim">صافي الدخل</span>
-                <span className={`tnum text-[18px] font-black ${incomeStatement.netIncome >= 0 ? "text-petrol" : "text-ember"}`}>
+                <span className={`tnum text-t-xl font-black ${incomeStatement.netIncome >= 0 ? "text-petrol" : "text-ember"}`}>
                   {money(incomeStatement.netIncome)} ر.س
                 </span>
               </div>
@@ -323,10 +320,10 @@ export default function AccountingPage() {
               <div className="grid gap-4 sm:grid-cols-3">
                 {([["الأصول", balanceSheet.assets], ["الخصوم", balanceSheet.liabilities], ["حقوق الملكية", balanceSheet.equity]] as const).map(([label, list]) => (
                   <div key={label}>
-                    <h3 className="mb-2 text-[13px] font-extrabold">{label}</h3>
+                    <h3 className="mb-2 text-t-md font-extrabold">{label}</h3>
                     <div className="space-y-1">
                       {list.map((r) => (
-                        <div key={r.code} className="flex justify-between text-[12.5px]">
+                        <div key={r.code} className="flex justify-between text-t-sm">
                           <span>{r.name}</span><span className="tnum">{money(r.balance)}</span>
                         </div>
                       ))}
@@ -334,7 +331,7 @@ export default function AccountingPage() {
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-3 gap-2 text-[12.5px]">
+              <div className="grid grid-cols-3 gap-2 text-t-sm">
                 <div className="rounded-lg bg-ink-3 p-2.5 text-center">
                   <div className="text-text-dim">إجمالي الأصول</div>
                   <div className="tnum font-bold">{money(balanceSheet.totalAssets)}</div>
@@ -358,11 +355,11 @@ export default function AccountingPage() {
                 <p className="py-6 text-center text-text-dim">لا توجد قيود في هذه الفترة</p>
               ) : journal.map((e) => (
                 <div key={e.id} className="rounded-lg border border-line p-3">
-                  <div className="mb-2 flex items-center justify-between text-[12px]">
+                  <div className="mb-2 flex items-center justify-between text-t-sm">
                     <span className="font-bold">{e.description || e.source_type}</span>
                     <span className="tnum text-text-dim">{dateFmt(e.entry_date)}</span>
                   </div>
-                  <table className="w-full text-[12px]">
+                  <table className="w-full text-t-sm">
                     <tbody>
                       {e.lines.map((l) => (
                         <tr key={l.id}>
@@ -390,9 +387,9 @@ export default function AccountingPage() {
               )}
               {Object.entries(ACCOUNT_TYPE_LABELS).map(([type, label]) => (
                 <div key={type}>
-                  <h3 className="mb-1.5 text-[13px] font-extrabold">{label}</h3>
+                  <h3 className="mb-1.5 text-t-md font-extrabold">{label}</h3>
                   <div className="overflow-x-auto rounded-lg border border-line">
-                    <table className="w-full border-collapse text-[12.5px]">
+                    <table className="w-full border-collapse text-t-sm">
                       <tbody>
                         {(accountsByType[type] || []).map((a) => (
                           <tr key={a.id} className="border-t border-line/70 first:border-t-0">
@@ -415,13 +412,13 @@ export default function AccountingPage() {
 
           {tab === "period-lock" && isAdmin && (
             <div className="max-w-md space-y-4">
-              <div className={`rounded-lg px-3 py-2.5 text-[12.5px] font-bold ${
+              <div className={`rounded-lg px-3 py-2.5 text-t-sm font-bold ${
                 closedUntil ? "bg-emerald-bg text-emerald" : "bg-brass-soft text-brass"}`}>
                 {closedUntil
                   ? `الفترة مقفولة حتى ${closedUntil} — أي قيد بتاريخ أقدم أو يساويه ممنوع إضافته أو تعديله.`
                   : "لا توجد فترة مقفولة حالياً — كل التواريخ قابلة للتعديل."}
               </div>
-              <p className="text-[12px] text-text-dim">
+              <p className="text-t-sm text-text-dim">
                 إقفال فترة يمنع أي موديول (فواتير، مشتريات، خزينة، رواتب...) من إضافة أو حذف قيد بتاريخ
                 داخل الفترة المقفولة. لتصحيح خطأ قديم: رفع الإقفال مؤقتاً، نفّذ التصحيح، ثم أقفل تاني.
               </p>

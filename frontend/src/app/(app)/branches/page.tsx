@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useLang } from "@/lib/i18n";
 import { DataTable, Column } from "@/components/DataTable";
-import { Button, Card, Field, Input, Select, Badge, Modal, ErrorNote } from "@/components/ui";
+import { Button, Card, Field, Input, Select, Badge, Modal, ErrorNote, PageHeader } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import { MIcon } from "@/components/m-icon";
 
@@ -122,10 +122,10 @@ export default function BranchesPage() {
       render: (b) => <span className="tnum">{b.category === "retail" ? "—" : b.capacity_rafaat}</span> },
     { key: "is_frozen", title: t("branches.status", "الحالة"), width: "110px",
       render: (b) => b.is_frozen
-        ? <span className="rounded-full bg-ember-bg px-2.5 py-1 text-[11px] font-bold text-ember">
+        ? <span className="rounded-full bg-ember-bg px-2.5 py-1 text-t-xs font-bold text-ember">
           {t("branches.frozen", "مجمّد")}
         </span>
-        : <span className="rounded-full bg-emerald-bg px-2.5 py-1 text-[11px] font-bold text-emerald">
+        : <span className="rounded-full bg-emerald-bg px-2.5 py-1 text-t-xs font-bold text-emerald">
           {t("branches.active", "نشط")}
         </span> },
     ...(canManage ? [{
@@ -133,17 +133,17 @@ export default function BranchesPage() {
       render: (b: Branch) => (
         <div className="flex justify-end gap-1.5">
           {b.category !== "retail" && (
-            <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => printBookingQR(b)}>
+            <Button variant="ghost" size="xs" onClick={() => printBookingQR(b)}>
               {t("branches.bookingQR", "QR الحجز")}
             </Button>
           )}
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => openEdit(b)}>
+          <Button variant="ghost" size="xs" onClick={() => openEdit(b)}>
             {t("branches.edit", "تعديل")}
           </Button>
-          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => toggleFreeze(b)}>
+          <Button variant="ghost" size="xs" onClick={() => toggleFreeze(b)}>
             {b.is_frozen ? t("branches.unfreeze", "فك التجميد") : t("branches.freeze", "تجميد")}
           </Button>
-          <Button variant="danger" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => remove(b)}>
+          <Button variant="danger" size="xs" onClick={() => remove(b)}>
             {t("branches.delete", "حذف")}
           </Button>
         </div>
@@ -160,27 +160,27 @@ export default function BranchesPage() {
       <title>QR حجز الدور — ${b.name}</title>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
       <style>
-        body{font-family:'Cairo','Segoe UI',sans-serif;margin:0;padding:28px;text-align:center;color:#0F2D52}
-        .card{border:3px solid #0F2D52;border-radius:24px;padding:28px 22px;max-width:400px;margin:0 auto}
-        h1{font-size:24px;margin:0 0 2px}h2{font-size:15px;color:#16A34A;margin:0 0 16px}
+        body{font-family:'Cairo','Segoe UI',sans-serif;margin:0;padding:28px;text-align:center;color:#1E3A8A}
+        .card{border:3px solid #1E3A8A;border-radius:24px;padding:28px 22px;max-width:400px;margin:0 auto}
+        h1{font-size:24px;margin:0 0 2px}h2{font-size:15px;color:#1E3A8A;margin:0 0 16px}
         #qr{display:flex;justify-content:center;margin:14px 0}
         #qr img,#qr canvas{border:10px solid #fff;outline:2px solid #E2E8F0;border-radius:12px}
         .steps{text-align:right;font-size:13px;line-height:2;margin:14px 8px 4px;font-weight:700}
-        .steps b{color:#16A34A}
+        .steps b{color:#1E3A8A}
         .url{font-size:10px;color:#51617A;direction:ltr;margin-top:10px;word-break:break-all}
         @media print{.noprint{display:none}}
         .noprint{margin-top:18px}
-        button{background:#16A34A;color:#fff;border:0;border-radius:10px;padding:10px 26px;font-size:14px;font-weight:900;font-family:inherit;cursor:pointer}
+        button{background:#1E3A8A;color:#fff;border:0;border-radius:10px;padding:10px 26px;font-size:14px;font-weight:900;font-family:inherit;cursor:pointer}
       </style></head><body>
       <div class="card">
         <h1>مصدر الزيوت</h1>
-        <h2>${b.name} — احجز دورك قبل الوصول 🚗</h2>
+        <h2>${b.name} — احجز دورك قبل الوصول</h2>
         <div id="qr"></div>
         <div class="steps">
           <b>١.</b> امسح الكود بكاميرا جوالك<br>
           <b>٢.</b> سجّل بياناتك ولوحة سيارتك<br>
           <b>٣.</b> تابع دورك مباشرة من جوالك<br>
-          <b>٤.</b> عند وصولك يتأكد دخولك تلقائياً ✨
+          <b>٤.</b> عند وصولك يتأكد دخولك تلقائياً
         </div>
         <div class="url">${url}</div>
       </div>
@@ -192,11 +192,7 @@ export default function BranchesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-[19px] font-extrabold">
-          {t("branches.title", "الفروع")}
-        </h1>
-      </div>
+      <PageHeader title={t("branches.title", "الفروع")} description="إدارة فروع الشركة وأكوادها وبوابات الحجز." />
 
       <Card>
         <DataTable
@@ -251,7 +247,7 @@ export default function BranchesPage() {
                   ))}
                   <button type="button"
                           onClick={() => setForm({ ...form, lines: [...form.lines, `سير ${form.lines.length + 1}`] })}
-                          className="z8-anim-btn w-full rounded-lg border border-dashed border-line py-1.5 text-[12px] font-bold text-text-dim hover:border-petrol hover:text-petrol">
+                          className="z8-anim-btn w-full rounded-lg border border-dashed border-line py-1.5 text-t-sm font-bold text-text-dim hover:border-petrol hover:text-petrol">
                    {t("branches.addLine", "+ إضافة خط سير")}
                   </button>
                 </div>
@@ -286,8 +282,8 @@ export default function BranchesPage() {
           <div className="grid grid-cols-2 gap-2 rounded-lg border border-line bg-ink-3 p-2.5">
             <label className="col-span-full flex cursor-pointer items-center justify-between">
               <div>
-                <div className="text-[12.5px] font-bold">{t("branches.independentNumbering", "ترقيم فواتير مستقل لهذا الفرع")}</div>
-                <div className="text-[11px] text-text-dim">
+                <div className="text-t-sm font-bold">{t("branches.independentNumbering", "ترقيم فواتير مستقل لهذا الفرع")}</div>
+                <div className="text-t-xs text-text-dim">
                   {t("branches.independentNumberingHint", "تسلسل خاص بالفرع بدل التسلسل العام المشترك بين كل الفروع")}
                 </div>
               </div>

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Switch, PageHeader, Tabs } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
 import { money } from "@/modules/invoices/types";
 import { Customer } from "@/modules/customers/types";
@@ -319,70 +319,53 @@ export default function TreasuryPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-[19px] font-extrabold">الخزينة</h1>
-        {canCreate && tab === "vouchers" && (
-          <div className="flex gap-2">
-            <button onClick={() => openModal("receipt")}
-                    className="flex items-center gap-1 rounded-xl bg-emerald px-5 py-2.5 text-[13.5px] font-black text-white shadow-card transition hover:brightness-110 active:scale-[.98]">
-              <MIcon name="arrow_downward" className="!text-[16px]" /> سند قبض
-            </button>
-            <button onClick={() => openModal("payment")}
-                    className="flex items-center gap-1 rounded-xl bg-ember px-5 py-2.5 text-[13.5px] font-black text-white shadow-card transition hover:brightness-110 active:scale-[.98]">
-              <MIcon name="arrow_upward" className="!text-[16px]" /> سند صرف
-            </button>
-          </div>
+      <PageHeader title="الخزينة" description="سندات القبض والصرف وحسابات الخزينة." actions={<>{canCreate && tab === "vouchers" && (
+          <>
+            <Button onClick={() => openModal("receipt")}><MIcon name="arrow_downward" className="!text-[16px]" />سند قبض</Button>
+            <Button variant="outline" onClick={() => openModal("payment")}><MIcon name="arrow_upward" className="!text-[16px]" />سند صرف</Button>
+          </>
         )}
         {tab === "banks" && canCreate && (
           <Button onClick={() => setBankModal(true)}>+ حساب بنكي جديد</Button>
-        )}
-      </div>
+        )}</>} />
 
-      <div className="flex gap-1.5 border-b border-line">
-        {([["vouchers", "السندات"], ["banks", "البنوك"]] as const).map(([k, label]) => (
-          <button key={k} onClick={() => setTab(k)}
-                  className={`px-3 py-2 text-[13px] font-bold ${tab === k
-                    ? "border-b-2 border-petrol text-petrol" : "text-text-dim hover:text-text"}`}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs value={tab} onChange={setTab} items={[{ key: "vouchers", label: "السندات" }, { key: "banks", label: "البنوك" }]} />
 
       {tab === "vouchers" && <ErrorNote msg={pageErr} />}
 
       {tab === "vouchers" && summary && (
         <div className="grid gap-3 sm:grid-cols-3">
-          <Card><div className="text-[11.5px] font-bold text-text-dim">مقبوضات اليوم ({summary.receiptCount})</div>
-            <div className="mt-1 tnum text-[19px] font-black text-emerald">{money(summary.receipts)} ر.س</div></Card>
-          <Card><div className="text-[11.5px] font-bold text-text-dim">مصروفات اليوم ({summary.paymentCount})</div>
-            <div className="mt-1 tnum text-[19px] font-black text-ember">{money(summary.payments)} ر.س</div></Card>
-          <Card><div className="text-[11.5px] font-bold text-text-dim">صافي حركة اليوم</div>
-            <div className={`mt-1 tnum text-[19px] font-black ${summary.net >= 0 ? "text-petrol" : "text-ember"}`}>{money(summary.net)} ر.س</div></Card>
+          <Card><div className="text-t-xs font-bold text-text-dim">مقبوضات اليوم ({summary.receiptCount})</div>
+            <div className="mt-1 tnum text-t-xl font-black text-emerald">{money(summary.receipts)} ر.س</div></Card>
+          <Card><div className="text-t-xs font-bold text-text-dim">مصروفات اليوم ({summary.paymentCount})</div>
+            <div className="mt-1 tnum text-t-xl font-black text-ember">{money(summary.payments)} ر.س</div></Card>
+          <Card><div className="text-t-xs font-bold text-text-dim">صافي حركة اليوم</div>
+            <div className={`mt-1 tnum text-t-xl font-black ${summary.net >= 0 ? "text-petrol" : "text-ember"}`}>{money(summary.net)} ر.س</div></Card>
         </div>
       )}
 
       {tab === "vouchers" && (
       <Card className="!p-0">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5">
-          <div className="flex flex-wrap items-center gap-2 text-[12.5px]">
+          <div className="flex flex-wrap items-center gap-2 text-t-sm">
             <span className="font-bold text-text-dim">من</span>
             <Input type="date" className="tnum !py-1.5" value={from} onChange={(e) => setFrom(e.target.value)} />
             <span className="font-bold text-text-dim">إلى</span>
             <Input type="date" className="tnum !py-1.5" value={to} onChange={(e) => setTo(e.target.value)} />
-            <label className="flex items-center gap-1.5 text-[12px] font-bold text-text-dim">
+            <label className="flex items-center gap-1.5 text-t-sm font-bold text-text-dim">
               <Switch size="sm" checked={showCancelled} onChange={setShowCancelled} />
               إظهار الملغي
             </label>
           </div>
-          <div className="flex gap-3 text-[12px] font-bold">
+          <div className="flex gap-3 text-t-sm font-bold">
             <span className="text-emerald">قبض: <span className="tnum">{money(totals.rec)}</span></span>
             <span className="text-ember">صرف: <span className="tnum">{money(totals.pay)}</span></span>
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-[12.5px]">
+          <table className="w-full border-collapse text-t-sm">
             <thead>
-              <tr className="bg-ink-3 text-[11.5px] font-extrabold text-text-dim">
+              <tr className="bg-ink-3 text-t-xs font-extrabold text-text-dim">
                 <th className="px-3 py-2 text-right">السند</th>
                 <th className="px-3 py-2 text-right">النوع</th>
                 <th className="px-3 py-2 text-right">الطرف / البند</th>
@@ -411,18 +394,18 @@ export default function TreasuryPage() {
                     </td>
                     <td className="px-3 py-2">
                       <div className="font-bold">{v.employee_name || v.customer_name || v.party_name || v.category || "—"}</div>
-                      {details && <div className="text-[11px] text-text-dim">{details}</div>}
+                      {details && <div className="text-t-xs text-text-dim">{details}</div>}
                     </td>
                     <td className="px-3 py-2 text-text-dim">{METHODS[v.method] || v.method}</td>
                     <td className={`px-3 py-2 tnum font-black ${cancelled ? "line-through" : ""} ${v.type === "receipt" ? "text-emerald" : "text-ember"}`}>
                       {v.type === "receipt" ? "+" : "−"}{money(v.amount)}
                     </td>
-                    <td className="px-3 py-2 tnum text-[11.5px] text-text-dim">{v.voucher_date || dtFmt(v.created_at)}</td>
+                    <td className="px-3 py-2 tnum text-t-xs text-text-dim">{v.voucher_date || dtFmt(v.created_at)}</td>
                     <td className="px-2 py-2">
                       <div className="flex gap-1">
-                        <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => printVoucher(v)}>السند</Button>
+                        <Button variant="ghost" size="xs" onClick={() => printVoucher(v)}>السند</Button>
                         {canCreate && !cancelled && (
-                          <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => cancelVoucher(v)}>إلغاء</Button>
+                          <Button variant="ghost" size="xs" onClick={() => cancelVoucher(v)}>إلغاء</Button>
                         )}
                       </div>
                     </td>
@@ -443,14 +426,14 @@ export default function TreasuryPage() {
             <Card className="!p-0">
               <div className="divide-y divide-line">
                 {banks.length === 0 && (
-                  <div className="p-4 text-center text-[12px] text-text-dim">لا توجد حسابات بنكية بعد</div>
+                  <div className="p-4 text-center text-t-sm text-text-dim">لا توجد حسابات بنكية بعد</div>
                 )}
                 {banks.map((b) => (
                   <button key={b.id} onClick={() => setSelectedBankId(b.id)}
                           className={`block w-full px-3 py-2.5 text-right transition ${selectedBankId === b.id ? "bg-petrol-soft" : "hover:bg-ink-3"}`}>
-                    <div className="font-extrabold text-[13px]">{b.name}</div>
-                    <div className="text-[11px] text-text-dim">{b.bank_name || "—"}</div>
-                    <div className="tnum mt-0.5 text-[13px] font-black text-petrol">{money(b.balance)} ر.س</div>
+                    <div className="font-extrabold text-t-md">{b.name}</div>
+                    <div className="text-t-xs text-text-dim">{b.bank_name || "—"}</div>
+                    <div className="tnum mt-0.5 text-t-md font-black text-petrol">{money(b.balance)} ر.س</div>
                   </button>
                 ))}
               </div>
@@ -458,38 +441,38 @@ export default function TreasuryPage() {
 
             <div className="space-y-3">
               {!selectedBank ? (
-                <Card><div className="p-3 text-center text-[12.5px] text-text-dim">اختر حساباً بنكياً من القائمة</div></Card>
+                <Card><div className="p-3 text-center text-t-sm text-text-dim">اختر حساباً بنكياً من القائمة</div></Card>
               ) : (
                 <>
                   <Card>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
-                        <div className="text-[14px] font-extrabold">{selectedBank.name}</div>
-                        <div className="text-[11.5px] text-text-dim tnum">
+                        <div className="text-t-md font-extrabold">{selectedBank.name}</div>
+                        <div className="text-t-xs text-text-dim tnum">
                           {selectedBank.bank_name} {selectedBank.iban ? `— ${selectedBank.iban}` : ""} {selectedBank.account_number ? `— ${selectedBank.account_number}` : ""}
                         </div>
                       </div>
                       {canCreate && (
                         <div className="flex gap-1.5">
-                          <Button className="!text-[12px]" onClick={() => setTxnModal("deposit")}>إيداع</Button>
-                          <Button variant="ghost" className="!text-[12px]" onClick={() => setTxnModal("withdrawal")}>سحب</Button>
-                          <Button variant="danger" className="!text-[12px]" onClick={() => removeBankAccount(selectedBank)}>إلغاء الحساب</Button>
+                          <Button size="sm" onClick={() => setTxnModal("deposit")}>إيداع</Button>
+                          <Button variant="ghost" size="sm" onClick={() => setTxnModal("withdrawal")}>سحب</Button>
+                          <Button variant="danger" size="sm" onClick={() => removeBankAccount(selectedBank)}>إلغاء الحساب</Button>
                         </div>
                       )}
                     </div>
                     {recon && (
                       <div className="mt-3 grid gap-2 sm:grid-cols-3">
                         <div className="rounded-lg border border-line p-2.5">
-                          <div className="text-[11px] text-text-dim">الرصيد الدفتري</div>
-                          <div className="tnum text-[15px] font-black">{money(recon.bookBalance)}</div>
+                          <div className="text-t-xs text-text-dim">الرصيد الدفتري</div>
+                          <div className="tnum text-t-lg font-black">{money(recon.bookBalance)}</div>
                         </div>
                         <div className="rounded-lg border border-line p-2.5">
-                          <div className="text-[11px] text-text-dim">حركات غير مسوّاة</div>
-                          <div className="tnum text-[15px] font-black">{recon.unreconciledSystemTxns}</div>
+                          <div className="text-t-xs text-text-dim">حركات غير مسوّاة</div>
+                          <div className="tnum text-t-lg font-black">{recon.unreconciledSystemTxns}</div>
                         </div>
                         <div className="rounded-lg border border-line p-2.5">
-                          <div className="text-[11px] text-text-dim">سطور كشف غير مطابَقة</div>
-                          <div className="tnum text-[15px] font-black">
+                          <div className="text-t-xs text-text-dim">سطور كشف غير مطابَقة</div>
+                          <div className="tnum text-t-lg font-black">
                             {recon.unmatchedStatementLines} <span className="text-text-dim">({money(recon.unmatchedStatementTotal)})</span>
                           </div>
                         </div>
@@ -499,18 +482,18 @@ export default function TreasuryPage() {
 
                   <Card className="!p-0">
                     <div className="flex items-center justify-between border-b border-line px-3 py-2">
-                      <div className="text-[12.5px] font-bold">حركات النظام</div>
+                      <div className="text-t-sm font-bold">حركات النظام</div>
                     </div>
                     <div className="max-h-64 overflow-y-auto divide-y divide-line">
-                      {bankTxns.length === 0 && <div className="p-3 text-center text-[12px] text-text-dim">لا حركات بعد</div>}
+                      {bankTxns.length === 0 && <div className="p-3 text-center text-t-sm text-text-dim">لا حركات بعد</div>}
                       {bankTxns.map((t) => (
-                        <div key={t.id} className="flex items-center justify-between px-3 py-2 text-[12.5px]">
+                        <div key={t.id} className="flex items-center justify-between px-3 py-2 text-t-sm">
                           <div>
                             <span className={t.txn_type === "deposit" ? "text-emerald" : "text-ember"}>
                               {t.txn_type === "deposit" ? "إيداع" : "سحب"}
                             </span>
                             {t.description && <span className="text-text-dim"> — {t.description}</span>}
-                            <div className="text-[10.5px] text-text-dim">{dtFmt(t.created_at)}</div>
+                            <div className="text-t-xs text-text-dim">{dtFmt(t.created_at)}</div>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="tnum font-bold">{money(t.amount)}</span>
@@ -525,17 +508,17 @@ export default function TreasuryPage() {
 
                   <Card className="!p-0">
                     <div className="flex items-center justify-between border-b border-line px-3 py-2">
-                      <div className="text-[12.5px] font-bold">كشف حساب البنك (للتسوية)</div>
+                      <div className="text-t-sm font-bold">كشف حساب البنك (للتسوية)</div>
                       {canCreate && (
-                        <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => setStmtModal(true)}>
+                        <Button variant="ghost" size="xs" onClick={() => setStmtModal(true)}>
                           + سطر من الكشف
                         </Button>
                       )}
                     </div>
                     <div className="max-h-72 overflow-y-auto divide-y divide-line">
-                      {stmtLines.length === 0 && <div className="p-3 text-center text-[12px] text-text-dim">لا سطور كشف بعد</div>}
+                      {stmtLines.length === 0 && <div className="p-3 text-center text-t-sm text-text-dim">لا سطور كشف بعد</div>}
                       {stmtLines.map((l) => (
-                        <div key={l.id} className="flex items-center justify-between px-3 py-2 text-[12.5px]">
+                        <div key={l.id} className="flex items-center justify-between px-3 py-2 text-t-sm">
                           <div>
                             <span className="tnum">{l.stmt_date}</span>
                             {l.description && <span className="text-text-dim"> — {l.description}</span>}
@@ -543,9 +526,9 @@ export default function TreasuryPage() {
                           <div className="flex items-center gap-2">
                             <span className={`tnum font-bold ${l.amount >= 0 ? "text-emerald" : "text-ember"}`}>{money(l.amount)}</span>
                             {l.matched_txn_id ? (
-                              <Button variant="ghost" className="!px-2 !py-0.5 !text-[11px]" onClick={() => doUnmatch(l)}>فك المطابقة</Button>
+                              <Button variant="ghost" size="xs" onClick={() => doUnmatch(l)}>فك المطابقة</Button>
                             ) : (
-                              <Button className="!px-2 !py-0.5 !text-[11px]" onClick={() => { setMatchFor(l); setMatchTxnId(""); }}>مطابقة</Button>
+                              <Button size="xs" onClick={() => { setMatchFor(l); setMatchTxnId(""); }}>مطابقة</Button>
                             )}
                           </div>
                         </div>
@@ -604,7 +587,7 @@ export default function TreasuryPage() {
                     {custResults.map((c) => (
                       <button key={c.id}
                               onClick={() => { setForm({ ...form, customerId: c.id, customerName: c.name }); setCustResults([]); }}
-                              className="block w-full px-3 py-2 text-right text-[12.5px] hover:bg-ink-3">
+                              className="block w-full px-3 py-2 text-right text-t-sm hover:bg-ink-3">
                         {c.name} {c.phone ? `— ${c.phone}` : ""}
                       </button>
                     ))}
@@ -642,7 +625,7 @@ export default function TreasuryPage() {
                 </Field>
               )}
               {overBalance && selectedEmp && (
-                <div className="text-[12px] font-bold text-ember">
+                <div className="text-t-sm font-bold text-ember">
                   المبلغ أكبر من رصيد السلفة ({money(selectedEmp.advanceBalance)} ر.س)
                 </div>
               )}
@@ -686,7 +669,7 @@ export default function TreasuryPage() {
 
           <ErrorNote msg={err} />
           <button onClick={save} disabled={!canSave}
-                  className={`flex w-full items-center justify-center gap-1 rounded-xl py-3 text-[14px] font-black text-white transition hover:brightness-110 disabled:opacity-40
+                  className={`flex w-full items-center justify-center gap-1 rounded-card py-3 text-t-md font-black text-white transition hover:brightness-110 disabled:opacity-40
                     ${modal === "receipt" ? "bg-emerald" : "bg-ember"}`}>
             {busy ? "جارِ الحفظ..." : <><MIcon name="check" className="!text-[16px]" /> {modal === "receipt" ? "حفظ وطباعة سند القبض" : "حفظ وطباعة سند الصرف"}</>}
           </button>
@@ -752,7 +735,7 @@ export default function TreasuryPage() {
           </div>
           <ErrorNote msg={banksErr} />
           <button onClick={saveBankTxn} disabled={bankBusy || Number(txnForm.amount) <= 0}
-                  className={`flex w-full items-center justify-center gap-1 rounded-xl py-3 text-[14px] font-black text-white transition hover:brightness-110 disabled:opacity-40
+                  className={`flex w-full items-center justify-center gap-1 rounded-card py-3 text-t-md font-black text-white transition hover:brightness-110 disabled:opacity-40
                     ${txnModal === "deposit" ? "bg-emerald" : "bg-ember"}`}>
             {bankBusy ? "جارِ الحفظ..." : txnModal === "deposit" ? "تأكيد الإيداع" : "تأكيد السحب"}
           </button>
@@ -788,7 +771,7 @@ export default function TreasuryPage() {
       <Modal open={!!matchFor} onClose={() => setMatchFor(null)} title="مطابقة سطر الكشف">
         <div className="space-y-3">
           {matchFor && (
-            <div className="rounded-lg border border-line p-2.5 text-[12.5px]">
+            <div className="rounded-lg border border-line p-2.5 text-t-sm">
               <div className="tnum">{matchFor.stmt_date}</div>
               <div className="tnum font-bold">{money(matchFor.amount)}</div>
               {matchFor.description && <div className="text-text-dim">{matchFor.description}</div>}
