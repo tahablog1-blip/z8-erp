@@ -276,7 +276,7 @@ export default function SalesPage() {
     finally { setPickBusy(false); }
   }
 
-  // ── قائمة الإعدادات السريعة ⚙ ──
+  // ── قائمة الإعدادات السريعة ──
   const [gearOpen, setGearOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [autoPrintOn, setAutoPrintOn] = useState(true);
@@ -381,7 +381,7 @@ export default function SalesPage() {
         });
       if (lines.length) {
         setCart(lines);
-        setPrefillMsg("🧾 تم تجهيز الفاتورة مثل آخر مرة — راجع الأصناف واضغط ادفع الآن");
+        setPrefillMsg("تم تجهيز الفاتورة مثل آخر مرة — راجع الأصناف واضغط ادفع الآن");
       }
     } catch { /* تجاهل أي تنسيق قديم */ }
   }
@@ -545,7 +545,7 @@ export default function SalesPage() {
           qty: it.isService ? 1 : it.qty,
           unitPrice: it.unitPrice, unitPriceVat: it.unitPriceVat, isService: it.isService,
         })));
-      setPrefillMsg("🧾 تم تجهيز الفاتورة تلقائياً — راجع الأصناف واضغط ادفع الآن");
+      setPrefillMsg("تم تجهيز الفاتورة تلقائياً — راجع الأصناف واضغط ادفع الآن");
     }
   }
 
@@ -583,7 +583,7 @@ export default function SalesPage() {
         isService: !!p.is_service,
       }];
     });
-    showToast(`✓ ${productLabel(p)}`);
+    showToast(`${productLabel(p)}`);
     setProductQuery("");
   }
   function setLineQty(productId: string, qty: number) {
@@ -783,7 +783,7 @@ export default function SalesPage() {
              title={`فاتورة ${viewInvoice?.invoice_no ?? ""}`}>
         {viewInvoice && (
           <div className="space-y-3">
-            <div className="grid gap-2 rounded-lg bg-ink-3 p-3 text-[12.5px] sm:grid-cols-3">
+            <div className="grid gap-2 rounded-lg bg-ink-3 p-3 text-t-sm sm:grid-cols-3">
               <div><span className="text-text-dim">العميل:</span> <b>{viewInvoice.customer_name || "بيع نقدي"}</b></div>
               <div><span className="text-text-dim">الفرع:</span> <b>{viewInvoice.branch_name}</b></div>
               <div><span className="text-text-dim">التاريخ:</span> <b>{dateFmt(viewInvoice.issued_at)}</b></div>
@@ -812,9 +812,9 @@ export default function SalesPage() {
             </div>
 
             <div className="overflow-x-auto rounded-lg border border-line">
-              <table className="w-full border-collapse text-[12.5px]">
+              <table className="w-full border-collapse text-t-sm">
                 <thead>
-                  <tr className="bg-ink-3 text-[11.5px] font-extrabold text-text-dim">
+                  <tr className="bg-ink-3 text-t-xs font-extrabold text-text-dim">
                     <th className="px-3 py-2 text-right">الصنف</th>
                     <th className="w-16 px-2 py-2 text-right">الكمية</th>
                     <th className="w-24 px-2 py-2 text-right">السعر</th>
@@ -827,7 +827,7 @@ export default function SalesPage() {
                       <td className="px-3 py-1.5">
                         {it.label}
                         {it.returned_qty > 0 && (
-                          <span className="mr-1.5 rounded-full bg-ember-bg px-2 py-0.5 text-[10px] font-bold text-ember">
+                          <span className="mr-1.5 rounded-full bg-ember-bg px-2 py-0.5 text-t-xs font-bold text-ember">
                             مرتجع {it.returned_qty}
                           </span>
                         )}
@@ -841,7 +841,7 @@ export default function SalesPage() {
               </table>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-[12.5px]">
+            <div className="grid grid-cols-3 gap-2 text-t-sm">
               <div className="rounded-lg bg-ink-3 p-2.5 text-center">
                 <div className="text-text-dim">قبل الضريبة</div>
                 <div className="tnum font-bold">{money(viewInvoice.total_ex)}</div>
@@ -858,7 +858,7 @@ export default function SalesPage() {
 
             <div className="flex flex-wrap gap-2">
               {viewInvoice.payments.map((p) => (
-                <span key={p.id} className="rounded-full bg-ink-3 px-3 py-1 text-[11.5px] font-bold">
+                <span key={p.id} className="rounded-full bg-ink-3 px-3 py-1 text-t-xs font-bold">
                   {PAYMENT_LABELS[p.method]}: <span className="tnum">{money(p.amount)}</span>
                 </span>
               ))}
@@ -868,11 +868,11 @@ export default function SalesPage() {
 
             {viewInvoice.returns.length > 0 && (
               <div className="space-y-1.5 rounded-lg border border-line p-3">
-                <div className="flex items-center gap-1.5 text-[12px] font-extrabold text-text-dim">
+                <div className="flex items-center gap-1.5 text-t-sm font-extrabold text-text-dim">
                   <MIcon name="assignment_return" className="!text-[16px]" /> مرتجعات جزئية سابقة
                 </div>
                 {viewInvoice.returns.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between text-[12px]">
+                  <div key={r.id} className="flex items-center justify-between text-t-sm">
                     <span>
                       <span className="tnum font-bold">{r.return_no}</span>
                       {" — "}{r.items.map((it) => `${it.label} ×${it.qty}`).join("، ")}
@@ -911,13 +911,13 @@ export default function SalesPage() {
       <Modal open={partialReturnOpen} onClose={() => setPartialReturnOpen(false)} title="مرتجع جزئي">
         {viewInvoice && (
           <div className="space-y-3">
-            <p className="text-[12.5px] text-text-dim">
+            <p className="text-t-sm text-text-dim">
               حدّد الكمية المطلوب إرجاعها من كل صنف — السعر نفس سعر البند في الفاتورة الأصلية.
             </p>
             <div className="overflow-x-auto rounded-lg border border-line">
-              <table className="w-full border-collapse text-[12.5px]">
+              <table className="w-full border-collapse text-t-sm">
                 <thead>
-                  <tr className="bg-ink-3 text-[11.5px] font-extrabold text-text-dim">
+                  <tr className="bg-ink-3 text-t-xs font-extrabold text-text-dim">
                     <th className="px-3 py-2 text-right">الصنف</th>
                     <th className="w-20 px-2 py-2 text-right">المتاح</th>
                     <th className="w-24 px-2 py-2 text-right">كمية الإرجاع</th>
@@ -963,7 +963,7 @@ export default function SalesPage() {
             <ErrorNote msg={returnErr} />
 
             <div className="flex items-center justify-between pt-1">
-              <div className="text-[13px]">
+              <div className="text-t-md">
                 إجمالي المرتجع: <span className="tnum font-black text-ember">{money(partialReturnTotal)}</span>
               </div>
               <div className="flex gap-2">
@@ -997,17 +997,17 @@ export default function SalesPage() {
   if (!shift) {
     return (
       <div className="mx-auto max-w-md space-y-4">
-        <h1 className="text-[19px] font-extrabold">{posTitle}</h1>
+        <h1 className="page-title">{posTitle}</h1>
         <ErrorNote msg={pageErr} />
 
       {prefillMsg && (
-        <div className="flex items-center justify-between rounded-lg border border-petrol/40 bg-petrol-soft px-4 py-2.5 text-[12.5px] font-bold text-petrol">
+        <div className="flex items-center justify-between rounded-lg border border-petrol/40 bg-petrol-soft px-4 py-2.5 text-t-sm font-bold text-petrol">
           <span>{prefillMsg}</span>
           <button onClick={() => setPrefillMsg("")} className="text-petrol/60 hover:text-petrol"><MIcon name="close" className="!text-[15px]" /></button>
         </div>
       )}
         <Card>
-          <p className="mb-3 text-[13px] text-text-dim">
+          <p className="mb-3 text-t-md text-text-dim">
             لازم تفتح وردية الأول قبل ما تقدر تصدر فواتير.
           </p>
           <div className="space-y-3">
@@ -1030,15 +1030,15 @@ export default function SalesPage() {
     );
   }
 
-  const chipCls = "flex items-center gap-2 rounded-xl border border-line bg-ink-2 px-3.5 py-2 text-[12px] font-bold transition hover:border-petrol";
+  const chipCls = "flex items-center gap-2 rounded-card border border-line bg-ink-2 px-3.5 py-2 text-t-sm font-bold transition hover:border-petrol";
 
   return (
     <div className="space-y-3">
       {/* ══════════ الشريط العلوي: العنوان + الوردية + التبويبات ══════════ */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <h1 className="text-[19px] font-extrabold">{posTitle}</h1>
-          <div className="flex overflow-hidden rounded-lg border border-line text-[12px] font-bold">
+          <h1 className="page-title">{posTitle}</h1>
+          <div className="flex overflow-hidden rounded-lg border border-line text-t-sm font-bold">
             <button onClick={() => setScreen("pos")}
                     className={`px-4 py-1.5 ${screen === "pos" ? "bg-petrol text-white" : "bg-ink-2 text-text-dim hover:text-text"}`}>
               نقطة البيع
@@ -1053,14 +1053,14 @@ export default function SalesPage() {
         </div>
         <div className="flex items-center gap-2">
         {/* حالة الوردية: لمبة + نشطة */}
-        <div className="flex items-center gap-2 rounded-lg border border-line bg-ink-2 px-3 py-1.5 text-[12.5px] font-bold">
+        <div className="flex items-center gap-2 rounded-lg border border-line bg-ink-2 px-3 py-1.5 text-t-sm font-bold">
           <span className="relative flex h-2.5 w-2.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald opacity-60" />
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald" />
           </span>
           الوردية: نشطة
         </div>
-        {/* ⚙ الإعدادات — الوردية والتقارير والتفضيلات كلها هنا */}
+        {/* الإعدادات — الوردية والتقارير والتفضيلات كلها هنا */}
         <div className="relative">
           <button onClick={() => setGearOpen((v) => !v)} aria-label="الإعدادات" title="الإعدادات — الوردية والتقارير"
                   className="flex items-center justify-center rounded-full p-1.5 transition hover:rotate-45"
@@ -1068,9 +1068,9 @@ export default function SalesPage() {
             <MIcon name="settings" className="!text-[24px]" />
           </button>
           {gearOpen && (
-            <div className="absolute left-0 z-30 mt-1 w-72 space-y-3 rounded-xl border border-line bg-ink-2 p-3.5 shadow-panel">
+            <div className="absolute left-0 z-30 mt-1 w-72 space-y-3 rounded-card border border-line bg-ink-2 p-3.5 shadow-panel">
               <div className="space-y-2 rounded-lg bg-ink-3 p-2.5">
-                <div className="flex items-center justify-between text-[12.5px] font-bold">
+                <div className="flex items-center justify-between text-t-sm font-bold">
                   <span className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full bg-emerald" />
                     وردية {shift.shift.branch_name} — نشطة
@@ -1088,17 +1088,17 @@ export default function SalesPage() {
                   </Button>
                 </div>
               </div>
-              <label className="flex cursor-pointer items-center justify-between text-[12.5px] font-bold">
-                الوضع الليلي 🌙
+              <label className="flex cursor-pointer items-center justify-between text-t-sm font-bold">
+                الوضع الليلي
                 <Switch checked={darkMode} onChange={toggleDark} />
               </label>
-              <label className="flex cursor-pointer items-center justify-between text-[12.5px] font-bold">
-                الطباعة التلقائية 🖨
+              <label className="flex cursor-pointer items-center justify-between text-t-sm font-bold">
+                الطباعة التلقائية
                 <Switch checked={autoPrintOn} onChange={toggleAutoPrint} />
               </label>
-              <div className="flex items-center justify-between text-[12.5px] font-bold text-text-dim">
-                اللغة 🌐
-                <span className="rounded-full bg-ink-3 px-2 py-0.5 text-[10.5px]">العربية — English قريباً</span>
+              <div className="flex items-center justify-between text-t-sm font-bold text-text-dim">
+                اللغة
+                <span className="rounded-full bg-ink-3 px-2 py-0.5 text-t-xs">العربية — English قريباً</span>
               </div>
             </div>
           )}
@@ -1115,12 +1115,12 @@ export default function SalesPage() {
           { icon: "task_alt", label: "خرجت اليوم", value: stats?.cars.doneToday ?? "…", sub: "", color: "#157F4C", onClick: () => {}, href: "/cars" },
         ].map((t) => {
           const inner = (
-            <div className="flex h-full flex-col items-center justify-center gap-0.5 rounded-xl border border-line bg-ink-2 px-2 py-2 text-center shadow-card transition hover:-translate-y-0.5 hover:shadow-panel"
+            <div className="flex h-full flex-col items-center justify-center gap-0.5 rounded-card border border-line bg-ink-2 px-2 py-2 text-center shadow-card transition hover:-translate-y-0.5 hover:shadow-panel"
                  style={{ borderTopWidth: 3, borderTopColor: t.color }}>
               <span style={{ color: t.color }}><MIcon name={t.icon} className="!text-[19px]" /></span>
-              <span className="tnum text-[16px] font-black leading-none" style={{ color: t.color }}>{t.value}</span>
-              <span className="text-[10.5px] font-bold text-text-dim">{t.label}</span>
-              {t.sub && <span className="tnum text-[9.5px] text-text-dim">{t.sub}</span>}
+              <span className="tnum text-t-lg font-black leading-none" style={{ color: t.color }}>{t.value}</span>
+              <span className="text-t-xs font-bold text-text-dim">{t.label}</span>
+              {t.sub && <span className="tnum text-t-xs text-text-dim">{t.sub}</span>}
             </div>
           );
           return t.href
@@ -1134,13 +1134,13 @@ export default function SalesPage() {
 
       <ErrorNote msg={pageErr} />
       {!canCreateInvoice && (
-        <div className="rounded-xl bg-ember-bg px-4 py-3 text-[13px] font-bold text-ember">
-          ⛔ هذه الشاشة مخصصة لكاشير {posMode === "direct" ? "البيع المباشر" : "الخدمة"} — حسابك لا يملك صلاحيتها.
+        <div className="rounded-card bg-ember-bg px-4 py-3 text-t-md font-bold text-ember">
+          هذه الشاشة مخصصة لكاشير {posMode === "direct" ? "البيع المباشر" : "الخدمة"} — حسابك لا يملك صلاحيتها.
         </div>
       )}
 
       {toast && (
-        <div className="fixed bottom-6 right-1/2 z-50 translate-x-1/2 rounded-full bg-slate-900 px-5 py-2.5 text-[13px] font-bold text-white shadow-xl">
+        <div className="fixed bottom-6 right-1/2 z-50 translate-x-1/2 rounded-full bg-text px-5 py-2.5 text-t-md font-bold text-ink-2 shadow-lg">
           {toast}
         </div>
       )}
@@ -1151,15 +1151,15 @@ export default function SalesPage() {
       )}
 
       {lastInvoice && (
-        <div className="flex items-center justify-between rounded-lg border border-emerald/30 bg-emerald-bg px-4 py-2.5 text-[12.5px] font-bold text-emerald">
-          <span>✓ تم إصدار فاتورة {lastInvoice.invoice_no} بإجمالي {money(lastInvoice.total_inc)} ر.س</span>
+        <div className="flex items-center justify-between rounded-lg border border-emerald/30 bg-emerald-bg px-4 py-2.5 text-t-sm font-bold text-emerald">
+          <span>تم إصدار فاتورة {lastInvoice.invoice_no} بإجمالي {money(lastInvoice.total_inc)} ر.س</span>
           <div className="flex items-center gap-2">
             <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]" onClick={() => printById(lastInvoice.id)}>إعادة طباعة</Button>
             <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
                     onClick={() => window.open(`/api/invoices/${lastInvoice.id}/pdf`, "_blank")}>PDF</Button>
             <Button variant="ghost" className="!px-2.5 !py-1 !text-[11.5px]"
                     onClick={async () => {
-                      try { await api(`/invoices/${lastInvoice.id}/send-whatsapp`, { method: "POST" }); showToast("📲 جارٍ الإرسال واتساب"); }
+                      try { await api(`/invoices/${lastInvoice.id}/send-whatsapp`, { method: "POST" }); showToast("جارٍ الإرسال واتساب"); }
                       catch { showToast("تعذر الإرسال"); }
                     }}>واتساب</Button>
             <button onClick={() => setLastInvoice(null)} className="text-emerald/70 hover:text-emerald"><MIcon name="close" className="!text-[15px]" /></button>
@@ -1173,20 +1173,20 @@ export default function SalesPage() {
           {/* اختيار العميل / السيارة — نظيف بزرار واحد */}
           <div className="flex flex-wrap items-center gap-2">
             <button onClick={() => { setPickOpen(true); api<BillingQueueRow[]>("/cars/billing-queue").then(setQueue).catch(() => {}); setPickQuery(""); setNewCust(null); setPickErr(""); }}
-                    className="flex items-center gap-2 rounded-xl bg-petrol px-4 py-2 text-[13px] font-bold text-white shadow-card transition hover:brightness-110">
+                    className="flex items-center gap-2 rounded-card bg-petrol px-4 py-2 text-t-md font-bold text-white shadow-card transition hover:brightness-110">
               <MIcon name="person_add" className="!text-[19px] text-white" />
               {carId || customerId ? "تغيير العميل" : posMode === "service" ? "اختيار سيارة من الطابور" : "إضافة عميل"}
             </button>
             {(carId || customerId) ? (
-              <span className="flex items-center gap-2 rounded-xl border border-petrol bg-petrol-soft px-3.5 py-2 text-[12.5px] font-bold text-petrol">
-                {carId ? "🚗" : "👤"} {customerName || "عميل"}
+              <span className="flex items-center gap-2 rounded-card border border-petrol bg-petrol-soft px-3.5 py-2 text-t-sm font-bold text-petrol">
+                <MIcon name={carId ? "directions_car" : "person"} className="!text-[16px]" /> {customerName || "عميل"}
                 {carId && queue.find((r) => r.id === carId)?.plate && (
                   <span className="tnum">— {queue.find((r) => r.id === carId)?.plate}</span>
                 )}
                 <button onClick={resetSale} className="mr-1 text-petrol/60 hover:text-petrol" aria-label="إلغاء"><MIcon name="close" className="!text-[15px]" /></button>
               </span>
             ) : (
-              <span className="rounded-xl bg-ink-3 px-3.5 py-2 text-[12.5px] font-bold text-text-dim">{posMode === "direct" ? "بيع نقدي" : "اختار سيارة من الطابور 👈"}</span>
+              <span className="rounded-card bg-ink-3 px-3.5 py-2 text-t-sm font-bold text-text-dim">{posMode === "direct" ? "بيع نقدي" : "اختار سيارة من الطابور"}</span>
             )}
           </div>
 
@@ -1196,8 +1196,8 @@ export default function SalesPage() {
               <div className="flex items-center gap-2">
                 <Input id="pos-barcode" value={productQuery} onKeyDown={onSearchKey}
                        onChange={(e) => setProductQuery(e.target.value)}
-                       className="!w-72 shrink-0 !rounded-xl !py-2.5 !text-[13.5px] focus:!ring-2 focus:!ring-petrol/20"
-                       placeholder="🔍 امسح الباركود (F2) — البحث بالباركود فقط" autoFocus />
+                       className="!w-72 shrink-0 !rounded-card !py-2.5 !text-[13.5px] focus:!ring-2 focus:!ring-petrol/20"
+                       placeholder="امسح الباركود (F2) — البحث بالباركود فقط" autoFocus />
 
                 {/* سهم يمين */}
                 <button onClick={() => scrollCats(1)} aria-label="تمرير يميناً"
@@ -1218,7 +1218,7 @@ export default function SalesPage() {
                               className={`flex h-[58px] w-[88px] shrink-0 flex-col items-center justify-center gap-1 rounded-lg text-white shadow-card transition active:scale-[.94]
                                 ${activeCat === c.key ? "bg-petrol-deep text-white shadow-md" : "border border-line !bg-ink-2 !text-text-dim hover:border-petrol hover:!text-petrol"}`}>
                         <MIcon name={c.icon} className={`!text-[20px] ${activeCat === c.key ? "text-white" : "text-inherit"}`} />
-                        <span className="max-w-[84px] truncate px-0.5 text-[10.5px] font-black leading-tight">{c.label}</span>
+                        <span className="max-w-[84px] truncate px-0.5 text-t-xs font-black leading-tight">{c.label}</span>
                       </button>
                     ))}
                   </div>
@@ -1234,8 +1234,8 @@ export default function SalesPage() {
               <div className="grid max-h-[calc(100vh-300px)] grid-cols-2 content-start gap-2 overflow-y-auto p-0.5 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
                 {products.length === 0 ? (
                   Array.from({ length: 10 }).map((_, i) => (
-                    <div key={i} className="rounded-2xl border border-line bg-ink-2 p-2">
-                      <div className="h-16 animate-pulse rounded-xl bg-ink-3" />
+                    <div key={i} className="rounded-card border border-line bg-ink-2 p-2">
+                      <div className="h-16 animate-pulse rounded-card bg-ink-3" />
                       <div className="mt-2 h-3 animate-pulse rounded-full bg-ink-3" />
                       <div className="mt-1.5 h-3 w-2/3 animate-pulse rounded-full bg-ink-3" />
                     </div>
@@ -1243,8 +1243,8 @@ export default function SalesPage() {
                 ) : gridProducts.length === 0 ? (
                   <div className="col-span-full flex flex-col items-center gap-2 py-12 text-text-dim">
                     <MIcon name="barcode_scanner" className="!text-[40px]" />
-                    <p className="text-[13px] font-bold">لا توجد أصناف مطابقة لهذا الباركود</p>
-                    <p className="text-[11.5px]">امسح باركوداً آخر — أو اختر فئة من الأعلى</p>
+                    <p className="text-t-md font-bold">لا توجد أصناف مطابقة لهذا الباركود</p>
+                    <p className="text-t-xs">امسح باركوداً آخر — أو اختر فئة من الأعلى</p>
                   </div>
                 ) : gridProducts.map((p) => {
                   const st = p.is_service ? null : branchStock(p.id);
@@ -1256,9 +1256,9 @@ export default function SalesPage() {
                     : { cls: "bg-emerald-bg text-emerald", label: `متوفر ${st}` };
                   return (
                     <button key={p.id} onClick={() => addProduct(p)}
-                            className="group relative flex flex-col rounded-2xl bg-ink-2 p-2 text-center shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg active:translate-y-0 active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol"
+                            className="group relative flex flex-col rounded-card bg-ink-2 p-2 text-center shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg active:translate-y-0 active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol"
                             style={{ border: `1.5px solid ${inCart ? "var(--emerald)" : "var(--line)"}` }}>
-                      <div className="relative grid h-16 place-items-center overflow-hidden rounded-xl bg-ink-3">
+                      <div className="relative grid h-16 place-items-center overflow-hidden rounded-card bg-ink-3">
                         <span className="text-text-dim transition-transform duration-200 group-hover:scale-110">
                           <MIcon name={catIcon(p.category, p.is_service)} className="!text-[32px]" />
                         </span>
@@ -1268,19 +1268,19 @@ export default function SalesPage() {
                           </span>
                         )}
                         {stockTone && (
-                          <span className={`tnum absolute left-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-[8.5px] font-black ${stockTone.cls}`}>{stockTone.label}</span>
+                          <span className={`tnum absolute left-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-t-xs font-black ${stockTone.cls}`}>{stockTone.label}</span>
                         )}
                       </div>
-                      <div className="mt-1.5 line-clamp-2 min-h-[32px] text-[12px] font-bold leading-tight text-text">
+                      <div className="mt-1.5 line-clamp-2 min-h-[32px] text-t-sm font-bold leading-tight text-text">
                         {p.name}{p.spec ? ` — ${p.spec}` : ""}
                       </div>
-                      {p.barcode && <div className="tnum text-[9px] text-text-dim">{p.barcode}</div>}
+                      {p.barcode && <div className="tnum text-t-xs text-text-dim">{p.barcode}</div>}
                       <div className="mt-auto flex items-center justify-between pt-1.5">
                         <span className="grid h-8 w-8 place-items-center rounded-full bg-emerald text-white shadow-md transition-all duration-200 group-hover:scale-110 group-hover:brightness-105 group-active:scale-90">
                           <MIcon name="add" className="!text-[18px] text-white" />
                         </span>
-                        <span className="tnum text-[15px] font-black leading-none text-text">
-                          {money(Number(p.price_vat))}<span className="mr-0.5 text-[9px] font-bold text-text-dim">ر.س</span>
+                        <span className="tnum text-t-lg font-black leading-none text-text">
+                          {money(Number(p.price_vat))}<span className="mr-0.5 text-t-xs font-bold text-text-dim">ر.س</span>
                         </span>
                       </div>
                     </button>
@@ -1293,17 +1293,17 @@ export default function SalesPage() {
             <Card className="!p-0 overflow-hidden lg:sticky lg:top-3">
               <div className="flex items-center justify-between bg-petrol-deep px-4 py-3 text-white">
                 <div className="min-w-0">
-                  <h2 className="flex items-center gap-1.5 text-[13.5px] font-black">
+                  <h2 className="flex items-center gap-1.5 text-t-md font-black">
                     <MIcon name="shopping_cart" className="!text-[18px] text-white" /> الفاتورة
                   </h2>
-                  <div className="truncate text-[10.5px] font-bold text-white/60">
+                  <div className="truncate text-t-xs font-bold text-white/60">
                     {customerName || "بيع نقدي"}{carId ? " · سيارة في الخدمة" : ""}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="tnum rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold">{cart.length} صنف</span>
+                  <span className="tnum rounded-full bg-white/15 px-2 py-0.5 text-t-xs font-bold">{cart.length} صنف</span>
                   <button onClick={() => setHeldModal(true)}
-                          className="rounded-lg bg-white/15 px-2.5 py-1 text-[10.5px] font-black hover:bg-white/25">
+                          className="rounded-lg bg-white/15 px-2.5 py-1 text-t-xs font-black hover:bg-white/25">
                     المعلقة {held.length > 0 && <span className="tnum rounded-full bg-brass px-1.5 text-petrol-deep">{held.length}</span>}
                   </button>
                 </div>
@@ -1313,14 +1313,14 @@ export default function SalesPage() {
                 {cart.length === 0 ? (
                   <div className="flex flex-col items-center gap-2 px-4 py-10 text-text-dim">
                     <MIcon name="shopping_cart" className="!text-[34px]" />
-                    <p className="text-[12.5px] font-bold">الفاتورة فارغة</p>
-                    <p className="text-[11px]">امسح الباركود أو اضغط بطاقة الصنف — وسيظهر هنا فوراً</p>
+                    <p className="text-t-sm font-bold">الفاتورة فارغة</p>
+                    <p className="text-t-xs">امسح الباركود أو اضغط بطاقة الصنف — وسيظهر هنا فوراً</p>
                   </div>
                 ) : cart.map((l) => (
                   <div key={l.productId} className="px-4 py-2">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 text-[12px] font-bold leading-snug">
-                        {l.isService && <span className="ml-1 text-[10px] text-brass">🛠</span>}
+                      <div className="min-w-0 text-t-sm font-bold leading-snug">
+                        {l.isService && <span className="ml-1 text-t-xs text-brass"></span>}
                         {l.label}
                       </div>
                       <button onClick={() => removeLine(l.productId)} aria-label="حذف"
@@ -1328,24 +1328,24 @@ export default function SalesPage() {
                     </div>
                     <div className="mt-1 flex items-center justify-between">
                       {l.isService ? (
-                        <span className="rounded-full bg-brass-soft px-2 py-0.5 text-[10px] font-bold text-brass">خدمة — كمية ثابتة</span>
+                        <span className="rounded-full bg-brass-soft px-2 py-0.5 text-t-xs font-bold text-brass">خدمة — كمية ثابتة</span>
                       ) : (
                         <div className="flex items-center gap-1">
                           <button onClick={() => cartonDown(l.productId)} title="− كرتونة (12 قطعة)"
-                                  className="h-6 w-6 rounded-md bg-ink-3 text-[13px] font-black hover:bg-ink-4">−</button>
-                          <span className="tnum w-8 text-center text-[13px] font-bold">{l.qty}</span>
+                                  className="h-6 w-6 rounded-md bg-ink-3 text-t-md font-black hover:bg-ink-4">−</button>
+                          <span className="tnum w-8 text-center text-t-md font-bold">{l.qty}</span>
                           <button onClick={() => cartonUp(l.productId)} title="+ كرتونة (12 قطعة)"
-                                  className="h-6 w-6 rounded-md bg-ink-3 text-[13px] font-black hover:bg-ink-4">+</button>
+                                  className="h-6 w-6 rounded-md bg-ink-3 text-t-md font-black hover:bg-ink-4">+</button>
                         </div>
                       )}
-                      <span className="tnum text-[13px] font-black">{money(l.unitPriceVat * l.qty)}</span>
+                      <span className="tnum text-t-md font-black">{money(l.unitPriceVat * l.qty)}</span>
                     </div>
                   </div>
                 ))}
               </div>
 
               <div className="space-y-2.5 border-t border-dashed border-line p-4 pb-2">
-                <div className="flex items-center justify-between text-[11.5px] font-bold text-text-dim">
+                <div className="flex items-center justify-between text-t-xs font-bold text-text-dim">
                   <span>الإجمالي شامل الضريبة</span>
                   <span className="tnum">{cart.length} صنف</span>
                 </div>
@@ -1357,7 +1357,7 @@ export default function SalesPage() {
                               const ck = await api<{ items: { label: string; status: string }[] }>(`/cars/${carId}/checklist`);
                               const needs = (ck.items || []).filter((i) => i.status === "needs");
                               if (needs.length) {
-                                await appAlert(`🚫 لا يمكن الدفع — مشاكل مفتوحة على السيارة:\n• ${needs.map((i) => i.label).join("\n• ")}`);
+                                await appAlert(`لا يمكن الدفع — مشاكل مفتوحة على السيارة:\n• ${needs.map((i) => i.label).join("\n• ")}`);
                                 return;
                               }
                             } catch { /* */ }
@@ -1382,13 +1382,13 @@ export default function SalesPage() {
                         }}
                         disabled={cart.length === 0 || !branchId || !canCreateInvoice}
                         id="pos-pay"
-                        className="flex w-full items-center justify-between rounded-2xl bg-emerald px-5 py-4 text-white shadow-md transition-all duration-200 hover:-translate-y-px hover:shadow-lg hover:brightness-105 active:translate-y-0 active:scale-[0.99] disabled:opacity-40">
-                  <span className="flex items-center gap-2 text-[15.5px] font-black">
+                        className="flex w-full items-center justify-between rounded-card bg-emerald px-5 py-4 text-white shadow-md transition-all duration-200 hover:-translate-y-px hover:shadow-lg hover:brightness-105 active:translate-y-0 active:scale-[0.99] disabled:opacity-40">
+                  <span className="flex items-center gap-2 text-t-lg font-black">
                     <MIcon name={scanBusy ? "videocam" : "payments"} className="!text-[21px] text-white" />
                     {scanBusy ? "الكاميرا تفحص..." : "ادفع الآن"}
-                    <kbd className="rounded-md bg-white/20 px-1.5 py-0.5 text-[9.5px] font-bold">F4</kbd>
+                    <kbd className="rounded-md bg-white/20 px-1.5 py-0.5 text-t-xs font-bold">F4</kbd>
                   </span>
-                  <span className="tnum text-[21px] font-black">{money(totalInc)} <span className="text-[11px]">ر.س</span></span>
+                  <span className="tnum text-t-2xl font-black">{money(totalInc)} <span className="text-t-xs">ر.س</span></span>
                 </button>
                 <Button variant="ghost" className="w-full justify-center !text-[11.5px]" disabled={cart.length === 0}
                         onClick={() => { setHoldNote(""); setHoldModal(true); }}>
@@ -1404,28 +1404,28 @@ export default function SalesPage() {
           {/* ══════════ خطوة 2: شاشة الدفع ══════════ */}
           {step === "pay" && (
             <div className="fixed inset-0 z-40 grid place-items-center bg-black/50 p-4" onClick={() => setStep("cart")}>
-              <div className="w-full max-w-md space-y-4 rounded-2xl border border-line bg-ink-2 p-5 shadow-panel"
+              <div className="w-full max-w-md space-y-4 rounded-card border border-line bg-ink-2 p-5 shadow-panel"
                    onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between">
-                  <h2 className="text-[16px] font-extrabold">إتمام الدفع</h2>
+                  <h2 className="text-t-lg font-extrabold">إتمام الدفع</h2>
                   <button onClick={() => setStep("cart")} className="text-text-dim hover:text-text"><MIcon name="close" className="!text-[16px]" /></button>
                 </div>
 
-                <div className="rounded-xl bg-petrol-deep px-4 py-4 text-center text-white">
-                  <div className="text-[11px] font-bold text-white/70">المطلوب — {cart.length} صنف</div>
+                <div className="rounded-card bg-petrol-deep px-4 py-4 text-center text-white">
+                  <div className="text-t-xs font-bold text-white/70">المطلوب — {cart.length} صنف</div>
                   {discountAmount > 0 && (
-                    <div className="tnum text-[13px] font-bold text-white/50 line-through">{money(totalInc)} ر.س</div>
+                    <div className="tnum text-t-md font-bold text-white/50 line-through">{money(totalInc)} ر.س</div>
                   )}
-                  <div className="tnum text-[30px] font-black">{money(totalAfterDiscount)} <span className="text-[14px]">ر.س</span></div>
+                  <div className="tnum text-t-3xl font-black">{money(totalAfterDiscount)} <span className="text-t-md">ر.س</span></div>
                   {discountAmount > 0 && (
-                    <div className="tnum text-[11px] font-bold text-emerald">خصم {money(discountAmount)} ر.س مُطبَّق</div>
+                    <div className="tnum text-t-xs font-bold text-emerald">خصم {money(discountAmount)} ر.س مُطبَّق</div>
                   )}
                 </div>
 
                 {/* ── خصم الفاتورة — الحد الفعلي يُفرض من الباك اند حسب دور الموظف ── */}
-                <details className="rounded-xl border border-line bg-ink-2 px-3 py-2">
-                  <summary className="cursor-pointer text-[12px] font-bold text-text-dim">
-                    🏷 إضافة خصم على الفاتورة {discountAmount > 0 && <span className="text-emerald">({money(discountAmount)} ر.س)</span>}
+                <details className="rounded-card border border-line bg-ink-2 px-3 py-2">
+                  <summary className="cursor-pointer text-t-sm font-bold text-text-dim">
+                    إضافة خصم على الفاتورة {discountAmount > 0 && <span className="text-emerald">({money(discountAmount)} ر.س)</span>}
                   </summary>
                   <div className="mt-2 grid gap-2 sm:grid-cols-2">
                     <Input type="number" min={0} step="0.01" className="tnum" placeholder="مبلغ الخصم (ر.س)"
@@ -1435,7 +1435,7 @@ export default function SalesPage() {
                   </div>
                   {activeContract && (
                     <button type="button"
-                      className="mt-2 w-full rounded-lg bg-petrol/10 px-3 py-1.5 text-[11.5px] font-bold text-petrol hover:bg-petrol/20"
+                      className="mt-2 w-full rounded-lg bg-petrol/10 px-3 py-1.5 text-t-xs font-bold text-petrol hover:bg-petrol/20"
                       onClick={() => {
                         const amt = +(totalInc * (activeContract.contract_discount_pct! / 100)).toFixed(2);
                         setDiscountInput(String(amt));
@@ -1456,7 +1456,7 @@ export default function SalesPage() {
                       <div className="absolute z-10 mt-1 w-full rounded-lg border border-line bg-ink-2 shadow-panel">
                         {customerResults.map((c) => (
                           <button key={c.id} onClick={() => { setCustomerId(c.id); setCustomerName(c.name); setCustomerResults([]); }}
-                                  className="block w-full px-3 py-2 text-right text-[12.5px] hover:bg-ink-3">
+                                  className="block w-full px-3 py-2 text-right text-t-sm hover:bg-ink-3">
                             {c.name} {c.phone ? `— ${c.phone}` : ""}
                           </button>
                         ))}
@@ -1486,8 +1486,8 @@ export default function SalesPage() {
                   ))}
                   <div className="flex items-center justify-between">
                     <Button variant="ghost" className="!text-[11px]" onClick={addPaymentLine}>+ طريقة أخرى</Button>
-                    <span className={`tnum text-[12.5px] font-bold ${Math.abs(remaining) > 0.01 ? "text-ember" : "text-emerald"}`}>
-                      {Math.abs(remaining) > 0.01 ? `المتبقي: ${money(remaining)}` : "✓ المبلغ مكتمل"}
+                    <span className={`tnum text-t-sm font-bold ${Math.abs(remaining) > 0.01 ? "text-ember" : "text-emerald"}`}>
+                      {Math.abs(remaining) > 0.01 ? `المتبقي: ${money(remaining)}` : "المبلغ مكتمل"}
                     </span>
                   </div>
                 </div>
@@ -1495,11 +1495,11 @@ export default function SalesPage() {
                 <ErrorNote msg={saleErr} />
                 <button onClick={submitSale}
                         disabled={saleBusy || Math.abs(remaining) > 0.01}
-                        className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald py-3.5 text-[15px] font-black text-white transition hover:brightness-110 disabled:opacity-40">
+                        className="flex w-full items-center justify-center gap-1.5 rounded-card bg-emerald py-3.5 text-t-lg font-black text-white transition hover:brightness-110 disabled:opacity-40">
                   {saleBusy ? "جارِ الإصدار..." : <><MIcon name="payments" className="!text-[18px]" /> إتمام الدفع وإصدار الفاتورة</>}
                 </button>
                 <button onClick={() => setStep("cart")}
-                        className="flex w-full items-center justify-center gap-1 rounded-lg py-2 text-[12.5px] font-bold text-text-dim hover:text-text">
+                        className="flex w-full items-center justify-center gap-1 rounded-lg py-2 text-t-sm font-bold text-text-dim hover:text-text">
                   <MIcon name="arrow_forward" className="!text-[14px]" /> رجوع للسلة
                 </button>
               </div>
@@ -1518,26 +1518,26 @@ export default function SalesPage() {
         <div className="space-y-3">
           {!newCust ? (
             <>
-              <Input value={pickQuery} autoFocus placeholder="🔍 بحث بالاسم أو الجوال أو اللوحة..."
+              <Input value={pickQuery} autoFocus placeholder="بحث بالاسم أو الجوال أو اللوحة..."
                      onChange={(e) => { setPickQuery(e.target.value); searchCustomers(e.target.value); }} />
 
               <div className="max-h-72 space-y-3 overflow-y-auto">
                 {posMode === "service" && pickedQueue.length > 0 && (
                   <div>
-                    <p className="mb-1 text-[11px] font-extrabold text-text-dim">🚗 سيارات في الطابور</p>
+                    <p className="mb-1 text-t-xs font-extrabold text-text-dim">سيارات في الطابور</p>
                     <div className="divide-y divide-line rounded-lg border border-line">
                       {pickedQueue.map((row) => (
                         <button key={row.id}
                                 onClick={() => { startFromQueue(row); setPickOpen(false); }}
-                                className="flex w-full items-center justify-between px-3 py-2 text-right text-[12.5px] hover:bg-ink-3">
+                                className="flex w-full items-center justify-between px-3 py-2 text-right text-t-sm hover:bg-ink-3">
                           <span><b className="tnum">{row.plate || "بدون لوحة"}</b>
                             <span className="mr-2 text-text-dim">{row.customer_name || "—"}</span>
                             {row.prepared_items && row.prepared_items.length > 0 && (
-                              <span className="mr-2 rounded-full bg-emerald-bg px-2 py-0.5 text-[10px] font-black text-emerald">
+                              <span className="mr-2 rounded-full bg-emerald-bg px-2 py-0.5 text-t-xs font-black text-emerald">
                                 فاتورة جاهزة
                               </span>
                             )}</span>
-                          <span className="tnum text-[10.5px] text-text-dim">#{row.queue_no}</span>
+                          <span className="tnum text-t-xs text-text-dim">#{row.queue_no}</span>
                         </button>
                       ))}
                     </div>
@@ -1545,12 +1545,12 @@ export default function SalesPage() {
                 )}
                 {posMode === "direct" && customerResults.length > 0 && (
                   <div>
-                    <p className="mb-1 text-[11px] font-extrabold text-text-dim">👤 عملاء مسجّلون</p>
+                    <p className="mb-1 text-t-xs font-extrabold text-text-dim">عملاء مسجّلون</p>
                     <div className="divide-y divide-line rounded-lg border border-line">
                       {customerResults.map((c) => (
                         <button key={c.id}
                                 onClick={() => { setCarId(null); setCustomerId(c.id); setCustomerName(c.name); setCustomerResults([]); setPickOpen(false); }}
-                                className="block w-full px-3 py-2 text-right text-[12.5px] hover:bg-ink-3">
+                                className="block w-full px-3 py-2 text-right text-t-sm hover:bg-ink-3">
                           {c.name} {c.phone ? <span className="tnum text-text-dim">— {c.phone}</span> : ""}
                         </button>
                       ))}
@@ -1558,7 +1558,7 @@ export default function SalesPage() {
                   </div>
                 )}
                 {pickQuery.trim().length >= 2 && pickedQueue.length === 0 && customerResults.length === 0 && (
-                  <p className="py-4 text-center text-[12px] text-text-dim">لا نتائج — أضفه كعميل جديد 👇</p>
+                  <p className="py-4 text-center text-t-sm text-text-dim">لا نتائج — أضفه كعميل جديد</p>
                 )}
               </div>
 
@@ -1599,21 +1599,21 @@ export default function SalesPage() {
 
       {/* ══════════ الفحص الختامي بالكاميرا ══════════ */}
       <Modal open={!!scanModal} size="lg" onClose={() => setScanModal(null)}
-             title={scanModal?.blocked ? "🚫 الكاميرا رصدت أخطاء — لا يمكن الدفع" : "⚠ الكاميرا رصدت ملاحظات"}>
+             title={scanModal?.blocked ? "الكاميرا رصدت أخطاء — لا يمكن الدفع" : "الكاميرا رصدت ملاحظات"}>
         {scanModal && (
           <div className="space-y-3">
             {scanModal.compared && (
-              <p className="rounded-lg bg-emerald-bg px-3 py-1.5 text-center text-[11px] font-black text-emerald">
-                ✓ فحص مقارن — اللقطة الحالية اتقارنت بلقطة دخول السيارة نفسها
+              <p className="rounded-lg bg-emerald-bg px-3 py-1.5 text-center text-t-xs font-black text-emerald">
+                فحص مقارن — اللقطة الحالية اتقارنت بلقطة دخول السيارة نفسها
               </p>
             )}
             {scanModal.image && (
               <img src={`data:image/jpeg;base64,${scanModal.image}`} alt="لقطة الفحص"
-                   className="max-h-72 w-full rounded-xl border border-line object-contain" />
+                   className="max-h-72 w-full rounded-card border border-line object-contain" />
             )}
             <div className="space-y-1.5">
               {scanModal.faults.map((f, i) => (
-                <div key={i} className={`flex items-start gap-2 rounded-xl px-3 py-2 text-[12.5px] font-bold
+                <div key={i} className={`flex items-start gap-2 rounded-card px-3 py-2 text-t-sm font-bold
                     ${f.severity === "high" ? "bg-ember-bg text-ember" : "bg-brass-soft text-brass"}`}>
                   <MIcon name={f.severity === "high" ? "error" : "warning"} filled className="!text-[18px] shrink-0" />
                   <span><b>{f.label}</b>{f.note && <span className="mr-1 font-normal">— {f.note}</span>}</span>
@@ -1622,7 +1622,7 @@ export default function SalesPage() {
             </div>
             {scanModal.blocked ? (
               <div className="space-y-2">
-                <p className="text-center text-[12px] font-bold text-text-dim">
+                <p className="text-center text-t-sm font-bold text-text-dim">
                   راجع الفني على المحطة، وبعد الإصلاح اضغط "ادفع الآن" تاني — الكاميرا هتعيد الفحص
                 </p>
                 <Button className="w-full justify-center" onClick={() => setScanModal(null)}>فهمت — هراجع الفني</Button>
@@ -1647,14 +1647,14 @@ export default function SalesPage() {
              title={svcFilter === "waiting" ? "سيارات الانتظار" : "في الخدمة — الفواتير المعلقة"}>
         <div className="space-y-2">
           {svcRows.length === 0 ? (
-            <p className="py-10 text-center text-[13px] text-text-dim">
+            <p className="py-10 text-center text-t-md text-text-dim">
               {svcFilter === "waiting" ? "لا سيارات في الانتظار" : "لا توجد سيارات في الخدمة حالياً"}
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-line">
-              <table className="w-full border-collapse text-[13px]">
+            <div className="overflow-x-auto rounded-card border border-line">
+              <table className="w-full border-collapse text-t-md">
                 <thead>
-                  <tr className="bg-ink-3 text-[11.5px] font-extrabold text-text-dim">
+                  <tr className="bg-ink-3 text-t-xs font-extrabold text-text-dim">
                     <th className="px-3 py-2.5 text-right">#</th>
                     <th className="px-3 py-2.5 text-right">اسم العميل</th>
                     <th className="px-3 py-2.5 text-right">نوع السيارة</th>
@@ -1677,35 +1677,35 @@ export default function SalesPage() {
                         <td className="tnum px-3 py-3 font-black">{row.plate || "—"}</td>
                         <td className="px-3 py-3">
                           {row.prepared_items && row.prepared_items.length > 0 ? (
-                            <span className="rounded-full bg-emerald-bg px-2.5 py-1 text-[10.5px] font-black text-emerald">
+                            <span className="rounded-full bg-emerald-bg px-2.5 py-1 text-t-xs font-black text-emerald">
                               جاهزة — {row.prepared_items.length} صنف
                             </span>
                           ) : (
-                            <span className="rounded-full bg-ink-3 px-2.5 py-1 text-[10.5px] font-bold text-text-dim">
+                            <span className="rounded-full bg-ink-3 px-2.5 py-1 text-t-xs font-bold text-text-dim">
                               بدون تجهيز
                             </span>
                           )}
                         </td>
-                        <td className="tnum px-3 py-3 text-[14px] font-black text-petrol">
+                        <td className="tnum px-3 py-3 text-t-md font-black text-petrol">
                           {tot > 0 ? `${money(tot)} ر.س` : "—"}
                         </td>
                         <td className="px-2 py-3">
                           <div className="flex justify-end gap-1.5">
                             {(row.customer_id || row.customer_phone) && tot === 0 && (
                               <button onClick={() => forcePrepare(row.id)} disabled={forcePrepBusy === row.id}
-                                      className="mi-hover flex items-center gap-1 rounded-lg border border-petrol/40 px-2.5 py-1.5 text-[11px] font-bold text-petrol transition hover:bg-petrol-soft disabled:opacity-50">
+                                      className="mi-hover flex items-center gap-1 rounded-lg border border-petrol/40 px-2.5 py-1.5 text-t-xs font-bold text-petrol transition hover:bg-petrol-soft disabled:opacity-50">
                                 <MIcon name="autorenew" className="!text-[16px]" />
                                 {forcePrepBusy === row.id ? "..." : "جهّز الآن"}
                               </button>
                             )}
                             {row.customer_id && (
                               <button onClick={() => openCustInvs(row)}
-                                      className="mi-hover flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-[11px] font-bold text-text-dim transition hover:border-petrol hover:text-petrol">
+                                      className="mi-hover flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-t-xs font-bold text-text-dim transition hover:border-petrol hover:text-petrol">
                                 <MIcon name="receipt_long" className="!text-[16px]" /> فواتير
                               </button>
                             )}
                             <button onClick={() => { startFromQueue(row); setSvcFilter(null); }}
-                                    className="flex items-center gap-1 rounded-lg bg-emerald px-3 py-1.5 text-[11.5px] font-black text-white transition hover:brightness-110 active:scale-[.96]">
+                                    className="flex items-center gap-1 rounded-lg bg-emerald px-3 py-1.5 text-t-xs font-black text-white transition hover:brightness-110 active:scale-[.96]">
                               <MIcon name="payments" className="!text-[16px] text-white" /> تحصيل
                             </button>
                           </div>
@@ -1717,7 +1717,7 @@ export default function SalesPage() {
               </table>
             </div>
           )}
-          <p className="text-center text-[10.5px] text-text-dim">
+          <p className="text-center text-t-xs text-text-dim">
             «تحصيل» يجهّز السلة تلقائياً — «فواتير» يعرض تاريخ العميل السابق
           </p>
         </div>
@@ -1728,19 +1728,19 @@ export default function SalesPage() {
              title={`فواتير ${custInvFor?.customer_name || "العميل"} السابقة`}>
         <div className="space-y-1.5">
           {custInvs === null ? (
-            <p className="py-8 text-center text-[12.5px] text-text-dim">جارِ التحميل...</p>
+            <p className="py-8 text-center text-t-sm text-text-dim">جارِ التحميل...</p>
           ) : custInvs.length === 0 ? (
-            <p className="py-8 text-center text-[12.5px] text-text-dim">لا فواتير سابقة لهذا العميل</p>
+            <p className="py-8 text-center text-t-sm text-text-dim">لا فواتير سابقة لهذا العميل</p>
           ) : (
             <div className="max-h-80 divide-y divide-line overflow-y-auto rounded-lg border border-line">
               {custInvs.map((inv) => (
-                <div key={inv.id} className="flex items-center justify-between px-3 py-2.5 text-[12.5px]">
+                <div key={inv.id} className="flex items-center justify-between px-3 py-2.5 text-t-sm">
                   <span>
                     <b className="tnum">{inv.invoice_no}</b>
-                    <span className="mr-2 tnum text-[11px] text-text-dim">
+                    <span className="mr-2 tnum text-t-xs text-text-dim">
                       {new Date(inv.issued_at).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"))}
                     </span>
-                    {inv.is_returned && <span className="mr-2 rounded-full bg-ember-bg px-2 py-0.5 text-[9.5px] font-bold text-ember">مرتجعة</span>}
+                    {inv.is_returned && <span className="mr-2 rounded-full bg-ember-bg px-2 py-0.5 text-t-xs font-bold text-ember">مرتجعة</span>}
                   </span>
                   <span className="flex items-center gap-2">
                     <b className="tnum text-petrol">{money(Number(inv.total_inc))} ر.س</b>
@@ -1761,18 +1761,18 @@ export default function SalesPage() {
              title={repFilter === "pos" ? "فواتير البيع — اليوم" : repFilter === "car" ? "فواتير الخدمة — اليوم" : "كل فواتير اليوم"}>
         <div className="max-h-96 divide-y divide-line overflow-y-auto">
           {todayInvoices.filter((i) => repFilter === "all" || !repFilter || i.source === repFilter).length === 0 ? (
-            <p className="py-8 text-center text-[12.5px] text-text-dim">لا فواتير اليوم في هذا التصنيف</p>
+            <p className="py-8 text-center text-t-sm text-text-dim">لا فواتير اليوم في هذا التصنيف</p>
           ) : todayInvoices
               .filter((i) => repFilter === "all" || !repFilter || i.source === repFilter)
               .map((i) => (
-            <div key={i.id} className="flex items-center justify-between gap-2 py-2.5 text-[12.5px]">
+            <div key={i.id} className="flex items-center justify-between gap-2 py-2.5 text-t-sm">
               <div>
                 <span className="tnum font-extrabold">{i.invoice_no}</span>
                 <span className="mr-2 text-text-dim">{i.customer_name || "بيع نقدي"}</span>
-                <span className={`mr-2 rounded-full px-2 py-0.5 text-[10px] font-bold ${i.source === "car" ? "bg-petrol-soft text-petrol" : "bg-ink-3 text-text-dim"}`}>
+                <span className={`mr-2 rounded-full px-2 py-0.5 text-t-xs font-bold ${i.source === "car" ? "bg-petrol-soft text-petrol" : "bg-ink-3 text-text-dim"}`}>
                   {i.source === "car" ? "خدمة" : "بيع"}
                 </span>
-                {i.is_returned && <span className="mr-1 rounded-full bg-ember-bg px-2 py-0.5 text-[10px] font-bold text-ember">مرتجعة</span>}
+                {i.is_returned && <span className="mr-1 rounded-full bg-ember-bg px-2 py-0.5 text-t-xs font-bold text-ember">مرتجعة</span>}
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="tnum font-bold">{money(i.total_inc)}</span>
@@ -1787,7 +1787,7 @@ export default function SalesPage() {
       {/* ══════════ تعليق فاتورة ══════════ */}
       <Modal open={holdModal} onClose={() => setHoldModal(false)} title="تعليق الفاتورة الحالية">
         <div className="space-y-3">
-          <p className="text-[12.5px] text-text-dim">
+          <p className="text-t-sm text-text-dim">
             السلة ({cart.length} صنف — {money(totalInc)} ر.س) هتتحفظ على الجهاز وترجع تكملها في أي وقت.
           </p>
           <Field label="ملاحظة (اختياري)">
@@ -1804,15 +1804,15 @@ export default function SalesPage() {
       {/* ══════════ الفواتير المعلقة ══════════ */}
       <Modal open={heldModal} onClose={() => setHeldModal(false)} title="الفواتير المعلقة" size="lg">
         {held.length === 0 ? (
-          <p className="py-6 text-center text-[12.5px] text-text-dim">لا توجد فواتير معلقة</p>
+          <p className="py-6 text-center text-t-sm text-text-dim">لا توجد فواتير معلقة</p>
         ) : (
           <div className="divide-y divide-line">
             {held.map((h) => (
-              <div key={h.id} className="flex items-center justify-between gap-3 py-3 text-[12.5px]">
+              <div key={h.id} className="flex items-center justify-between gap-3 py-3 text-t-sm">
                 <div className="min-w-0">
                   <div className="font-bold">
                     {h.customerName || "بيع نقدي"}
-                    <span className="tnum mr-2 text-[11px] font-normal text-text-dim">{dateFmt(h.time)}</span>
+                    <span className="tnum mr-2 text-t-xs font-normal text-text-dim">{dateFmt(h.time)}</span>
                   </div>
                   <div className="text-text-dim">
                     {h.cart.length} صنف — <span className="tnum font-bold">{money(h.cart.reduce((s, l) => s + l.unitPriceVat * l.qty, 0))}</span> ر.س
@@ -1832,7 +1832,7 @@ export default function SalesPage() {
       {/* ══════════ إغلاق الوردية ══════════ */}
       <Modal open={closeModal} onClose={() => setCloseModal(false)} title="إغلاق الوردية">
         <div className="space-y-3">
-          <div className="rounded-lg bg-ink-3 p-3 text-[12.5px]">
+          <div className="rounded-lg bg-ink-3 p-3 text-t-sm">
             <div className="flex justify-between"><span className="text-text-dim">النقد المتوقع في الدرج</span>
               <b className="tnum">{money(shift.cash.expected)}</b></div>
           </div>

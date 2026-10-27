@@ -1,14 +1,15 @@
 "use client";
 import { MIcon } from "@/components/m-icon";
+import { Badge, type Tone } from "@/components/ui";
 import { fmtMoney } from "@/lib/customers/format";
 import type { StockStatus } from "@/lib/products/types";
 
-/** ألوان حالة المخزون موحّدة في كل شاشات الأصناف (نفس رموز التصميم) */
-const TONE: Record<StockStatus, string> = { ok: "bg-emerald-bg text-emerald", low: "bg-brass-bg text-brass", out: "bg-ember-bg text-ember", service: "bg-ink-3 text-text-dim" };
+/** حالة المخزون — تستخدم الشارة الموحدة (Badge) بنفس الألوان الدلالية في كل النظام */
+const TONE: Record<StockStatus, Tone> = { ok: "success", low: "warning", out: "danger", service: "neutral" };
 const LABEL: Record<StockStatus, string> = { ok: "متوفر", low: "منخفض", out: "نافد", service: "خدمة" };
 
 export function StockBadge({ status }: { status: StockStatus }) {
-  return <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-t-xs font-extrabold ${TONE[status]}`}><i className="h-1.5 w-1.5 rounded-full bg-current" />{LABEL[status]}</span>;
+  return <Badge tone={TONE[status]} dot>{LABEL[status]}</Badge>;
 }
 
 export function StockCell({ stock, status, unit }: { stock: number | null; status: StockStatus; unit?: string | null }) {

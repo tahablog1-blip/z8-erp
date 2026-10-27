@@ -140,8 +140,8 @@ export default function StocktakePage() {
       ) : (<>
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-t-3xl font-black">جرد المخزون</h1>
-            <p className="mt-1 text-t-sm text-text-dim">إدارة عمليات الجرد ومراجعة فروقات المخزون واعتماد التسويات.</p>
+            <h1 className="page-title">جرد المخزون</h1>
+            <p className="page-desc">إدارة عمليات الجرد ومراجعة فروقات المخزون واعتماد التسويات.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="tool" onClick={exportList} disabled={!filtered.length}><MIcon name="download" className="!text-[18px]" />تصدير</Button>

@@ -91,7 +91,7 @@ export default function ProductProfilePage() {
 
   if (loading) return <div className="mx-auto max-w-[1400px] space-y-4"><Skeleton height={120} /><div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{Array.from({ length: 8 }).map((_, i) => <KpiSkeleton key={i} />)}</div><Skeleton height={300} /></div>;
   if (error || !d || !p) return (
-    <div role="alert" className="mx-auto max-w-md py-16 text-center"><MIcon name="inventory_2" className="!text-[44px] text-ember" /><h1 className="mt-2 text-t-xl font-black">تعذر تحميل ملف الصنف</h1><p className="mt-1 text-t-sm text-text-dim">{error}</p>
+    <div role="alert" className="mx-auto max-w-md py-16 text-center"><MIcon name="inventory_2" className="!text-[44px] text-ember" /><h1 className="mt-2 page-title">تعذر تحميل ملف الصنف</h1><p className="page-desc">{error}</p>
       <div className="mt-4 flex justify-center gap-2"><Button onClick={() => { setLoading(true); load(); }}>إعادة المحاولة</Button><Button variant="outline" onClick={() => router.push("/products")}>العودة للأصناف</Button></div></div>);
 
   const k = d.kpis;
@@ -114,7 +114,7 @@ export default function ProductProfilePage() {
           <div className="flex min-w-0 items-center gap-4">
             <Thumb id={p.id} has={p.hasImage} size={76} name={p.name} />
             <div className="min-w-0">
-              <h1 className="text-t-2xl font-black leading-tight">{p.name}{p.spec ? <bdi dir="ltr" className="ms-2 font-bold text-text-dim">{p.spec}</bdi> : null}</h1>
+              <h1 className="page-title">{p.name}{p.spec ? <bdi dir="ltr" className="ms-2 font-bold text-text-dim">{p.spec}</bdi> : null}</h1>
               <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-t-sm text-text-dim">
                 {p.sku && <button onClick={() => copy(p.sku!)} title="نسخ" className="tnum hover:text-petrol">SKU: <b dir="ltr">{p.sku}</b></button>}
                 {p.barcode && <button onClick={() => copy(p.barcode!)} title="نسخ" className="tnum hover:text-petrol">الباركود: <b dir="ltr">{p.barcode}</b></button>}
@@ -128,12 +128,12 @@ export default function ProductProfilePage() {
           </div>
           <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
             {canEdit && <Button variant="outline" onClick={() => setEdit(true)}><MIcon name="edit" className="!text-[18px]" />تعديل</Button>}
-            {canSell && !p.isService && <Link href="/sales/direct" className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-[13px] font-semibold hover:border-petrol hover:text-petrol"><MIcon name="point_of_sale" className="!text-[18px]" />بيع</Link>}
-            {canPurchase && !p.isService && <Link href="/purchases" className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-[13px] font-semibold hover:border-petrol hover:text-petrol"><MIcon name="shopping_bag" className="!text-[18px]" />شراء</Link>}
+            {canSell && !p.isService && <Link href="/sales/direct" className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-t-md font-semibold hover:border-petrol hover:text-petrol"><MIcon name="point_of_sale" className="!text-[18px]" />بيع</Link>}
+            {canPurchase && !p.isService && <Link href="/purchases" className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-t-md font-semibold hover:border-petrol hover:text-petrol"><MIcon name="shopping_bag" className="!text-[18px]" />شراء</Link>}
             <div className="relative">
               <Button variant="outline" aria-haspopup="menu" aria-expanded={menu} aria-label="المزيد" onClick={() => setMenu(!menu)}><MIcon name="more_horiz" className="!text-[20px]" /></Button>
               {menu && (
-                <div role="menu" className="absolute end-0 top-full z-30 mt-1 w-56 overflow-hidden rounded-xl border border-line bg-ink-2 shadow-xl">
+                <div role="menu" className="absolute end-0 top-full z-30 mt-1 w-56 overflow-hidden rounded-card border border-line bg-ink-2 shadow-xl">
                   {canStockOps && !p.isService && <Link role="menuitem" href="/inventory" className="flex items-center gap-2 px-3 py-2.5 text-t-sm font-bold hover:bg-ink-3"><MIcon name="swap_horiz" className="!text-[18px] text-petrol" />تحويل / استلام</Link>}
                   {canStockOps && !p.isService && <Link role="menuitem" href="/inventory/stocktake" className="flex items-center gap-2 px-3 py-2.5 text-t-sm font-bold hover:bg-ink-3"><MIcon name="fact_check" className="!text-[18px] text-petrol" />جرد</Link>}
                   <button role="menuitem" onClick={() => { setMenu(false); setLabels(true); }} className="flex w-full items-center gap-2 px-3 py-2.5 text-start text-t-sm font-bold hover:bg-ink-3"><MIcon name="barcode" className="!text-[18px] text-petrol" />طباعة باركود</button>
@@ -146,7 +146,7 @@ export default function ProductProfilePage() {
         </div>
       </header>
 
-      {notice && <div role="status" className={`rounded-xl px-4 py-2.5 text-t-sm font-bold ${notice.ok ? "bg-emerald-bg text-emerald" : "bg-ember-bg text-ember"}`}>{notice.msg}</div>}
+      {notice && <div role="status" className={`rounded-card px-4 py-2.5 text-t-sm font-bold ${notice.ok ? "bg-emerald-bg text-emerald" : "bg-ember-bg text-ember"}`}>{notice.msg}</div>}
 
       <section aria-label="KPI" className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {!p.isService && <div role="presentation" onClick={() => switchTab("movements")} className="contents"><KpiCard label="المخزون الحالي" icon="inventory_2" accent="var(--petrol)" value={fmtMoney(d.totalStock ?? 0, 0)} sub={p.minQty ? `الحد الأدنى: ${p.minQty}` : undefined} subTone={stockTone === "out" ? "danger" : stockTone === "low" ? "warning" : "neutral"} /></div>}
@@ -162,7 +162,7 @@ export default function ProductProfilePage() {
 
       <div role="tablist" aria-label="أقسام ملف الصنف" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
         {tabs.filter((t) => t.show).map((t) => (
-          <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => switchTab(t.key)} className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2 text-t-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol ${tab === t.key ? "bg-petrol text-white" : "bg-ink-2 text-text-dim hover:bg-ink-3"}`}>
+          <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => switchTab(t.key)} className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-card px-3.5 py-2 text-t-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol ${tab === t.key ? "bg-petrol text-white" : "bg-ink-2 text-text-dim hover:bg-ink-3"}`}>
             <MIcon name={t.icon} className="!text-[17px]" />{t.label}{t.n != null && <span className="tnum text-t-xs opacity-80">({t.n})</span>}</button>))}
       </div>
 
@@ -269,7 +269,7 @@ export default function ProductProfilePage() {
         <Card title="الباركود" icon="barcode" actions={<Button size="sm" onClick={() => setLabels(true)}><MIcon name="print" className="!text-[16px]" />طباعة الملصقات</Button>}>
           {!(p.barcode || p.sku) ? <EmptyState icon="barcode" title="لا يوجد باركود ولا SKU لهذا الصنف" description="أضف باركوداً من نموذج التعديل." action={canEdit ? <Button onClick={() => setEdit(true)}>تعديل الصنف</Button> : undefined} /> : (
             <div className="flex flex-wrap items-center gap-6">
-              <div className="rounded-xl border border-line bg-white p-4 text-center" dangerouslySetInnerHTML={{ __html: barcodeSvg((p.barcode || p.sku)!, { height: 70, module: 1.8 }) + `<div style="font:600 13px monospace;direction:ltr;margin-top:4px">${(p.barcode || p.sku)!.replace(/[<>&]/g, "")}</div>` }} />
+              <div className="rounded-card border border-line bg-white p-4 text-center" dangerouslySetInnerHTML={{ __html: barcodeSvg((p.barcode || p.sku)!, { height: 70, module: 1.8 }) + `<div style="font:600 13px monospace;direction:ltr;margin-top:4px">${(p.barcode || p.sku)!.replace(/[<>&]/g, "")}</div>` }} />
               <div className="flex flex-col gap-2"><span className="text-t-sm text-text-dim">النوع: Code 128</span>
                 <div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => copy((p.barcode || p.sku)!)}><MIcon name="content_copy" className="!text-[16px]" />نسخ</Button><Button size="sm" variant="outline" onClick={downloadSvg}><MIcon name="download" className="!text-[16px]" />تنزيل SVG</Button></div></div>
             </div>)}

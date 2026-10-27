@@ -54,7 +54,7 @@ export function BarcodeLabels({ open, items, onClose }: { open: boolean; items: 
           </div>
         </div>
         {missing > 0 && <p role="alert" className="rounded-lg bg-brass-bg px-3 py-2 text-t-sm font-bold text-brass">{missing} صنف بلا باركود ولا SKU — لن يظهر له رمز.</p>}
-        <div className="rounded-xl border border-line bg-ink-3 p-2">
+        <div className="rounded-card border border-line bg-ink-3 p-2">
           <div className="mb-1 text-t-xs font-bold text-text-dim">معاينة (أول {Math.min(6, items.length)} من {items.length} صنف) — الإجمالي {items.length * n} ملصق</div>
           <iframe title="معاينة الملصقات" srcDoc={html} sandbox="" style={{ width: "100%", height: size === "a4" ? 260 : Math.max(120, S.h * 4.2 + 20), border: 0, background: "#fff" }} />
         </div>

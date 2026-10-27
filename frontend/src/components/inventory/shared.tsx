@@ -3,10 +3,12 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
 import { MIcon } from "@/components/m-icon";
 import { PERIODS, rangeFor, type PeriodKey } from "@/lib/dashboard/periods";
-import { STATUS_LABEL, STATUS_TONE, type ItemStatus } from "@/lib/inventory/types";
+import { Badge, type Tone } from "@/components/ui";
+import { STATUS_LABEL, type ItemStatus } from "@/lib/inventory/types";
 
+const ITEM_TONE: Record<ItemStatus, Tone> = { ok: "success", low: "warning", out: "danger", dead: "neutral" };
 export function StatusPill({ s }: { s: ItemStatus }) {
-  return <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-t-xs font-extrabold ${STATUS_TONE[s]}`}><i className="h-1.5 w-1.5 rounded-full bg-current" />{STATUS_LABEL[s]}</span>;
+  return <Badge tone={ITEM_TONE[s]} dot>{STATUS_LABEL[s]}</Badge>;
 }
 
 export const fmtN = (n: number | null | undefined) => (n == null ? "—" : Number(n).toLocaleString("en-US"));

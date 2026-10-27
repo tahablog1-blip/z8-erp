@@ -119,7 +119,7 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
   }
 
   const Steps = ({ current }: { current: 1 | 2 | 3 | 4 }) => (
-    <div className="flex items-center justify-center gap-1.5 text-[10.5px] font-bold">
+    <div className="flex items-center justify-center gap-1.5 text-t-xs font-bold">
       {[{ n: 1, t: "الشركة" }, { n: 2, t: "الزيت" }, { n: 3, t: "الفلتر" }, { n: 4, t: "التأكيد" }].map((st, i) => (
         <div key={st.n} className="flex items-center gap-1.5">
           {i > 0 && <span className="h-px w-4 bg-line" />}
@@ -134,7 +134,7 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
 
   const BackBtn = ({ to, label }: { to: typeof step; label: string }) => (
     <button onClick={() => setStep(to)}
-            className="z8-anim-btn mx-auto flex items-center gap-1 rounded-lg px-3 py-1.5 text-[12px] font-black text-text-dim transition hover:bg-ink-3 hover:text-text">
+            className="z8-anim-btn mx-auto flex items-center gap-1 rounded-lg px-3 py-1.5 text-t-sm font-black text-text-dim transition hover:bg-ink-3 hover:text-text">
       <MIcon name="arrow_forward" className="!text-[16px]" /> {label}
     </button>
   );
@@ -152,7 +152,7 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
 
       {step === "error" && (
         <div className="kiosk-step space-y-3 py-6">
-          <p className="text-[13px] font-bold text-ember">{err || "حدث خطأ"}</p>
+          <p className="text-t-md font-bold text-ember">{err || "حدث خطأ"}</p>
           <Button variant="ghost" onClick={onDone}>رجوع</Button>
         </div>
       )}
@@ -161,26 +161,26 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
       {step === "service" && data && (
         <div key="service" className="kiosk-step space-y-4">
           <div className="space-y-1">
-            <h3 className="text-[19px] font-black">أهلاً بك 👋</h3>
-            <p className="text-[13px] text-text-dim">إيه الخدمة اللي محتاجها النهاردة؟</p>
+            <h3 className="text-t-xl font-black">أهلاً بك</h3>
+            <p className="text-t-md text-text-dim">إيه الخدمة اللي محتاجها النهاردة؟</p>
           </div>
           <div className="mx-auto grid max-w-lg gap-3 sm:grid-cols-2">
             <button onClick={() => { setFlow("engine"); setStep(data.brands.length > 0 ? "brand" : "oil"); }}
-                    className="flex flex-col items-center gap-2.5 rounded-3xl border-2 border-line bg-ink-2 px-4 py-7 shadow-card transition hover:border-petrol hover:-translate-y-1 active:scale-[.96]">
-              <span className="grid h-16 w-16 place-items-center rounded-2xl bg-petrol text-white">
+                    className="flex flex-col items-center gap-2.5 rounded-card border-2 border-line bg-ink-2 px-4 py-7 shadow-card transition hover:border-petrol hover:-translate-y-1 active:scale-[.96]">
+              <span className="grid h-16 w-16 place-items-center rounded-card bg-petrol text-white">
                 <MIcon name="opacity" className="!text-[32px] text-white" />
               </span>
-              <span className="text-[15px] font-black">تغيير زيت الماكينة</span>
-              <span className="text-[11px] font-bold text-text-dim">زيت + فلتر + خدمة بسعر سيارتك</span>
+              <span className="text-t-lg font-black">تغيير زيت الماكينة</span>
+              <span className="text-t-xs font-bold text-text-dim">زيت + فلتر + خدمة بسعر سيارتك</span>
             </button>
             <button onClick={() => { setFlow("gear"); setChosenGear(null); setStep("gearOil"); }}
                     disabled={data.gearOils.length === 0}
-                    className="flex flex-col items-center gap-2.5 rounded-3xl border-2 border-line bg-ink-2 px-4 py-7 shadow-card transition hover:border-emerald hover:-translate-y-1 active:scale-[.96] disabled:opacity-40">
-              <span className="grid h-16 w-16 place-items-center rounded-2xl bg-emerald text-white">
+                    className="flex flex-col items-center gap-2.5 rounded-card border-2 border-line bg-ink-2 px-4 py-7 shadow-card transition hover:border-emerald hover:-translate-y-1 active:scale-[.96] disabled:opacity-40">
+              <span className="grid h-16 w-16 place-items-center rounded-card bg-emerald text-white">
                 <MIcon name="settings" className="!text-[32px] text-white" />
               </span>
-              <span className="text-[15px] font-black">تغيير زيت القير</span>
-              <span className="text-[11px] font-bold text-text-dim">اختر النوع — والفني يفحص ويحدد</span>
+              <span className="text-t-lg font-black">تغيير زيت القير</span>
+              <span className="text-t-xs font-bold text-text-dim">اختر النوع — والفني يفحص ويحدد</span>
             </button>
           </div>
         </div>
@@ -189,15 +189,15 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
       {/* ═══ رحلة القير: اختيار النوع ═══ */}
       {step === "gearOil" && data && (
         <div key="gearOil" className="kiosk-step space-y-3.5">
-          <h3 className="text-[17px] font-black">اختر نوع زيت القير ⚙️</h3>
-          <p className="text-[11.5px] text-text-dim">الكمية وسعر الخدمة يحددهم الفني بعد الفحص</p>
+          <h3 className="text-t-xl font-black">اختر نوع زيت القير</h3>
+          <p className="text-t-xs text-text-dim">الكمية وسعر الخدمة يحددهم الفني بعد الفحص</p>
           <div className="grid max-h-[52vh] grid-cols-2 content-start gap-2.5 overflow-y-auto sm:grid-cols-3 lg:grid-cols-4">
             {data.gearOils.map((p) => (
               <button key={p.id} onClick={() => { setChosenGear(p); setStep("gearReview"); }}
-                      className="flex min-h-[152px] flex-col items-center justify-between gap-1.5 rounded-2xl border-2 border-line bg-ink-2 p-3 shadow-card transition hover:border-emerald hover:-translate-y-0.5 active:scale-[.96]">
+                      className="flex min-h-[152px] flex-col items-center justify-between gap-1.5 rounded-card border-2 border-line bg-ink-2 p-3 shadow-card transition hover:border-emerald hover:-translate-y-0.5 active:scale-[.96]">
                 <ProductImg p={p} />
-                <span className="line-clamp-2 text-[11.5px] font-black leading-snug">{p.name}{p.spec ? ` — ${p.spec}` : ""}</span>
-                <span className="tnum rounded-full bg-emerald-bg px-2.5 py-0.5 text-[12.5px] font-black text-emerald">
+                <span className="line-clamp-2 text-t-xs font-black leading-snug">{p.name}{p.spec ? ` — ${p.spec}` : ""}</span>
+                <span className="tnum rounded-full bg-emerald-bg px-2.5 py-0.5 text-t-sm font-black text-emerald">
                   {p.price_vat.toFixed(2)} ر.س / علبة
                 </span>
               </button>
@@ -210,27 +210,27 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
       {/* ═══ رحلة القير: المراجعة والتأكيد ═══ */}
       {step === "gearReview" && chosenGear && (
         <div key="gearReview" className="kiosk-step space-y-3.5">
-          <h3 className="text-[17px] font-black">راجع طلبك وأكّد ✅</h3>
-          <div className="mx-auto max-w-md space-y-2 rounded-2xl border border-line p-3 text-right">
+          <h3 className="text-t-xl font-black">راجع طلبك وأكّد</h3>
+          <div className="mx-auto max-w-md space-y-2 rounded-card border border-line p-3 text-right">
             <div className="flex items-center gap-3">
               <ProductImg p={chosenGear} />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[13px] font-black">{chosenGear.name}</div>
-                <div className="tnum text-[12px] text-emerald">{chosenGear.price_vat.toFixed(2)} ر.س / علبة</div>
+                <div className="truncate text-t-md font-black">{chosenGear.name}</div>
+                <div className="tnum text-t-sm text-emerald">{chosenGear.price_vat.toFixed(2)} ر.س / علبة</div>
               </div>
             </div>
-            <div className="flex items-center justify-between border-t border-dashed border-line pt-2 text-[12.5px]">
+            <div className="flex items-center justify-between border-t border-dashed border-line pt-2 text-t-sm">
               <span className="flex items-center gap-1 font-bold text-text-dim">
                 <MIcon name="search" className="!text-[16px]" /> خدمة فحص
               </span>
               <span className="tnum font-black text-emerald">+25.00 ر.س</span>
             </div>
-            <div className="rounded-xl bg-brass-soft px-3 py-2.5 text-[12px] font-bold leading-relaxed text-brass">
-              ⚠ كمية الزيت وسعر خدمة تغيير زيت القير يتحددان داخل الفرع بعد فحص الفني لحالة القير
+            <div className="rounded-card bg-brass-soft px-3 py-2.5 text-t-sm font-bold leading-relaxed text-brass">
+              كمية الزيت وسعر خدمة تغيير زيت القير يتحددان داخل الفرع بعد فحص الفني لحالة القير
             </div>
           </div>
           <button onClick={submit}
-                  className="mx-auto flex items-center gap-2 rounded-2xl bg-emerald px-10 py-4 text-[16px] font-black text-white shadow-panel transition hover:brightness-110 active:scale-[.97]">
+                  className="mx-auto flex items-center gap-2 rounded-lg bg-emerald px-10 py-4 text-t-lg font-black text-white shadow-panel transition hover:brightness-110 active:scale-[.97]">
             <MIcon name="check_circle" className="!text-[22px] text-white" /> تأكيد الطلب
           </button>
           <BackBtn to="gearOil" label="تغيير النوع" />
@@ -241,30 +241,30 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
       {step === "brand" && data && (
         <div key="brand" className="kiosk-step space-y-4">
           <div className="space-y-1">
-            <h3 className="text-[18px] font-black">أهلاً بك 👋</h3>
-            <p className="text-[12.5px] text-text-dim">اختر شركة الزيت — أو خلّينا نرشحلك الأنسب لسيارتك</p>
+            <h3 className="text-t-xl font-black">أهلاً بك</h3>
+            <p className="text-t-sm text-text-dim">اختر شركة الزيت — أو خلّينا نرشحلك الأنسب لسيارتك</p>
           </div>
           <Steps current={1} />
           <BackBtn to="service" label="رجوع للخدمات" />
           <button onClick={recommend} disabled={recBusy}
-                  className="mx-auto flex items-center gap-2 rounded-xl bg-petrol px-5 py-3 text-[13.5px] font-black text-white shadow-card transition hover:brightness-110 active:scale-[.97] disabled:opacity-60">
+                  className="mx-auto flex items-center gap-2 rounded-lg bg-petrol px-5 py-3 text-t-md font-black text-white shadow-card transition hover:brightness-110 active:scale-[.97] disabled:opacity-60">
             <MIcon name="auto_awesome" className="!text-[19px] text-white" />
             {recBusy ? "جارِ تحليل سيارتك..." : "رشّح لي الزيت المناسب لسيارتي"}
           </button>
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
             {data.brands.map((b) => (
               <button key={b.id} onClick={() => { setBrand(b.name); setStep("oil"); }}
-                      className="flex flex-col items-center gap-2 rounded-2xl border-2 border-line bg-ink-2 p-4 shadow-card transition hover:border-petrol hover:-translate-y-0.5 active:scale-[.96]">
+                      className="flex flex-col items-center gap-2 rounded-card border-2 border-line bg-ink-2 p-4 shadow-card transition hover:border-petrol hover:-translate-y-0.5 active:scale-[.96]">
                 {b.logo_base64
                   ? <img src={`data:image/png;base64,${b.logo_base64}`} alt={b.name} className="h-14 w-auto object-contain" />
                   : <MIcon name="verified" className="!text-[32px] text-text-dim" />}
-                <span className="text-[13px] font-black">{b.name}</span>
+                <span className="text-t-md font-black">{b.name}</span>
               </button>
             ))}
             <button onClick={() => { setBrand(null); setStep("oil"); }}
-                    className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line p-4 text-text-dim transition hover:border-petrol hover:text-petrol active:scale-[.96]">
+                    className="flex flex-col items-center justify-center gap-2 rounded-card border-2 border-dashed border-line p-4 text-text-dim transition hover:border-petrol hover:text-petrol active:scale-[.96]">
               <MIcon name="apps" className="!text-[26px]" />
-              <span className="text-[12.5px] font-black">عرض كل الزيوت</span>
+              <span className="text-t-sm font-black">عرض كل الزيوت</span>
             </button>
           </div>
         </div>
@@ -273,30 +273,30 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
       {/* ═══ 2: الزيت ═══ */}
       {step === "oil" && data && (
         <div key="oil" className="kiosk-step space-y-3.5">
-          <h3 className="text-[17px] font-black">{brand ? `زيوت ${brand}` : "اختر نوع الزيت"}</h3>
+          <h3 className="text-t-xl font-black">{brand ? `زيوت ${brand}` : "اختر نوع الزيت"}</h3>
           <Steps current={2} />
           {recOil && (
             <div className="kiosk-pop mx-auto w-full max-w-lg space-y-3">
               {/* بطاقة المقترح — خلفية مميزة بالكامل */}
-              <div className="rounded-3xl p-[2px] shadow-panel"
+              <div className="rounded-card p-[2px] shadow-panel"
                    style={{ background: "linear-gradient(135deg, var(--emerald), var(--petrol-deep))" }}>
-                <div className="flex flex-col items-center gap-2.5 rounded-[22px] bg-emerald-bg px-5 py-6">
-                  <span className="flex items-center gap-1.5 rounded-full bg-emerald px-3.5 py-1 text-[12px] font-black text-white">
+                <div className="flex flex-col items-center gap-2.5 rounded-card bg-emerald-bg px-5 py-6">
+                  <span className="flex items-center gap-1.5 rounded-full bg-emerald px-3.5 py-1 text-t-sm font-black text-white">
                     <MIcon name="auto_awesome" className="!text-[16px] text-white" /> مقترحنا لسيارتك
                   </span>
                   <ProductImg p={recOil} big />
-                  <div className="text-[16px] font-black">{recOil.name}{recOil.spec ? ` — ${recOil.spec}` : ""}</div>
-                  <div className="text-[12.5px] font-bold text-text-dim">{rec?.reason}</div>
-                  <div className="tnum text-[22px] font-black text-emerald">{recOil.price_vat.toFixed(2)} ر.س</div>
+                  <div className="text-t-lg font-black">{recOil.name}{recOil.spec ? ` — ${recOil.spec}` : ""}</div>
+                  <div className="text-t-sm font-bold text-text-dim">{rec?.reason}</div>
+                  <div className="tnum text-t-2xl font-black text-emerald">{recOil.price_vat.toFixed(2)} ر.س</div>
                   <button onClick={() => { setChosenOil(recOil); setOilQty(1); setStep("filter"); }}
-                          className="flex items-center gap-2 rounded-2xl bg-emerald px-8 py-3.5 text-[15px] font-black text-white shadow-card transition hover:brightness-110 active:scale-[.97]">
+                          className="flex items-center gap-2 rounded-card bg-emerald px-8 py-3.5 text-t-lg font-black text-white shadow-card transition hover:brightness-110 active:scale-[.97]">
                     <MIcon name="check_circle" className="!text-[20px] text-white" /> اختيار المقترح
                   </button>
                 </div>
               </div>
               {!showAllOils && (
                 <button onClick={() => setShowAllOils(true)}
-                        className="mx-auto flex items-center gap-1.5 rounded-lg px-4 py-2 text-[12.5px] font-black text-text-dim transition hover:bg-ink-3 hover:text-text">
+                        className="mx-auto flex items-center gap-1.5 rounded-lg px-4 py-2 text-t-sm font-black text-text-dim transition hover:bg-ink-3 hover:text-text">
                   <MIcon name="apps" className="!text-[16px]" /> عرض باقي الزيوت
                 </button>
               )}
@@ -304,22 +304,22 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
           )}
           {!recOil && (
             <button onClick={recommend} disabled={recBusy}
-                    className="mx-auto flex items-center gap-1.5 rounded-lg border border-petrol/40 px-3.5 py-2 text-[12px] font-black text-petrol transition hover:bg-petrol-soft active:scale-[.97] disabled:opacity-60">
+                    className="mx-auto flex items-center gap-1.5 rounded-lg border border-petrol/40 px-3.5 py-2 text-t-sm font-black text-petrol transition hover:bg-petrol-soft active:scale-[.97] disabled:opacity-60">
               <MIcon name="auto_awesome" className="!text-[16px]" />
               {recBusy ? "جارِ التحليل..." : "رشّح لي المناسب لسيارتي"}
             </button>
           )}
           {recOil && !showAllOils ? null : oils.length === 0 ? (
-            <p className="py-8 text-[12.5px] text-text-dim">لا توجد زيوت في هذا التصنيف</p>
+            <p className="py-8 text-t-sm text-text-dim">لا توجد زيوت في هذا التصنيف</p>
           ) : (
             <div className="grid max-h-[52vh] grid-cols-2 content-start gap-2.5 overflow-y-auto sm:grid-cols-3 lg:grid-cols-4">
               {oils.map((p) => (
                 <button key={p.id} onClick={() => { setChosenOil(p); setOilQty(1); setStep("filter"); }}
-                        className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 p-3 shadow-card transition hover:-translate-y-0.5 active:scale-[.96]
+                        className={`flex flex-col items-center gap-1.5 rounded-card border-2 p-3 shadow-card transition hover:-translate-y-0.5 active:scale-[.96]
                           ${rec?.productId === p.id ? "border-emerald bg-emerald-bg" : "border-line bg-ink-2 hover:border-petrol"}`}>
                   <ProductImg p={p} />
-                  <span className="line-clamp-2 text-[11.5px] font-black leading-snug">{p.name}{p.spec ? ` — ${p.spec}` : ""}</span>
-                  <span className="tnum rounded-full bg-petrol-soft px-2.5 py-0.5 text-[12.5px] font-black text-petrol">
+                  <span className="line-clamp-2 text-t-xs font-black leading-snug">{p.name}{p.spec ? ` — ${p.spec}` : ""}</span>
+                  <span className="tnum rounded-full bg-petrol-soft px-2.5 py-0.5 text-t-sm font-black text-petrol">
                     {p.price_vat.toFixed(2)} ر.س
                   </span>
                 </button>
@@ -333,28 +333,28 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
       {/* ═══ 3: الفلتر ═══ */}
       {step === "filter" && chosenOil && data && (
         <div key="filter" className="kiosk-step space-y-3.5">
-          <h3 className="text-[17px] font-black">تحتاج فلتر زيت جديد؟</h3>
-          <p className="text-[11.5px] text-text-dim">ينصح بتغيير فلتر الزيت مع كل تغيير زيت للحفاظ على المحرك</p>
+          <h3 className="text-t-xl font-black">تحتاج فلتر زيت جديد؟</h3>
+          <p className="text-t-xs text-text-dim">ينصح بتغيير فلتر الزيت مع كل تغيير زيت للحفاظ على المحرك</p>
           <Steps current={3} />
           {data.filters.length === 0 ? (
             <button onClick={() => { setChosenFilter(null); setStep("review"); }}
-                    className="mx-auto rounded-xl bg-petrol px-6 py-3 text-[13.5px] font-black text-white">متابعة بدون فلتر</button>
+                    className="mx-auto rounded-card bg-petrol px-6 py-3 text-t-md font-black text-white">متابعة بدون فلتر</button>
           ) : (
             <>
               <div className="grid max-h-56 grid-cols-2 content-start gap-2.5 overflow-y-auto sm:grid-cols-3">
                 {data.filters.map((f) => (
                   <button key={f.id} onClick={() => { setChosenFilter(f); setStep("review"); }}
-                          className="flex flex-col items-center gap-1.5 rounded-2xl border-2 border-line bg-ink-2 p-3 shadow-card transition hover:border-emerald hover:-translate-y-0.5 active:scale-[.96]">
+                          className="flex flex-col items-center gap-1.5 rounded-card border-2 border-line bg-ink-2 p-3 shadow-card transition hover:border-emerald hover:-translate-y-0.5 active:scale-[.96]">
                     {f.image_base64
                       ? <img src={`data:image/jpeg;base64,${f.image_base64}`} alt={f.name} className="h-12 w-auto rounded-lg object-contain" />
                       : <MIcon name="filter_alt" className="!text-[28px] text-text-dim" />}
-                    <span className="line-clamp-2 text-[11px] font-black leading-snug">{f.name}</span>
-                    <span className="tnum text-[12px] font-black text-emerald">+{f.price_vat.toFixed(2)} ر.س</span>
+                    <span className="line-clamp-2 text-t-xs font-black leading-snug">{f.name}</span>
+                    <span className="tnum text-t-sm font-black text-emerald">+{f.price_vat.toFixed(2)} ر.س</span>
                   </button>
                 ))}
               </div>
               <button onClick={() => { setChosenFilter(null); setStep("review"); }}
-                      className="mx-auto flex items-center gap-1.5 rounded-xl border-2 border-line px-5 py-2.5 text-[12.5px] font-black text-text-dim transition hover:border-ember hover:text-ember active:scale-[.97]">
+                      className="mx-auto flex items-center gap-1.5 rounded-card border-2 border-line px-5 py-2.5 text-t-sm font-black text-text-dim transition hover:border-ember hover:text-ember active:scale-[.97]">
                 <MIcon name="close" className="!text-[16px]" /> لا — بدون فلتر
               </button>
             </>
@@ -366,67 +366,67 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
       {/* ═══ 4: المراجعة والتأكيد ═══ */}
       {step === "review" && chosenOil && (
         <div key="review" className="kiosk-step space-y-3.5">
-          <h3 className="text-[17px] font-black">راجع طلبك وأكّد ✅</h3>
+          <h3 className="text-t-xl font-black">راجع طلبك وأكّد</h3>
           <Steps current={4} />
-          <div className="mx-auto max-w-md space-y-2 rounded-2xl border border-line p-3 text-right">
+          <div className="mx-auto max-w-md space-y-2 rounded-card border border-line p-3 text-right">
             <div className="flex items-center gap-3">
               <ProductImg p={chosenOil} />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[13px] font-black">{chosenOil.name}</div>
-                <div className="tnum text-[12px] text-petrol">{chosenOil.price_vat.toFixed(2)} ر.س × {oilQty}</div>
+                <div className="truncate text-t-md font-black">{chosenOil.name}</div>
+                <div className="tnum text-t-sm text-petrol">{chosenOil.price_vat.toFixed(2)} ر.س × {oilQty}</div>
               </div>
               {/* كمية الزيت بيد العميل */}
               <div className="flex items-center gap-1.5">
                 <button onClick={() => setOilQty(Math.max(1, oilQty - 1))}
-                        className="grid h-8 w-8 place-items-center rounded-lg border border-line text-[16px] font-black active:scale-90">−</button>
-                <span className="tnum w-6 text-[15px] font-black">{oilQty}</span>
+                        className="grid h-8 w-8 place-items-center rounded-lg border border-line text-t-lg font-black active:scale-90">−</button>
+                <span className="tnum w-6 text-t-lg font-black">{oilQty}</span>
                 <button onClick={() => setOilQty(Math.min(6, oilQty + 1))}
-                        className="grid h-8 w-8 place-items-center rounded-lg bg-petrol text-[16px] font-black text-white active:scale-90">+</button>
+                        className="grid h-8 w-8 place-items-center rounded-lg bg-petrol text-t-lg font-black text-white active:scale-90">+</button>
               </div>
             </div>
-            <div className="flex items-center justify-between border-t border-dashed border-line pt-2 text-[12.5px]">
+            <div className="flex items-center justify-between border-t border-dashed border-line pt-2 text-t-sm">
               <span className="font-bold text-text-dim">فلتر الزيت</span>
               {chosenFilter ? (
                 <span className="flex items-center gap-2">
                   <b>{chosenFilter.name}</b>
                   <span className="tnum text-emerald">+{chosenFilter.price_vat.toFixed(2)}</span>
-                  <button onClick={() => setStep("filter")} className="text-[11px] font-bold text-petrol hover:underline">تغيير</button>
+                  <button onClick={() => setStep("filter")} className="text-t-xs font-bold text-petrol hover:underline">تغيير</button>
                 </span>
               ) : (
                 <span className="flex items-center gap-2 text-text-dim">
                   بدون فلتر
-                  <button onClick={() => setStep("filter")} className="text-[11px] font-bold text-petrol hover:underline">إضافة</button>
+                  <button onClick={() => setStep("filter")} className="text-t-xs font-bold text-petrol hover:underline">إضافة</button>
                 </span>
               )}
             </div>
             {svcFee?.productId && (
-              <div className="flex items-center justify-between border-t border-dashed border-line pt-2 text-[12.5px]">
+              <div className="flex items-center justify-between border-t border-dashed border-line pt-2 text-t-sm">
                 <span className="flex items-center gap-1 font-bold text-text-dim">
                   <MIcon name="car_repair" className="!text-[16px]" /> خدمة التغيير — حسب سيارتك
                 </span>
                 <span className="tnum font-black text-emerald">+{svcFee.price?.toFixed(2)}</span>
               </div>
             )}
-            <div className="flex items-center justify-between rounded-xl bg-petrol-soft px-3 py-2.5">
-              <span className="text-[13px] font-black">الإجمالي التقريبي</span>
-              <span className="tnum text-[18px] font-black text-petrol">{total.toFixed(2)} ر.س</span>
+            <div className="flex items-center justify-between rounded-card bg-petrol-soft px-3 py-2.5">
+              <span className="text-t-md font-black">الإجمالي التقريبي</span>
+              <span className="tnum text-t-xl font-black text-petrol">{total.toFixed(2)} ر.س</span>
             </div>
           </div>
           <button onClick={submit}
-                  className="mx-auto flex items-center gap-2 rounded-2xl bg-emerald px-10 py-4 text-[16px] font-black text-white shadow-panel transition hover:brightness-110 active:scale-[.97]">
+                  className="mx-auto flex items-center gap-2 rounded-lg bg-emerald px-10 py-4 text-t-lg font-black text-white shadow-panel transition hover:brightness-110 active:scale-[.97]">
             <MIcon name="check_circle" className="!text-[22px] text-white" /> تأكيد الطلب
           </button>
           <BackBtn to="filter" label="رجوع" />
         </div>
       )}
 
-      {step === "saving" && <p className="py-10 text-[13px] font-bold text-text-dim">جارِ حفظ طلبك...</p>}
+      {step === "saving" && <p className="py-10 text-t-md font-bold text-text-dim">جارِ حفظ طلبك...</p>}
 
       {step === "done" && (
         <div className="kiosk-pop space-y-2 py-8">
           <MIcon name="task_alt" className="!text-[56px] text-emerald" filled />
-          <p className="text-[16px] font-black text-emerald">تم تأكيد طلبك بنجاح</p>
-          <p className="text-[12.5px] text-text-dim">تفضل بالجلوس — الموظف سيجهز فاتورتك الآن</p>
+          <p className="text-t-lg font-black text-emerald">تم تأكيد طلبك بنجاح</p>
+          <p className="text-t-sm text-text-dim">تفضل بالجلوس — الموظف سيجهز فاتورتك الآن</p>
         </div>
       )}
     </div>
@@ -451,7 +451,7 @@ function StatusPill({ tone, icon, children, pulse }: {
     neutral: { bg: "var(--ink3)", fg: "var(--text-dim)" },
   }[tone];
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-bold transition-colors duration-200"
+    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-t-xs font-bold transition-colors duration-200"
           style={{ background: map.bg, color: map.fg }}>
       {pulse && <span className="relative flex h-1.5 w-1.5">
         <span className="absolute h-full w-full animate-ping rounded-full opacity-60" style={{ background: map.fg }} />
@@ -475,11 +475,11 @@ function IconBtn({ icon, label, onClick, tone = "ghost" }: {
   return (
     <span className="group/ib relative inline-flex">
       <button onClick={onClick} aria-label={label}
-              className={`grid h-9 w-9 place-items-center rounded-xl transition-all duration-200 ease-in-out active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-petrol ${cls}`}
+              className={`grid h-9 w-9 place-items-center rounded-card transition-all duration-200 ease-in-out active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-petrol ${cls}`}
               style={tone === "primary" ? { background: UI.primary } : undefined}>
         <MIcon name={icon} className="!text-[19px]" />
       </button>
-      <span className="pointer-events-none absolute -top-8 right-1/2 translate-x-1/2 whitespace-nowrap rounded-lg bg-slate-900 px-2 py-1 text-[10.5px] font-bold text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover/ib:opacity-100">
+      <span className="pointer-events-none absolute -top-8 right-1/2 translate-x-1/2 whitespace-nowrap rounded-lg bg-text px-2 py-1 text-t-xs font-bold text-ink-2 opacity-0 shadow-lg transition-opacity duration-200 group-hover/ib:opacity-100">
         {label}
       </span>
     </span>
@@ -493,15 +493,15 @@ function StatCard({ icon, value, title, hint, color, tint, onClick }: {
 }) {
   return (
     <button onClick={onClick} disabled={!onClick}
-            className="group flex items-center gap-4 rounded-2xl border border-line bg-ink-2 p-6 text-right shadow-card transition-all duration-200 ease-in-out enabled:hover:-translate-y-0.5 enabled:hover:shadow-md">
-      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl transition-transform duration-200 group-hover:scale-105"
+            className="group flex items-center gap-4 rounded-lg border border-line bg-ink-2 p-6 text-right shadow-card transition-all duration-200 ease-in-out enabled:hover:-translate-y-0.5 enabled:hover:shadow-md">
+      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-card transition-transform duration-200 group-hover:scale-105"
             style={{ background: tint, color }}>
         <MIcon name={icon} className="!text-[24px]" />
       </span>
       <span className="min-w-0">
-        <span className="tnum block text-[24px] font-black leading-none" style={{ color }}>{value}</span>
-        <span className="mt-1 block text-[12px] font-bold text-text-dim">{title}</span>
-        {hint && <span className="tnum mt-0.5 block text-[10.5px] text-text-dim">{hint}</span>}
+        <span className="tnum block text-t-3xl font-black leading-none" style={{ color }}>{value}</span>
+        <span className="mt-1 block text-t-sm font-bold text-text-dim">{title}</span>
+        {hint && <span className="tnum mt-0.5 block text-t-xs text-text-dim">{hint}</span>}
       </span>
     </button>
   );
@@ -710,7 +710,7 @@ export default function CarsPage() {
     router.push("/sales");
   }
 
-  // ══════════ 🎛 مفتاح البوابة الذكية (المراقب الخلفي) — تشغيل/إيقاف بضغطة ══════════
+  // ══════════ مفتاح البوابة الذكية (المراقب الخلفي) — تشغيل/إيقاف بضغطة ══════════
   const [gateSwOn, setGateSwOn] = useState<boolean | null>(null);
   const [gateSwRunning, setGateSwRunning] = useState(false);
   const [gateSwBusy, setGateSwBusy] = useState(false);
@@ -1019,7 +1019,7 @@ export default function CarsPage() {
       if (!res) {
         // ── لا يوجد فشل صامت: أول فشل بيتكتب في السجل بسببه ──
         if (R.attempts === 0) {
-          liveAddLog(`⚠ فشلت محاولة القراءة${lastErr ? `: ${lastErr}` : " — جارِ الإعادة"}`, "err");
+          liveAddLog(`فشلت محاولة القراءة${lastErr ? `: ${lastErr}` : " — جارِ الإعادة"}`, "err");
         }
         // محاولة تانية للحدث نفسه لو لسه في النطاق
         R.attempts += 1;
@@ -1043,7 +1043,7 @@ export default function CarsPage() {
       if (res.matched && !res.alreadyEntered && !res.lastInvoiceId) {
         // عميل جديد (مفيهوش فاتورة سابقة): إيقاف المسح وفتح بوابة اختيار الزيت الذاتية
         beep(true);
-        liveAddLog(`✓ دخلت ${res.car.plate} — عميل جديد (⏱ ${((performance.now() - t0) / 1000).toFixed(1)}ث)`, "ok");
+        liveAddLog(`دخلت ${res.car.plate} — عميل جديد (⏱ ${((performance.now() - t0) / 1000).toFixed(1)}ث)`, "ok");
         load();
         R.paused = true;
         setLiveKioskCar(res.car.id);
@@ -1052,10 +1052,10 @@ export default function CarsPage() {
         // التجهيز التلقائي بقى مركزي في الباك اند (بيشتغل مع أي طريقة دخول) — هنا بس بنعرض الحالة
         const walkInNote = res.isWalkIn ? "عميل مسجل — وصل من غير حجز" : "";
         const prepped = !!res.lastInvoiceItems?.length;
-        showHit(`✓ تم تأكيد دخول ${res.car.plate}`,
+        showHit(`تم تأكيد دخول ${res.car.plate}`,
                 [walkInNote, prepped ? "الفاتورة جاهزة بنفس أصناف آخر مرة" : "سجّل الأصناف يدوياً من المبيعات"]
                   .filter(Boolean).join(" — "), "ok");
-        liveAddLog(`✓ دخلت ${res.car.plate} — ${res.car.customer_name || "بدون عميل"}${res.isWalkIn ? " (عميل مسجل بدون حجز)" : ""}${prepped ? " (فاتورة مجهّزة ✓)" : ""} ⏱ ${((performance.now() - t0) / 1000).toFixed(1)}ث`, "ok");
+        liveAddLog(`دخلت ${res.car.plate} — ${res.car.customer_name || "بدون عميل"}${res.isWalkIn ? " (عميل مسجل بدون حجز)" : ""}${prepped ? " (فاتورة مجهّزة)" : ""} ⏱ ${((performance.now() - t0) / 1000).toFixed(1)}ث`, "ok");
         load();
       } else if (res.matched && res.alreadyEntered) {
         showHit(`اللوحة ${res.car.plate} داخلة بالفعل`, "", "warn");
@@ -1069,7 +1069,7 @@ export default function CarsPage() {
           R.globalCooldownUntil = Date.now() + 250;     // ربع ثانية بس
           return;
         }
-        liveAddLog(`⚠ اللوحة مش واضحة كفاية — قرّب الكاميرا أو حسّن الإضاءة`, "warn");
+        liveAddLog(`اللوحة مش واضحة كفاية — قرّب الكاميرا أو حسّن الإضاءة`, "warn");
         R.attempts = 0;
       } else if (res.letters || res.numbers) {
         // لوحة أول مرة فعلاً (اتفحصت في الدور النشط + الجراج الدائم + كل التاريخ ومفيش أي تطابق)
@@ -1116,7 +1116,7 @@ export default function CarsPage() {
       return true;
     } catch (e: any) {
       R.lastIpErr = e?.message || "تعذّر الوصول للكاميرا";
-      liveAddLog(`⚠ الكاميرا مش بترد: ${e.message}`, "err");
+      liveAddLog(`الكاميرا مش بترد: ${e.message}`, "err");
       return false;
     } finally { R.ipFetching = false; }
   }
@@ -1204,12 +1204,12 @@ export default function CarsPage() {
       R.globalCooldownUntil = 0; R.plateCooldown.clear(); R.visionCalls = []; R.useLocalOnly = false;
       // بصمة نسخة الخادم — لو قديمة يبقى الباك اند شغال بكود قديم ولازم إعادة تشغيل
       api<{ build?: string }>("/health").then((h) => {
-        if (h.build && h.build >= "gate-v3") liveAddLog(`✓ الخادم محدث (${h.build})`, "info");
-        else liveAddLog("⚠ الباك اند شغال بنسخة قديمة! اقفل نافذته وشغّل START-Z8.bat", "err");
+        if (h.build && h.build >= "gate-v3") liveAddLog(`الخادم محدث (${h.build})`, "info");
+        else liveAddLog("الباك اند شغال بنسخة قديمة! اقفل نافذته وشغّل START-Z8.bat", "err");
       }).catch(() => {});
       R.timer = setInterval(liveTick, mode === "ip" ? TICK_IP_MS : TICK_MS);
       setLiveStatus("watching");
-      liveAddLog(mode === "ip" ? "👁 المراقبة بدأت من كاميرا IP" : "👁 المراقبة بدأت — وجّه الكاميرا على مكان الدخول", "info");
+      liveAddLog(mode === "ip" ? "المراقبة بدأت من كاميرا IP" : "المراقبة بدأت — وجّه الكاميرا على مكان الدخول", "info");
     } catch (e: any) {
       setLiveStatus("error");
       setLiveErr(e?.message || "تعذّر فتح الكاميرا");
@@ -1248,14 +1248,14 @@ export default function CarsPage() {
         .url{font-size:11px;color:#888;direction:ltr;margin-top:12px;word-break:break-all}
       </style></head><body>
       <div class="card">
-        <h1>🚗 احجز دورك قبل ما توصل</h1>
+        <h1>احجز دورك قبل ما توصل</h1>
         <h2>فرع ${bName}</h2>
         <div id="qrcode"></div>
         <div class="steps">
-          ١- امسح الباركود بكاميرا جوالك 📷<br>
+          ١- امسح الباركود بكاميرا جوالك<br>
           ٢- سجّل اسمك ورقم لوحتك<br>
           ٣- تابع دورك مباشرة من جوالك<br>
-          ٤- عند وصولك يتم دخولك <b>تلقائياً</b> ✨
+          ٤- عند وصولك يتم دخولك <b>تلقائياً</b>
         </div>
         <div class="url">${url}</div>
       </div>
@@ -1388,7 +1388,7 @@ export default function CarsPage() {
           plateLetters: letters || f.plateLetters,
           plateNumbers: numbers || f.plateNumbers,
         }));
-        setOcrMsg(`✓ ${source}: ${letters || "؟"} ${numbers || "؟"}`);
+        setOcrMsg(`${source}: ${letters || "؟"} ${numbers || "؟"}`);
         setTimeout(tryLookup, 100);
       } else {
         setOcrMsg("مقدرتش أقرأ اللوحة — قرّب الكاميرا على اللوحة بس وصوّر تاني");
@@ -1472,7 +1472,7 @@ export default function CarsPage() {
         if (liveMode) {
           liveRefs.current.paused = false;
           liveRefs.current.lastReadFrame = null;
-          liveAddLog(`✓ تسجّلت ${created.plate} — استُؤنفت المراقبة`, "ok");
+          liveAddLog(`تسجّلت ${created.plate} — استُؤنفت المراقبة`, "ok");
         }
       } else if (modal?.mode === "edit") {
         const body = {
@@ -1646,7 +1646,7 @@ export default function CarsPage() {
       ${c.odometer_previous ? `<div class="row"><span>العداد السابق</span><b class="tnum">${esc(c.odometer_previous)}</b></div>` : ""}
       <div class="row"><span>وقت التسجيل</span><b class="tnum">${esc(new Date(c.created_at).toLocaleString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn")))}</b></div>
       ${ckRows ? `<div class="dash"></div><div style="font-weight:800;margin:2px 0">نقاط التشييك</div>${ckRows}` : ""}
-      <div class="perfo">✂ - - - - - - - - - - - - - - - - - - ✂</div>
+      <div class="perfo">- - - - - - - - - - - - - - - - - -</div>
       <div style="text-align:center">
         <div class="big tnum" style="font-size:18px">${esc(c.plate || "—")}</div>
         <div style="font-size:10px">${esc(c.customer_name || "")} — احتفظ بهذا الجزء</div>
@@ -1679,9 +1679,9 @@ export default function CarsPage() {
   /** مدة الانتظار كعمود مستقل */
   function renderWait(c: Car) {
     const s = carStatus(c);
-    if (s === "done") return <span className="tnum text-[12px] text-text-dim">—</span>;
+    if (s === "done") return <span className="tnum text-t-sm text-text-dim">—</span>;
     const from = s === "in_service" ? c.entered_at : c.created_at;
-    return <span className="tnum text-[12.5px] font-bold text-text-dim">{elapsed(from, now)}</span>;
+    return <span className="tnum text-t-sm font-bold text-text-dim">{elapsed(from, now)}</span>;
   }
 
   /** أزرار الإجراءات — أيقونات بتلميحات، الأساسي مميز باللون */
@@ -1708,33 +1708,33 @@ export default function CarsPage() {
            style={{ borderColor: UI.border }}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-[22px] font-black text-text">خط الخدمة</h1>
-            <p className="text-[11.5px] font-medium text-text-dim">إدارة طابور السيارات — من الحجز للخروج</p>
+            <h1 className="page-title">خط الخدمة</h1>
+            <p className="page-desc">إدارة طابور السيارات — من الحجز للخروج</p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => { setQrOpen(true); setQrBranch(branches[0]?.id || ""); }}
-                    className="flex items-center gap-1.5 rounded-xl border bg-ink-2 px-3.5 py-2 text-[12.5px] font-bold text-text shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol"
+                    className="flex items-center gap-1.5 rounded-card border bg-ink-2 px-3.5 py-2 text-t-sm font-bold text-text shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol"
                     style={{ borderColor: UI.border }}>
               <MIcon name="qr_code_2" className="!text-[17px]" /> باركود الحجز
             </button>
-            {/* 🎛 البوابة الذكية — لوحة بمفتاح مستقل لكل كاميرا */}
+            {/* البوابة الذكية — لوحة بمفتاح مستقل لكل كاميرا */}
             <div className="relative">
               <button onClick={() => setGateSwPanel((v) => !v)}
-                      className="flex items-center gap-2 rounded-xl border bg-ink-2 px-3.5 py-2 shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md"
+                      className="flex items-center gap-2 rounded-card border bg-ink-2 px-3.5 py-2 shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md"
                       style={{ borderColor: UI.border }}>
                 <span className={`inline-block h-2.5 w-2.5 rounded-full ${gateSwOn && gateSwRunning ? "animate-pulse" : ""}`}
                       style={{ background: gateSwOn === null ? "var(--ink4)" : gateSwOn ? UI.success : "var(--ember)" }} />
-                <span className="text-[12.5px] font-bold text-text">البوابة الذكية</span>
+                <span className="text-t-sm font-bold text-text">البوابة الذكية</span>
                 <MIcon name={gateSwPanel ? "expand_less" : "expand_more"} className="!text-[17px]" />
               </button>
 
               {gateSwPanel && (
-                <div className="absolute left-0 top-full z-30 mt-2 w-80 rounded-2xl border bg-ink-2 p-3 shadow-xl"
+                <div className="absolute left-0 top-full z-30 mt-2 w-80 rounded-card border bg-ink-2 p-3 shadow-xl"
                      style={{ borderColor: UI.border }}>
                   {/* المفتاح الرئيسي */}
-                  <div className="flex items-center justify-between rounded-xl px-3 py-2.5"
+                  <div className="flex items-center justify-between rounded-card px-3 py-2.5"
                        style={{ background: "var(--ink3)" }}>
-                    <span className="text-[12.5px] font-black text-text">المراقب التلقائي (الكل)</span>
+                    <span className="text-t-sm font-black text-text">المراقب التلقائي (الكل)</span>
                     <button onClick={toggleGateSw} disabled={gateSwOn === null || gateSwBusy}
                             className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50"
                             style={{ background: gateSwOn ? UI.success : "var(--ink4)" }}>
@@ -1746,17 +1746,17 @@ export default function CarsPage() {
                   {/* مفتاح مستقل لكل كاميرا + مؤشر حي */}
                   <div className="mt-2 space-y-1.5">
                     {gateCamsStatus.length === 0 && (
-                      <p className="py-2 text-center text-[11.5px] font-bold text-text-dim">جارِ تحميل الكاميرات...</p>
+                      <p className="py-2 text-center text-t-xs font-bold text-text-dim">جارِ تحميل الكاميرات...</p>
                     )}
                     {gateCamsStatus.map((c) => (
-                      <div key={c.id} className="flex items-center justify-between rounded-xl border px-3 py-2"
+                      <div key={c.id} className="flex items-center justify-between rounded-card border px-3 py-2"
                            style={{ borderColor: UI.border }}>
                         <span className="flex min-w-0 items-center gap-2">
                           <span className="inline-block h-2 w-2 shrink-0 rounded-full"
                                 style={{ background: !c.is_active ? "var(--ink4)" : c.ok === null ? "var(--brass)" : c.ok ? UI.success : "var(--ember)" }}
                                 title={!c.is_active ? "موقوفة" : c.ok === null ? "بانتظار أول التقاط" : c.ok ? "تلتقط بنجاح" : "لا تستجيب"} />
-                          <span className="truncate text-[12px] font-bold text-text">{c.name}</span>
-                          {c.last && <span className="tnum shrink-0 text-[10px] text-text-dim">{c.last}</span>}
+                          <span className="truncate text-t-sm font-bold text-text">{c.name}</span>
+                          {c.last && <span className="tnum shrink-0 text-t-xs text-text-dim">{c.last}</span>}
                         </span>
                         <button onClick={() => toggleCam(c.id, !c.is_active)}
                                 className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
@@ -1767,14 +1767,14 @@ export default function CarsPage() {
                       </div>
                     ))}
                   </div>
-                  <p className="mt-2 text-center text-[10px] font-bold text-text-dim">
-                    🟢 تلتقط · 🔴 لا تستجيب · 🟠 بانتظار أول التقاط · ⚪ موقوفة
+                  <p className="mt-2 text-center text-t-xs font-bold text-text-dim">
+                    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1"><span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-emerald" />تلتقط</span> <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-ember" />لا تستجيب</span> <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-brass" />بانتظار أول التقاط</span> <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-text-dim" />موقوفة</span></span>
                   </p>
                 </div>
               )}
             </div>
             <button onClick={() => { setGateOpen(true); setGateResult(null); setGateMsg(""); }}
-                    className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[12.5px] font-bold text-white shadow-sm transition-all duration-200 hover:-translate-y-px hover:brightness-110"
+                    className="flex items-center gap-1.5 rounded-card px-3.5 py-2 text-t-sm font-bold text-white shadow-sm transition-all duration-200 hover:-translate-y-px hover:brightness-110"
                     style={{ background: UI.primary }}>
               <MIcon name="photo_camera" className="!text-[17px] text-white" /> لقطة يدوية
             </button>
@@ -1803,7 +1803,7 @@ export default function CarsPage() {
       {show3D ? (
         <div className="relative">
           <button onClick={toggle3D}
-                  className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-xl border bg-ink-2/90 px-3 py-1.5 text-[12px] font-bold shadow-sm backdrop-blur"
+                  className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-lg border bg-ink-2/90 px-3 py-1.5 text-t-sm font-bold shadow-sm backdrop-blur"
                   style={{ borderColor: UI.border, color: UI.primary }}>
             <MIcon name="visibility_off" className="!text-[16px]" /> إخفاء البانوراما
           </button>
@@ -1814,7 +1814,7 @@ export default function CarsPage() {
         </div>
       ) : (
         <button onClick={toggle3D}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border bg-ink-2 px-4 py-3 text-[13px] font-bold transition-colors hover:brightness-95"
+                className="flex w-full items-center justify-center gap-2 rounded-lg border bg-ink-2 px-4 py-3 text-t-md font-bold transition-colors hover:brightness-95"
                 style={{ borderColor: UI.border, color: UI.primary }}>
           <MIcon name="view_in_ar" className="!text-[18px]" /> عرض البانوراما ثلاثية الأبعاد
         </button>
@@ -1822,27 +1822,27 @@ export default function CarsPage() {
 
       {/* ═══════ لوحتا المحطات الحية (انتظار / خدمة) ═══════ */}
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="overflow-hidden rounded-2xl border bg-ink-2 shadow-sm" style={{ borderColor: UI.border }}>
+        <div className="overflow-hidden rounded-card border bg-ink-2 shadow-sm" style={{ borderColor: UI.border }}>
           <div className="flex items-center justify-between border-b px-5 py-3" style={{ borderColor: UI.border }}>
-            <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-text">
+            <h2 className="flex items-center gap-2 text-t-md font-extrabold text-text">
               <MIcon name="schedule" className="!text-[17px] text-brass" /> في الانتظار
             </h2>
-            <span className="tnum rounded-full bg-brass-soft px-2.5 py-0.5 text-[12px] font-black text-brass">{queued.length}</span>
+            <span className="tnum rounded-full bg-brass-soft px-2.5 py-0.5 text-t-sm font-black text-brass">{queued.length}</span>
           </div>
           <div className="max-h-56 divide-y overflow-y-auto" style={{ borderColor: UI.border }}>
             {queued.length === 0 ? (
               <div className="flex flex-col items-center gap-1.5 py-6 text-text-dim">
                 <MIcon name="coffee" className="!text-[26px]" />
-                <p className="text-[12px] font-bold">لا توجد سيارات في الانتظار</p>
+                <p className="text-t-sm font-bold">لا توجد سيارات في الانتظار</p>
               </div>
             ) : queued.map((c) => (
-              <div key={c.id} className="flex items-center justify-between px-5 py-2.5 text-[12.5px] transition-colors duration-200 hover:bg-ink-3">
+              <div key={c.id} className="flex items-center justify-between px-5 py-2.5 text-t-sm transition-colors duration-200 hover:bg-ink-3">
                 <div className="min-w-0">
                   <span className="tnum font-extrabold text-text">{c.plate || "بدون لوحة"}</span>
                   <span className="mr-2 text-text-dim">{c.customer_name}</span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="tnum text-[11px] font-bold text-brass">{elapsed(c.created_at, now)}</span>
+                  <span className="tnum text-t-xs font-bold text-brass">{elapsed(c.created_at, now)}</span>
                   {canEnter && <IconBtn tone="primary" icon="login" label="دخول" onClick={() => confirmEntry(c)} />}
                 </div>
               </div>
@@ -1850,30 +1850,30 @@ export default function CarsPage() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border bg-ink-2 shadow-sm" style={{ borderColor: UI.border }}>
+        <div className="overflow-hidden rounded-card border bg-ink-2 shadow-sm" style={{ borderColor: UI.border }}>
           <div className="flex items-center justify-between border-b px-5 py-3" style={{ borderColor: UI.border }}>
-            <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-text">
+            <h2 className="flex items-center gap-2 text-t-md font-extrabold text-text">
               <span style={{ color: UI.primary }}><MIcon name="build" className="!text-[17px]" /></span> في الخدمة
             </h2>
-            <span className="tnum rounded-full px-2.5 py-0.5 text-[12px] font-black" style={{ background: "var(--petrol-soft)", color: UI.primary }}>{inService.length}</span>
+            <span className="tnum rounded-full px-2.5 py-0.5 text-t-sm font-black" style={{ background: "var(--petrol-soft)", color: UI.primary }}>{inService.length}</span>
           </div>
           <div className="max-h-56 divide-y overflow-y-auto" style={{ borderColor: UI.border }}>
             {inService.length === 0 ? (
               <div className="flex flex-col items-center gap-1.5 py-6 text-text-dim">
                 <MIcon name="build" className="!text-[26px]" />
-                <p className="text-[12px] font-bold">لا توجد سيارات في الخدمة</p>
+                <p className="text-t-sm font-bold">لا توجد سيارات في الخدمة</p>
               </div>
             ) : inService.map((c) => {
               const p = carProgress(c);
               return (
-                <div key={c.id} className="px-5 py-2.5 text-[12.5px] transition-colors duration-200 hover:bg-ink-3">
+                <div key={c.id} className="px-5 py-2.5 text-t-sm transition-colors duration-200 hover:bg-ink-3">
                   <div className="flex items-center justify-between">
                     <div className="min-w-0">
                       <span className="tnum font-extrabold text-text">{c.plate || "بدون لوحة"}</span>
                       <span className="mr-2 text-text-dim">{c.customer_name}</span>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
-                      <span className="tnum text-[11px] font-bold" style={{ color: UI.primary }}>{elapsed(c.entered_at, now)}</span>
+                      <span className="tnum text-t-xs font-bold" style={{ color: UI.primary }}>{elapsed(c.entered_at, now)}</span>
                       {canChecklist && <IconBtn icon="checklist" label="التشييك" onClick={() => openChecklist(c)} />}
                       {canExit && <IconBtn tone="primary" icon="logout" label="خروج" onClick={() => confirmExit(c)} />}
                     </div>
@@ -1883,7 +1883,7 @@ export default function CarsPage() {
                       <div className="h-full rounded-full transition-all duration-500"
                            style={{ width: `${p.pct}%`, background: p.ready ? UI.success : UI.primary }} />
                     </div>
-                    <span className="tnum shrink-0 text-[10.5px] font-bold text-text-dim">{p.finished}/{p.total}</span>
+                    <span className="tnum shrink-0 text-t-xs font-bold text-text-dim">{p.finished}/{p.total}</span>
                   </div>
                 </div>
               );
@@ -1893,16 +1893,16 @@ export default function CarsPage() {
       </div>
 
       {/* ═══════ شريط الأدوات: بحث + فلاتر + تصدير ═══════ */}
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border bg-ink-2 p-3 shadow-sm" style={{ borderColor: UI.border }}>
+      <div className="flex flex-wrap items-center gap-2 rounded-card border bg-ink-2 p-3 shadow-sm" style={{ borderColor: UI.border }}>
         <div className="relative min-w-[220px] flex-1">
           <MIcon name="search" className="absolute right-3 top-1/2 -translate-y-1/2 !text-[18px] text-text-dim" />
           <input value={q} onChange={(e) => setQ(e.target.value)}
                  placeholder="بحث باللوحة أو العميل أو الجوال…"
-                 className="w-full rounded-xl border bg-ink-3 py-2 pl-3 pr-10 text-[13px] font-medium outline-none transition-all duration-200 focus:border-petrol focus:bg-ink-2 focus:ring-2 focus:ring-petrol/15"
+                 className="w-full rounded-card border bg-ink-3 py-2 pl-3 pr-10 text-t-md font-medium outline-none transition-all duration-200 focus:border-petrol focus:bg-ink-2 focus:ring-2 focus:ring-petrol/15"
                  style={{ borderColor: UI.border }} />
         </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-                className="rounded-xl border bg-ink-2 px-3 py-2 text-[12.5px] font-bold text-text outline-none transition focus:border-petrol"
+                className="rounded-card border bg-ink-2 px-3 py-2 text-t-sm font-bold text-text outline-none transition focus:border-petrol"
                 style={{ borderColor: UI.border }}>
           <option value="active">النشطة (لم تغادر بعد)</option>
           <option value="queued">في الانتظار</option>
@@ -1912,7 +1912,7 @@ export default function CarsPage() {
         </select>
         {branches.length > 1 && (
           <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)}
-                  className="rounded-xl border bg-ink-2 px-3 py-2 text-[12.5px] font-bold text-text outline-none transition focus:border-petrol"
+                  className="rounded-card border bg-ink-2 px-3 py-2 text-t-sm font-bold text-text outline-none transition focus:border-petrol"
                   style={{ borderColor: UI.border }}>
             <option value="">كل الفروع</option>
             {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -1920,22 +1920,22 @@ export default function CarsPage() {
         )}
         {(q || statusFilter !== "active" || branchFilter) && (
           <button onClick={() => { setQ(""); setStatusFilter("active"); setBranchFilter(""); }}
-                  className="z8-anim-btn flex items-center gap-1 rounded-xl px-3 py-2 text-[12px] font-bold text-text-dim transition hover:bg-ink-3 hover:text-text">
+                  className="z8-anim-btn flex items-center gap-1 rounded-card px-3 py-2 text-t-sm font-bold text-text-dim transition hover:bg-ink-3 hover:text-text">
             <MIcon name="filter_alt_off" className="!text-[16px]" /> مسح الفلاتر
           </button>
         )}
         <button onClick={exportCsv}
-                className="flex items-center gap-1.5 rounded-xl border bg-ink-2 px-3.5 py-2 text-[12.5px] font-bold text-text shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md"
+                className="flex items-center gap-1.5 rounded-lg border bg-ink-2 px-3.5 py-2 text-t-sm font-bold text-text shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md"
                 style={{ borderColor: UI.border }}>
           <MIcon name="download" className="!text-[16px]" /> تصدير
         </button>
       </div>
 
       {/* ═══════ الجدول الرئيسي — سطح مكتب ═══════ */}
-      <div className="hidden overflow-hidden rounded-2xl border bg-ink-2 shadow-sm md:block" style={{ borderColor: UI.border }}>
+      <div className="hidden overflow-hidden rounded-card border bg-ink-2 shadow-sm md:block" style={{ borderColor: UI.border }}>
         <div className="max-h-[60vh] overflow-auto">
-          <table className="w-full text-[12.5px]">
-            <thead className="sticky top-0 z-10 bg-ink-3 text-[11.5px] font-black text-text-dim">
+          <table className="w-full text-t-sm">
+            <thead className="sticky top-0 z-10 bg-ink-3 text-t-xs font-black text-text-dim">
               <tr className="border-b" style={{ borderColor: UI.border }}>
                 <th className="px-4 py-3 text-right">اللوحة</th>
                 <th className="px-3 py-3 text-right">العميل</th>
@@ -1960,8 +1960,8 @@ export default function CarsPage() {
                 <tr><td colSpan={8}>
                   <div className="flex flex-col items-center gap-2 py-14 text-text-dim">
                     <MIcon name="directions_car" className="!text-[38px]" />
-                    <p className="text-[13px] font-bold">لا سيارات مطابقة</p>
-                    <p className="text-[11.5px]">جرّب مسح عوامل التصفية — أو سجّل سيارة من الزر العائم</p>
+                    <p className="text-t-md font-bold">لا سيارات مطابقة</p>
+                    <p className="text-t-xs">جرّب مسح عوامل التصفية — أو سجّل سيارة من الزر العائم</p>
                   </div>
                 </td></tr>
               ) : pageRows.map((c) => (
@@ -1982,7 +1982,7 @@ export default function CarsPage() {
         </div>
         {pages > 1 && (
           <div className="flex items-center justify-between border-t bg-ink-3/60 px-4 py-2.5" style={{ borderColor: UI.border }}>
-            <span className="tnum text-[11.5px] font-bold text-text-dim">{filteredRows.length} سيارة — صفحة {page} من {pages}</span>
+            <span className="tnum text-t-xs font-bold text-text-dim">{filteredRows.length} سيارة — صفحة {page} من {pages}</span>
             <div className="flex gap-1">
               <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}
                       className="z8-anim-btn grid h-8 w-8 place-items-center rounded-lg border bg-ink-2 text-text-dim transition enabled:hover:border-petrol disabled:opacity-40" style={{ borderColor: UI.border }}>›</button>
@@ -1996,17 +1996,17 @@ export default function CarsPage() {
       {/* ═══════ عرض الموبايل: بطاقات بدل الجدول ═══════ */}
       <div className="space-y-2.5 md:hidden">
         {pageRows.map((c) => (
-          <div key={c.id} className="rounded-2xl border bg-ink-2 p-4 shadow-sm" style={{ borderColor: UI.border }}>
+          <div key={c.id} className="rounded-card border bg-ink-2 p-4 shadow-sm" style={{ borderColor: UI.border }}>
             <div className="flex items-start justify-between gap-2">
               <div>
-                <div className="tnum text-[15px] font-black text-text">{c.plate || "بدون لوحة"}</div>
-                <div className="text-[12px] font-bold text-text">{c.customer_name}</div>
-                <div className="tnum text-[11px] text-text-dim">{c.customer_phone}</div>
+                <div className="tnum text-t-lg font-black text-text">{c.plate || "بدون لوحة"}</div>
+                <div className="text-t-sm font-bold text-text">{c.customer_name}</div>
+                <div className="tnum text-t-xs text-text-dim">{c.customer_phone}</div>
               </div>
               {renderStatus(c)}
             </div>
             <div className="mt-2 flex items-center justify-between border-t pt-2" style={{ borderColor: UI.border }}>
-              <span className="text-[11px] text-text-dim">{[c.brand, c.name].filter(Boolean).join(" ")}</span>
+              <span className="text-t-xs text-text-dim">{[c.brand, c.name].filter(Boolean).join(" ")}</span>
               {renderActions(c)}
             </div>
           </div>
@@ -2072,9 +2072,9 @@ export default function CarsPage() {
             </div>
           </div>
           {(ocrBusy || ocrMsg || plateShot) && (
-            <div className="flex items-center gap-3 rounded-lg bg-ink-3 px-3 py-2 text-[12px]">
+            <div className="flex items-center gap-3 rounded-lg bg-ink-3 px-3 py-2 text-t-sm">
               {plateShot && <img src={plateShot} alt="لوحة" className="h-10 rounded-md border border-line object-cover" />}
-              <span className={ocrBusy ? "text-amber-600" : "text-text-dim"}>
+              <span className={ocrBusy ? "text-brass" : "text-text-dim"}>
                 {ocrBusy ? "جارِ قراءة اللوحة من الصورة..." : ocrMsg}
               </span>
             </div>
@@ -2184,7 +2184,7 @@ export default function CarsPage() {
       <Modal open={!!ckCar} size="lg" onClose={() => setCkCar(null)}
              title={`نقاط التشييك — ${ckCar?.plate || ""}`}>
         <div className="space-y-2">
-          <p className="text-[12px] text-text-dim">
+          <p className="text-t-sm text-text-dim">
             {ckCar?.customer_name} — {[ckCar?.brand, ckCar?.name].filter(Boolean).join(" ")}
           </p>
           {(() => {
@@ -2198,10 +2198,10 @@ export default function CarsPage() {
                     <div className={`h-full rounded-full transition-all duration-500 ${ready ? "bg-emerald" : "bg-petrol"}`}
                          style={{ width: `${Math.round((fin / CHECKPOINTS.length) * 100)}%` }} />
                   </div>
-                  <span className="tnum text-[11.5px] font-bold text-text-dim">{fin}/{CHECKPOINTS.length}</span>
+                  <span className="tnum text-t-xs font-bold text-text-dim">{fin}/{CHECKPOINTS.length}</span>
                 </div>
-                <div className="mt-1 text-[12px] font-bold">
-                  {ready ? <span className="text-emerald">✓ كل النقاط تمت — السيارة جاهزة</span>
+                <div className="mt-1 text-t-sm font-bold">
+                  {ready ? <span className="text-emerald">كل النقاط تمت — السيارة جاهزة</span>
                     : working ? <span className="flex items-center gap-1.5 text-petrol"><Spinner /> جاري تنفيذ الخدمة المطلوبة...</span>
                     : <span className="text-text-dim">اضغط «بدء» على النقطة اللي شغالين فيها</span>}
                 </div>
@@ -2211,23 +2211,23 @@ export default function CarsPage() {
           <div className="rounded-lg border border-line">
             {STAGES.map((st) => (
               <div key={st.id}>
-                <div className="border-y border-line bg-petrol-soft px-3 py-1.5 text-[12px] font-extrabold text-petrol first:border-t-0">
+                <div className="border-y border-line bg-petrol-soft px-3 py-1.5 text-t-sm font-extrabold text-petrol first:border-t-0">
                   {st.title}
                 </div>
                 <div className="divide-y divide-line">
                   {ckItems.filter((i) => stageOf(i.key) === st.id).map((i) => {
               const btn = (st: CkStatus, label: string, activeCls: string) => (
                 <button key={st} onClick={() => setCk(i.key, { status: i.status === st ? "pending" : st }, true)}
-                        className={`rounded-md px-2 py-1 text-[11px] font-bold transition
+                        className={`rounded-md px-2 py-1 text-t-xs font-bold transition
                           ${i.status === st ? activeCls : "bg-ink-3 text-text-dim hover:text-text"}`}>
                   {label}
                 </button>
               );
               return (
                 <div key={i.key} className="grid items-center gap-2 px-3 py-2 sm:grid-cols-[130px_1fr_170px]">
-                  <span className="flex items-center gap-1.5 text-[12.5px] font-bold">
+                  <span className="flex items-center gap-1.5 text-t-sm font-bold">
                     {i.status === "in_progress" && <Spinner />}
-                    {FINISHED.includes(i.status) && <span className="text-emerald">✓</span>}
+                    {FINISHED.includes(i.status) && <span className="text-emerald"></span>}
                     {i.label}
                   </span>
                   <div className="flex flex-wrap gap-1">
@@ -2246,14 +2246,14 @@ export default function CarsPage() {
             ))}
           </div>
           {/* إسناد العمل: الفني يدوس اسمه أول ما يبدأ */}
-          <div className="space-y-1.5 rounded-xl border border-line p-2.5">
-            <div className="flex items-center justify-between text-[11.5px] font-black">
+          <div className="space-y-1.5 rounded-card border border-line p-2.5">
+            <div className="flex items-center justify-between text-t-xs font-black">
               <span className="flex items-center gap-1"><MIcon name="engineering" className="!text-[16px]" /> مين شغال على السيارة؟</span>
               {workLog.length > 0 && (
                 <span className="flex flex-wrap justify-end gap-1">
                   {[...new Map(workLog.map((w) => [w.employee_name, w])).values()].map((w) => (
-                    <span key={w.employee_name} className="rounded-full bg-emerald-bg px-2 py-0.5 text-[10px] font-black text-emerald">
-                      ✓ {w.employee_name}
+                    <span key={w.employee_name} className="rounded-full bg-emerald-bg px-2 py-0.5 text-t-xs font-black text-emerald">
+                      {w.employee_name}
                     </span>
                   ))}
                 </span>
@@ -2261,13 +2261,13 @@ export default function CarsPage() {
             </div>
             <div className="flex flex-wrap gap-1.5">
               {lineWorkers.length === 0 && (
-                <span className="text-[11px] text-text-dim">أضف موظفيك من الموارد البشرية أولاً</span>
+                <span className="text-t-xs text-text-dim">أضف موظفيك من الموارد البشرية أولاً</span>
               )}
               {lineWorkers.map((w) => {
                 const tagged = workLog.some((x) => x.employee_name === w.name);
                 return (
                   <button key={w.id} disabled={workBusy || tagged} onClick={() => tagWorker(w)}
-                          className={`rounded-lg px-2.5 py-1.5 text-[11.5px] font-bold transition active:scale-[.95]
+                          className={`rounded-lg px-2.5 py-1.5 text-t-xs font-bold transition active:scale-[.95]
                             ${tagged ? "bg-emerald text-white" : "border border-line hover:border-petrol hover:text-petrol"}`}>
                     {w.name}
                   </button>
@@ -2277,7 +2277,7 @@ export default function CarsPage() {
           </div>
 
           <button onClick={aiAnalyzeChecklist} disabled={aiCamBusy}
-                  className="mi-hover flex w-full items-center justify-center gap-1.5 rounded-xl border border-petrol/40 py-2.5 text-[12.5px] font-black text-petrol transition hover:bg-petrol-soft active:scale-[.98] disabled:opacity-50">
+                  className="mi-hover flex w-full items-center justify-center gap-1.5 rounded-lg border border-petrol/40 py-2.5 text-t-sm font-black text-petrol transition hover:bg-petrol-soft active:scale-[.98] disabled:opacity-50">
             <MIcon name="videocam" className="!text-[18px]" />
             {aiCamBusy ? "الكاميرا بتحلل المشهد..." : "تحليل بالكاميرا — تعليم تلقائي"}
           </button>
@@ -2294,14 +2294,14 @@ export default function CarsPage() {
 
       {/* ══════════ فريق العمل — من اشتغل على السيارة ══════════ */}
       <Modal open={!!teamCar} onClose={() => setTeamCar(null)}
-             title={`👥 فريق العمل — ${teamCar?.plate || ""}`}>
+             title={`فريق العمل — ${teamCar?.plate || ""}`}>
         {teamErr ? (
-          <p className="py-6 text-center text-[12.5px] font-bold text-ember">⚠ {teamErr}</p>
+          <p className="py-6 text-center text-t-sm font-bold text-ember">{teamErr}</p>
         ) : !team ? (
-          <p className="py-6 text-center text-[12.5px] text-text-dim">جارٍ التحميل…</p>
+          <p className="py-6 text-center text-t-sm text-text-dim">جارٍ التحميل…</p>
         ) : (
           <div className="space-y-3">
-            <p className="text-[12px] text-text-dim">
+            <p className="text-t-sm text-text-dim">
               {team.customerName} — {team.car}{team.station ? ` · محطة ${team.station}` : ""}
             </p>
 
@@ -2313,9 +2313,9 @@ export default function CarsPage() {
                 { label: "فك وتركيب 2", name: team.fitter2, bg: "var(--petrol-soft)", fg: "var(--petrol)" },
                 { label: "التشييك", name: team.checker, bg: "var(--emerald-bg)", fg: "var(--emerald)" },
               ].map((r) => (
-                <div key={r.label} className="rounded-xl p-3" style={{ background: r.bg }}>
-                  <div className="text-[10.5px] font-black" style={{ color: r.fg }}>{r.label}</div>
-                  <div className="mt-0.5 truncate text-[13px] font-extrabold"
+                <div key={r.label} className="rounded-card p-3" style={{ background: r.bg }}>
+                  <div className="text-t-xs font-black" style={{ color: r.fg }}>{r.label}</div>
+                  <div className="mt-0.5 truncate text-t-md font-extrabold"
                        style={{ color: r.name ? "var(--text)" : "var(--text-dim)" }}>
                     {r.name || "لم يُسجَّل"}
                   </div>
@@ -2324,7 +2324,7 @@ export default function CarsPage() {
             </div>
 
             {/* التوقيتات + معتمد الأمر */}
-            <div className="rounded-xl bg-ink-3 p-3 text-[11.5px]">
+            <div className="rounded-card bg-ink-3 p-3 text-t-xs">
               <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                 <div className="flex justify-between"><span className="text-text-dim">الدخول</span><span className="tnum font-bold">{dtFmt(team.enteredAt)}</span></div>
                 <div className="flex justify-between"><span className="text-text-dim">اعتماد الأمر</span><span className="tnum font-bold">{dtFmt(team.preparedAt)}</span></div>
@@ -2336,8 +2336,8 @@ export default function CarsPage() {
             {/* سجل الإسناد اليدوي (شاشة التشييك) */}
             {team.log.length > 0 && (
               <div>
-                <p className="mb-1 text-[11px] font-bold text-text-dim">سجل الإسناد أثناء الخدمة</p>
-                <div className="max-h-36 space-y-1 overflow-y-auto rounded-xl border border-line p-2 text-[11.5px]">
+                <p className="mb-1 text-t-xs font-bold text-text-dim">سجل الإسناد أثناء الخدمة</p>
+                <div className="max-h-36 space-y-1 overflow-y-auto rounded-card border border-line p-2 text-t-xs">
                   {team.log.map((w, i) => (
                     <div key={i} className="flex items-center justify-between">
                       <span className="font-bold">{w.employee_name}{w.station ? ` · محطة ${w.station}` : ""}</span>
@@ -2349,7 +2349,7 @@ export default function CarsPage() {
             )}
 
             {!team.filler && !team.fitter1 && !team.fitter2 && !team.checker && team.log.length === 0 && (
-              <p className="rounded-xl bg-brass-soft p-3 text-center text-[12px] font-bold text-brass">
+              <p className="rounded-card bg-brass-soft p-3 text-center text-t-sm font-bold text-brass">
                 لم يُسجَّل أي فني على هذه السيارة — الفنيون يُسجَّلون لحظة اعتماد أمر العمل من التابلت
               </p>
             )}
@@ -2358,28 +2358,28 @@ export default function CarsPage() {
       </Modal>
 
       {/* ══════════ بوابة الدخول الذكية ══════════ */}
-      <Modal open={gateOpen} onClose={() => setGateOpen(false)} title="📷 بوابة الدخول الذكية">
+      <Modal open={gateOpen} onClose={() => setGateOpen(false)} title="بوابة الدخول الذكية">
         <div className="space-y-3">
       {/* ══════════ تنبيهات المشرف الآلي ══════════ */}
       {alerts.length > 0 && (
         <div className="space-y-1.5">
           {alerts.map((a) => (
-            <div key={a.id} className="flex items-center justify-between gap-2 rounded-xl border-2 border-ember bg-ember-bg px-3.5 py-2.5">
-              <span className="flex min-w-0 items-center gap-2 text-[12.5px] font-black text-ember">
+            <div key={a.id} className="flex items-center justify-between gap-2 rounded-card border-2 border-ember bg-ember-bg px-3.5 py-2.5">
+              <span className="flex min-w-0 items-center gap-2 text-t-sm font-black text-ember">
                 <MIcon name="warning" filled className="!text-[20px] shrink-0" />
                 <span className="truncate">
                   {a.plate && <b className="tnum ml-1">{a.plate}</b>}
-                  {a.station && <span className="ml-1 text-[11px]">م{String(a.station).replace(/\D/g, "")}</span>}
+                  {a.station && <span className="ml-1 text-t-xs">م{String(a.station).replace(/\D/g, "")}</span>}
                   — {a.message}
                 </span>
               </span>
               <span className="flex shrink-0 gap-1.5">
                 <button onClick={() => dismissAlert(a.id, true)}
-                        className="z8-anim-btn rounded-lg border border-ember/40 px-2 py-1 text-[10.5px] font-bold text-ember hover:bg-ember/10">
+                        className="z8-anim-btn rounded-lg border border-ember/40 px-2 py-1 text-t-xs font-bold text-ember hover:bg-ember/10">
                   بلاغ خاطئ
                 </button>
                 <button onClick={() => dismissAlert(a.id)}
-                        className="z8-anim-btn rounded-lg bg-ember px-2.5 py-1 text-[11px] font-black text-white hover:brightness-110">
+                        className="z8-anim-btn rounded-lg bg-ember px-2.5 py-1 text-t-xs font-black text-white hover:brightness-110">
                   تم التعامل
                 </button>
               </span>
@@ -2389,33 +2389,33 @@ export default function CarsPage() {
       )}
           {!gateResult && (
             <>
-              <p className="text-[12.5px] text-text-dim">
+              <p className="text-t-sm text-text-dim">
                 صوّر لوحة السيارة — لو متسجلة في الدور هيتأكد دخولها <b>تلقائياً</b> وتظهر بياناتها كاملة.
               </p>
               <input ref={gateFileRef} type="file" accept="image/*" capture="environment" hidden
                      onChange={(e) => { const f = e.target.files?.[0]; if (f) onGatePhoto(f); e.target.value = ""; }} />
               <button onClick={() => gateFileRef.current?.click()} disabled={gateBusy}
-                      className="w-full rounded-xl bg-petrol py-4 text-[15px] font-black text-white transition hover:brightness-110 disabled:opacity-50">
+                      className="w-full rounded-card bg-petrol py-4 text-t-lg font-black text-white transition hover:brightness-110 disabled:opacity-50">
                 {gateBusy ? "جارِ القراءة والمطابقة..." : "التقاط صورة اللوحة"}
               </button>
-              {gateMsg && <p className="text-center text-[12.5px] font-bold text-ember">{gateMsg}</p>}
+              {gateMsg && <p className="text-center text-t-sm font-bold text-ember">{gateMsg}</p>}
             </>
           )}
 
           {gateResult?.matched && gateResult.car && (
             <div className="space-y-3">
-              <div className={`rounded-xl border px-4 py-3 text-center font-black
+              <div className={`rounded-card border px-4 py-3 text-center font-black
                      ${gateResult.alreadyEntered ? "border-brass bg-brass-soft text-brass" : "border-emerald/40 bg-emerald-bg text-emerald"}`}>
                 {gateResult.alreadyEntered
                   ? `اللوحة ${gateResult.car.plate} داخلة بالفعل`
-                  : `✓ تم تأكيد دخول اللوحة ${gateResult.car.plate} تلقائياً`}
+                  : `تم تأكيد دخول اللوحة ${gateResult.car.plate} تلقائياً`}
               </div>
               {gateResult.isWalkIn && !gateResult.alreadyEntered && (
-                <div className="flex items-center justify-center gap-1.5 rounded-xl border border-petrol/30 bg-petrol-soft px-3 py-2 text-[12px] font-black text-petrol">
+                <div className="flex items-center justify-center gap-1.5 rounded-card border border-petrol/30 bg-petrol-soft px-3 py-2 text-t-sm font-black text-petrol">
                   <MIcon name="verified" className="!text-[16px]" /> عميل مسجل معانا — وصل من غير حجز، وكل بياناته اتسحبت من جراجه تلقائياً
                 </div>
               )}
-              <div className="space-y-1.5 rounded-xl border border-line p-3 text-[13px]">
+              <div className="space-y-1.5 rounded-card border border-line p-3 text-t-md">
                 <div className="flex justify-between"><span className="text-text-dim">العميل</span><b>{gateResult.car.customer_name || "—"}</b></div>
                 <div className="flex justify-between"><span className="text-text-dim">الجوال</span><b className="tnum">{gateResult.car.customer_phone || "—"}</b></div>
                 <div className="flex justify-between"><span className="text-text-dim">السيارة</span><b>{[gateResult.car.brand, gateResult.car.name, gateResult.car.model_year].filter(Boolean).join(" ") || "—"}</b></div>
@@ -2426,15 +2426,15 @@ export default function CarsPage() {
               </div>
               {gateResult.lastInvoiceId ? (
                 <div className="space-y-2">
-                  <div className="rounded-xl border border-petrol/30 bg-petrol-soft px-3 py-2.5 text-center text-[12.5px] font-bold text-petrol">
-                    🧾 الفاتورة (مثل آخر مرة) جاهزة تلقائياً — هتظهر فور اختيار السيارة من طابور الفوترة في المبيعات
+                  <div className="rounded-card border border-petrol/30 bg-petrol-soft px-3 py-2.5 text-center text-t-sm font-bold text-petrol">
+                    الفاتورة (مثل آخر مرة) جاهزة تلقائياً — هتظهر فور اختيار السيارة من طابور الفوترة في المبيعات
                   </div>
                   <Button variant="ghost" className="w-full justify-center" onClick={goToSalesWithLastInvoice}>
                     الذهاب لشاشة المبيعات — الفاتورة معبأة وقابلة للتعديل
                   </Button>
                 </div>
               ) : (
-                <div className="rounded-2xl border border-line p-4">
+                <div className="rounded-card border border-line p-4">
                   <OilKiosk carId={gateResult.car.id} onDone={() => { setGateResult(null); setGateMsg(""); load(); }} />
                 </div>
               )}
@@ -2447,7 +2447,7 @@ export default function CarsPage() {
 
           {gateResult && !gateResult.matched && (
             <div className="space-y-3">
-              <div className="rounded-xl border border-ember/40 bg-ember-bg px-4 py-3 text-center text-[13px] font-black text-ember">
+              <div className="rounded-card border border-ember/40 bg-ember-bg px-4 py-3 text-center text-t-md font-black text-ember">
                 اللوحة المقروءة ({gateResult.letters} {gateResult.numbers}) مش متسجلة في الدور
               </div>
               <Button className="w-full justify-center"
@@ -2474,20 +2474,20 @@ export default function CarsPage() {
         <div className="fixed inset-0 z-[100] flex flex-col bg-black">
           {/* شريط الحالة */}
           <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-2 text-[13px] font-black text-white">
+            <div className="flex items-center gap-2 text-t-md font-black text-white">
               <span className={`relative flex h-3 w-3`}>
                 <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60
-                  ${liveStatus === "watching" ? "bg-emerald-400" : liveStatus === "motion" ? "bg-amber-400" : liveStatus === "reading" ? "bg-sky-400" : "bg-red-500"}`} />
+                  ${liveStatus === "watching" ? "bg-emerald" : liveStatus === "motion" ? "bg-brass" : liveStatus === "reading" ? "bg-petrol" : "bg-ember"}`} />
                 <span className={`relative inline-flex h-3 w-3 rounded-full
-                  ${liveStatus === "watching" ? "bg-emerald-400" : liveStatus === "motion" ? "bg-amber-400" : liveStatus === "reading" ? "bg-sky-400" : "bg-red-500"}`} />
+                  ${liveStatus === "watching" ? "bg-emerald" : liveStatus === "motion" ? "bg-brass" : liveStatus === "reading" ? "bg-petrol" : "bg-ember"}`} />
               </span>
               {liveStatus === "starting" && "جارِ تشغيل الكاميرا..."}
               {liveStatus === "watching" && "المراقبة نشطة — أي لوحة تظهر تتقرأ فوراً"}
-              {liveStatus === "reading" && "🔍 جارِ قراءة اللوحة والمطابقة..."}
+              {liveStatus === "reading" && "جارِ قراءة اللوحة والمطابقة..."}
               {liveStatus === "error" && "تعذّر تشغيل الكاميرا"}
             </div>
             <button onClick={stopLive}
-                    className="flex items-center justify-center gap-1 rounded-lg bg-white/15 px-4 py-1.5 text-[12.5px] font-black text-white hover:bg-white/25">
+                    className="flex items-center justify-center gap-1 rounded-lg bg-white/15 px-4 py-1.5 text-t-sm font-black text-white hover:bg-white/25">
               <MIcon name="close" className="!text-[15px]" /> إيقاف البوابة
             </button>
           </div>
@@ -2499,21 +2499,21 @@ export default function CarsPage() {
             {liveMode === "ip" && (
               ipFrame
                 ? <img src={ipFrame} alt="بث الكاميرا" className="h-full w-full object-contain" />
-                : <div className="grid h-full place-items-center text-[13px] font-bold text-white/50">في انتظار أول لقطة من الكاميرا...</div>
+                : <div className="grid h-full place-items-center text-t-md font-bold text-white/50">في انتظار أول لقطة من الكاميرا...</div>
             )}
 
             {/* ══ شاشة اختيار مصدر الكاميرا ══ */}
             {liveStatus === "idle" && (
               <div className="absolute inset-0 grid place-items-center bg-black/80 p-5">
-                <div className="w-full max-w-md space-y-3 rounded-2xl bg-white p-5">
-                  <h3 className="text-center text-[15px] font-black">مصدر كاميرا البوابة</h3>
+                <div className="w-full max-w-md space-y-3 rounded-card bg-white p-5">
+                  <h3 className="text-center text-t-lg font-black">مصدر كاميرا البوابة</h3>
                   <button onClick={() => startLive("device")}
-                          className="w-full rounded-xl bg-petrol py-3.5 text-[14px] font-black text-white hover:brightness-110">
+                          className="w-full rounded-card bg-petrol py-3.5 text-t-md font-black text-white hover:brightness-110">
                     كاميرا هذا الجهاز
                   </button>
                   {gateCams.length > 0 && (
-                    <div className="space-y-1.5 rounded-xl border border-emerald/40 bg-emerald-bg p-3">
-                      <p className="text-[12px] font-black text-emerald">📷 كاميراتك المسجلة في الإعدادات — ضغطة تشغيل</p>
+                    <div className="space-y-1.5 rounded-card border border-emerald/40 bg-emerald-bg p-3">
+                      <p className="text-t-sm font-black text-emerald">كاميراتك المسجلة في الإعدادات — ضغطة تشغيل</p>
                       {gateCams.map((c) => (
                         <button key={c.id}
                                 onClick={() => {
@@ -2527,23 +2527,23 @@ export default function CarsPage() {
                                   setIpCamUrl(shot);
                                   startLive("ip", shot);
                                 }}
-                                className="flex w-full items-center justify-between rounded-lg bg-ink-2 px-3 py-2 text-[12px] font-bold shadow-card transition hover:brightness-105 active:scale-[.98]">
+                                className="flex w-full items-center justify-between rounded-lg bg-ink-2 px-3 py-2 text-t-sm font-bold shadow-card transition hover:brightness-105 active:scale-[.98]">
                           <span>{c.name} — {c.branch_name || ""} م{c.station}</span>
                           <span className="text-emerald">▶ تشغيل</span>
                         </button>
                       ))}
                     </div>
                   )}
-                  <div className="rounded-xl border border-line p-3">
-                    <p className="mb-1.5 text-[12px] font-black">🌐 أو رابط كاميرا يدوي</p>
+                  <div className="rounded-card border border-line p-3">
+                    <p className="mb-1.5 text-t-sm font-black">أو رابط كاميرا يدوي</p>
                     <Input dir="ltr" className="tnum" value={ipCamUrl}
                            placeholder="http://10.151.86.117:8080/shot.jpg"
                            onChange={(e) => setIpCamUrl(e.target.value)} />
-                    <p className="mt-1 text-[10.5px] text-text-dim">
+                    <p className="mt-1 text-t-xs text-text-dim">
                       من IP Webcam: شغّل Start server وخد الرابط اللي بيظهر تحت وضيف عليه /shot.jpg
                     </p>
                     <button onClick={() => startLive("ip")}
-                            className="mt-2 w-full rounded-xl bg-emerald py-3 text-[13.5px] font-black text-white hover:brightness-110">
+                            className="mt-2 w-full rounded-card bg-emerald py-3 text-t-md font-black text-white hover:brightness-110">
                       ▶ تشغيل من كاميرا IP
                     </button>
                   </div>
@@ -2553,24 +2553,24 @@ export default function CarsPage() {
 
             {/* بطاقة النتيجة الكبيرة */}
             {liveHit && (
-              <div className={`absolute inset-x-4 top-4 rounded-2xl border-2 px-5 py-4 text-center shadow-panel backdrop-blur
+              <div className={`absolute inset-x-4 top-4 rounded-card border-2 px-5 py-4 text-center shadow-panel backdrop-blur
                      ${liveHit.tone === "ok" ? "border-emerald-400 bg-emerald-600/85"
-                       : liveHit.tone === "warn" ? "border-amber-400 bg-amber-600/85"
-                       : "border-red-400 bg-red-600/85"}`}>
-                <div className="text-[20px] font-black text-white">{liveHit.title}</div>
-                {liveHit.sub && <div className="mt-0.5 text-[13px] font-bold text-white/85">{liveHit.sub}</div>}
+                       : liveHit.tone === "warn" ? "border-brass bg-brass/85"
+                       : "border-ember bg-ember/85"}`}>
+                <div className="text-t-2xl font-black text-white">{liveHit.title}</div>
+                {liveHit.sub && <div className="mt-0.5 text-t-md font-bold text-white/85">{liveHit.sub}</div>}
               </div>
             )}
 
             {liveKioskCar && (
               <div className="absolute inset-0 overflow-y-auto bg-ink p-4 sm:p-6">
-                <div className="mx-auto w-full max-w-4xl rounded-2xl bg-ink-2 p-5 shadow-panel sm:p-7">
+                <div className="mx-auto w-full max-w-4xl rounded-card bg-ink-2 p-5 shadow-panel sm:p-7">
                   <OilKiosk carId={liveKioskCar}
                             onDone={() => {
                               setLiveKioskCar(null);
                               liveRefs.current.paused = false;
                               liveRefs.current.lastReadFrame = null;
-                              liveAddLog("✓ تم إعداد الزيت — استُؤنفت المراقبة", "ok");
+                              liveAddLog("تم إعداد الزيت — استُؤنفت المراقبة", "ok");
                               load();
                             }} />
                 </div>
@@ -2579,10 +2579,10 @@ export default function CarsPage() {
 
             {liveStatus === "error" && (
               <div className="absolute inset-0 grid place-items-center bg-black/70 p-6">
-                <div className="max-w-md space-y-3 rounded-2xl bg-white p-5 text-center">
-                  <p className="text-[14px] font-black text-ember">{liveErr}</p>
+                <div className="max-w-md space-y-3 rounded-card bg-white p-5 text-center">
+                  <p className="text-t-md font-black text-ember">{liveErr}</p>
                   {liveMode === "ip" ? (
-                    <div className="space-y-1.5 text-right text-[12px] leading-relaxed text-text-dim">
+                    <div className="space-y-1.5 text-right text-t-sm leading-relaxed text-text-dim">
                       <p className="font-bold text-text">تأكد من:</p>
                       <p>1. تطبيق IP Webcam فاتح على الموبايل وضاغط <b>Start server</b> فيه (مش بس مفتوح)</p>
                       <p>2. الموبايل والكمبيوتر على <b>نفس شبكة الواي فاي</b> بالظبط</p>
@@ -2590,7 +2590,7 @@ export default function CarsPage() {
                       <p>4. لو الرابط شغال من متصفح الكمبيوتر لوحده بس مش هنا، جرّب تقفل VPN لو مفعّل على أي جهاز</p>
                     </div>
                   ) : (
-                    <p className="text-[12px] leading-relaxed text-text-dim">
+                    <p className="text-t-sm leading-relaxed text-text-dim">
                       المتصفح بيسمح بالكاميرا المستمرة على HTTPS أو localhost فقط.
                       من كروم الموبايل افتح: <span className="tnum" dir="ltr">chrome://flags</span> ←
                       ابحث <b>Insecure origins treated as secure</b> ← أضف
@@ -2614,11 +2614,11 @@ export default function CarsPage() {
           {/* سجل الأحداث الحي */}
           <div className="max-h-44 space-y-1 overflow-y-auto bg-black/90 px-4 py-3">
             {liveLog.length === 0 ? (
-              <p className="text-center text-[11.5px] text-white/40">الأحداث هتظهر هنا أولاً بأول</p>
+              <p className="text-center text-t-xs text-white/40">الأحداث هتظهر هنا أولاً بأول</p>
             ) : liveLog.map((l, i) => (
-              <div key={i} className="flex items-center gap-2 text-[12px] font-bold">
+              <div key={i} className="flex items-center gap-2 text-t-sm font-bold">
                 <span className="tnum text-white/40">{l.t}</span>
-                <span className={l.tone === "ok" ? "text-emerald-400" : l.tone === "warn" ? "text-brass" : l.tone === "err" ? "text-red-400" : "text-white/70"}>
+                <span className={l.tone === "ok" ? "text-emerald" : l.tone === "warn" ? "text-brass" : l.tone === "err" ? "text-ember" : "text-white/70"}>
                   {l.msg}
                 </span>
               </div>
@@ -2628,9 +2628,9 @@ export default function CarsPage() {
       )}
 
       {/* ══════════ باركود الحجز الذاتي ══════════ */}
-      <Modal open={qrOpen} onClose={() => setQrOpen(false)} title="📱 باركود الحجز الذاتي للعملاء">
+      <Modal open={qrOpen} onClose={() => setQrOpen(false)} title="باركود الحجز الذاتي للعملاء">
         <div className="space-y-3">
-          <p className="text-[12.5px] leading-relaxed text-text-dim">
+          <p className="text-t-sm leading-relaxed text-text-dim">
             العميل بيمسح الباركود بجواله → يسجّل سيارته ويحجز دوره <b>قبل ما يوصل</b> → يتابع
             الطابور مباشرة → وأول ما يوصل، البوابة الحية بتتعرف على لوحته وتأكد دخوله تلقائياً.
           </p>
@@ -2640,10 +2640,10 @@ export default function CarsPage() {
             </Select>
           </Field>
           {qrBranch && (
-            <div className="space-y-2 rounded-xl border border-line p-4 text-center">
+            <div className="space-y-2 rounded-card border border-line p-4 text-center">
               <img alt="باركود الحجز" className="mx-auto h-44 w-44 rounded-lg"
                    src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`${typeof window !== "undefined" ? window.location.origin : ""}/q/${qrBranch}`)}`} />
-              <div dir="ltr" className="tnum break-all text-[10.5px] text-text-dim">
+              <div dir="ltr" className="tnum break-all text-t-xs text-text-dim">
                 {typeof window !== "undefined" ? `${window.location.origin}/q/${qrBranch}` : ""}
               </div>
             </div>
@@ -2651,8 +2651,8 @@ export default function CarsPage() {
           <Button className="w-full justify-center" onClick={printBookingQr} disabled={!qrBranch}>
             طباعة ملصق الباركود
           </Button>
-          <p className="text-[10.5px] leading-relaxed text-text-dim">
-            💡 اطبعه والصقه على مدخل الفرع وطاولة الاستقبال — ولو عايز العملاء يحجزوا من بيوتهم،
+          <p className="text-t-xs leading-relaxed text-text-dim">
+            اطبعه والصقه على مدخل الفرع وطاولة الاستقبال — ولو عايز العملاء يحجزوا من بيوتهم،
             ابعت اللينك في واتساب أو حطه في جوجل ماب (يتطلب إن السيرفر يكون متاح على الإنترنت).
           </p>
         </div>

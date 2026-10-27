@@ -26,7 +26,7 @@ const STATUS_UI: Record<string, { label: string; tone: "warn" | "info" | "neutra
   pending: { label: "بانتظار الموافقة", tone: "warn" },
   approved: { label: "تمت الموافقة", tone: "info" },
   rejected: { label: "مرفوض", tone: "neutral" },
-  fulfilled: { label: "تم التنفيذ ✓", tone: "good" },
+  fulfilled: { label: "تم التنفيذ", tone: "good" },
 };
 const WAREHOUSE = "main";
 
@@ -146,7 +146,7 @@ export default function BranchRequestForm({ id }: { id?: string }) {
   }
 
   const back = (
-    <button type="button" onClick={goList} className="inline-flex items-center gap-1 text-[12.5px] font-bold text-petrol">
+    <button type="button" onClick={goList} className="inline-flex items-center gap-1 text-t-sm font-bold text-petrol">
       <MIcon name="arrow_forward" className="!text-[15px]" /> المخزون / طلبات الفروع
     </button>
   );
@@ -163,7 +163,7 @@ export default function BranchRequestForm({ id }: { id?: string }) {
       {back}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <h1 className="text-[19px] font-extrabold">{title}</h1>
+          <h1 className="page-title">{title}</h1>
           <Badge tone={ui.tone}>{ui.label}</Badge>
         </div>
         {editable && (
@@ -176,11 +176,11 @@ export default function BranchRequestForm({ id }: { id?: string }) {
       </div>
 
       <ErrorNote msg={err} />
-      {ok && <div className="rounded-lg bg-emerald-bg px-4 py-2.5 text-[12.5px] font-bold text-emerald">{ok}</div>}
+      {ok && <div className="rounded-lg bg-emerald-bg px-4 py-2.5 text-t-sm font-bold text-emerald">{ok}</div>}
 
       {editable ? (
         <Card className="space-y-3 p-4">
-          <p className="text-[12px] text-text-dim">
+          <p className="text-t-sm text-text-dim">
             احفظ الطلب كمسودة وكمّله لاحقاً، أو أرسله للموافقة. بعد الإرسال لا يمكن تعديله.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -202,11 +202,11 @@ export default function BranchRequestForm({ id }: { id?: string }) {
           <Field label="ملاحظة (اختياري)">
             <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="مثال: نقص مفاجئ في الزيت الأكثر طلباً" />
           </Field>
-          <div className="text-[12px] text-text-dim">إجمالي الكميات: <b className="tnum text-text">{totalQty}</b></div>
+          <div className="text-t-sm text-text-dim">إجمالي الكميات: <b className="tnum text-text">{totalQty}</b></div>
         </Card>
       ) : req && (
         <Card className="space-y-3 p-4">
-          <div className="grid gap-2 text-[12.5px] sm:grid-cols-4">
+          <div className="grid gap-2 text-t-sm sm:grid-cols-4">
             <div><span className="text-text-dim">الفرع الطالب:</span> <b>{req.requestingBranchName}</b></div>
             <div><span className="text-text-dim">المصدر:</span> <b>{req.sourceBranchName || "—"}</b></div>
             <div><span className="text-text-dim">بواسطة:</span> <b>{req.requestedByName}</b></div>
@@ -214,9 +214,9 @@ export default function BranchRequestForm({ id }: { id?: string }) {
             {req.note && <div className="sm:col-span-4"><span className="text-text-dim">ملاحظة:</span> {req.note}</div>}
           </div>
           <div className="overflow-x-auto rounded-lg border border-line">
-            <table className="w-full border-collapse text-[12.5px]">
+            <table className="w-full border-collapse text-t-sm">
               <thead>
-                <tr className="bg-ink-3 text-[11.5px] font-extrabold text-text-dim">
+                <tr className="bg-ink-3 text-t-xs font-extrabold text-text-dim">
                   <th className="px-3 py-2 text-right">الصنف</th>
                   <th className="w-28 px-3 py-2 text-right">المطلوب</th>
                   <th className="w-28 px-3 py-2 text-right">المعتمد</th>
@@ -234,7 +234,7 @@ export default function BranchRequestForm({ id }: { id?: string }) {
             </table>
           </div>
           {req.decidedByName && (
-            <div className="text-[12px] text-text-dim">
+            <div className="text-t-sm text-text-dim">
               البت بواسطة {req.decidedByName}{req.decisionNote && ` — ${req.decisionNote}`}
             </div>
           )}

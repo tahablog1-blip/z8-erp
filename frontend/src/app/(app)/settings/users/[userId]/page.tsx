@@ -114,7 +114,7 @@ export default function UserEditorPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-[19px] font-extrabold">
+        <h1 className="page-title">
           {isNew ? "إضافة موظف جديد" : `تعديل — ${savedName}`}
         </h1>
         <Button variant="ghost" className="gap-1" onClick={() => router.push("/settings/users")}><MIcon name="arrow_forward" className="!text-[15px]" /> رجوع للقائمة</Button>
@@ -158,7 +158,7 @@ export default function UserEditorPage() {
           </div>
 
           {!isNew && (
-            <label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-bold">
+            <label className="flex cursor-pointer items-center gap-2 text-t-sm font-bold">
               <Switch checked={uForm.isActive} onChange={(v) => setUForm({ ...uForm, isActive: v })} />
               الحساب نشط (إلغاء التفعيل = تعطيل الدخول)
             </label>
@@ -171,20 +171,20 @@ export default function UserEditorPage() {
           <div className="space-y-3">
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <p className="text-[12px] font-extrabold text-text-dim">أدوار جاهزة — اضغط دور ليملأ الصلاحيات ثم عدّل ما تشاء:</p>
-                <a href="/settings/roles" className="text-[11px] font-bold text-petrol hover:underline">إدارة الأدوار ←</a>
+                <p className="text-t-sm font-extrabold text-text-dim">أدوار جاهزة — اضغط دور ليملأ الصلاحيات ثم عدّل ما تشاء:</p>
+                <a href="/settings/roles" className="text-t-xs font-bold text-petrol hover:underline">إدارة الأدوار ←</a>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {roles.map((r) => (
                   <button key={r.id} type="button" title={r.description || undefined}
                           onClick={() => applyRole(r)}
-                          className={`rounded-lg px-3 py-1.5 text-[11.5px] font-bold transition
+                          className={`rounded-lg px-3 py-1.5 text-t-xs font-bold transition
                             ${uForm.roleId === r.id ? "bg-petrol text-white" : "border border-line bg-ink-2 hover:border-petrol"}`}>
                     {r.icon} {r.name}
                   </button>
                 ))}
                 <button type="button" onClick={() => setUForm({ ...uForm, roleId: null, permissions: [] })}
-                        className="flex items-center gap-1 rounded-lg border border-line bg-ink-2 px-3 py-1.5 text-[11.5px] font-bold text-text-dim hover:border-ember hover:text-ember">
+                        className="flex items-center gap-1 rounded-lg border border-line bg-ink-2 px-3 py-1.5 text-t-xs font-bold text-text-dim hover:border-ember hover:text-ember">
                   <MIcon name="close" className="!text-[14px]" /> مسح الكل
                 </button>
               </div>
@@ -195,10 +195,10 @@ export default function UserEditorPage() {
               <div className="grid gap-3 lg:grid-cols-2">
                 {permGroups.map((g) => (
                   <div key={g.group} className="rounded-lg border border-line p-3">
-                    <p className="mb-1.5 text-[12px] font-extrabold text-petrol">{g.group}</p>
+                    <p className="mb-1.5 text-t-sm font-extrabold text-petrol">{g.group}</p>
                     <div className="grid gap-1 sm:grid-cols-2">
                       {g.items.map((it) => (
-                        <label key={it.key} className="flex cursor-pointer items-center gap-2 text-[12px]">
+                        <label key={it.key} className="flex cursor-pointer items-center gap-2 text-t-sm">
                           <Switch size="sm" checked={uForm.permissions.includes(it.key)} onChange={() => togglePerm(it.key)} />
                           {it.label}
                         </label>
@@ -208,7 +208,7 @@ export default function UserEditorPage() {
                 ))}
               </div>
             )}
-            <p className="text-[11.5px] font-bold text-text-dim">
+            <p className="text-t-xs font-bold text-text-dim">
               المحدد: {uForm.permissions.length} صلاحية
             </p>
           </div>

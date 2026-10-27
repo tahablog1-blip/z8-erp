@@ -49,7 +49,7 @@ const previewButton = (show: boolean) => !show ? "" : `
   <button onclick="window.print()" class="no-print"
     style="position:fixed;top:8px;inset-inline-start:8px;z-index:9;background:#0C5E66;color:#fff;
            border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-family:inherit;
-           font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)">🖨 طباعة</button>
+           font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)">طباعة</button>
   <style>@media print { .no-print { display:none !important; } }</style>`;
 
 // ── تقرير التشييك مجمّعاً بالمحطات (مشترك بين الصيغتين) ──
@@ -60,7 +60,7 @@ function checklistHTML(inv: InvoiceDetail, compact: boolean): string {
     const rows = items.filter((i) => stageOf(i.key) === st.id);
     if (!rows.length) return "";
     const body = rows.map((i) => {
-      const mark = i.status === "needs" ? "⚠" : "✓";
+      const mark = i.status === "needs" ? "" : "";
       return compact
         ? `<div class="row"><span>${mark} ${esc(i.label)}</span><b>${esc(CK_LABEL[i.status as CkStatus] ?? i.status)}</b></div>` +
           (i.note ? `<div style="font-size:9px;color:#333;margin-right:10px">${esc(i.note)}</div>` : "")

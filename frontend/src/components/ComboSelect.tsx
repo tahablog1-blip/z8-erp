@@ -1,5 +1,6 @@
 "use client";
 // ComboSelect — قائمة منسدلة + خيار «أخرى...» يفتح كتابة حرة، ويتعرّف تلقائياً على القيم القديمة غير الموجودة بالقائمة.
+import { MIcon } from "@/components/m-icon";
 import { useEffect, useState } from "react";
 import { Input, Select } from "@/components/ui";
 
@@ -15,8 +16,8 @@ export function ComboSelect({ value, options, placeholder, onChange }: {
         <Input value={value} placeholder={placeholder || "اكتب..."} autoFocus
                onChange={(e) => onChange(e.target.value)} />
         <button type="button" onClick={() => { setOther(false); onChange(""); }}
-                className="z8-anim-btn shrink-0 rounded-lg border border-line px-2 text-[11px] font-bold text-text-dim hover:text-text"
-                title="الرجوع للقائمة">☰</button>
+                className="z8-anim-btn shrink-0 rounded-lg border border-line px-2 text-t-xs font-bold text-text-dim hover:text-text"
+                title="الرجوع للقائمة" aria-label="الرجوع للقائمة"><MIcon name="list" className="!text-[16px]" /></button>
       </div>
     );
   }

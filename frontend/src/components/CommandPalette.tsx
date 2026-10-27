@@ -80,7 +80,7 @@ export function CommandPalette({ open, onClose, titleOf }: { open: boolean; onCl
   return (
     <div className="fixed inset-0 z-[90] flex items-start justify-center bg-black/45 px-3 pt-[10vh]" onMouseDown={onClose}>
       <div role="dialog" aria-modal="true" aria-label={en ? "Search" : "بحث"} onMouseDown={(e) => e.stopPropagation()} onKeyDown={onKey}
-        className="w-full max-w-xl overflow-hidden rounded-2xl border border-line bg-ink-2 shadow-2xl">
+        className="w-full max-w-xl overflow-hidden rounded-card border border-line bg-ink-2 shadow-2xl">
         <div className="flex items-center gap-2 border-b border-line px-4">
           <MIcon name="search" className="!text-[20px] text-text-dim" />
           <input ref={inputRef} value={q} onChange={(e) => setQ(e.target.value)} role="combobox" aria-expanded="true" aria-controls="cp-list"

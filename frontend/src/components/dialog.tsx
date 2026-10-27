@@ -52,26 +52,26 @@ export function DialogHost() {
   const danger = cur.kind === "confirm" &&
     /حذف|مسح|إلغاء|مرتجع|إنهاء|إغلاق الوردية/.test(cur.message);
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-[3px]"
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4"
          onClick={() => close(cur.kind === "alert")}>
       <div className="z8-pop w-full max-w-sm rounded-card border border-line bg-ink-2 p-5 shadow-panel"
            onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start gap-3">
-          <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl
+          <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-card
               ${danger ? "bg-ember-bg text-ember" : "bg-petrol-soft text-petrol"}`}>
             <MIcon name={danger ? "delete" : cur.kind === "alert" ? "info" : "help"} className="!text-[21px]" />
           </span>
-          <p className="pt-1 text-[13.5px] font-bold leading-relaxed">{cur.message}</p>
+          <p className="pt-1 text-t-md font-bold leading-relaxed">{cur.message}</p>
         </div>
         <div className="mt-4 flex justify-start gap-2">
           <button onClick={() => close(true)} autoFocus
-                  className={`rounded-xl px-5 py-2.5 text-[13px] font-black text-white shadow-card transition-all duration-200 hover:-translate-y-px hover:brightness-110 active:scale-[.97]
+                  className={`rounded-card px-5 py-2.5 text-t-md font-black text-white shadow-card transition-all duration-200 hover:-translate-y-px hover:brightness-110 active:scale-[.97]
                       ${danger ? "bg-ember" : "bg-petrol"}`}>
             {cur.kind === "alert" ? "حسناً" : danger ? "نعم — نفّذ" : "تأكيد"}
           </button>
           {cur.kind === "confirm" && (
             <button onClick={() => close(false)}
-                    className="rounded-xl border border-line bg-ink-2 px-5 py-2.5 text-[13px] font-bold transition-all duration-200 hover:border-petrol hover:text-petrol">
+                    className="rounded-card border border-line bg-ink-2 px-5 py-2.5 text-t-md font-bold transition-all duration-200 hover:border-petrol hover:text-petrol">
               إلغاء
             </button>
           )}

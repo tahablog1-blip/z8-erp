@@ -58,10 +58,10 @@ export function InvoicePreviewModal({ invoice, initialFormat = "a4", onClose }: 
     <FullScreenModal title={`معاينة الفاتورة ${invoice.invoice_no}`} onClose={onClose}>
       <div className="flex min-h-0 flex-1 flex-col gap-3 p-3 md:p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <div role="tablist" aria-label="حجم الطباعة" className="inline-flex rounded-xl border border-line bg-ink-2 p-0.5">
+          <div role="tablist" aria-label="حجم الطباعة" className="inline-flex rounded-card border border-line bg-ink-2 p-0.5">
             {([["a4", "A4"], ["thermal", "حراري 80مم"]] as const).map(([k, l]) => (
               <button key={k} role="tab" aria-selected={fmt === k} onClick={() => setFmt(k)}
-                className={`rounded-lg px-3.5 py-1.5 text-[13px] font-bold transition ${fmt === k ? "bg-petrol text-white" : "text-text-dim hover:text-text"}`}>{l}</button>))}
+                className={`rounded-lg px-3.5 py-1.5 text-t-md font-bold transition ${fmt === k ? "bg-petrol text-white" : "text-text-dim hover:text-text"}`}>{l}</button>))}
           </div>
           <div className="ms-auto flex flex-wrap items-center gap-2">
             <Button onClick={print} disabled={!html}><MIcon name="print" className="!text-[17px]" />طباعة</Button>
@@ -69,8 +69,8 @@ export function InvoicePreviewModal({ invoice, initialFormat = "a4", onClose }: 
             <Button variant="outline" onClick={whatsapp} loading={busy === "wa"}><MIcon name="chat" className="!text-[17px]" />واتساب</Button>
           </div>
         </div>
-        {note && <div role="status" className={`rounded-xl px-3 py-2 text-[13px] font-bold ${note.ok ? "bg-emerald-bg text-emerald" : "bg-ember-bg text-ember"}`}>{note.msg}</div>}
-        <div ref={box} className="min-h-0 flex-1 overflow-auto rounded-xl border border-line bg-ink-3 p-2">
+        {note && <div role="status" className={`rounded-card px-3 py-2 text-t-md font-bold ${note.ok ? "bg-emerald-bg text-emerald" : "bg-ember-bg text-ember"}`}>{note.msg}</div>}
+        <div ref={box} className="min-h-0 flex-1 overflow-auto rounded-card border border-line bg-ink-3 p-2">
           {err ? <div role="alert" className="p-8 text-center text-ember">تعذر تجهيز المعاينة: {err}</div> : !html ? <div className="p-8 text-center text-text-dim">جارِ التجهيز…</div> : (
             <div dir="ltr" style={{ width: w * scale, height: h * scale, margin: "0 auto" }}>
               <iframe ref={frame} title={`فاتورة ${invoice.invoice_no}`} srcDoc={html} sandbox="allow-same-origin allow-scripts allow-modals"

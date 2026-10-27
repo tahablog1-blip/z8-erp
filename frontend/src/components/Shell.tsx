@@ -136,7 +136,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     });
   }
 
-  // ── 💬 عداد الرسائل غير المقروءة (رسائل العملاء) — استطلاع كل 15 ثانية ──
+  // ── عداد الرسائل غير المقروءة (رسائل العملاء) — استطلاع كل 15 ثانية ──
   //    شارة خضراء على "المحادثات" + إشعار متصفح + عداد في عنوان التبويب
   const [unread, setUnread] = useState(0);
   const canChats = hasPerm("service_notes.view", "service_notes.create", "service_notes.manage");
@@ -154,7 +154,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         if (last >= 0 && r.unread > last && typeof Notification !== "undefined") {
           if (Notification.permission === "default") await Notification.requestPermission();
           if (Notification.permission === "granted") {
-            new Notification("💬 رسالة جديدة من عميل", {
+            new Notification("رسالة جديدة من عميل", {
               body: `لديك ${r.unread} رسالة غير مقروءة — افتح المحادثات`,
               tag: "z8-chat",
             });
@@ -176,7 +176,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     document.title = unread > 0 ? `(${unread}) ${base}` : base;
   }, [unread]);
 
-  // ── 🔔 مركز الإشعارات الداخلي (نقص مخزون/موافقات معلقة/فرق صندوق...) ──
+  // ── مركز الإشعارات الداخلي (نقص مخزون/موافقات معلقة/فرق صندوق...) ──
   const [notifUnread, setNotifUnread] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifList, setNotifList] = useState<NotificationRow[]>([]);
@@ -255,12 +255,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
                         ${collapsed ? "md:w-[72px]" : "md:w-60"}
                         ${mobileNavOpen ? "translate-x-0 shadow-panel" : "ltr:-translate-x-full rtl:translate-x-full"}`}>
         <div className={`flex items-center gap-3 px-5 py-5 ${collapsed ? "md:justify-center md:px-0" : ""}`}>
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 p-1.5">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-card bg-white/10 p-1.5">
             <img src="/logo-white.png" alt="مصدر الزيوت" className="h-full w-full object-contain" />
           </div>
           <div className={`leading-tight flex-1 ${collapsed ? "md:hidden" : ""}`}>
-            <div className="text-[13.5px] font-extrabold">مصدر الزيوت</div>
-            <div className="text-[10.5px] text-white/60">منصة الإدارة</div>
+            <div className="text-t-md font-extrabold">مصدر الزيوت</div>
+            <div className="text-t-xs text-white/60">منصة الإدارة</div>
           </div>
           {/* إغلاق الدرج — الشاشات الضيقة بس */}
           <button onClick={() => setMobileNavOpen(false)} aria-label="إغلاق القائمة"
@@ -280,11 +280,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 {/* رأس القسم — حواف حادة، نفس لون القضيب */}
                 {sec !== "الرئيسية" && !collapsed && (
                   <button onClick={() => toggleSec(sec)}
-                    className={`flex h-10 w-full items-center gap-2.5 px-3 text-[12.5px] font-extrabold transition
+                    className={`flex h-10 w-full items-center gap-2.5 px-3 text-t-sm font-extrabold transition
                             ${openSecs[sec] ? "bg-white/10 text-white" : "text-white/60 hover:bg-white/5 hover:text-white"}`}>
                     <NavIcon name={SECTION_ICONS[sec] || "sec_ops"} />
                     <span className="flex-1 text-right">{sectionLabel}</span>
-                    <span className={`text-[9px] opacity-60 transition-transform duration-200 ${openSecs[sec] ? "" : "-rotate-90"}`}>▼</span>
+                    <span className={`text-t-xs opacity-60 transition-transform duration-200 ${openSecs[sec] ? "" : "-rotate-90"}`}>▼</span>
                   </button>
                 )}
                 {sec !== "الرئيسية" && collapsed && (
@@ -299,13 +299,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
                     const label = t(NAV_TITLE_KEYS[m.title] || "", m.title);
                     const linkEl = (
                       <Link href={m.path} onClick={() => setMobileNavOpen(false)}
-                        className={`relative mx-2 flex h-10 items-center gap-2.5 px-3.5 text-[13px] font-bold transition-all duration-200
+                        className={`relative mx-2 flex h-10 items-center gap-2.5 px-3.5 text-t-md font-bold transition-all duration-200
                               ${sec !== "الرئيسية" ? "pr-6" : ""} ${collapsed ? "md:mx-auto md:w-10 md:justify-center md:px-0 md:pr-0" : ""}
-                              ${active ? "m3 rounded-lg bg-blue-500 font-black text-white" : "m3 rounded-lg text-white/70 hover:bg-white/10 hover:text-white"}`}>
+                              ${active ? "m3 rounded-lg bg-nav-active font-black text-white" : "m3 rounded-lg text-white/70 hover:bg-white/10 hover:text-white"}`}>
                         <NavIcon name={m.icon} />
                         <span className={collapsed ? "flex-1 md:hidden" : "flex-1"}>{label}</span>
                         {m.path === "/service-notes" && unread > 0 && (
-                          <span className={`grid h-5 min-w-5 place-items-center rounded-full bg-emerald px-1.5 text-[10.5px] font-black text-white ${collapsed ? "md:absolute md:-left-1 md:-top-1 md:h-4 md:min-w-4 md:text-[9px]" : ""}`}>
+                          <span className={`grid h-5 min-w-5 place-items-center rounded-full bg-emerald px-1.5 text-t-xs font-black text-white ${collapsed ? "md:absolute md:-left-1 md:-top-1 md:h-4 md:min-w-4 md:text-t-xs" : ""}`}>
                             {unread > 99 ? "99+" : unread}
                           </span>
                         )}
@@ -327,13 +327,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
                           <div key={m.path} className="relative">
                             <Tooltip label={label}>
                               <Link href={m.path}
-                                className={`mx-auto flex h-10 w-10 items-center justify-center text-[13px] font-bold transition-all duration-200
-                                      ${active ? "m3 rounded-lg bg-blue-500 font-black text-white" : "m3 rounded-lg text-white/70 hover:bg-white/10 hover:text-white"}`}>
+                                className={`mx-auto flex h-10 w-10 items-center justify-center text-t-md font-bold transition-all duration-200
+                                      ${active ? "m3 rounded-lg bg-nav-active font-black text-white" : "m3 rounded-lg text-white/70 hover:bg-white/10 hover:text-white"}`}>
                                 <NavIcon name={m.icon} />
                               </Link>
                             </Tooltip>
                             {m.path === "/service-notes" && unread > 0 && (
-                              <span className="pointer-events-none absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-emerald px-1 text-[9px] font-black text-white">
+                              <span className="pointer-events-none absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-emerald px-1 text-t-xs font-black text-white">
                                 {unread > 99 ? "99+" : unread}
                               </span>
                             )}
@@ -351,20 +351,20 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className={`border-t border-white/10 px-3 py-2 ${collapsed ? "md:px-0" : ""}`}>
           <Tooltip label={collapsed ? "توسيع القائمة" : "طيّ القائمة"} side="end">
             <button onClick={toggleCollapsed}
-              className={`m3 hidden h-9 items-center gap-2 rounded-lg text-[12px] font-bold text-white/60 transition hover:bg-white/10 hover:text-white md:flex ${collapsed ? "md:w-10 md:justify-center md:mx-auto" : "w-full px-3"}`}>
+              className={`m3 hidden h-9 items-center gap-2 rounded-lg text-t-sm font-bold text-white/60 transition hover:bg-white/10 hover:text-white md:flex ${collapsed ? "md:w-10 md:justify-center md:mx-auto" : "w-full px-3"}`}>
               <MIcon name={collapsed ? "right_panel_open" : "left_panel_close"} />
               {!collapsed && <span>طيّ القائمة</span>}
             </button>
           </Tooltip>
         </div>
-        <div className={`border-t border-white/10 px-3 py-3 text-[10.5px] text-white/45 ${collapsed ? "hidden md:hidden" : ""}`}>
+        <div className={`border-t border-white/10 px-3 py-3 text-t-xs text-white/45 ${collapsed ? "hidden md:hidden" : ""}`}>
           Z8 Platform · المرحلة 5 · {process.env.NEXT_PUBLIC_BUILD}
         </div>
       </aside>
 
       {/* ── مساحة العمل ── */}
       <div className="flex min-w-0 flex-1 flex-col z8-h-screen p-2 sm:p-3 md:p-4">
-        <div className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line elev-1 ${panelBgStyle(bg) ? "" : "bg-ink-2"}`}
+        <div className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border border-line elev-1 ${panelBgStyle(bg) ? "" : "bg-ink-2"}`}
              style={panelBgStyle(bg)}>
           <header className="flex h-14 shrink-0 items-center gap-1.5 border-b border-line px-3 sm:gap-2.5 sm:px-5">
             {/* زر القائمة — الشاشات الضيقة بس (موبايل/تابلت عمودي) */}
@@ -379,7 +379,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {/* عنوان الصفحة + فتات الخبز */}
             <div className="min-w-0 flex-1">
               {sectionTitle && <div className="hidden sm:block"><Breadcrumb items={[{ label: sectionTitle }, { label: pageTitle }]} /></div>}
-              <div className="truncate text-[16px] font-extrabold leading-6 text-text sm:text-page-title">{pageTitle}</div>
+              <div className="truncate text-t-lg font-extrabold leading-6 text-text sm:text-page-title">{pageTitle}</div>
             </div>
 
             {/* البحث الشامل (Ctrl+K) */}
@@ -396,7 +396,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol">
                   <MIcon name="notifications_active" className="!text-[19px]" />
                   {notifUnread > 0 && (
-                    <span className="absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-ember px-1 text-[9px] font-black text-white">
+                    <span className="absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-ember px-1 text-t-xs font-black text-white">
                       {notifUnread > 99 ? "99+" : notifUnread}
                     </span>
                   )}
@@ -405,29 +405,29 @@ export function Shell({ children }: { children: React.ReactNode }) {
               {notifOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
-                  <div role="dialog" aria-label="الإشعارات" className="fixed inset-x-2 top-16 z-50 overflow-hidden rounded-xl border border-line bg-ink-2 shadow-panel sm:absolute sm:inset-x-auto sm:left-0 sm:top-11 sm:w-80">
+                  <div role="dialog" aria-label="الإشعارات" className="fixed inset-x-2 top-16 z-50 overflow-hidden rounded-card border border-line bg-ink-2 shadow-panel sm:absolute sm:inset-x-auto sm:left-0 sm:top-11 sm:w-80">
                     <div className="flex items-center justify-between border-b border-line px-3 py-2">
-                      <span className="text-[12.5px] font-bold">الإشعارات</span>
+                      <span className="text-t-sm font-bold">الإشعارات</span>
                       {notifUnread > 0 && (
-                        <button onClick={markAllNotifRead} className="text-[11px] font-bold text-petrol hover:underline">
+                        <button onClick={markAllNotifRead} className="text-t-xs font-bold text-petrol hover:underline">
                           تعليم الكل كمقروء
                         </button>
                       )}
                     </div>
                     <div className="max-h-[60vh] overflow-y-auto sm:max-h-96">
                       {notifLoading ? (
-                        <div className="p-4 text-center text-[12px] text-text-dim">جارِ التحميل...</div>
+                        <div className="p-4 text-center text-t-sm text-text-dim">جارِ التحميل...</div>
                       ) : notifList.length === 0 ? (
-                        <div className="p-4 text-center text-[12px] text-text-dim">لا توجد إشعارات</div>
+                        <div className="p-4 text-center text-t-sm text-text-dim">لا توجد إشعارات</div>
                       ) : notifList.map((n) => (
                         <button key={n.id} onClick={() => markNotifRead(n)}
                           className={`block w-full border-b border-line/60 px-3 py-2.5 text-right transition hover:bg-ink-3 ${n.is_read ? "" : "bg-petrol-soft/40"}`}>
                           <div className="flex items-start gap-1.5">
                             <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${
-                              n.severity === "danger" ? "bg-ember" : n.severity === "warn" ? "bg-amber-500" : "bg-petrol"}`} />
+                              n.severity === "danger" ? "bg-ember" : n.severity === "warn" ? "bg-brass" : "bg-petrol"}`} />
                             <div className="min-w-0 flex-1">
-                              <div className={`text-[12.5px] ${n.is_read ? "text-text-dim" : "font-bold"}`}>{n.title}</div>
-                              {n.body && <div className="mt-0.5 text-[11px] text-text-dim">{n.body}</div>}
+                              <div className={`text-t-sm ${n.is_read ? "text-text-dim" : "font-bold"}`}>{n.title}</div>
+                              {n.body && <div className="mt-0.5 text-t-xs text-text-dim">{n.body}</div>}
                             </div>
                           </div>
                         </button>
@@ -444,7 +444,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 className="relative hidden h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol sm:grid">
                 <MIcon name="chat" className="!text-[19px]" />
                 {unread > 0 && (
-                  <span className="absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-ember px-1 text-[9px] font-black text-white">
+                  <span className="absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-ember px-1 text-t-xs font-black text-white">
                     {unread > 99 ? "99+" : unread}
                   </span>
                 )}
@@ -454,7 +454,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {/* ع / EN — يظهر لكل الموظفين في كل الأقسام */}
             <button onClick={() => setLang(lang === "ar" ? "en" : "ar")}
               title={lang === "ar" ? "Switch to English" : "التبديل للعربية"}
-              className="grid h-9 min-w-9 shrink-0 place-items-center rounded-lg border border-line px-2 text-[12px] font-black text-text-dim transition hover:border-petrol hover:text-petrol">
+              className="grid h-9 min-w-9 shrink-0 place-items-center rounded-lg border border-line px-2 text-t-sm font-black text-text-dim transition hover:border-petrol hover:text-petrol">
               {lang === "ar" ? "EN" : "ع"}
             </button>
 
@@ -471,16 +471,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
             <div className="mx-1 hidden h-6 w-px shrink-0 bg-line sm:block" />
 
-            <div className="hidden text-[12.5px] text-text-dim sm:block">
+            <div className="hidden text-t-sm text-text-dim sm:block">
               <span className="font-bold text-text">{user?.fullName}</span>
               <span className="mx-1.5">·</span>
               {user?.role === "admin" ? (lang === "ar" ? "مدير النظام" : "Administrator") : (lang === "ar" ? "موظف" : "Employee")}
             </div>
-            <div className="hidden h-9 w-9 shrink-0 place-items-center rounded-full bg-petrol text-[13px] font-black text-white sm:grid">
+            <div className="hidden h-9 w-9 shrink-0 place-items-center rounded-full bg-petrol text-t-md font-black text-white sm:grid">
               {user?.fullName?.trim().charAt(0) || "؟"}
             </div>
             <button onClick={logout} aria-label={t("top.logout")} title={t("top.logout")}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-[12px] font-bold text-text-dim hover:border-ember hover:text-ember sm:w-auto sm:px-3">
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-t-sm font-bold text-text-dim hover:border-ember hover:text-ember sm:w-auto sm:px-3">
               <MIcon name="logout" className="!text-[19px] sm:hidden" />
               <span className="hidden sm:inline">{t("top.logout")}</span>
             </button>

@@ -76,7 +76,7 @@ function StatusText({ inv }: { inv: Invoice }) {
   return (
     <span className="inline-flex flex-col">
       <span className="inline-flex items-center gap-1.5 font-bold text-emerald"><span className="h-2 w-2 rounded-full bg-emerald" aria-hidden />سارية</span>
-      {Number(inv.credit_total) > 0 && <span className="tnum text-[11px] font-bold text-brass">آجل {money(inv.credit_total)}</span>}
+      {Number(inv.credit_total) > 0 && <span className="tnum text-t-xs font-bold text-brass">آجل {money(inv.credit_total)}</span>}
     </span>
   );
 }
@@ -171,24 +171,24 @@ export function InvoiceHistory({ onOpen, onPrint, refreshKey }: {
   const total = rows.reduce((s, r) => s + (r.is_returned ? 0 : Number(r.total_inc)), 0);
 
   return (
-    <div className="rounded-2xl border border-line bg-ink-2">
+    <div className="rounded-card border border-line bg-ink-2">
       {/* ═══ شريط الأدوات ═══ */}
       <div className="flex flex-wrap items-center gap-2 border-b border-line p-3">
         {/* قائمة العرض */}
         <div className="relative">
           <button onClick={() => { setViewOpen((v) => !v); setAdvOpen(false); }} aria-haspopup="listbox" aria-expanded={viewOpen}
-            className="inline-flex items-center gap-2 rounded-xl border border-line px-3.5 py-2.5 text-[14px] font-extrabold transition hover:border-petrol">
+            className="inline-flex items-center gap-2 rounded-card border border-line px-3.5 py-2.5 text-t-md font-extrabold transition hover:border-petrol">
             {activeView ? activeView.label : "نتائج البحث"}
             <MIcon name="expand_more" className="!text-[20px] text-text-dim" />
           </button>
           {viewOpen && (
             <>
               <div className="fixed inset-0 z-30" onClick={() => setViewOpen(false)} aria-hidden />
-              <ul role="listbox" className="absolute right-0 z-40 mt-1.5 w-56 overflow-hidden rounded-xl border border-line bg-ink-2 py-1 shadow-panel">
+              <ul role="listbox" className="absolute right-0 z-40 mt-1.5 w-56 overflow-hidden rounded-card border border-line bg-ink-2 py-1 shadow-panel">
                 {VIEWS.map((v) => (
                   <li key={v.key}>
                     <button role="option" aria-selected={activeView?.key === v.key} onClick={() => applyView(v)}
-                      className={`flex w-full items-center gap-2.5 px-3.5 py-2.5 text-right text-[13px] font-bold transition hover:bg-ink-3
+                      className={`flex w-full items-center gap-2.5 px-3.5 py-2.5 text-right text-t-md font-bold transition hover:bg-ink-3
                         ${activeView?.key === v.key ? "text-petrol" : ""}`}>
                       <MIcon name={v.icon} className="!text-[18px]" />{v.label}
                       {activeView?.key === v.key && <MIcon name="check" className="mr-auto !text-[16px]" />}
@@ -218,50 +218,50 @@ export function InvoiceHistory({ onOpen, onPrint, refreshKey }: {
               <div className="fixed inset-0 z-30" onClick={() => setAdvOpen(false)} aria-hidden />
               <form role="dialog" aria-label="بحث متقدم"
                 onSubmit={(e) => { e.preventDefault(); applyAdvanced(); }}
-                className="absolute right-0 top-full z-40 mt-2 w-[min(580px,calc(100vw-2rem))] rounded-2xl border border-line bg-ink-2 p-4 shadow-panel">
+                className="absolute right-0 top-full z-40 mt-2 w-[min(580px,calc(100vw-2rem))] rounded-card border border-line bg-ink-2 p-4 shadow-panel">
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-[14px] font-extrabold">بحث متقدم</h3>
+                  <h3 className="text-t-md font-extrabold">بحث متقدم</h3>
                   <IconButton label="إغلاق" size="sm" type="button" onClick={() => setAdvOpen(false)}><MIcon name="close" className="!text-[17px]" /></IconButton>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="block">
-                    <span className="mb-1.5 block text-[12px] font-bold text-text-dim">رقم الفاتورة</span>
+                    <span className="mb-1.5 block text-t-sm font-bold text-text-dim">رقم الفاتورة</span>
                     <Input value={draft.invoiceNo} onChange={(e) => setDraft({ ...draft, invoiceNo: e.target.value })} placeholder="INV-000123" dir="ltr" className="text-right" />
                   </label>
                   <label className="block">
-                    <span className="mb-1.5 block text-[12px] font-bold text-text-dim">رقم اللوحة</span>
+                    <span className="mb-1.5 block text-t-sm font-bold text-text-dim">رقم اللوحة</span>
                     <Input value={draft.plate} onChange={(e) => setDraft({ ...draft, plate: e.target.value })} placeholder="1288 HHR" dir="ltr" className="text-right uppercase" />
                   </label>
                   <label className="block sm:col-span-2">
-                    <span className="mb-1.5 block text-[12px] font-bold text-text-dim">العميل أو الجوال</span>
+                    <span className="mb-1.5 block text-t-sm font-bold text-text-dim">العميل أو الجوال</span>
                     <Input value={draft.customer} onChange={(e) => setDraft({ ...draft, customer: e.target.value })} />
                   </label>
                   <label className="block">
-                    <span className="mb-1.5 block text-[12px] font-bold text-text-dim">نوع الفاتورة</span>
+                    <span className="mb-1.5 block text-t-sm font-bold text-text-dim">نوع الفاتورة</span>
                     <Select value={draft.source} onChange={(e) => setDraft({ ...draft, source: e.target.value as Filters["source"] })}>
                       <option value="">الكل</option><option value="car">خدمة سيارة</option><option value="pos">بيع مباشر</option>
                     </Select>
                   </label>
                   <label className="block">
-                    <span className="mb-1.5 block text-[12px] font-bold text-text-dim">الحالة</span>
+                    <span className="mb-1.5 block text-t-sm font-bold text-text-dim">الحالة</span>
                     <Select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value as Filters["status"] })}>
                       <option value="">الكل</option><option value="active">سارية</option><option value="returned">مرتجعة</option><option value="credit">بها آجل</option>
                     </Select>
                   </label>
                   <label className="block">
-                    <span className="mb-1.5 block text-[12px] font-bold text-text-dim">من تاريخ</span>
+                    <span className="mb-1.5 block text-t-sm font-bold text-text-dim">من تاريخ</span>
                     <Input type="date" value={draft.from} onChange={(e) => setDraft({ ...draft, from: e.target.value })} />
                   </label>
                   <label className="block">
-                    <span className="mb-1.5 block text-[12px] font-bold text-text-dim">إلى تاريخ</span>
+                    <span className="mb-1.5 block text-t-sm font-bold text-text-dim">إلى تاريخ</span>
                     <Input type="date" value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value })} />
                   </label>
                   <label className="block">
-                    <span className="mb-1.5 block text-[12px] font-bold text-text-dim">الإجمالي من (ر.س)</span>
+                    <span className="mb-1.5 block text-t-sm font-bold text-text-dim">الإجمالي من (ر.س)</span>
                     <Input inputMode="decimal" value={draft.min} onChange={(e) => setDraft({ ...draft, min: e.target.value.replace(/[^0-9.]/g, "") })} className="tnum" />
                   </label>
                   <label className="block">
-                    <span className="mb-1.5 block text-[12px] font-bold text-text-dim">الإجمالي إلى (ر.س)</span>
+                    <span className="mb-1.5 block text-t-sm font-bold text-text-dim">الإجمالي إلى (ر.س)</span>
                     <Input inputMode="decimal" value={draft.max} onChange={(e) => setDraft({ ...draft, max: e.target.value.replace(/[^0-9.]/g, "") })} className="tnum" />
                   </label>
                 </div>
@@ -284,23 +284,23 @@ export function InvoiceHistory({ onOpen, onPrint, refreshKey }: {
       {hasFilters && (
         <div className="flex flex-wrap items-center gap-2 border-b border-line bg-ink-3/50 px-3 py-2">
           {f.q.trim() && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-ink-2 py-1 pl-1.5 pr-3 text-[12px] font-bold">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-ink-2 py-1 pl-1.5 pr-3 text-t-sm font-bold">
               بحث: {f.q.trim()}
               <button aria-label="إزالة البحث" onClick={() => { setQInput(""); setF({ ...f, q: "" }); }} className="grid h-5 w-5 place-items-center rounded-full text-text-dim hover:bg-ink-3 hover:text-ember"><MIcon name="close" className="!text-[14px]" /></button>
             </span>
           )}
           {chips.map((c) => (
-            <span key={c.key} className="inline-flex items-center gap-1.5 rounded-full border border-petrol/30 bg-petrol-soft py-1 pl-1.5 pr-3 text-[12px] font-bold text-petrol">
+            <span key={c.key} className="inline-flex items-center gap-1.5 rounded-full border border-petrol/30 bg-petrol-soft py-1 pl-1.5 pr-3 text-t-sm font-bold text-petrol">
               {c.label}
               <button aria-label={`إزالة ${c.label}`} onClick={() => removeChip(c.key)} className="grid h-5 w-5 place-items-center rounded-full hover:bg-petrol/15"><MIcon name="close" className="!text-[14px]" /></button>
             </span>
           ))}
-          <button onClick={clearAll} className="text-[12px] font-bold text-text-dim hover:text-ember">مسح الكل</button>
+          <button onClick={clearAll} className="text-t-sm font-bold text-text-dim hover:text-ember">مسح الكل</button>
         </div>
       )}
 
       {err && (
-        <div role="alert" className="flex items-center justify-between gap-3 border-b border-ember/30 bg-ember-bg px-4 py-3 text-[13px] font-bold text-ember">
+        <div role="alert" className="flex items-center justify-between gap-3 border-b border-ember/30 bg-ember-bg px-4 py-3 text-t-md font-bold text-ember">
           <span>{err}</span><Button size="sm" variant="danger" onClick={() => load(f)}>إعادة المحاولة</Button>
         </div>
       )}
@@ -315,7 +315,7 @@ export function InvoiceHistory({ onOpen, onPrint, refreshKey }: {
         {!loading && rows.length === 0 && (
           <li className="px-6 py-12 text-center">
             <MIcon name={hasFilters ? "search_off" : "receipt_long"} className="!text-[30px] text-text-dim" />
-            <div className="mt-2 text-[14px] font-extrabold">{hasFilters ? "لا توجد فواتير مطابقة" : "لا توجد فواتير بعد"}</div>
+            <div className="mt-2 text-t-md font-extrabold">{hasFilters ? "لا توجد فواتير مطابقة" : "لا توجد فواتير بعد"}</div>
             {hasFilters && <Button className="mt-3" variant="ghost" onClick={clearAll}>مسح الفلاتر</Button>}
           </li>
         )}
@@ -325,10 +325,10 @@ export function InvoiceHistory({ onOpen, onPrint, refreshKey }: {
               <button onClick={() => onOpen(inv)} className="min-w-0 flex-1 text-right" aria-label={`فتح الفاتورة ${inv.invoice_no}`}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="tnum font-extrabold text-petrol">{inv.invoice_no}</span>
-                  <span className={`tnum text-[15px] font-extrabold ${inv.is_returned ? "text-text-dim line-through" : ""}`}>{money(inv.total_inc)}</span>
+                  <span className={`tnum text-t-lg font-extrabold ${inv.is_returned ? "text-text-dim line-through" : ""}`}>{money(inv.total_inc)}</span>
                 </div>
-                <div className="mt-1 truncate text-[13px] font-bold">{inv.customer_name || <span className="font-medium text-text-dim">بيع نقدي</span>}</div>
-                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px] text-text-dim">
+                <div className="mt-1 truncate text-t-md font-bold">{inv.customer_name || <span className="font-medium text-text-dim">بيع نقدي</span>}</div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-t-sm text-text-dim">
                   {inv.plate && <PlateBadge plate={inv.plate} size="sm" />}
                   <StatusText inv={inv} />
                   <span>{SOURCE_LABEL[inv.source] ?? inv.source}</span>
@@ -343,13 +343,13 @@ export function InvoiceHistory({ onOpen, onPrint, refreshKey }: {
 
       {/* ═══ الجدول (الشاشات المتوسطة وأكبر) ═══ */}
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[820px] text-[13px]">
+        <table className="w-full min-w-[820px] text-t-md">
           <thead>
             <tr className="border-b border-line bg-ink-3 text-text-dim">
               {["التاريخ", "رقم الفاتورة", "العميل", "السيارة", "النوع", "الحالة"].map((h) => (
-                <th key={h} className="whitespace-nowrap px-3.5 py-3 text-right text-[12px] font-extrabold">{h}</th>
+                <th key={h} className="whitespace-nowrap px-3.5 py-3 text-right text-t-sm font-extrabold">{h}</th>
               ))}
-              <th className="whitespace-nowrap px-3.5 py-3 text-left text-[12px] font-extrabold">الإجمالي</th>
+              <th className="whitespace-nowrap px-3.5 py-3 text-left text-t-sm font-extrabold">الإجمالي</th>
               <th className="w-14" />
             </tr>
           </thead>
@@ -364,8 +364,8 @@ export function InvoiceHistory({ onOpen, onPrint, refreshKey }: {
             {!loading && rows.length === 0 && (
               <tr><td colSpan={8} className="px-6 py-16 text-center">
                 <MIcon name={hasFilters ? "search_off" : "receipt_long"} className="!text-[34px] text-text-dim" />
-                <div className="mt-2 text-[14px] font-extrabold">{hasFilters ? "لا توجد فواتير مطابقة" : "لا توجد فواتير بعد"}</div>
-                <p className="mx-auto mt-1 max-w-sm text-[12.5px] leading-relaxed text-text-dim">
+                <div className="mt-2 text-t-md font-extrabold">{hasFilters ? "لا توجد فواتير مطابقة" : "لا توجد فواتير بعد"}</div>
+                <p className="mx-auto mt-1 max-w-sm text-t-sm leading-relaxed text-text-dim">
                   {hasFilters ? "غيّر شروط البحث أو امسح الفلاتر لعرض كل الفواتير." : "الفواتير الصادرة ستظهر هنا."}
                 </p>
                 {hasFilters && <Button className="mt-3" variant="ghost" onClick={clearAll}>مسح الفلاتر</Button>}
@@ -375,16 +375,16 @@ export function InvoiceHistory({ onOpen, onPrint, refreshKey }: {
               <tr key={inv.id} tabIndex={0} onClick={() => onOpen(inv)}
                 onKeyDown={(e) => { if (e.key === "Enter") onOpen(inv); }}
                 className="group cursor-pointer border-b border-line/60 transition-colors hover:bg-ink-3 focus-visible:bg-ink-3 focus-visible:outline-none">
-                <td className="whitespace-nowrap px-3.5 py-3.5 text-[12.5px] text-text-dim tnum">{dateFmt(inv.issued_at)}</td>
+                <td className="whitespace-nowrap px-3.5 py-3.5 text-t-sm text-text-dim tnum">{dateFmt(inv.issued_at)}</td>
                 <td className="px-3.5 py-3.5"><span className="tnum font-extrabold text-petrol group-hover:underline">{inv.invoice_no}</span></td>
                 <td className="px-3.5 py-3.5">
                   <div className="font-bold">{inv.customer_name || <span className="font-medium text-text-dim">بيع نقدي</span>}</div>
-                  {inv.customer_phone && <div dir="ltr" className="tnum text-right text-[11.5px] text-text-dim">{inv.customer_phone}</div>}
+                  {inv.customer_phone && <div dir="ltr" className="tnum text-right text-t-xs text-text-dim">{inv.customer_phone}</div>}
                 </td>
                 <td className="px-3.5 py-3.5">{inv.plate ? <PlateBadge plate={inv.plate} size="sm" /> : <span className="text-text-dim">—</span>}</td>
                 <td className="whitespace-nowrap px-3.5 py-3.5 text-text-dim">{SOURCE_LABEL[inv.source] ?? inv.source}</td>
                 <td className="px-3.5 py-3.5"><StatusText inv={inv} /></td>
-                <td className="whitespace-nowrap px-3.5 py-3.5 text-left tnum text-[14px] font-extrabold">
+                <td className="whitespace-nowrap px-3.5 py-3.5 text-left tnum text-t-md font-extrabold">
                   <span className={inv.is_returned ? "text-text-dim line-through" : ""}>{money(inv.total_inc)}</span>
                 </td>
                 <td className="px-2 py-2 text-left">
@@ -402,7 +402,7 @@ export function InvoiceHistory({ onOpen, onPrint, refreshKey }: {
 
       {/* ═══ التذييل: العدد + إجمالي المعروض + عرض المزيد ═══ */}
       {!loading && rows.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3 text-[12.5px] text-text-dim">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3 text-t-sm text-text-dim">
           <span className="tnum">
             {rows.length} فاتورة{more ? "+" : ""} · إجمالي المعروض (دون المرتجع) <b className="text-text">{money(total)}</b> ر.س
           </span>

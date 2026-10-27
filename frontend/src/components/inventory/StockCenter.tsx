@@ -402,7 +402,7 @@ function ProductDrawer({ id, canTransfer, onClose, onTransfer, onShowMoves }: {
             </section>
 
             <div className="flex flex-wrap gap-2 border-t border-line pt-3">
-              <Link href={`/products/${p.id}`} className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-[12px] font-semibold text-text-dim hover:border-petrol hover:text-petrol">فتح الصنف</Link>
+              <Link href={`/products/${p.id}`} className="m3 z8-anim-btn inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-t-sm font-semibold text-text-dim hover:border-petrol hover:text-petrol">فتح الصنف</Link>
               <Button size="sm" variant="outline" onClick={() => onShowMoves(p.id, label)}>حركة المخزون</Button>
               {canTransfer && <Button size="sm" variant="outline" onClick={() => onTransfer([{ productId: p.id, productLabel: label, barcode: p.barcode }])}>تحويل</Button>}
                           </div>

@@ -273,28 +273,28 @@ export default function ReportsPage() {
 
   const sourceCard = (title: string, s: SalesSummary["service"]) => (
     <div className="rounded-lg border border-line p-4">
-      <h3 className="mb-3 text-[13px] font-extrabold">{title}</h3>
-      <div className="grid grid-cols-2 gap-3 text-[12.5px]">
+      <h3 className="mb-3 text-t-md font-extrabold">{title}</h3>
+      <div className="grid grid-cols-2 gap-3 text-t-sm">
         <div><div className="text-text-dim">عدد الفواتير</div><div className="tnum font-bold">{s.invoiceCount}</div></div>
         <div><div className="text-text-dim">متوسط الفاتورة</div><div className="tnum font-bold">{money(s.avgTicket)}</div></div>
         <div><div className="text-text-dim">الإجمالي شامل الضريبة</div><div className="tnum font-bold">{money(s.totalInc)}</div></div>
         <div><div className="text-text-dim">مجمل الربح</div>
           <div className={`tnum font-bold ${s.grossProfit >= 0 ? "text-emerald" : "text-ember"}`}>
-            {money(s.grossProfit)} <span className="text-[11px] text-text-dim">({s.marginPct}%)</span>
+            {money(s.grossProfit)} <span className="text-t-xs text-text-dim">({s.marginPct}%)</span>
           </div>
         </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {Object.entries(s.byMethod).filter(([, v]) => v > 0).map(([m, v]) => (
-          <span key={m} className="rounded-full bg-ink-3 px-2.5 py-1 text-[11px] font-bold">
+          <span key={m} className="rounded-full bg-ink-3 px-2.5 py-1 text-t-xs font-bold">
             {m === "cash" ? "نقدي" : m === "card" ? "شبكة" : m === "transfer" ? "تحويل" : "آجل"}: <span className="tnum">{money(v)}</span>
           </span>
         ))}
       </div>
       {s.topItems.length > 0 && (
         <div className="mt-3">
-          <p className="mb-1 text-[11px] font-bold text-text-dim">الأكثر مبيعاً</p>
-          <div className="space-y-0.5 text-[11.5px]">
+          <p className="mb-1 text-t-xs font-bold text-text-dim">الأكثر مبيعاً</p>
+          <div className="space-y-0.5 text-t-xs">
             {s.topItems.slice(0, 5).map((it) => (
               <div key={it.label} className="flex justify-between">
                 <span className="truncate">{it.label}</span>
@@ -309,49 +309,49 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-[19px] font-extrabold">التقارير</h1>
+      <h1 className="page-title">التقارير</h1>
 
-      {/* ══════════ 🏆 مقارنة الفروع ══════════ */}
+      {/* ══════════ مقارنة الفروع ══════════ */}
       <Card>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[14px] font-black">🏆 مقارنة أداء الفروع</h2>
+          <h2 className="text-t-md font-black">مقارنة أداء الفروع</h2>
           <div className="flex flex-wrap items-center gap-1.5">
             {[7, 30, 90].map((d) => (
               <button key={d} onClick={() => { setCmpMonth(null); setCmpDays(d); }}
-                      className={`m3 rounded-full px-3 py-1.5 text-[11.5px] font-bold transition
+                      className={`m3 rounded-full px-3 py-1.5 text-t-xs font-bold transition
                         ${!cmpMonth && cmpDays === d ? "bg-petrol text-white" : "border border-line bg-ink-2 text-text-dim hover:border-petrol"}`}>
                 {d === 7 ? "أسبوع" : d === 30 ? "30 يوم" : "90 يوم"}
               </button>
             ))}
             <button onClick={() => setCmpMonth(thisMonth)}
-                    className={`m3 rounded-full px-3 py-1.5 text-[11.5px] font-bold transition
+                    className={`m3 rounded-full px-3 py-1.5 text-t-xs font-bold transition
                       ${cmpMonth ? "bg-petrol text-white" : "border border-line bg-ink-2 text-text-dim hover:border-petrol"}`}>
               الشهر التقويمي
             </button>
             {cmpMonth && (
               <span className="flex items-center gap-1 rounded-full border border-line bg-ink-2 px-1.5 py-1">
                 <button onClick={() => shiftMonth(-1)}
-                        className="m3 grid h-6 w-6 place-items-center rounded-full text-[13px] font-black text-text-dim hover:text-petrol">‹</button>
-                <span className="tnum min-w-[92px] text-center text-[11.5px] font-black">
+                        className="m3 grid h-6 w-6 place-items-center rounded-full text-t-md font-black text-text-dim hover:text-petrol">‹</button>
+                <span className="tnum min-w-[92px] text-center text-t-xs font-black">
                   {monthLabel}{cmpMonth === thisMonth && <span className="text-emerald"> · حتى الآن</span>}
                 </span>
                 <button onClick={() => shiftMonth(+1)} disabled={cmpMonth === thisMonth}
-                        className="m3 grid h-6 w-6 place-items-center rounded-full text-[13px] font-black text-text-dim hover:text-petrol disabled:opacity-30">›</button>
+                        className="m3 grid h-6 w-6 place-items-center rounded-full text-t-md font-black text-text-dim hover:text-petrol disabled:opacity-30">›</button>
               </span>
             )}
           </div>
         </div>
         {cmpErr ? (
-          <p className="py-4 text-center text-[12px] font-bold text-ember">⚠ {cmpErr}</p>
-        ) : !cmp ? <p className="py-4 text-center text-[12px] text-text-dim">جارٍ التحميل…</p> : (
+          <p className="py-4 text-center text-t-sm font-bold text-ember">{cmpErr}</p>
+        ) : !cmp ? <p className="py-4 text-center text-t-sm text-text-dim">جارٍ التحميل…</p> : (
           <div className="space-y-2.5">
             {cmp.branches.map((b, i) => {
               const max = cmp.branches[0]?.revenue || 1;
               return (
                 <div key={b.id}>
-                  <div className="flex items-center justify-between text-[12.5px] font-bold">
+                  <div className="flex items-center justify-between text-t-sm font-bold">
                     <span className="flex items-center gap-1.5">
-                      <span className="tnum grid h-5 w-5 place-items-center rounded-md bg-ink-3 text-[10px] font-black text-text-dim">{i + 1}</span>
+                      <span className="tnum grid h-5 w-5 place-items-center rounded-md bg-ink-3 text-t-xs font-black text-text-dim">{i + 1}</span>
                       {b.name}
                     </span>
                     <span className="tnum text-text-dim">
@@ -417,13 +417,13 @@ export default function ReportsPage() {
               </Field>
             )}
             <button onClick={refresh}
-                    className="rounded-lg bg-petrol px-4 py-2 text-[13px] font-bold text-white hover:bg-petrol-deep">
+                    className="rounded-lg bg-petrol px-4 py-2 text-t-md font-bold text-white hover:bg-petrol-deep">
               تحديث
             </button>
             <button onClick={printCurrent}
                     disabled={tab === "vat" ? !vat : tab === "sales" ? !sales : tab === "techs" ? !techs
                              : tab === "inventory" ? !inv : tab === "profit" ? !profit : !ar}
-                    className="rounded-lg border border-line bg-ink-2 px-4 py-2 text-[13px] font-bold text-text hover:border-petrol hover:text-petrol disabled:opacity-50">
+                    className="rounded-lg border border-line bg-ink-2 px-4 py-2 text-t-md font-bold text-text hover:border-petrol hover:text-petrol disabled:opacity-50">
               طباعة التقرير
             </button>
           </div>
@@ -432,8 +432,8 @@ export default function ReportsPage() {
             <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border border-line p-4">
-                  <h3 className="mb-2 text-[13px] font-extrabold">ضريبة المخرجات (المبيعات)</h3>
-                  <div className="space-y-1 text-[12.5px]">
+                  <h3 className="mb-2 text-t-md font-extrabold">ضريبة المخرجات (المبيعات)</h3>
+                  <div className="space-y-1 text-t-sm">
                     <div className="flex justify-between"><span className="text-text-dim">المبيعات قبل الضريبة</span><span className="tnum font-bold">{money(vat.salesEx)}</span></div>
                     <div className="flex justify-between"><span className="text-text-dim">إجمالي الضريبة قبل المرتجعات</span><span className="tnum">{money(vat.grossVat)}</span></div>
                     <div className="flex justify-between"><span className="text-text-dim">مرتجعات ({vat.returnsCount})</span><span className="tnum text-ember">-{money(vat.returnsVat)}</span></div>
@@ -441,8 +441,8 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 <div className="rounded-lg border border-line p-4">
-                  <h3 className="mb-2 text-[13px] font-extrabold">ضريبة المدخلات (المشتريات)</h3>
-                  <div className="space-y-1 text-[12.5px]">
+                  <h3 className="mb-2 text-t-md font-extrabold">ضريبة المدخلات (المشتريات)</h3>
+                  <div className="space-y-1 text-t-sm">
                     <div className="flex justify-between"><span className="text-text-dim">المشتريات قبل الضريبة</span><span className="tnum font-bold">{money(vat.purchasesEx)}</span></div>
                     <div className="flex justify-between border-t border-line pt-1 font-bold"><span>إجمالي ضريبة المدخلات</span><span className="tnum">{money(vat.inputVat)}</span></div>
                   </div>
@@ -450,7 +450,7 @@ export default function ReportsPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg bg-ink-3 p-3 text-[12.5px]">
+                <div className="rounded-lg bg-ink-3 p-3 text-t-sm">
                   <p className="mb-1.5 font-bold text-text-dim">تفصيل حسب المصدر</p>
                   {Object.entries(vat.bySource).map(([src, v]) => {
                     const stat = v as { invoiceCount: number; salesEx: number; outputVat: number };
@@ -464,7 +464,7 @@ export default function ReportsPage() {
                 </div>
                 <div className={`flex items-center justify-between rounded-lg p-4 ${vat.netVat >= 0 ? "bg-ember-bg" : "bg-emerald-bg"}`}>
                   <span className="font-bold text-text-dim">{vat.netVat >= 0 ? "مستحق للهيئة" : "مسترد"}</span>
-                  <span className={`tnum text-[20px] font-black ${vat.netVat >= 0 ? "text-ember" : "text-emerald"}`}>
+                  <span className={`tnum text-t-2xl font-black ${vat.netVat >= 0 ? "text-ember" : "text-emerald"}`}>
                     {money(Math.abs(vat.netVat))} ر.س
                   </span>
                 </div>
@@ -476,12 +476,12 @@ export default function ReportsPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between rounded-lg bg-petrol-soft p-4">
                 <div>
-                  <div className="text-[12px] font-bold text-text-dim">إجمالي المبيعات ({sales.totals.invoiceCount} فاتورة)</div>
-                  <div className="tnum text-[22px] font-black text-petrol">{money(sales.totals.totalInc)} ر.س</div>
+                  <div className="text-t-sm font-bold text-text-dim">إجمالي المبيعات ({sales.totals.invoiceCount} فاتورة)</div>
+                  <div className="tnum text-t-2xl font-black text-petrol">{money(sales.totals.totalInc)} ر.س</div>
                 </div>
                 <div className="text-left">
-                  <div className="text-[12px] font-bold text-text-dim">مجمل الربح</div>
-                  <div className="tnum text-[16px] font-bold">{money(sales.totals.grossProfit)}</div>
+                  <div className="text-t-sm font-bold text-text-dim">مجمل الربح</div>
+                  <div className="tnum text-t-lg font-bold">{money(sales.totals.grossProfit)}</div>
                 </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -490,8 +490,8 @@ export default function ReportsPage() {
               </div>
               {sales.daily.length > 0 && (
                 <div className="rounded-lg border border-line p-4">
-                  <h3 className="mb-2 text-[13px] font-extrabold">الاتجاه الزمني</h3>
-                  <div className="max-h-48 space-y-1 overflow-y-auto text-[12px]">
+                  <h3 className="mb-2 text-t-md font-extrabold">الاتجاه الزمني</h3>
+                  <div className="max-h-48 space-y-1 overflow-y-auto text-t-sm">
                     {sales.daily.map((d, i) => (
                       <div key={i} className="flex justify-between">
                         <span className="tnum text-text-dim">{d.day} · {d.source === "car" ? "خدمة" : "بيع"}</span>
@@ -508,23 +508,23 @@ export default function ReportsPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between rounded-lg bg-petrol-soft p-4">
                 <div>
-                  <div className="text-[12px] font-bold text-text-dim">سيارات مسجَّل عليها فريق عمل خلال الفترة</div>
-                  <div className="tnum text-[22px] font-black text-petrol">{techs.totalCars} سيارة</div>
+                  <div className="text-t-sm font-bold text-text-dim">سيارات مسجَّل عليها فريق عمل خلال الفترة</div>
+                  <div className="tnum text-t-2xl font-black text-petrol">{techs.totalCars} سيارة</div>
                 </div>
                 <div className="text-left">
-                  <div className="text-[12px] font-bold text-text-dim">عدد الفنيين</div>
-                  <div className="tnum text-[16px] font-bold">{techs.rows.length}</div>
+                  <div className="text-t-sm font-bold text-text-dim">عدد الفنيين</div>
+                  <div className="tnum text-t-lg font-bold">{techs.rows.length}</div>
                 </div>
               </div>
 
               {techs.rows.length === 0 ? (
-                <p className="py-8 text-center text-[12.5px] text-text-dim">
+                <p className="py-8 text-center text-t-sm text-text-dim">
                   لا توجد بيانات فنيين في هذه الفترة — الفنيون يُسجَّلون على السيارة لحظة اعتماد أمر العمل من التابلت
                 </p>
               ) : (
                 <div className="overflow-x-auto rounded-lg border border-line">
-                  <table className="w-full text-[12.5px]">
-                    <thead className="bg-ink-3 text-[11.5px] font-black text-text-dim">
+                  <table className="w-full text-t-sm">
+                    <thead className="bg-ink-3 text-t-xs font-black text-text-dim">
                       <tr>
                         <th className="px-3 py-2.5 text-right">الفني</th>
                         <th className="px-3 py-2.5 text-right">الدور</th>
@@ -541,7 +541,7 @@ export default function ReportsPage() {
                         return (
                           <tr key={r.id} className="border-t border-line">
                             <td className="px-3 py-2.5 font-extrabold">
-                              <span className="tnum ml-1.5 inline-grid h-5 w-5 place-items-center rounded-md bg-ink-3 text-[10px] font-black text-text-dim">{i + 1}</span>
+                              <span className="tnum ml-1.5 inline-grid h-5 w-5 place-items-center rounded-md bg-ink-3 text-t-xs font-black text-text-dim">{i + 1}</span>
                               {r.name}
                             </td>
                             <td className="px-3 py-2.5">
@@ -574,14 +574,14 @@ export default function ReportsPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="flex items-center justify-between rounded-lg bg-petrol-soft p-4">
                   <div>
-                    <div className="text-[12px] font-bold text-text-dim">قيمة المخزون الحالية (كلفة)</div>
-                    <div className="tnum text-[22px] font-black text-petrol">{money(inv.totalValue)} ر.س</div>
+                    <div className="text-t-sm font-bold text-text-dim">قيمة المخزون الحالية (كلفة)</div>
+                    <div className="tnum text-t-2xl font-black text-petrol">{money(inv.totalValue)} ر.س</div>
                   </div>
-                  <div className="text-[11px] text-text-dim">كما في {inv.asOf}</div>
+                  <div className="text-t-xs text-text-dim">كما في {inv.asOf}</div>
                 </div>
                 <div className="rounded-lg border border-line p-4">
-                  <h3 className="mb-2 text-[12.5px] font-extrabold">قيمة المخزون بعمره منذ آخر استلام</h3>
-                  <div className="space-y-1 text-[12px]">
+                  <h3 className="mb-2 text-t-sm font-extrabold">قيمة المخزون بعمره منذ آخر استلام</h3>
+                  <div className="space-y-1 text-t-sm">
                     {(["fresh", "d30", "d60", "d90", "unknown"] as const).map((k) => (
                       <div key={k} className="flex justify-between">
                         <span className={k === "d90" ? "font-bold text-ember" : "text-text-dim"}>{AGE_LABEL[k]}</span>
@@ -593,8 +593,8 @@ export default function ReportsPage() {
               </div>
 
               <div className="rounded-lg border border-line p-4">
-                <h3 className="mb-2 text-[13px] font-extrabold">حسب الفئة</h3>
-                <div className="space-y-1 text-[12.5px]">
+                <h3 className="mb-2 text-t-md font-extrabold">حسب الفئة</h3>
+                <div className="space-y-1 text-t-sm">
                   {inv.byCategory.map((c) => (
                     <div key={c.category} className="flex justify-between">
                       <span>{c.category}</span>
@@ -605,8 +605,8 @@ export default function ReportsPage() {
               </div>
 
               <div className="overflow-x-auto rounded-lg border border-line">
-                <table className="w-full text-[12.5px]">
-                  <thead className="bg-ink-3 text-[11.5px] font-black text-text-dim">
+                <table className="w-full text-t-sm">
+                  <thead className="bg-ink-3 text-t-xs font-black text-text-dim">
                     <tr>
                       <th className="px-3 py-2.5 text-right">الصنف</th>
                       <th className="px-3 py-2.5 text-right">الفئة</th>
@@ -641,23 +641,23 @@ export default function ReportsPage() {
             <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-lg bg-petrol-soft p-4">
-                  <div className="text-[12px] font-bold text-text-dim">المبيعات (قبل الضريبة)</div>
-                  <div className="tnum text-[18px] font-black text-petrol">{money(profit.totals.revenueEx)}</div>
+                  <div className="text-t-sm font-bold text-text-dim">المبيعات (قبل الضريبة)</div>
+                  <div className="tnum text-t-xl font-black text-petrol">{money(profit.totals.revenueEx)}</div>
                 </div>
                 <div className="rounded-lg border border-line p-4">
-                  <div className="text-[12px] font-bold text-text-dim">تكلفة البضاعة المباعة</div>
-                  <div className="tnum text-[18px] font-black">{money(profit.totals.cogs)}</div>
+                  <div className="text-t-sm font-bold text-text-dim">تكلفة البضاعة المباعة</div>
+                  <div className="tnum text-t-xl font-black">{money(profit.totals.cogs)}</div>
                 </div>
                 <div className={`rounded-lg p-4 ${profit.totals.grossProfit >= 0 ? "bg-emerald-bg" : "bg-ember-bg"}`}>
-                  <div className="text-[12px] font-bold text-text-dim">مجمل الربح</div>
-                  <div className={`tnum text-[18px] font-black ${profit.totals.grossProfit >= 0 ? "text-emerald" : "text-ember"}`}>
-                    {money(profit.totals.grossProfit)} <span className="text-[12px]">({profit.totals.marginPct}%)</span>
+                  <div className="text-t-sm font-bold text-text-dim">مجمل الربح</div>
+                  <div className={`tnum text-t-xl font-black ${profit.totals.grossProfit >= 0 ? "text-emerald" : "text-ember"}`}>
+                    {money(profit.totals.grossProfit)} <span className="text-t-sm">({profit.totals.marginPct}%)</span>
                   </div>
                 </div>
               </div>
               <div className="overflow-x-auto rounded-lg border border-line">
-                <table className="w-full text-[12.5px]">
-                  <thead className="bg-ink-3 text-[11.5px] font-black text-text-dim">
+                <table className="w-full text-t-sm">
+                  <thead className="bg-ink-3 text-t-xs font-black text-text-dim">
                     <tr>
                       <th className="px-3 py-2.5 text-right">
                         {profit.groupBy === "category" ? "الفئة" : profit.groupBy === "branch" ? "الفرع" : "الصنف"}
@@ -695,25 +695,25 @@ export default function ReportsPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <div className="rounded-lg border border-line p-3 text-center">
-                  <div className="text-[11px] font-bold text-text-dim">حتى 30 يوم</div>
-                  <div className="tnum text-[16px] font-black">{money(ar.totals.current)}</div>
+                  <div className="text-t-xs font-bold text-text-dim">حتى 30 يوم</div>
+                  <div className="tnum text-t-lg font-black">{money(ar.totals.current)}</div>
                 </div>
                 <div className="rounded-lg border border-line p-3 text-center">
-                  <div className="text-[11px] font-bold text-text-dim">31–60 يوم</div>
-                  <div className="tnum text-[16px] font-black">{money(ar.totals.d31_60)}</div>
+                  <div className="text-t-xs font-bold text-text-dim">31–60 يوم</div>
+                  <div className="tnum text-t-lg font-black">{money(ar.totals.d31_60)}</div>
                 </div>
                 <div className="rounded-lg bg-ember-bg p-3 text-center">
-                  <div className="text-[11px] font-bold text-text-dim">61–90 يوم</div>
-                  <div className="tnum text-[16px] font-black text-ember">{money(ar.totals.d61_90)}</div>
+                  <div className="text-t-xs font-bold text-text-dim">61–90 يوم</div>
+                  <div className="tnum text-t-lg font-black text-ember">{money(ar.totals.d61_90)}</div>
                 </div>
                 <div className="rounded-lg bg-ember-bg p-3 text-center">
-                  <div className="text-[11px] font-bold text-text-dim">أكثر من 90 يوم</div>
-                  <div className="tnum text-[16px] font-black text-ember">{money(ar.totals.d90plus)}</div>
+                  <div className="text-t-xs font-bold text-text-dim">أكثر من 90 يوم</div>
+                  <div className="tnum text-t-lg font-black text-ember">{money(ar.totals.d90plus)}</div>
                 </div>
               </div>
               <div className="overflow-x-auto rounded-lg border border-line">
-                <table className="w-full text-[12.5px]">
-                  <thead className="bg-ink-3 text-[11.5px] font-black text-text-dim">
+                <table className="w-full text-t-sm">
+                  <thead className="bg-ink-3 text-t-xs font-black text-text-dim">
                     <tr>
                       <th className="px-3 py-2.5 text-right">العميل</th>
                       <th className="px-3 py-2.5 text-center">حتى 30</th>

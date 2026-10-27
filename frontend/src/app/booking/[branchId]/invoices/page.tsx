@@ -71,64 +71,64 @@ export default function MyInvoicesPage() {
   return (
     <div dir="rtl" className="min-h-screen px-4 py-6" style={{ background: "#EEF2F6" }}>
       <div className="mx-auto max-w-md space-y-4">
-        <div className="flex items-center justify-between rounded-2xl px-5 py-4 text-white shadow-lg" style={{ background: NAVY }}>
+        <div className="flex items-center justify-between rounded-card px-5 py-4 text-white shadow-lg" style={{ background: NAVY }}>
           <div>
-            <div className="text-[17px] font-black">📄 فواتيري</div>
-            <div className="text-[11px] text-white/70">كل فواتيرك — معاينة وتحميل</div>
+            <div className="text-t-xl font-black">📄 فواتيري</div>
+            <div className="text-t-xs text-white/70">كل فواتيرك — معاينة وتحميل</div>
           </div>
           <a href={`/booking/${branchId}`}
-             className="rounded-full bg-white/15 px-4 py-2 text-[12px] font-black text-white">‹ رجوع للحجز</a>
+             className="rounded-full bg-white/15 px-4 py-2 text-t-sm font-black text-white">‹ رجوع للحجز</a>
         </div>
 
         {err && (
-          <p className="rounded-xl bg-white px-4 py-3 text-center text-[12.5px] font-bold shadow" style={{ color: "#DC2626" }}>{err}</p>
+          <p className="rounded-card bg-white px-4 py-3 text-center text-t-sm font-bold shadow" style={{ color: "#DC2626" }}>{err}</p>
         )}
 
-        {invoices === null && <p className="py-8 text-center text-[13px]" style={{ color: DIM }}>جارِ التحميل...</p>}
+        {invoices === null && <p className="py-8 text-center text-t-md" style={{ color: DIM }}>جارِ التحميل...</p>}
         {invoices !== null && invoices.length === 0 && !err && (
-          <div className="rounded-2xl bg-white p-8 text-center shadow-lg">
+          <div className="rounded-card bg-white p-8 text-center shadow-lg">
             <MIcon name="receipt_long" className="!text-[42px]" />
-            <p className="mt-2 text-[13px] font-bold" style={{ color: DIM }}>لا توجد فواتير مسجلة بجوالك بعد</p>
+            <p className="mt-2 text-t-md font-bold" style={{ color: DIM }}>لا توجد فواتير مسجلة بجوالك بعد</p>
           </div>
         )}
 
         {(invoices || []).map((inv) => {
           const st = STATUS_META[inv.status] || null;
           return (
-            <div key={inv.id} className="kiosk-pop space-y-3 rounded-2xl bg-white p-4 shadow-lg">
+            <div key={inv.id} className="kiosk-pop space-y-3 rounded-card bg-white p-4 shadow-lg">
               {(inv.plate || inv.carLabel) && (
-                <div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: "#F3F6FA" }}>
+                <div className="flex items-center gap-2 rounded-card px-3 py-2" style={{ background: "#F3F6FA" }}>
                   {inv.plate && (
-                    <span className="tnum rounded-lg px-2.5 py-1 text-[12px] font-black text-white" style={{ background: NAVY }}>
+                    <span className="tnum rounded-lg px-2.5 py-1 text-t-sm font-black text-white" style={{ background: NAVY }}>
                       {inv.plate}
                     </span>
                   )}
                   {inv.carLabel && (
-                    <span className="truncate text-[12px] font-bold" style={{ color: NAVY }}>{inv.carLabel}</span>
+                    <span className="truncate text-t-sm font-bold" style={{ color: NAVY }}>{inv.carLabel}</span>
                   )}
                 </div>
               )}
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="tnum text-[15px] font-black" style={{ color: NAVY }}>{inv.invoiceNo}</div>
-                  <div className="tnum mt-0.5 text-[11.5px] font-bold" style={{ color: DIM }}>
+                  <div className="tnum text-t-lg font-black" style={{ color: NAVY }}>{inv.invoiceNo}</div>
+                  <div className="tnum mt-0.5 text-t-xs font-bold" style={{ color: DIM }}>
                     📅 {new Date(inv.issuedAt).toLocaleDateString((typeof document !== "undefined" && document.documentElement.lang === "en" ? "en-US" : "ar-SA-u-nu-latn"), { year: "numeric", month: "2-digit", day: "2-digit" })}
                     {inv.odometer != null && <> · 🛞 عداد {inv.odometer.toLocaleString("en")}</>}
                   </div>
                 </div>
                 <div className="text-left">
-                  <div className="tnum text-[15px] font-black" style={{ color: GREEN }}>{money(inv.total)} ر.س</div>
-                  {st && <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-black"
+                  <div className="tnum text-t-lg font-black" style={{ color: GREEN }}>{money(inv.total)} ر.س</div>
+                  {st && <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-t-xs font-black"
                                style={{ color: st.color, background: st.bg }}>{st.label}</span>}
                 </div>
               </div>
               <button onClick={() => openOfficial(inv)} disabled={busyId === inv.id}
-                      className="flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12.5px] font-black text-white transition active:scale-[.98] disabled:opacity-50"
+                      className="flex w-full items-center justify-center gap-1.5 rounded-card py-2.5 text-t-sm font-black text-white transition active:scale-[.98] disabled:opacity-50"
                       style={{ background: NAVY }}>
                 <MIcon name="visibility" className="!text-[17px] text-white" />
                 {busyId === inv.id ? "جارِ الفتح..." : "معاينة وتحميل الفاتورة الرسمية"}
               </button>
-              <p className="text-center text-[10px] font-bold" style={{ color: DIM }}>
+              <p className="text-center text-t-xs font-bold" style={{ color: DIM }}>
                 للتحميل PDF: من نافذة الفاتورة اختر «حفظ كـ PDF» في حوار الطباعة
               </p>
             </div>

@@ -11,7 +11,7 @@ import { downloadCsv, fmtDT } from "@/lib/customers/format";
 import { kpisHTML, printReport, tableHTML } from "@/lib/print";
 import Link from "next/link";
 import {
-  ACTION_LABEL, CONDITION_LABEL, COUNT_TYPE_LABEL, STATUS_LABEL, STATUS_TONE, VAR_BG, VAR_LABEL, VAR_TEXT, signed, varState,
+  ACTION_LABEL, CONDITION_LABEL, COUNT_TYPE_LABEL, STATUS_LABEL, STATUS_TONE, VAR_LABEL, VAR_TEXT, VAR_TONE, signed, varState,
   type CountRound, type ImportPreview, type StocktakeDetail, type StocktakeItem, type TimelineEvent, type VarState,
 } from "@/lib/stocktake/types";
 
@@ -262,7 +262,7 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
             <Button variant="tool" size="sm" onClick={exportCsv}><MIcon name="download" className="!text-[16px]" />تصدير CSV</Button>
             <Button variant="tool" size="sm" onClick={printMinutes}><MIcon name="print" className="!text-[16px]" />محضر الجرد</Button>
             {editable && <>
-              <label className="m3 z8-anim-btn inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-3 py-1.5 text-[12px] font-semibold text-text-dim hover:border-petrol hover:text-petrol">
+              <label className="m3 z8-anim-btn inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-3 py-1.5 text-t-sm font-semibold text-text-dim hover:border-petrol hover:text-petrol">
                 <MIcon name="upload_file" className="!text-[16px]" />رفع Excel / CSV
                 <input type="file" accept=".xlsx,.xlsm,.csv" className="hidden" onChange={pickFile} disabled={busy} />
               </label>
@@ -426,7 +426,7 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
                         <td className={`tnum p-2.5 font-black ${VAR_TEXT[st]}`} dir="ltr">{signed(it.difference)}</td>
                         <td className="tnum p-2.5">{fmtMoney(it.unitCost)}</td>
                         <td className={`tnum p-2.5 font-bold ${VAR_TEXT[st]}`} dir="ltr">{it.diffValue == null ? "—" : fmtMoney(it.diffValue)}</td>
-                        <td className="p-2.5"><span className={`inline-block rounded-full px-2 py-0.5 text-t-xs font-bold ${VAR_BG[st]}`}>{VAR_LABEL[st]}</span></td>
+                        <td className="p-2.5"><Badge tone={VAR_TONE[st]} dot>{VAR_LABEL[st]}</Badge></td>
                         {canEditRow && <td className="p-2.5"><Button size="xs" onClick={() => saveRow(it)} disabled={busy}>حفظ</Button></td>}
                       </tr>
                     );

@@ -482,7 +482,7 @@ export default function PurchasesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-[19px] font-extrabold">المشتريات</h1>
+        <h1 className="page-title">المشتريات</h1>
       </div>
 
       <ErrorNote msg={pageErr} />
@@ -535,7 +535,7 @@ export default function PurchasesPage() {
       <Modal open={modalOpen} size="lg" onClose={() => setModalOpen(false)} title={invoicePoId ? "فاتورة مطابقة لأمر شراء" : "فاتورة مشتريات جديدة"}>
         <div className="space-y-3">
           {invoicePoId && (
-            <div className="rounded-lg bg-petrol-soft p-2.5 text-[12px] font-bold text-petrol">
+            <div className="rounded-lg bg-petrol-soft p-2.5 text-t-sm font-bold text-petrol">
               مرتبطة بأمر شراء — الأصناف والكميات معبّأة من الاستلام المخزني، يمكنك تعديلها عند الحاجة.
             </div>
           )}
@@ -578,10 +578,10 @@ export default function PurchasesPage() {
 
           <StockItemsEditor products={products} items={lines} onChange={setLines} withCost />
 
-          <div className="rounded-lg bg-ink-3 p-3 text-[12.5px]">
+          <div className="rounded-lg bg-ink-3 p-3 text-t-sm">
             <div className="flex justify-between"><span className="text-text-dim">الإجمالي قبل الضريبة</span>
               <b className="tnum">{money(subtotal)}</b></div>
-            <p className="mt-1 text-[11px] text-text-dim">الضريبة والإجمالي الكلي بيتحسبوا في السيرفر حسب نسبة ضريبة الشركة.</p>
+            <p className="mt-1 text-t-xs text-text-dim">الضريبة والإجمالي الكلي بيتحسبوا في السيرفر حسب نسبة ضريبة الشركة.</p>
           </div>
 
           <ErrorNote msg={err} />
@@ -599,7 +599,7 @@ export default function PurchasesPage() {
       <Modal open={!!viewInvoice} size="lg" onClose={() => setViewInvoice(null)} title={`فاتورة ${viewInvoice?.invoice_no ?? ""}`}>
         {viewInvoice && (
           <div className="space-y-3">
-            <div className="grid gap-2 rounded-lg bg-ink-3 p-3 text-[12.5px] sm:grid-cols-3">
+            <div className="grid gap-2 rounded-lg bg-ink-3 p-3 text-t-sm sm:grid-cols-3">
               <div><span className="text-text-dim">المورد:</span> <b>{viewInvoice.supplier_name}</b></div>
               <div><span className="text-text-dim">التاريخ:</span> <b>{dateFmt(viewInvoice.invoice_date)}</b></div>
               <div><span className="text-text-dim">الحالة:</span> <Badge tone={STATUS_BADGE[viewInvoice.status].tone}>{STATUS_BADGE[viewInvoice.status].label}</Badge></div>
@@ -607,9 +607,9 @@ export default function PurchasesPage() {
             </div>
 
             <div className="overflow-x-auto rounded-lg border border-line">
-              <table className="w-full border-collapse text-[12.5px]">
+              <table className="w-full border-collapse text-t-sm">
                 <thead>
-                  <tr className="bg-ink-3 text-[11.5px] font-extrabold text-text-dim">
+                  <tr className="bg-ink-3 text-t-xs font-extrabold text-text-dim">
                     <th className="px-3 py-2 text-right">الصنف</th>
                     <th className="w-16 px-2 py-2 text-right">الكمية</th>
                     <th className="w-24 px-2 py-2 text-right">التكلفة</th>
@@ -629,7 +629,7 @@ export default function PurchasesPage() {
               </table>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-[12.5px]">
+            <div className="grid grid-cols-3 gap-2 text-t-sm">
               <div className="rounded-lg bg-ink-3 p-2.5 text-center">
                 <div className="text-text-dim">قبل الضريبة</div>
                 <div className="tnum font-bold">{money(viewInvoice.subtotal)}</div>
@@ -671,7 +671,7 @@ export default function PurchasesPage() {
 
           <StockItemsEditor products={products} items={qLines} onChange={setQLines} withCost />
 
-          <div className="rounded-lg bg-ink-3 p-3 text-[12.5px]">
+          <div className="rounded-lg bg-ink-3 p-3 text-t-sm">
             <div className="flex justify-between"><span className="text-text-dim">إجمالي العرض (قبل الضريبة)</span>
               <b className="tnum">{money(validQLines.reduce((s, l) => s + (l.unitCost || 0) * l.qty, 0))}</b></div>
           </div>
@@ -690,7 +690,7 @@ export default function PurchasesPage() {
       <Modal open={!!viewQuotation} size="lg" onClose={() => setViewQuotation(null)} title={`عرض سعر ${viewQuotation?.quotation_no ?? ""}`}>
         {viewQuotation && (
           <div className="space-y-3">
-            <div className="grid gap-2 rounded-lg bg-ink-3 p-3 text-[12.5px] sm:grid-cols-3">
+            <div className="grid gap-2 rounded-lg bg-ink-3 p-3 text-t-sm sm:grid-cols-3">
               <div><span className="text-text-dim">المورد:</span> <b>{viewQuotation.supplier_name}</b></div>
               <div><span className="text-text-dim">الحالة:</span> <Badge tone={QUOT_BADGE[viewQuotation.status].tone}>{QUOT_BADGE[viewQuotation.status].label}</Badge></div>
               {viewQuotation.valid_until && <div><span className="text-text-dim">صالح حتى:</span> <b>{dateFmt(viewQuotation.valid_until)}</b></div>}
@@ -698,9 +698,9 @@ export default function PurchasesPage() {
             </div>
 
             <div className="overflow-x-auto rounded-lg border border-line">
-              <table className="w-full border-collapse text-[12.5px]">
+              <table className="w-full border-collapse text-t-sm">
                 <thead>
-                  <tr className="bg-ink-3 text-[11.5px] font-extrabold text-text-dim">
+                  <tr className="bg-ink-3 text-t-xs font-extrabold text-text-dim">
                     <th className="px-3 py-2 text-right">الصنف</th>
                     <th className="w-16 px-2 py-2 text-right">الكمية</th>
                     <th className="w-24 px-2 py-2 text-right">السعر</th>
@@ -720,7 +720,7 @@ export default function PurchasesPage() {
               </table>
             </div>
 
-            <div className="flex justify-end text-[13px]">
+            <div className="flex justify-end text-t-md">
               <span className="text-text-dim">الإجمالي:</span>
               <b className="tnum ms-2">{money(viewQuotation.total)} ر.س</b>
             </div>
@@ -754,7 +754,7 @@ export default function PurchasesPage() {
           </div>
 
           {!!poQuotationId && (
-            <div className="rounded-lg bg-petrol-soft p-2.5 text-[12px] font-bold text-petrol">
+            <div className="rounded-lg bg-petrol-soft p-2.5 text-t-sm font-bold text-petrol">
               مبني على عرض سعر — الأصناف معبّأة منه ويمكن تعديلها.
             </div>
           )}
@@ -783,7 +783,7 @@ export default function PurchasesPage() {
 
           <StockItemsEditor products={products} items={poLines} onChange={setPoLines} withCost />
 
-          <div className="rounded-lg bg-ink-3 p-3 text-[12.5px]">
+          <div className="rounded-lg bg-ink-3 p-3 text-t-sm">
             <div className="flex justify-between"><span className="text-text-dim">إجمالي أمر الشراء (قبل الضريبة)</span>
               <b className="tnum">{money(validPoLines.reduce((s, l) => s + (l.unitCost || 0) * l.qty, 0))}</b></div>
           </div>
@@ -802,7 +802,7 @@ export default function PurchasesPage() {
       <Modal open={!!viewPO} size="lg" onClose={() => setViewPO(null)} title={`أمر شراء ${viewPO?.po_no ?? ""}`}>
         {viewPO && (
           <div className="space-y-3">
-            <div className="grid gap-2 rounded-lg bg-ink-3 p-3 text-[12.5px] sm:grid-cols-3">
+            <div className="grid gap-2 rounded-lg bg-ink-3 p-3 text-t-sm sm:grid-cols-3">
               <div><span className="text-text-dim">المورد:</span> <b>{viewPO.supplier_name}</b></div>
               <div><span className="text-text-dim">الحالة:</span> <Badge tone={PO_BADGE[viewPO.status].tone}>{PO_BADGE[viewPO.status].label}</Badge></div>
               {viewPO.expected_date && <div><span className="text-text-dim">التوريد المتوقع:</span> <b>{dateFmt(viewPO.expected_date)}</b></div>}
@@ -813,9 +813,9 @@ export default function PurchasesPage() {
             </div>
 
             <div className="overflow-x-auto rounded-lg border border-line">
-              <table className="w-full border-collapse text-[12.5px]">
+              <table className="w-full border-collapse text-t-sm">
                 <thead>
-                  <tr className="bg-ink-3 text-[11.5px] font-extrabold text-text-dim">
+                  <tr className="bg-ink-3 text-t-xs font-extrabold text-text-dim">
                     <th className="px-3 py-2 text-right">الصنف</th>
                     <th className="w-20 px-2 py-2 text-right">الكمية</th>
                     <th className="w-20 px-2 py-2 text-right">المستلم</th>
@@ -839,7 +839,7 @@ export default function PurchasesPage() {
               </table>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-[12.5px]">
+            <div className="grid grid-cols-3 gap-2 text-t-sm">
               <div className="rounded-lg bg-ink-3 p-2.5 text-center">
                 <div className="text-text-dim">قبل الضريبة</div>
                 <div className="tnum font-bold">{money(viewPO.subtotal)}</div>
@@ -856,10 +856,10 @@ export default function PurchasesPage() {
 
             {viewPO.receipts.length > 0 && (
               <div>
-                <div className="mb-1 text-[12px] font-extrabold text-text-dim">سندات الاستلام</div>
+                <div className="mb-1 text-t-sm font-extrabold text-text-dim">سندات الاستلام</div>
                 <div className="space-y-1.5">
                   {viewPO.receipts.map((r) => (
-                    <div key={r.id} className="rounded-lg border border-line p-2 text-[12px]">
+                    <div key={r.id} className="rounded-lg border border-line p-2 text-t-sm">
                       <div className="flex justify-between font-bold">
                         <span className="tnum">{r.receipt_no}</span>
                         <span className="text-text-dim">{dateFmt(r.created_at)} {r.received_by_name ? `— ${r.received_by_name}` : ""}</span>
@@ -938,7 +938,7 @@ export default function PurchasesPage() {
                 const remaining = it.qty - it.qty_received;
                 return (
                   <div key={it.id} className="flex items-center justify-between gap-2 rounded-lg border border-line p-2">
-                    <div className="min-w-0 text-[12.5px]">
+                    <div className="min-w-0 text-t-sm">
                       <div className="font-bold">{it.product_label}</div>
                       <div className="text-text-dim">المتبقي للاستلام: <span className="tnum">{remaining}</span> من <span className="tnum">{it.qty}</span></div>
                     </div>
@@ -949,7 +949,7 @@ export default function PurchasesPage() {
                 );
               })}
               {viewPO.items.every((it) => !it.product_id || it.qty_received >= it.qty) && (
-                <div className="text-center text-[12.5px] text-text-dim">لا توجد أصناف متبقية للاستلام</div>
+                <div className="text-center text-t-sm text-text-dim">لا توجد أصناف متبقية للاستلام</div>
               )}
             </div>
             <Field label="ملاحظة" hint="اختياري">

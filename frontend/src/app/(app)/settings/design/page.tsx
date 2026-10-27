@@ -88,8 +88,8 @@ export default function DesignSettingsPage() {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-[19px] font-extrabold">الإعدادات — التصميم</h1>
-          <p className="text-[12.5px] text-text-dim">
+          <h1 className="page-title">الإعدادات — التصميم</h1>
+          <p className="page-desc">
             إعداد موحّد للشركة كاملة — أي تغيير هنا ينعكس فوراً على كل المستخدمين في كل صفحات النظام.
           </p>
         </div>
@@ -100,7 +100,7 @@ export default function DesignSettingsPage() {
 
       {/* ── الألوان ── */}
       <Card>
-        <h2 className="mb-3 text-[14px] font-black">الألوان</h2>
+        <h2 className="mb-3 text-t-md font-black">الألوان</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           {TONES.map((tone) => {
             const value = settings[tone.key];
@@ -110,12 +110,12 @@ export default function DesignSettingsPage() {
               <div key={tone.key} className="rounded-lg border border-line p-3">
                 <div className="mb-2 flex items-center justify-between">
                   <div>
-                    <div className="text-[12.5px] font-bold">{tone.label}</div>
-                    <div className="text-[11px] text-text-dim">{tone.hint}</div>
+                    <div className="text-t-sm font-bold">{tone.label}</div>
+                    <div className="text-t-xs text-text-dim">{tone.hint}</div>
                   </div>
                   {value && (
                     <button type="button" onClick={() => save({ ...settings, [tone.key]: null })}
-                            className="shrink-0 text-[11px] font-bold text-text-dim hover:text-ember">
+                            className="shrink-0 text-t-xs font-bold text-text-dim hover:text-ember">
                       استخدام الافتراضي
                     </button>
                   )}
@@ -129,12 +129,12 @@ export default function DesignSettingsPage() {
                            const v = e.target.value;
                            if (/^#[0-9A-Fa-f]{6}$/.test(v)) save({ ...settings, [tone.key]: v });
                          }}
-                         className="tnum w-24 rounded-lg border border-line bg-ink-2 px-2 py-1.5 text-[12.5px] uppercase"
+                         className="tnum w-24 rounded-lg border border-line bg-ink-2 px-2 py-1.5 text-t-sm uppercase"
                          placeholder={tone.fallback} />
-                  {!value && <span className="text-[11px] text-text-dim">افتراضي</span>}
+                  {!value && <span className="text-t-xs text-text-dim">افتراضي</span>}
                 </div>
                 {weakContrast && (
-                  <div className="mt-2 flex items-start gap-1.5 text-[10.5px] font-bold text-brass">
+                  <div className="mt-2 flex items-start gap-1.5 text-t-xs font-bold text-brass">
                     <MIcon name="warning" className="!text-[13px]" />
                     تباين ضعيف مع النص الأبيض على الأزرار — قد يصعب قراءته لبعض المستخدمين
                   </div>
@@ -147,8 +147,8 @@ export default function DesignSettingsPage() {
 
       {/* ── الخط — عربي وإنجليزي منفصلين، كل واحد يظهر تلقائياً مع لغة الواجهة المطابقة ── */}
       <Card>
-        <h2 className="mb-3 text-[14px] font-black">الخط</h2>
-        <p className="mb-3 text-[11.5px] text-text-dim">
+        <h2 className="mb-3 text-t-md font-black">الخط</h2>
+        <p className="mb-3 text-t-xs text-text-dim">
           الخط العربي يظهر تلقائياً لما واجهة النظام تكون عربي، والخط الإنجليزي لما تكون English — حسب زر ع/EN في الأعلى.
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -159,8 +159,8 @@ export default function DesignSettingsPage() {
               </Select>
             </Field>
             <div className="mt-2 rounded-lg border border-line bg-ink-3 p-4 text-center" style={{ fontFamily: FONT_STACKS_AR[settings.fontFamilyAr] }}>
-              <div className="text-[20px] font-extrabold">مصدر الزيوت — فاتورة رقم 1024</div>
-              <div className="mt-1 text-[12.5px] text-text-dim">نموذج معاينة الخط العربي</div>
+              <div className="text-t-2xl font-extrabold">مصدر الزيوت — فاتورة رقم 1024</div>
+              <div className="mt-1 text-t-sm text-text-dim">نموذج معاينة الخط العربي</div>
             </div>
           </div>
           <div>
@@ -170,8 +170,8 @@ export default function DesignSettingsPage() {
               </Select>
             </Field>
             <div className="mt-2 rounded-lg border border-line bg-ink-3 p-4 text-center" style={{ fontFamily: FONT_STACKS_EN[settings.fontFamilyEn] }}>
-              <div className="text-[20px] font-extrabold">Masdar Al-Zuyout — Invoice #1024</div>
-              <div className="mt-1 text-[12.5px] text-text-dim">English font preview</div>
+              <div className="text-t-2xl font-extrabold">Masdar Al-Zuyout — Invoice #1024</div>
+              <div className="mt-1 text-t-sm text-text-dim">English font preview</div>
             </div>
           </div>
         </div>
@@ -179,24 +179,24 @@ export default function DesignSettingsPage() {
 
       {/* ── حجم الخط — موحّد لكل صفحات النظام: نص + أزرار + أيقونات معاً بنفس النسبة ── */}
       <Card>
-        <h2 className="mb-3 text-[14px] font-black">حجم الخط</h2>
-        <p className="mb-3 text-[11.5px] text-text-dim">
+        <h2 className="mb-3 text-t-md font-black">حجم الخط</h2>
+        <p className="mb-3 text-t-xs text-text-dim">
           يكبّر أو يصغّر كل عناصر الواجهة معاً (النص والأزرار والأيقونات) بنسبة واحدة — ينعكس فوراً على كل صفحات النظام بعد تسجيل الدخول.
         </p>
         <div className="flex flex-wrap gap-3">
           {SCALE_KEYS.map((scale) => (
             <button key={scale} type="button" onClick={() => save({ ...settings, fontScale: scale })}
-                    className={`z8-anim-btn flex flex-col items-center gap-2 rounded-xl border-2 px-5 py-4 transition
+                    className={`z8-anim-btn flex flex-col items-center gap-2 rounded-card border-2 px-5 py-4 transition
                       ${settings.fontScale === scale ? "border-petrol bg-petrol-soft/40" : "border-line hover:border-petrol/50"}`}>
               <span className="font-extrabold text-petrol" style={{ fontSize: `${(FONT_SCALE_PERCENT[scale] / 100) * 15}px` }}>
                 Aa أب
               </span>
-              <span className="text-[11.5px] font-bold">{FONT_SCALE_LABELS[scale]}</span>
+              <span className="text-t-xs font-bold">{FONT_SCALE_LABELS[scale]}</span>
             </button>
           ))}
         </div>
         {settings.fontScale === "xl" && (
-          <div className="mt-3 flex items-start gap-1.5 text-[11px] font-bold text-brass">
+          <div className="mt-3 flex items-start gap-1.5 text-t-xs font-bold text-brass">
             <MIcon name="warning" className="!text-[14px]" />
             الجداول المزدحمة (مثل المخزون والتقارير) قد تبدو متقاربة على الشاشات الصغيرة بهذا الحجم.
           </div>
@@ -205,17 +205,17 @@ export default function DesignSettingsPage() {
 
       {/* ── شكل الأزرار ── */}
       <Card>
-        <h2 className="mb-3 text-[14px] font-black">شكل الأزرار والبطاقات</h2>
+        <h2 className="mb-3 text-t-md font-black">شكل الأزرار والبطاقات</h2>
         <div className="flex flex-wrap gap-3">
           {SHAPE_KEYS.map((shape) => (
             <button key={shape} type="button" onClick={() => save({ ...settings, buttonShape: shape })}
-                    className={`flex flex-col items-center gap-2 rounded-xl border-2 px-5 py-4 transition
+                    className={`flex flex-col items-center gap-2 rounded-card border-2 px-5 py-4 transition
                       ${settings.buttonShape === shape ? "border-petrol bg-petrol-soft/40" : "border-line hover:border-petrol/50"}`}>
-              <span className="grid h-9 w-24 place-items-center bg-petrol text-[11px] font-bold text-white"
+              <span className="grid h-9 w-24 place-items-center bg-petrol text-t-xs font-bold text-white"
                     style={{ borderRadius: RADIUS_PREVIEW[shape] }}>
                 زر مثال
               </span>
-              <span className="text-[11.5px] font-bold">{BUTTON_SHAPE_LABELS[shape]}</span>
+              <span className="text-t-xs font-bold">{BUTTON_SHAPE_LABELS[shape]}</span>
             </button>
           ))}
         </div>
@@ -223,11 +223,11 @@ export default function DesignSettingsPage() {
 
       {/* ── حركة الأزرار — زر Button/IconButton فقط، بلا أي تأثير على القوائم أو حجمها أو مكانها ── */}
       <Card>
-        <h2 className="mb-3 text-[14px] font-black">حركة الأزرار</h2>
+        <h2 className="mb-3 text-t-md font-black">حركة الأزرار</h2>
         <label className="flex max-w-xl cursor-pointer items-center justify-between gap-3 rounded-lg border border-line p-3">
           <div>
-            <div className="text-[13px] font-bold">تفعيل حركة الأزرار (تكبير خفيف عند التحويم والضغط)</div>
-            <div className="text-[11.5px] text-text-dim">تخص الأزرار فقط — القوائم الجانبية والتابات بلا تغيير في الحجم أو الحركة أو المكان</div>
+            <div className="text-t-md font-bold">تفعيل حركة الأزرار (تكبير خفيف عند التحويم والضغط)</div>
+            <div className="text-t-xs text-text-dim">تخص الأزرار فقط — القوائم الجانبية والتابات بلا تغيير في الحجم أو الحركة أو المكان</div>
           </div>
           <Switch checked={settings.buttonAnimation} onChange={(v) => save({ ...settings, buttonAnimation: v })} />
         </label>
@@ -239,7 +239,7 @@ export default function DesignSettingsPage() {
 
       {/* ── القائمة الجانبية ── */}
       <Card>
-        <h2 className="mb-3 text-[14px] font-black">القائمة الجانبية</h2>
+        <h2 className="mb-3 text-t-md font-black">القائمة الجانبية</h2>
         <Field label="الحالة الافتراضية عند أول دخول" hint="كل مستخدم بعدين يقدر يطوي/يوسّع القائمة بنفسه — واختياره الشخصي يتحفظ ويتفضّل على هذا الإعداد">
           <Select value={settings.sidebarDefault}
                   onChange={(e) => save({ ...settings, sidebarDefault: e.target.value as "expanded" | "collapsed" })}
@@ -250,7 +250,7 @@ export default function DesignSettingsPage() {
         </Field>
       </Card>
 
-      {saving && <p className="text-[11px] text-text-dim">جارِ الحفظ...</p>}
+      {saving && <p className="text-t-xs text-text-dim">جارِ الحفظ...</p>}
       <ErrorNote msg={err} />
     </div>
   );

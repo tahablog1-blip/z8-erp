@@ -38,7 +38,7 @@ function resizeToBase64(file: File, maxSide: number): Promise<string> {
 }
 
 const Section = ({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) => (
-  <fieldset className="space-y-2.5 rounded-xl border border-line p-3.5">
+  <fieldset className="space-y-2.5 rounded-card border border-line p-3.5">
     <legend className="px-1.5 text-t-sm font-extrabold">{title}{hint && <span className="ms-2 text-t-xs font-normal text-text-dim">{hint}</span>}</legend>{children}
   </fieldset>
 );

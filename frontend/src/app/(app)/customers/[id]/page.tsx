@@ -122,7 +122,7 @@ export default function CustomerProfilePage() {
   if (error || !customer || !profile) return (
     <div role="alert" className="mx-auto max-w-md py-16 text-center">
       <MIcon name="person_off" className="!text-[44px] text-ember" />
-      <h1 className="mt-2 text-t-xl font-black">تعذر تحميل ملف العميل</h1><p className="mt-1 text-t-sm text-text-dim">{error}</p>
+      <h1 className="mt-2 page-title">تعذر تحميل ملف العميل</h1><p className="page-desc">{error}</p>
       <div className="mt-4 flex justify-center gap-2"><Button onClick={() => { setLoading(true); load(); }}>إعادة المحاولة</Button><Button variant="outline" onClick={() => router.push("/customers")}>العودة للعملاء</Button></div>
     </div>);
 
@@ -149,7 +149,7 @@ export default function CustomerProfilePage() {
           <div className="flex min-w-0 items-center gap-4">
             <Avatar name={customer.name} size={64} />
             <div className="min-w-0">
-              <h1 className="truncate text-t-2xl font-black leading-tight">{customer.name}</h1>
+              <h1 className="truncate page-title">{customer.name}</h1>
               <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-t-sm text-text-dim">
                 <span className="tnum font-bold">{profile.no}</span>
                 {customer.phone && <span dir="ltr" className="tnum">{customer.phone}</span>}
@@ -164,12 +164,12 @@ export default function CustomerProfilePage() {
           </div>
           <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
             {canEdit && <Button variant="outline" onClick={() => setEditOpen(true)}><MIcon name="edit" className="!text-[18px]" />تعديل</Button>}
-            <Link href="/sales/direct" className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-[13px] font-semibold hover:border-petrol hover:text-petrol"><MIcon name="add_shopping_cart" className="!text-[18px]" />فاتورة جديدة</Link>
+            <Link href="/sales/direct" className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-4 py-2 text-t-md font-semibold hover:border-petrol hover:text-petrol"><MIcon name="add_shopping_cart" className="!text-[18px]" />فاتورة جديدة</Link>
             {canPay && <Button onClick={() => setPayOpen(true)}><MIcon name="payments" className="!text-[18px]" />تسجيل دفعة</Button>}
             <div className="relative">
               <Button variant="outline" aria-haspopup="menu" aria-expanded={menu} aria-label="المزيد" onClick={() => setMenu(!menu)}><MIcon name="more_horiz" className="!text-[20px]" /></Button>
               {menu && (
-                <div role="menu" className="absolute end-0 top-full z-30 mt-1 w-52 overflow-hidden rounded-xl border border-line bg-ink-2 shadow-xl">
+                <div role="menu" className="absolute end-0 top-full z-30 mt-1 w-52 overflow-hidden rounded-card border border-line bg-ink-2 shadow-xl">
                   {customer.phone && <a role="menuitem" href={waLink(customer.phone)} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-2.5 text-t-sm font-bold hover:bg-ink-3"><MIcon name="chat" className="!text-[18px] text-petrol" />واتساب</a>}
                   {customer.phone && <a role="menuitem" href={`tel:${customer.phone}`} className="flex items-center gap-2 px-3 py-2.5 text-t-sm font-bold hover:bg-ink-3"><MIcon name="call" className="!text-[18px] text-petrol" />اتصال</a>}
                   {statement && <button role="menuitem" onClick={printStatement} className="flex w-full items-center gap-2 px-3 py-2.5 text-start text-t-sm font-bold hover:bg-ink-3"><MIcon name="print" className="!text-[18px] text-petrol" />طباعة كشف الحساب</button>}
@@ -181,7 +181,7 @@ export default function CustomerProfilePage() {
         </div>
       </header>
 
-      {notice && <div role="status" className={`rounded-xl px-4 py-2.5 text-t-sm font-bold ${notice.ok ? "bg-emerald-bg text-emerald" : "bg-ember-bg text-ember"}`}>{notice.msg}</div>}
+      {notice && <div role="status" className={`rounded-card px-4 py-2.5 text-t-sm font-bold ${notice.ok ? "bg-emerald-bg text-emerald" : "bg-ember-bg text-ember"}`}>{notice.msg}</div>}
 
       {/* ── KPI 360 ── */}
       {k && (
@@ -201,7 +201,7 @@ export default function CustomerProfilePage() {
       <div role="tablist" aria-label="أقسام ملف العميل" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
         {tabs.filter((t) => t.show).map((t) => (
           <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => switchTab(t.key)}
-            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2 text-t-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol ${tab === t.key ? "bg-petrol text-white" : "bg-ink-2 text-text-dim hover:bg-ink-3"}`}>
+            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-card px-3.5 py-2 text-t-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol ${tab === t.key ? "bg-petrol text-white" : "bg-ink-2 text-text-dim hover:bg-ink-3"}`}>
             <MIcon name={t.icon} className="!text-[17px]" />{t.label}{t.count != null && <span className="tnum text-t-xs opacity-80">({t.count})</span>}
           </button>
         ))}
@@ -238,7 +238,7 @@ function Overview({ profile, customer, statement, onReload, canPay, canNote, onT
               {[["مبيعات آجلة", f.creditSales, "+"], ["المدفوعات", f.payments, "−"], ["المرتجعات", f.returns, "−"], ["الرصيد الحالي", f.balance, "="]].map(([l, v, op], i) => (
                 <div key={l as string} className="flex items-center gap-2">
                   {i > 0 && <span className="text-t-lg font-black text-text-dim">{op}</span>}
-                  <div className={`rounded-xl border px-3.5 py-2.5 ${i === 3 ? "border-petrol/40 bg-petrol-soft" : "border-line bg-ink"}`}>
+                  <div className={`rounded-card border px-3.5 py-2.5 ${i === 3 ? "border-petrol/40 bg-petrol-soft" : "border-line bg-ink"}`}>
                     <div className="text-t-xs text-text-dim">{l}</div><div className={`tnum text-t-lg font-black ${i === 3 && (v as number) > 0 ? "text-ember" : ""}`}>{fmtCurrency(v as number, 2)}</div>
                   </div>
                 </div>
@@ -500,14 +500,14 @@ function VehiclesTab({ customerId, vehicles, canEdit, onChange }: { customerId: 
   return (
     <Card title="سيارات العميل" icon="directions_car" actions={canEdit && <Button size="sm" onClick={() => { reset(); setOpen(true); }}><MIcon name="add" className="!text-[16px]" />إضافة سيارة</Button>}>
       {dupKeys.size > 0 && (
-        <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brass/40 bg-brass-bg px-3 py-2 text-t-sm font-bold text-brass">
+        <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-card border border-brass/40 bg-brass-bg px-3 py-2 text-t-sm font-bold text-brass">
           <span>توجد لوحات مكرّرة (نفس الأرقام والحروف). لن يُسمح بتسجيل لوحة مكرّرة بعد الآن.</span>
           {canEdit && <Button size="sm" variant="outline" loading={busy} onClick={removeDuplicates}>حذف النسخ المكرّرة (إبقاء الأقدم)</Button>}
         </div>)}
       {vehicles.length === 0 ? <EmptyState icon="directions_car" title="لا توجد سيارات مسجّلة" description="أضف سيارة العميل لتسهيل التعرف عليه في نقطة البيع." action={canEdit ? <Button onClick={() => { reset(); setOpen(true); }}>إضافة سيارة</Button> : undefined} /> : (
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {vehicles.map((x) => (
-            <li key={x.id} className={`rounded-xl border bg-ink p-3.5 ${dupKeys.has(plateKey(x.plate, x.plate_type)) ? "border-brass/60" : "border-line"}`}>
+            <li key={x.id} className={`rounded-card border bg-ink p-3.5 ${dupKeys.has(plateKey(x.plate, x.plate_type)) ? "border-brass/60" : "border-line"}`}>
               <div className="flex items-start justify-between gap-2"><PlateBadge plate={x.plate} />{canEdit && <div className="flex gap-0.5"><button onClick={() => startEdit(x)} aria-label={`تعديل ${x.plate}`} title="تعديل" className="grid h-8 w-8 place-items-center rounded-md text-text-dim hover:bg-petrol-soft hover:text-petrol"><MIcon name="edit" className="!text-[18px]" /></button><button onClick={() => remove(x)} aria-label={`حذف ${x.plate}`} title="حذف" className="grid h-8 w-8 place-items-center rounded-md text-text-dim hover:bg-ember-bg hover:text-ember"><MIcon name="delete" className="!text-[18px]" /></button></div>}</div>
               {dupKeys.has(plateKey(x.plate, x.plate_type)) && <span className="mt-1.5 inline-block rounded-md bg-brass-bg px-1.5 py-0.5 text-t-xs font-extrabold text-brass">لوحة مكرّرة</span>}
               <div className="mt-2 text-t-sm font-bold">{[x.brand, x.make_model || x.name, x.model_year].filter(Boolean).join(" ") || "—"}</div>
@@ -566,7 +566,7 @@ function NotesTab({ customerId, notes, canNote, onAdded }: { customerId: string;
         </div>)}
       {notes.length === 0 ? <EmptyState icon="sticky_note_2" title="لا توجد ملاحظات" /> : (
         <ul className="space-y-3">{notes.map((n) => (
-          <li key={n.id} className="rounded-xl border border-line bg-ink p-3"><p className="whitespace-pre-wrap break-words text-t-sm">{n.note}</p><div className="mt-1.5 text-t-xs text-text-dim">{n.user ?? "—"} · {fmtDT(n.createdAt)}</div></li>))}</ul>)}
+          <li key={n.id} className="rounded-card border border-line bg-ink p-3"><p className="whitespace-pre-wrap break-words text-t-sm">{n.note}</p><div className="mt-1.5 text-t-xs text-text-dim">{n.user ?? "—"} · {fmtDT(n.createdAt)}</div></li>))}</ul>)}
     </Card>
   );
 }

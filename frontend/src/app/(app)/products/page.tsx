@@ -206,7 +206,7 @@ export default function ProductsPage() {
     <div className="relative" onClick={(e) => e.stopPropagation()}>
       <button aria-label={`المزيد: ${r.name}`} aria-haspopup="menu" aria-expanded={menu === `row:${r.id}`} onClick={() => setMenu(menu === `row:${r.id}` ? "" : `row:${r.id}`)} className="grid h-8 w-8 place-items-center rounded-md text-text-dim hover:bg-petrol-soft hover:text-petrol"><MIcon name="more_horiz" className="!text-[19px]" /></button>
       {menu === `row:${r.id}` && (
-        <div role="menu" className="absolute end-0 top-full z-30 mt-1 w-52 overflow-hidden rounded-xl border border-line bg-ink-2 shadow-xl">
+        <div role="menu" className="absolute end-0 top-full z-30 mt-1 w-52 overflow-hidden rounded-card border border-line bg-ink-2 shadow-xl">
           {[
             canSell && !r.isService ? { l: "بيع الصنف", i: "point_of_sale", href: "/sales/direct" } : null,
             canPurchase && !r.isService ? { l: "شراء", i: "shopping_bag", href: "/purchases" } : null,
@@ -245,13 +245,13 @@ export default function ProductsPage() {
   return (
     <div className="cx-enter mx-auto w-full max-w-[1600px] space-y-4 pb-8" onClick={() => menu && setMenu("")}>
       <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0"><h1 className="text-t-2xl font-black tracking-tight">الأصناف</h1><p className="mt-0.5 text-t-sm text-text-dim">إدارة المنتجات والمخزون والأسعار والتكلفة والربحية.</p></div>
+        <div className="min-w-0"><h1 className="page-title">الأصناف</h1><p className="page-desc">إدارة المنتجات والمخزون والأسعار والتكلفة والربحية.</p></div>
         <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          <Link href="/products/manage" className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-3.5 py-2 text-[13px] font-semibold hover:border-petrol hover:text-petrol"><MIcon name="build" className="!text-[17px]" />استيراد وأدوات متقدمة</Link>
+          <Link href="/products/manage" className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-2 px-3.5 py-2 text-t-md font-semibold hover:border-petrol hover:text-petrol"><MIcon name="build" className="!text-[17px]" />استيراد وأدوات متقدمة</Link>
           <div className="relative">
             <Button variant="outline" loading={busy} aria-haspopup="menu" aria-expanded={menu === "export"} onClick={() => setMenu(menu === "export" ? "" : "export")}><MIcon name="download" className="!text-[18px]" />تصدير / طباعة</Button>
             {menu === "export" && (
-              <div role="menu" className="absolute end-0 top-full z-30 mt-1 w-52 overflow-hidden rounded-xl border border-line bg-ink-2 shadow-xl">
+              <div role="menu" className="absolute end-0 top-full z-30 mt-1 w-52 overflow-hidden rounded-card border border-line bg-ink-2 shadow-xl">
                 <button role="menuitem" onClick={() => doExport("csv")} className="flex w-full items-center gap-2 px-3 py-2.5 text-start text-t-sm font-bold hover:bg-ink-3"><MIcon name="table_view" className="!text-[18px] text-petrol" />Excel / CSV</button>
                 <button role="menuitem" onClick={() => doExport("pdf")} className="flex w-full items-center gap-2 px-3 py-2.5 text-start text-t-sm font-bold hover:bg-ink-3"><MIcon name="picture_as_pdf" className="!text-[18px] text-petrol" />طباعة / PDF</button>
               </div>)}
@@ -289,7 +289,7 @@ export default function ProductsPage() {
             onKeyDown={(e) => { if (e.key === "Enter" && data?.total === 1 && data.items[0]) router.push(`/products/${data.items[0].id}`); }} />
         </div>
         {data && data.facets.locations.length > 1 && (
-          <select value={filters.loc} onChange={(e) => { setFilters({ ...filters, loc: e.target.value }); setPage(1); }} aria-label="الموقع" className="h-10 rounded-xl border border-line bg-ink-2 px-3 text-t-sm font-bold">
+          <select value={filters.loc} onChange={(e) => { setFilters({ ...filters, loc: e.target.value }); setPage(1); }} aria-label="الموقع" className="h-10 rounded-card border border-line bg-ink-2 px-3 text-t-sm font-bold">
             <option value="">كل المواقع</option>{data.facets.locations.map((l) => <option key={l.id} value={l.type === "warehouse" ? "warehouse" : l.id}>{l.name}</option>)}</select>)}
         <Button variant="outline" onClick={() => setFiltersOpen(true)}><MIcon name="tune" className="!text-[18px]" />فلاتر متقدمة{activeCount > 0 && <span className="tnum grid h-5 min-w-5 place-items-center rounded-full bg-petrol px-1 text-t-xs font-black text-white">{activeCount}</span>}</Button>
         {filtered && <button onClick={clearAll} className="text-t-sm font-bold text-petrol hover:underline">مسح الكل</button>}
@@ -298,7 +298,7 @@ export default function ProductsPage() {
           <div className="relative hidden md:block">
             <button onClick={() => setMenu(menu === "cols" ? "" : "cols")} aria-haspopup="menu" aria-expanded={menu === "cols"} className="flex h-9 items-center gap-1.5 rounded-lg border border-line px-3 text-t-sm font-bold text-text-dim hover:border-petrol hover:text-petrol"><MIcon name="view_column" className="!text-[18px]" />الأعمدة</button>
             {menu === "cols" && (
-              <div role="menu" className="absolute end-0 top-full z-30 mt-1 w-48 rounded-xl border border-line bg-ink-2 p-2 shadow-xl">
+              <div role="menu" className="absolute end-0 top-full z-30 mt-1 w-48 rounded-card border border-line bg-ink-2 p-2 shadow-xl">
                 {COLS.filter((x) => x.key !== "product" && (!x.cost || canCost) && (!x.sales || canSales)).map((x) => (
                   <label key={x.key} className="flex min-h-[34px] cursor-pointer items-center gap-2 rounded-md px-2 text-t-sm hover:bg-ink-3"><input type="checkbox" className="accent-[var(--petrol)]" checked={cols.includes(x.key)} onChange={(e) => setCols((p) => e.target.checked ? [...p, x.key] : p.filter((y) => y !== x.key))} />{x.label}</label>))}
               </div>)}
@@ -307,7 +307,7 @@ export default function ProductsPage() {
       </div>
 
       {selected.size > 0 && (
-        <div role="region" aria-label="إجراءات جماعية" className="cx-enter flex flex-wrap items-center gap-2 rounded-xl border border-petrol/30 bg-petrol-soft px-3 py-2">
+        <div role="region" aria-label="إجراءات جماعية" className="cx-enter flex flex-wrap items-center gap-2 rounded-card border border-petrol/30 bg-petrol-soft px-3 py-2">
           <b className="tnum text-t-sm">{selected.size} محدد</b><span className="mx-1 h-4 w-px bg-line" />
           <Button size="sm" variant="outline" onClick={() => doExport("csv", [...selected.values()])}><MIcon name="download" className="!text-[16px]" />تصدير</Button>
           <Button size="sm" variant="outline" onClick={() => doExport("pdf", [...selected.values()])}><MIcon name="print" className="!text-[16px]" />طباعة</Button>

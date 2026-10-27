@@ -8,9 +8,17 @@ const config: Config = {
       colors: {
         ink:      { DEFAULT: "var(--ink)", 2: "var(--ink2)", 3: "var(--ink3)", 4: "var(--ink4)" },
         petrol:   { DEFAULT: "var(--petrol)", deep: "var(--petrol-deep)", soft: "var(--petrol-soft)" },
-        brass:    { DEFAULT: "var(--brass)", soft: "var(--brass-soft)" },
+        brass:    { DEFAULT: "var(--brass)", soft: "var(--brass-soft)", bg: "var(--brass-soft)" },
         emerald:  { DEFAULT: "var(--emerald)", bg: "var(--emerald-bg)" },
         ember:    { DEFAULT: "var(--ember)", bg: "var(--ember-bg)" },
+        // ── أسماء دلالية موحّدة (Semantic) — نفس قيم الرموز أعلاه، تُفضَّل في الكود الجديد ──
+        primary:  { DEFAULT: "var(--petrol)", deep: "var(--petrol-deep)", soft: "var(--petrol-soft)" },
+        success:  { DEFAULT: "var(--emerald)", soft: "var(--emerald-bg)" },
+        warning:  { DEFAULT: "var(--brass)", soft: "var(--brass-soft)" },
+        danger:   { DEFAULT: "var(--ember)", soft: "var(--ember-bg)" },
+        info:     { DEFAULT: "var(--petrol)", soft: "var(--petrol-soft)" },
+        surface:  { DEFAULT: "var(--ink2)", hover: "var(--ink3)", raised: "var(--surface-raised)" },
+        nav:      { active: "var(--nav-active)" },
         line:     "var(--line)",
         text:     { DEFAULT: "var(--text)", dim: "var(--text-dim)" },
       },

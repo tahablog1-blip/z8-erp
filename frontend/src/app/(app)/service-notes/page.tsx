@@ -111,39 +111,39 @@ function ThreadRow({ t, typeLabels, onOpen, onOpenNote }: {
       {unread > 0 && <span className="absolute inset-y-0 right-0 w-1 bg-emerald" aria-hidden />}
       <button onClick={onOpen} className="absolute inset-0 z-0" aria-label={`فتح محادثة ${name}${unread ? ` — ${unread} غير مقروءة` : ""}`} />
       <div className="pointer-events-none relative z-[1] flex items-start gap-3 px-4 py-3.5 sm:gap-4">
-        <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-[16px] font-black text-white ${unread > 0 ? "bg-emerald" : "bg-petrol"}`} aria-hidden>
+        <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-t-lg font-black text-white ${unread > 0 ? "bg-emerald" : "bg-petrol"}`} aria-hidden>
           {(t.customer_name || t.plate || "؟").trim().charAt(0)}
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-            <span className={`text-[14px] ${unread > 0 ? "font-black" : "font-bold"}`}>{name}</span>
+            <span className={`text-t-md ${unread > 0 ? "font-black" : "font-bold"}`}>{name}</span>
             {t.plate && <PlateBadge plate={t.plate} size="sm" />}
             <CarBrandMark brand={t.brand} model={t.car_name} size="md" />
-            {t.customer_phone && <span dir="ltr" className="tnum text-[12px] text-text-dim">{t.customer_phone}</span>}
+            {t.customer_phone && <span dir="ltr" className="tnum text-t-sm text-text-dim">{t.customer_phone}</span>}
           </div>
-          <div className={`mt-1 truncate text-[13px] ${unread > 0 ? "font-bold text-text" : "text-text-dim"}`}>
+          <div className={`mt-1 truncate text-t-md ${unread > 0 ? "font-bold text-text" : "text-text-dim"}`}>
             <Preview t={t} />
           </div>
           {notes.length > 0 && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {notes.slice(0, 4).map((n) => (
                 <button key={n.id} onClick={() => onOpenNote(n.id)}
-                  className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-line bg-ink-2 px-2.5 py-1 text-[11.5px] font-bold transition hover:border-petrol hover:text-petrol">
+                  className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-line bg-ink-2 px-2.5 py-1 text-t-xs font-bold transition hover:border-petrol hover:text-petrol">
                   <span className={`h-2 w-2 rounded-full ${STATUS_DOT[n.status] ?? "bg-text-dim"}`} aria-hidden />
                   <span className="tnum">{n.note_number}</span>
                   <span className="font-medium text-text-dim">{typeLabels[n.type] ?? n.type}</span>
                 </button>
               ))}
-              {notes.length > 4 && <span className="text-[11.5px] font-bold text-text-dim">+{notes.length - 4} أخرى</span>}
+              {notes.length > 4 && <span className="text-t-xs font-bold text-text-dim">+{notes.length - 4} أخرى</span>}
             </div>
           )}
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
-          <span className="tnum text-[11.5px] text-text-dim">{timeLabel(t.last_at)}</span>
+          <span className="tnum text-t-xs text-text-dim">{timeLabel(t.last_at)}</span>
           {unread > 0 ? (
-            <span className="grid h-6 min-w-6 place-items-center rounded-full bg-emerald px-1.5 text-[12px] font-black text-white" aria-hidden>{unread}</span>
+            <span className="grid h-6 min-w-6 place-items-center rounded-full bg-emerald px-1.5 text-t-sm font-black text-white" aria-hidden>{unread}</span>
           ) : (
             <MIcon name="chevron_left" className="!text-[20px] text-text-dim opacity-0 transition group-hover:opacity-100" />
           )}
@@ -173,8 +173,8 @@ function EmptyInFrame({ icon, title, hint }: { icon: string; title: string; hint
   return (
     <div className="px-6 py-14 text-center">
       <MIcon name={icon} className="!text-[32px] text-text-dim" />
-      <div className="mt-2 text-[14px] font-extrabold">{title}</div>
-      <p className="mx-auto mt-1 max-w-sm text-[12.5px] leading-relaxed text-text-dim">{hint}</p>
+      <div className="mt-2 text-t-md font-extrabold">{title}</div>
+      <p className="mx-auto mt-1 max-w-sm text-t-sm leading-relaxed text-text-dim">{hint}</p>
     </div>
   );
 }
@@ -264,21 +264,21 @@ export default function ServiceNotesPage() {
       {/* ═══ العنوان ═══ */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2.5 text-[20px] font-black">
+          <h1 className="flex items-center gap-2.5 page-title">
             المحادثات والملاحظات
             {totalUnread > 0 && (
-              <span className="rounded-full bg-emerald px-2.5 py-0.5 text-[12px] font-black text-white tnum">{totalUnread} غير مقروءة</span>
+              <span className="rounded-full bg-emerald px-2.5 py-0.5 text-t-sm font-black text-white tnum">{totalUnread} غير مقروءة</span>
             )}
           </h1>
-          <p className="mt-0.5 text-[12.5px] text-text-dim">
+          <p className="page-desc">
             محادثات العملاء وملاحظات الخدمة في مكان واحد. الرسائل غير المقروءة تظهر أولاً.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-xl border border-line bg-ink-2 p-0.5" role="tablist" aria-label="طريقة العرض">
+          <div className="flex rounded-card border border-line bg-ink-2 p-0.5" role="tablist" aria-label="طريقة العرض">
             {([["threads", "المحادثات", "forum"], ["table", "جدول الملاحظات", "table_rows"]] as const).map(([k, label, icon]) => (
               <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)}
-                className={`inline-flex items-center gap-1.5 rounded-[10px] px-3.5 py-2 text-[12.5px] font-bold transition
+                className={`inline-flex items-center gap-1.5 rounded-[10px] px-3.5 py-2 text-t-sm font-bold transition
                   ${view === k ? "bg-petrol text-white" : "text-text-dim hover:text-text"}`}>
                 <MIcon name={icon} className="!text-[17px]" />{label}
               </button>
@@ -316,11 +316,11 @@ export default function ServiceNotesPage() {
             const on = filter === f.key;
             return (
               <button key={f.key} role="tab" aria-selected={on} onClick={() => setFilter(f.key)}
-                className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-[12.5px] font-bold transition
+                className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-t-sm font-bold transition
                   ${on ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol"}`}>
                 {f.key !== "all" && <span className={`h-2 w-2 rounded-full ${on ? "bg-white" : f.tone}`} aria-hidden />}
                 {f.label}
-                <span className={`tnum rounded-full px-1.5 text-[11.5px] ${on ? "bg-white/20" : "bg-ink-3"}`}>{chipCount[f.key]}</span>
+                <span className={`tnum rounded-full px-1.5 text-t-xs ${on ? "bg-white/20" : "bg-ink-3"}`}>{chipCount[f.key]}</span>
               </button>
             );
           })}
@@ -328,7 +328,7 @@ export default function ServiceNotesPage() {
       </div>
 
       {err && (
-        <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-ember/30 bg-ember-bg px-4 py-3 text-[13px] font-bold text-ember">
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-card border border-ember/30 bg-ember-bg px-4 py-3 text-t-md font-bold text-ember">
           <span>{err}</span>
           <Button size="sm" variant="danger" onClick={() => load(true)}>إعادة المحاولة</Button>
         </div>
@@ -336,7 +336,7 @@ export default function ServiceNotesPage() {
 
       {/* ═══ المحادثات ═══ */}
       {view === "threads" && (
-        <div className="overflow-hidden rounded-2xl border border-line bg-ink-2">
+        <div className="overflow-hidden rounded-card border border-line bg-ink-2">
           {loading ? <SkeletonRows /> : shownThreads.length === 0 ? (
             <EmptyInFrame icon={ql || filter !== "all" ? "search_off" : "forum"}
               title={ql || filter !== "all" ? "لا توجد نتائج مطابقة" : "لا توجد محادثات بعد"}
@@ -349,7 +349,7 @@ export default function ServiceNotesPage() {
                     onOpen={() => openChat(t.work_order_id)} onOpenNote={openNote} />
                 ))}
               </ul>
-              <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-2.5 text-[12px] text-text-dim">
+              <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-2.5 text-t-sm text-text-dim">
                 <span className="tnum">
                   {Math.min(limit, shownThreads.length)} من {shownThreads.length} محادثة
                   {unreadThreads > 0 && ` · ${unreadThreads} فيها رسائل جديدة`}
@@ -365,13 +365,13 @@ export default function ServiceNotesPage() {
 
       {/* ═══ جدول الملاحظات ═══ */}
       {view === "table" && (
-        <div className="overflow-hidden rounded-2xl border border-line bg-ink-2">
+        <div className="overflow-hidden rounded-card border border-line bg-ink-2">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-[12.5px]">
+            <table className="w-full min-w-[900px] text-t-sm">
               <thead>
                 <tr className="border-b border-line bg-ink-3 text-text-dim">
                   {["الرقم", "الحالة", "النوع", "العميل", "السيارة", "المنتج", "المطلوب / المتوفر", "الموظف", "الفرع", "التاريخ", "مرفقات"].map((h) => (
-                    <th key={h} className="whitespace-nowrap px-3 py-3 text-right text-[12px] font-extrabold">{h}</th>
+                    <th key={h} className="whitespace-nowrap px-3 py-3 text-right text-t-sm font-extrabold">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -417,7 +417,7 @@ export default function ServiceNotesPage() {
             </table>
           </div>
           {!loading && shownRows.length > 0 && (
-            <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-2.5 text-[12px] text-text-dim">
+            <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-2.5 text-t-sm text-text-dim">
               <span className="tnum">{Math.min(limit, shownRows.length)} من {shownRows.length} ملاحظة</span>
               {shownRows.length > limit && <Button size="sm" variant="ghost" onClick={() => setLimit((l) => l + PAGE)}>عرض المزيد</Button>}
             </div>

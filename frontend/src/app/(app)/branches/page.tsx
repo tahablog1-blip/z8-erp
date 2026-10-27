@@ -122,10 +122,10 @@ export default function BranchesPage() {
       render: (b) => <span className="tnum">{b.category === "retail" ? "—" : b.capacity_rafaat}</span> },
     { key: "is_frozen", title: t("branches.status", "الحالة"), width: "110px",
       render: (b) => b.is_frozen
-        ? <span className="rounded-full bg-ember-bg px-2.5 py-1 text-[11px] font-bold text-ember">
+        ? <span className="rounded-full bg-ember-bg px-2.5 py-1 text-t-xs font-bold text-ember">
           {t("branches.frozen", "مجمّد")}
         </span>
-        : <span className="rounded-full bg-emerald-bg px-2.5 py-1 text-[11px] font-bold text-emerald">
+        : <span className="rounded-full bg-emerald-bg px-2.5 py-1 text-t-xs font-bold text-emerald">
           {t("branches.active", "نشط")}
         </span> },
     ...(canManage ? [{
@@ -174,13 +174,13 @@ export default function BranchesPage() {
       </style></head><body>
       <div class="card">
         <h1>مصدر الزيوت</h1>
-        <h2>${b.name} — احجز دورك قبل الوصول 🚗</h2>
+        <h2>${b.name} — احجز دورك قبل الوصول</h2>
         <div id="qr"></div>
         <div class="steps">
           <b>١.</b> امسح الكود بكاميرا جوالك<br>
           <b>٢.</b> سجّل بياناتك ولوحة سيارتك<br>
           <b>٣.</b> تابع دورك مباشرة من جوالك<br>
-          <b>٤.</b> عند وصولك يتأكد دخولك تلقائياً ✨
+          <b>٤.</b> عند وصولك يتأكد دخولك تلقائياً
         </div>
         <div class="url">${url}</div>
       </div>
@@ -193,7 +193,7 @@ export default function BranchesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-[19px] font-extrabold">
+        <h1 className="page-title">
           {t("branches.title", "الفروع")}
         </h1>
       </div>
@@ -251,7 +251,7 @@ export default function BranchesPage() {
                   ))}
                   <button type="button"
                           onClick={() => setForm({ ...form, lines: [...form.lines, `سير ${form.lines.length + 1}`] })}
-                          className="z8-anim-btn w-full rounded-lg border border-dashed border-line py-1.5 text-[12px] font-bold text-text-dim hover:border-petrol hover:text-petrol">
+                          className="z8-anim-btn w-full rounded-lg border border-dashed border-line py-1.5 text-t-sm font-bold text-text-dim hover:border-petrol hover:text-petrol">
                    {t("branches.addLine", "+ إضافة خط سير")}
                   </button>
                 </div>
@@ -286,8 +286,8 @@ export default function BranchesPage() {
           <div className="grid grid-cols-2 gap-2 rounded-lg border border-line bg-ink-3 p-2.5">
             <label className="col-span-full flex cursor-pointer items-center justify-between">
               <div>
-                <div className="text-[12.5px] font-bold">{t("branches.independentNumbering", "ترقيم فواتير مستقل لهذا الفرع")}</div>
-                <div className="text-[11px] text-text-dim">
+                <div className="text-t-sm font-bold">{t("branches.independentNumbering", "ترقيم فواتير مستقل لهذا الفرع")}</div>
+                <div className="text-t-xs text-text-dim">
                   {t("branches.independentNumberingHint", "تسلسل خاص بالفرع بدل التسلسل العام المشترك بين كل الفروع")}
                 </div>
               </div>

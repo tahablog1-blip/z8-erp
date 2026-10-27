@@ -35,17 +35,17 @@ export default function CompanySettingsPage() {
   const [coErr, setCoErr] = useState("");
   const [coOk, setCoOk] = useState("");
 
-  // ── 🖼 الشعار ──
+  // ── الشعار ──
   const fileRef = useRef<HTMLInputElement>(null);
   const [logoBusy, setLogoBusy] = useState(false);
   const [logoErr, setLogoErr] = useState("");
 
-  // ── 📲 إعداد واتساب (UltraMsg) ──
+  // ── إعداد واتساب (UltraMsg) ──
   const [waInstance, setWaInstance] = useState("");
   const [waToken, setWaToken] = useState("");
   const [waMsg, setWaMsg] = useState("");
 
-  // ── 🎁 برنامج نقاط الولاء ──
+  // ── برنامج نقاط الولاء ──
   const [loyalty, setLoyalty] = useState({ earnPerSar: "0", redeemValue: "0" });
   const [loyaltyBusy, setLoyaltyBusy] = useState(false);
   const [loyaltyMsg, setLoyaltyMsg] = useState("");
@@ -129,21 +129,21 @@ export default function CompanySettingsPage() {
   async function saveWa() {
     try {
       await api("/auth/wa-settings", { method: "PUT", body: JSON.stringify({ waInstance, waToken }) });
-      setWaMsg("✅ تم الحفظ — إشعارات العميل والفواتير ستُرسل تلقائياً");
-    } catch (e) { setWaMsg(`❌ ${e instanceof Error ? e.message : "فشل الحفظ"}`); }
+      setWaMsg("تم الحفظ — إشعارات العميل والفواتير ستُرسل تلقائياً");
+    } catch (e) { setWaMsg(`${e instanceof Error ? e.message : "فشل الحفظ"}`); }
   }
 
   if (!canCompany) return <Card>لا تملك صلاحية «بيانات الشركة والمظهر».</Card>;
 
   return (
     <div className="space-y-4">
-      <h1 className="text-[19px] font-extrabold">الإعدادات — المنشأة</h1>
+      <h1 className="page-title">الإعدادات — المنشأة</h1>
 
       <Card>
-        <h2 className="mb-2 text-[14px] font-black">🖼 الشعار</h2>
-        <p className="mb-3 text-[12px] text-text-dim">يظهر في ترويسة الفواتير المطبوعة (حراري وA4) بدل الشعار الافتراضي.</p>
+        <h2 className="mb-2 text-t-md font-black">الشعار</h2>
+        <p className="mb-3 text-t-sm text-text-dim">يظهر في ترويسة الفواتير المطبوعة (حراري وA4) بدل الشعار الافتراضي.</p>
         <div className="flex flex-wrap items-center gap-4">
-          <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-ink-3">
+          <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-card border border-line bg-ink-3">
             {form.has_logo && form.logo_url
               ? <img src={form.logo_url} alt="شعار المنشأة" className="h-full w-full object-contain" />
               : <MIcon name="apartment" className="!text-[28px] text-text-dim" />}
@@ -157,7 +157,7 @@ export default function CompanySettingsPage() {
                 <Button variant="ghost" onClick={removeLogo} disabled={logoBusy}>إزالة</Button>
               )}
             </div>
-            <p className="text-[11px] text-text-dim">PNG أو JPG — أقل من 1.5 ميجابايت</p>
+            <p className="text-t-xs text-text-dim">PNG أو JPG — أقل من 1.5 ميجابايت</p>
             <ErrorNote msg={logoErr} />
           </div>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onLogoFile} />
@@ -165,7 +165,7 @@ export default function CompanySettingsPage() {
       </Card>
 
       <Card>
-        <h2 className="mb-2 text-[14px] font-black">🏢 بيانات أساسية</h2>
+        <h2 className="mb-2 text-t-md font-black">بيانات أساسية</h2>
         <div className="max-w-3xl space-y-3">
           <div className="grid gap-2 sm:grid-cols-2">
             <Field label="اسم المنشأة (عربي)">
@@ -193,7 +193,7 @@ export default function CompanySettingsPage() {
       </Card>
 
       <Card>
-        <h2 className="mb-2 text-[14px] font-black">📞 التواصل</h2>
+        <h2 className="mb-2 text-t-md font-black">التواصل</h2>
         <div className="grid max-w-3xl gap-2 sm:grid-cols-2">
           <Field label="الهاتف (يظهر بالفاتورة)">
             <Input className="tnum" dir="ltr" value={form.phone || ""} onChange={(e) => set("phone", e.target.value)} />
@@ -211,7 +211,7 @@ export default function CompanySettingsPage() {
       </Card>
 
       <Card>
-        <h2 className="mb-2 text-[14px] font-black">📍 العنوان</h2>
+        <h2 className="mb-2 text-t-md font-black">العنوان</h2>
         <div className="grid max-w-3xl gap-2 sm:grid-cols-2">
           <Field label="العنوان المختصر (يظهر بالفاتورة)">
             <Input value={form.address || ""} onChange={(e) => set("address", e.target.value)} />
@@ -240,7 +240,7 @@ export default function CompanySettingsPage() {
       <Card>
         <div className="flex max-w-3xl items-center justify-between gap-3">
           <ErrorNote msg={coErr} />
-          {coOk && <p className="text-[12.5px] font-bold text-emerald">{coOk}</p>}
+          {coOk && <p className="text-t-sm font-bold text-emerald">{coOk}</p>}
           <div className="mr-auto flex justify-end">
             <Button onClick={saveCompany} disabled={coBusy || !form.name.trim()}>
               {coBusy ? "جارِ الحفظ..." : "حفظ البيانات"}
@@ -250,8 +250,8 @@ export default function CompanySettingsPage() {
       </Card>
 
       <Card>
-        <h2 className="mb-2 text-[14px] font-black">📲 إشعارات واتساب للعملاء</h2>
-        <p className="mb-3 text-[11.5px] text-text-dim">
+        <h2 className="mb-2 text-t-md font-black">إشعارات واتساب للعملاء</h2>
+        <p className="mb-3 text-t-xs text-text-dim">
           عند التفعيل: العميل يستلم "سيارتك جاهزة" فور اعتماد أمر العمل، وفاتورته PDF فور إتمام الدفع.
           البيانات من حسابك في ultramsg.com (Instance ID + Token).
         </p>
@@ -265,13 +265,13 @@ export default function CompanySettingsPage() {
         </div>
         <div className="mt-3 flex items-center gap-3">
           <Button onClick={saveWa}>حفظ إعداد واتساب</Button>
-          {waMsg && <span className="text-[12px] font-bold">{waMsg}</span>}
+          {waMsg && <span className="text-t-sm font-bold">{waMsg}</span>}
         </div>
       </Card>
 
       <Card>
-        <h2 className="mb-2 text-[14px] font-black">🎁 برنامج نقاط الولاء</h2>
-        <p className="mb-3 text-[11.5px] text-text-dim">
+        <h2 className="mb-2 text-t-md font-black">برنامج نقاط الولاء</h2>
+        <p className="mb-3 text-t-xs text-text-dim">
           صفر في أي خانة = ميزتها معطّلة. الاكتساب يحصل تلقائياً عند إصدار أي فاتورة لعميل مسجّل،
           والاستبدال يتم من صفحة العميل نفسه. البرنامج مستقل عن كشف الحساب ولا يُنشئ قيوداً محاسبية.
         </p>
@@ -287,7 +287,7 @@ export default function CompanySettingsPage() {
         </div>
         <div className="mt-3 flex items-center gap-3">
           <Button onClick={saveLoyalty} disabled={loyaltyBusy}>{loyaltyBusy ? "جارِ الحفظ..." : "حفظ إعداد النقاط"}</Button>
-          {loyaltyMsg && <span className="text-[12px] font-bold">{loyaltyMsg}</span>}
+          {loyaltyMsg && <span className="text-t-sm font-bold">{loyaltyMsg}</span>}
         </div>
       </Card>
     </div>

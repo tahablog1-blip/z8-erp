@@ -202,8 +202,8 @@ export default function CustomersPage() {
       {/* ── Header ── */}
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-t-2xl font-black tracking-tight">{c("title")}</h1>
-          <p className="mt-0.5 text-t-sm text-text-dim">{c("subtitle")}</p>
+          <h1 className="page-title">{c("title")}</h1>
+          <p className="page-desc">{c("subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
           <div className="relative">
@@ -211,7 +211,7 @@ export default function CustomersPage() {
               <MIcon name="download" className="!text-[18px]" />{c("export")}
             </Button>
             {menu === "export" && (
-              <div role="menu" className="absolute end-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-xl border border-line bg-ink-2 shadow-xl">
+              <div role="menu" className="absolute end-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-card border border-line bg-ink-2 shadow-xl">
                 <button role="menuitem" onClick={() => doExport("csv")} className="flex w-full items-center gap-2 px-3 py-2.5 text-start text-t-sm font-bold hover:bg-ink-3"><MIcon name="table_view" className="!text-[18px] text-petrol" />{c("exportCsv")}</button>
                 <button role="menuitem" onClick={() => doExport("pdf")} className="flex w-full items-center gap-2 px-3 py-2.5 text-start text-t-sm font-bold hover:bg-ink-3"><MIcon name="picture_as_pdf" className="!text-[18px] text-petrol" />{c("exportPdf")}</button>
               </div>
@@ -265,7 +265,7 @@ export default function CustomersPage() {
               <MIcon name="view_column" className="!text-[18px]" />{c("columns")}
             </button>
             {menu === "cols" && (
-              <div role="menu" className="absolute end-0 top-full z-30 mt-1 w-48 rounded-xl border border-line bg-ink-2 p-2 shadow-xl">
+              <div role="menu" className="absolute end-0 top-full z-30 mt-1 w-48 rounded-card border border-line bg-ink-2 p-2 shadow-xl">
                 {COLS.filter((x) => x.key !== "customer" && (!x.fin || fin)).map((x) => (
                   <label key={x.key} className="flex min-h-[34px] cursor-pointer items-center gap-2 rounded-md px-2 text-t-sm hover:bg-ink-3">
                     <input type="checkbox" className="accent-[var(--petrol)]" checked={cols.includes(x.key)}
@@ -280,7 +280,7 @@ export default function CustomersPage() {
 
       {/* ── Bulk bar ── */}
       {selected.size > 0 && (
-        <div role="region" aria-label="bulk" className="cx-enter flex flex-wrap items-center gap-2 rounded-xl border border-petrol/30 bg-petrol-soft px-3 py-2">
+        <div role="region" aria-label="bulk" className="cx-enter flex flex-wrap items-center gap-2 rounded-card border border-petrol/30 bg-petrol-soft px-3 py-2">
           <b className="tnum text-t-sm">{selected.size} {c("selected")}</b>
           <span className="mx-1 h-4 w-px bg-line" />
           <Button size="sm" variant="outline" onClick={() => doExport("csv", [...selected.values()])}><MIcon name="download" className="!text-[16px]" />{c("bulk.export")}</Button>

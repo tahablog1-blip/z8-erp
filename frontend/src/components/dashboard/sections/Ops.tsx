@@ -20,7 +20,7 @@ export function OpsStrip({ data }: { data: Executive | null }) {
   const o = data?.ops;
   if (!o && !(canShift && shift)) return null;
   const cell = (label: string, v: number, icon: string, tone: string) => (
-    <div className="flex items-center gap-2 rounded-xl border border-line bg-ink-2 px-3 py-2">
+    <div className="flex items-center gap-2 rounded-card border border-line bg-ink-2 px-3 py-2">
       <span className={`grid h-8 w-8 place-items-center rounded-lg ${tone}`}><MIcon name={icon} className="!text-[18px]" /></span>
       <span><span className="tnum block text-t-lg font-black leading-none">{v}</span><span className="text-t-xs text-text-dim">{label}</span></span>
     </div>
@@ -33,7 +33,7 @@ export function OpsStrip({ data }: { data: Executive | null }) {
         {cell(d("ops.done"), o.doneToday, "task_alt", "bg-emerald-bg text-emerald")}
       </>}
       {canShift && shift && (
-        <Link href="/sales" className="flex items-center gap-2 rounded-xl border border-emerald/30 bg-emerald-bg px-3 py-2 text-t-sm font-bold text-emerald">
+        <Link href="/sales" className="flex items-center gap-2 rounded-lg border border-emerald/30 bg-emerald-bg px-3 py-2 text-t-sm font-bold text-emerald">
           <MIcon name="schedule" className="!text-[18px]" />
           <span>{shift.shift.branch_name ?? ""} · <b className="tnum">{fmtCurrency(shift.sales.totalInc, 2)}</b> ({shift.sales.invoiceCount})</span>
         </Link>

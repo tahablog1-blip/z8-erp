@@ -96,7 +96,7 @@ export default function SystemSettingsPage() {
     setTestMsg(""); setTestBusy(true);
     try {
       await api("/settings/email/test", { method: "POST", body: JSON.stringify({ to: testTo }) });
-      setTestMsg("تم الإرسال ✓ تفقّد صندوق الوارد");
+      setTestMsg("تم الإرسال تفقّد صندوق الوارد");
     } catch (e: any) { setTestMsg(e.message); }
     finally { setTestBusy(false); }
   }
@@ -156,13 +156,13 @@ export default function SystemSettingsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-[19px] font-extrabold">الإعدادات — النظام</h1>
+      <h1 className="page-title">الإعدادات — النظام</h1>
 
       <Card>
-        <div className="max-w-xl space-y-2 text-[12.5px]">
+        <div className="max-w-xl space-y-2 text-t-sm">
           <div className="flex justify-between rounded-lg border border-line p-3">
             <span className="text-text-dim">حالة الخادم</span>
-            <b className={health ? "text-emerald" : "text-ember"}>{health === null ? "..." : health ? "متصل ✓" : "غير متصل ✗"}</b>
+            <b className={health ? "text-emerald" : "text-ember"}>{health === null ? "..." : health ? "متصل" : "غير متصل"}</b>
           </div>
           <div className="flex justify-between rounded-lg border border-line p-3">
             <span className="text-text-dim">المستخدم الحالي</span><b>{user?.fullName} ({user?.email})</b>
@@ -177,7 +177,7 @@ export default function SystemSettingsPage() {
       </Card>
 
       <Card>
-        <h2 className="mb-3 text-[14px] font-black">وجهة ما بعد تسجيل الدخول</h2>
+        <h2 className="mb-3 text-t-md font-black">وجهة ما بعد تسجيل الدخول</h2>
         <div className="grid max-w-xl gap-3 sm:grid-cols-2">
           <Field label="وجهة المدير (admin) — فاضي = لوحة القيادة">
             <Select value={form.landingAdmin || ""} onChange={(e) => setForm({ ...form, landingAdmin: e.target.value || null })}>
@@ -192,13 +192,13 @@ export default function SystemSettingsPage() {
             </Select>
           </Field>
         </div>
-        <p className="mt-2 text-[11px] text-text-dim">
+        <p className="mt-2 text-t-xs text-text-dim">
           لو وجّهت موظفاً لصفحة بلا صلاحية وصول فعلية، الواجهة بتتجاهل الإعداد وترجع للاكتشاف التلقائي أمناً.
         </p>
       </Card>
 
       <Card>
-        <h2 className="mb-3 text-[14px] font-black">الأمان والجلسات</h2>
+        <h2 className="mb-3 text-t-md font-black">الأمان والجلسات</h2>
         <div className="grid max-w-xl gap-3 sm:grid-cols-2">
           <Field label="مدة الجلسة بالساعات — 0 = الافتراضي الأصلي للنظام">
             <Input type="number" min={0} max={720} className="tnum" value={form.sessionHours}
@@ -217,13 +217,13 @@ export default function SystemSettingsPage() {
                    onChange={(e) => setForm({ ...form, lockoutMinutes: Math.max(1, Number(e.target.value) || 15) })} />
           </Field>
         </div>
-        <p className="mt-2 text-[11px] text-text-dim">
+        <p className="mt-2 text-t-xs text-text-dim">
           القفل المؤقت وحد محاولات الدخول لا يُطبّقان أبداً على حساب المدير (admin) — حماية من إغلاق الوصول للنظام بالكامل بالخطأ.
         </p>
       </Card>
 
       <Card>
-        <h2 className="mb-3 text-[14px] font-black">عام</h2>
+        <h2 className="mb-3 text-t-md font-black">عام</h2>
         <div className="grid max-w-xl gap-3 sm:grid-cols-2">
           <Field label="تنسيق الوقت في الفواتير المطبوعة">
             <Select value={form.timeFormat} onChange={(e) => setForm({ ...form, timeFormat: e.target.value as "24" | "12" })}>
@@ -250,7 +250,7 @@ export default function SystemSettingsPage() {
             </Select>
           </Field>
         </div>
-        <p className="mt-2 text-[11px] text-text-dim">
+        <p className="mt-2 text-t-xs text-text-dim">
           بداية السنة المالية بتُستخدم في زر «السنة المالية الحالية» بشاشة التقارير لحساب نطاق التاريخ تلقائياً.
           التاريخ الهجري وتنسيق الأرقام يُطبَّقان فوراً على كل شاشات النظام لجميع المستخدمين بعد الحفظ.
         </p>
@@ -258,14 +258,14 @@ export default function SystemSettingsPage() {
 
       <Card>
         <div className="mb-3 flex items-center justify-between">
-          <div className="text-[14px] font-extrabold">البريد الإلكتروني (SMTP)</div>
+          <div className="text-t-md font-extrabold">البريد الإلكتروني (SMTP)</div>
           <Switch checked={emailForm.enabled} onChange={(v) => setEmailForm({ ...emailForm, enabled: v })} />
         </div>
-        <p className="mb-3 text-[11px] text-text-dim">
+        <p className="mb-3 text-t-xs text-text-dim">
           لإرسال إشعارات تلقائية بالبريد (نقص مخزون، موافقة معلقة، فرق صندوق...) — جزء من مركز الإشعارات.
         </p>
         {!emailLoaded ? (
-          <div className="text-[12px] text-text-dim">جارِ التحميل...</div>
+          <div className="text-t-sm text-text-dim">جارِ التحميل...</div>
         ) : (
           <div className="space-y-2.5">
             <div className="grid gap-2 sm:grid-cols-3">
@@ -297,13 +297,13 @@ export default function SystemSettingsPage() {
                      onChange={(e) => setEmailForm({ ...emailForm, fromAddress: e.target.value })} />
             </Field>
             <label className="flex cursor-pointer items-center justify-between rounded-lg border border-line p-2.5">
-              <div className="text-[12px] font-bold">إرسال بريد تلقائي للتنبيهات المهمة فقط</div>
+              <div className="text-t-sm font-bold">إرسال بريد تلقائي للتنبيهات المهمة فقط</div>
               <Switch size="sm" checked={emailForm.notifyOnWarnAndDanger}
                       onChange={(v) => setEmailForm({ ...emailForm, notifyOnWarnAndDanger: v })} />
             </label>
 
             <ErrorNote msg={emailErr} />
-            {emailOk && <p className="text-[12px] font-bold text-emerald">{emailOk}</p>}
+            {emailOk && <p className="text-t-sm font-bold text-emerald">{emailOk}</p>}
             <div className="flex justify-end">
               <Button onClick={saveEmail} disabled={emailBusy}>{emailBusy ? "جارِ الحفظ..." : "حفظ إعدادات البريد"}</Button>
             </div>
@@ -317,7 +317,7 @@ export default function SystemSettingsPage() {
                 {testBusy ? "جارِ الإرسال..." : "إرسال"}
               </Button>
             </div>
-            {testMsg && <p className="text-[11.5px] text-text-dim">{testMsg}</p>}
+            {testMsg && <p className="text-t-xs text-text-dim">{testMsg}</p>}
           </div>
         )}
       </Card>
@@ -325,8 +325,8 @@ export default function SystemSettingsPage() {
       <Card>
         <label className="flex cursor-pointer items-center justify-between rounded-lg border border-line p-3">
           <div>
-            <div className="text-[13px] font-bold text-ember">وضع الصيانة</div>
-            <div className="text-[11.5px] text-text-dim">يمنع دخول الموظفين مؤقتاً (رسالة «النظام تحت الصيانة») — حساب المدير يفضل يدخل عادي دايماً عشان يقدر يلغي الوضع</div>
+            <div className="text-t-md font-bold text-ember">وضع الصيانة</div>
+            <div className="text-t-xs text-text-dim">يمنع دخول الموظفين مؤقتاً (رسالة «النظام تحت الصيانة») — حساب المدير يفضل يدخل عادي دايماً عشان يقدر يلغي الوضع</div>
           </div>
           <Switch checked={form.maintenanceMode} onChange={(v) => setForm({ ...form, maintenanceMode: v })} tone="ember" />
         </label>
@@ -334,25 +334,25 @@ export default function SystemSettingsPage() {
 
       <Card>
         <div className="mb-3 flex items-center justify-between">
-          <div className="text-[14px] font-extrabold">النسخ الاحتياطي</div>
+          <div className="text-t-md font-extrabold">النسخ الاحتياطي</div>
           <Button onClick={createBackup} disabled={backupBusy}>{backupBusy ? "جارِ إنشاء النسخة..." : "+ نسخة احتياطية جديدة"}</Button>
         </div>
-        <p className="mb-3 text-[11px] text-text-dim">
+        <p className="mb-3 text-t-xs text-text-dim">
           تصدير فوري لكل بيانات شركتك (كل الجداول) كملف واحد مضغوط — يمكن تنزيله أو حذفه من هنا.
           التصدير لا يشمل الصور والملفات المرفوعة (الشعار، صور المنتجات...).
         </p>
         <ErrorNote msg={backupErr} />
         {!backupsLoaded ? (
-          <div className="text-[12px] text-text-dim">جارِ التحميل...</div>
+          <div className="text-t-sm text-text-dim">جارِ التحميل...</div>
         ) : backups.length === 0 ? (
-          <div className="rounded-lg border border-line p-4 text-center text-[12px] text-text-dim">لا توجد نسخ احتياطية بعد</div>
+          <div className="rounded-lg border border-line p-4 text-center text-t-sm text-text-dim">لا توجد نسخ احتياطية بعد</div>
         ) : (
           <div className="space-y-1.5">
             {backups.map((b) => (
               <div key={b.filename} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line p-2.5">
-                <div className="text-[12px]">
+                <div className="text-t-sm">
                   <div className="font-bold tnum" dir="ltr">{b.filename}</div>
-                  <div className="text-[11px] text-text-dim">
+                  <div className="text-t-xs text-text-dim">
                     {new Date(b.createdAt).toLocaleString("ar-SA", { dateStyle: "medium", timeStyle: "short" })}
                     {" — "}{b.tableCount} جدول، {b.rowCount.toLocaleString()} سجل، {fmtSize(b.sizeBytes)}
                   </div>
@@ -368,7 +368,7 @@ export default function SystemSettingsPage() {
       </Card>
 
       <ErrorNote msg={err} />
-      {ok && <p className="text-[12.5px] font-bold text-emerald">{ok}</p>}
+      {ok && <p className="text-t-sm font-bold text-emerald">{ok}</p>}
       <div className="flex justify-end pb-6">
         <Button onClick={save} disabled={busy}>{busy ? "جارِ الحفظ..." : "حفظ إعدادات النظام"}</Button>
       </div>

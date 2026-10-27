@@ -45,22 +45,22 @@ export default function PrintingSettingsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-[19px] font-extrabold">الإعدادات — الطباعة</h1>
+      <h1 className="page-title">الإعدادات — الطباعة</h1>
 
       <Card>
         <div className="max-w-xl space-y-4">
           <label className="flex cursor-pointer items-center justify-between rounded-lg border border-line p-3">
             <div>
-              <div className="text-[13px] font-bold">الطباعة التلقائية عند إصدار الفاتورة</div>
-              <div className="text-[11.5px] text-text-dim">نافذة الطباعة الحرارية تفتح لوحدها فور الإصدار</div>
+              <div className="text-t-md font-bold">الطباعة التلقائية عند إصدار الفاتورة</div>
+              <div className="text-t-xs text-text-dim">نافذة الطباعة الحرارية تفتح لوحدها فور الإصدار</div>
             </div>
             <Switch checked={form.autoPrint} onChange={(v) => setForm({ ...form, autoPrint: v })} />
           </label>
 
           <label className="flex cursor-pointer items-center justify-between rounded-lg border border-line p-3">
             <div>
-              <div className="text-[13px] font-bold">معاينة قبل الطباعة</div>
-              <div className="text-[11.5px] text-text-dim">نافذة الطباعة تُفتح للمراجعة أولاً — الطباعة تنتظر ضغطة زر «🖨 طباعة» بدل التنفيذ التلقائي</div>
+              <div className="text-t-md font-bold">معاينة قبل الطباعة</div>
+              <div className="text-t-xs text-text-dim">نافذة الطباعة تُفتح للمراجعة أولاً — الطباعة تنتظر ضغطة زر «طباعة» بدل التنفيذ التلقائي</div>
             </div>
             <Switch checked={form.previewBeforePrint} onChange={(v) => setForm({ ...form, previewBeforePrint: v })} />
           </label>
@@ -87,28 +87,28 @@ export default function PrintingSettingsPage() {
           </div>
 
           <div className="rounded-lg border border-line p-3">
-            <div className="mb-2 text-[12px] font-extrabold text-text-dim">خاصة بالفاتورة الحرارية 80مم فقط</div>
+            <div className="mb-2 text-t-sm font-extrabold text-text-dim">خاصة بالفاتورة الحرارية 80مم فقط</div>
             <div className="space-y-2">
               <label className="flex cursor-pointer items-center justify-between">
-                <span className="text-[12.5px] font-bold">إظهار شعار المنشأة</span>
+                <span className="text-t-sm font-bold">إظهار شعار المنشأة</span>
                 <Switch checked={form.thermalShowLogo} onChange={(v) => setForm({ ...form, thermalShowLogo: v })} />
               </label>
               <label className="flex cursor-pointer items-center justify-between">
-                <span className="text-[12.5px] font-bold">إظهار رمز QR الضريبي</span>
+                <span className="text-t-sm font-bold">إظهار رمز QR الضريبي</span>
                 <Switch checked={form.thermalShowQr} onChange={(v) => setForm({ ...form, thermalShowQr: v })} />
               </label>
             </div>
-            <p className="mt-2 text-[11px] text-text-dim">
+            <p className="mt-2 text-t-xs text-text-dim">
               فاتورة A4 الضريبية الرسمية تحتفظ بالشعار و QR دايماً — مفيش تعطيل ليهم على A4 (مطلب ضريبي).
             </p>
           </div>
 
-          <div className="rounded-lg bg-ink-3 p-3 text-[12px] text-text-dim">
+          <div className="rounded-lg bg-ink-3 p-3 text-t-sm text-text-dim">
             صيغ الطباعة المتاحة في كل النظام: <b>حراري 80مم</b> للكاشير والتذاكر، و<b>A4 رسمي</b> للفواتير الضريبية والتقارير وكشوف الحساب — الاختيار بيظهر عند عرض أي فاتورة.
           </div>
 
           <ErrorNote msg={err} />
-          {ok && <p className="text-[12.5px] font-bold text-emerald">{ok}</p>}
+          {ok && <p className="text-t-sm font-bold text-emerald">{ok}</p>}
           <div className="flex justify-end">
             <Button onClick={save} disabled={busy}>{busy ? "جارِ الحفظ..." : "حفظ إعدادات الطباعة"}</Button>
           </div>

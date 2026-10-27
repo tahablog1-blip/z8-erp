@@ -74,13 +74,13 @@ type GateEvent = {
 /* ------------------------------------------------------------ ألوان الحالة */
 
 const STATUS_STYLE: Record<string, { label: string; bg: string; fg: string }> = {
-  checked_in:    { label: "تم الدخول",     bg: "#0C5E66", fg: "#ffffff" },
-  matched:       { label: "عميل مسجّل",     bg: "#0C5E66", fg: "#ffffff" },
-  needs_confirm: { label: "يحتاج تأكيد",    bg: "#B45309", fg: "#ffffff" },
-  unknown:       { label: "غير مسجّل",      bg: "#7C2D12", fg: "#ffffff" },
-  duplicate:     { label: "مكرر",           bg: "#57534E", fg: "#ffffff" },
-  no_plate:      { label: "لوحة غير واضحة", bg: "#57534E", fg: "#ffffff" },
-  error:         { label: "خطأ",            bg: "#991B1B", fg: "#ffffff" },
+  checked_in:    { label: "تم الدخول",     bg: "var(--emerald)", fg: "#ffffff" },
+  matched:       { label: "عميل مسجّل",     bg: "var(--emerald)", fg: "#ffffff" },
+  needs_confirm: { label: "يحتاج تأكيد",    bg: "var(--brass)", fg: "#ffffff" },
+  unknown:       { label: "غير مسجّل",      bg: "var(--ember)", fg: "#ffffff" },
+  duplicate:     { label: "مكرر",           bg: "var(--text-dim)", fg: "#ffffff" },
+  no_plate:      { label: "لوحة غير واضحة", bg: "var(--text-dim)", fg: "#ffffff" },
+  error:         { label: "خطأ",            bg: "var(--ember)", fg: "#ffffff" },
 };
 
 const money = (n?: number | null) =>

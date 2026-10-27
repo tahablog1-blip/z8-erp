@@ -52,7 +52,7 @@ export function GlobalFilters({ value, branches, onChange, onRefresh, refreshing
         </div>
       </div>
       {customOpen && (
-        <div className="flex flex-wrap items-end gap-2 rounded-xl border border-line bg-ink-2 p-3">
+        <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-ink-2 p-3">
           <label className="text-t-xs font-bold text-text-dim">{d("from")}
             <input type="date" value={cf} max={ct || undefined} onChange={(e) => setCf(e.target.value)} className="mt-1 block rounded-lg border border-line bg-ink px-2.5 py-1.5 text-t-sm text-text" />
           </label>

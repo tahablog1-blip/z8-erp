@@ -63,13 +63,13 @@ export function ToastHost() {
         return (
           <div key={t.id}
                role="status"
-               className="z8-pop pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border border-line bg-ink-2 p-3.5 shadow-lg">
+               className="z8-pop pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-card border border-line bg-ink-2 p-3.5 shadow-lg">
             <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${s.chip}`}>
               <MIcon name={s.icon} className="!text-[18px]" />
             </span>
             <div className="min-w-0 flex-1 pt-0.5">
-              <div className="text-[12.5px] font-extrabold text-text">{t.title || TONE_LABEL[t.tone]}</div>
-              <div className="mt-0.5 text-[12px] leading-relaxed text-text-dim">{t.message}</div>
+              <div className="text-t-sm font-extrabold text-text">{t.title || TONE_LABEL[t.tone]}</div>
+              <div className="mt-0.5 text-t-sm leading-relaxed text-text-dim">{t.message}</div>
             </div>
             <button onClick={() => dismiss(t.id)} aria-label="إغلاق الإشعار"
                     className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-text-dim transition hover:bg-ink-3 hover:text-text">
