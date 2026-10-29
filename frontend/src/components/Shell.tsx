@@ -250,26 +250,26 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {mobileNavOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileNavOpen(false)} />
       )}
-      <aside className={`fixed inset-y-0 start-0 z-50 flex z8-h-screen w-72 flex-col overflow-hidden bg-petrol-deep text-white
+      <aside className={`fixed inset-y-0 start-0 z-50 z8-sidebar flex z8-h-screen w-72 flex-col overflow-hidden
                         transition-[transform,width] duration-300 md:sticky md:top-0 md:shrink-0 md:!translate-x-0
                         ${collapsed ? "md:w-[72px]" : "md:w-60"}
                         ${mobileNavOpen ? "translate-x-0 shadow-panel" : "ltr:-translate-x-full rtl:translate-x-full"}`}>
-        <div className={`flex items-center gap-3 px-5 py-5 ${collapsed ? "md:justify-center md:px-0" : ""}`}>
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-card bg-white/10 p-1.5">
+        <div className={`z8-sidebar__header ${collapsed ? "md:justify-center md:!px-0" : ""}`}>
+          <div className="z8-sidebar__logo">
             <img src="/logo-white.png" alt="مصدر الزيوت" className="h-full w-full object-contain" />
           </div>
           <div className={`leading-tight flex-1 ${collapsed ? "md:hidden" : ""}`}>
-            <div className="text-t-md font-extrabold">مصدر الزيوت</div>
-            <div className="text-t-xs text-white/60">منصة الإدارة</div>
+            <div className="z8-sidebar__name text-t-md font-extrabold">مصدر الزيوت</div>
+            <div className="z8-sidebar__sub text-t-xs">منصة الإدارة</div>
           </div>
           {/* إغلاق الدرج — الشاشات الضيقة بس */}
           <button onClick={() => setMobileNavOpen(false)} aria-label="إغلاق القائمة"
-            className="grid h-8 w-8 place-items-center rounded-lg text-white/70 hover:bg-white/10 md:hidden">
+            className="z8-sidebar__close md:hidden">
             <MIcon name="close" />
           </button>
         </div>
 
-        <nav className="no-scrollbar mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden px-3 pb-3">
+        <nav className="z8-sidebar__nav min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
           {NAV_SECTIONS.map((sec) => {
             const items = visible.filter((mm) => mm.section === sec);
             if (items.length === 0) return null;
@@ -280,30 +280,29 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 {/* رأس القسم — حواف حادة، نفس لون القضيب */}
                 {sec !== "الرئيسية" && !collapsed && (
                   <button onClick={() => toggleSec(sec)}
-                    className={`flex h-10 w-full items-center gap-2.5 px-3 text-t-sm font-extrabold transition
-                            ${openSecs[sec] ? "bg-white/10 text-white" : "text-white/60 hover:bg-white/5 hover:text-white"}`}>
-                    <NavIcon name={SECTION_ICONS[sec] || "sec_ops"} />
-                    <span className="flex-1 text-right">{sectionLabel}</span>
-                    <span className={`text-t-xs opacity-60 transition-transform duration-200 ${openSecs[sec] ? "" : "-rotate-90"}`}>▼</span>
+                    aria-expanded={!!openSecs[sec]}
+                    className="z8-sidebar__group text-t-sm">
+                    <NavIcon name={SECTION_ICONS[sec] || "sec_ops"} className="z8-sidebar__icon" />
+                    <span className="z8-sidebar__group-label">{sectionLabel}</span>
+                    <MIcon name="expand_more" className={`z8-sidebar__chev ${openSecs[sec] ? "" : "z8-sidebar__chev--closed"}`} />
                   </button>
                 )}
                 {sec !== "الرئيسية" && collapsed && (
-                  <div className="mx-3 my-2 h-px bg-white/10" role="separator" aria-label={sectionLabel} />
+                  <div className="z8-sidebar__sep" role="separator" aria-label={sectionLabel} />
                 )}
                 {/* القائمة المنسدلة — مستطيل واحد بنفس عرض رأس القسم بالظبط، حواف حادة، درجة رمادي فاتح */}
-                <div className={`overflow-hidden transition-all duration-200
-                       ${sectionOpen ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"}
-                       ${sec !== "الرئيسية" && !collapsed ? "bg-white/[0.06]" : ""}`}>
+                <div className={`z8-sidebar__submenu ${sec !== "الرئيسية" && !collapsed ? "z8-sidebar__submenu--sub" : ""}
+                       ${sectionOpen ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"}`}>
                   {items.map((m) => {
                     const active = m.path === activePath;
                     const label = t(NAV_TITLE_KEYS[m.title] || "", m.title);
                     const linkEl = (
                       <Link href={m.path} onClick={() => setMobileNavOpen(false)}
-                        className={`relative mx-2 flex h-10 items-center gap-2.5 px-3.5 text-t-md font-bold transition-all duration-200
-                              ${sec !== "الرئيسية" ? "pr-6" : ""} ${collapsed ? "md:mx-auto md:w-10 md:justify-center md:px-0 md:pr-0" : ""}
-                              ${active ? "m3 rounded-lg bg-nav-active font-black text-white" : "m3 rounded-lg text-white/70 hover:bg-white/10 hover:text-white"}`}>
-                        <NavIcon name={m.icon} />
-                        <span className={collapsed ? "flex-1 md:hidden" : "flex-1"}>{label}</span>
+                        aria-current={active ? "page" : undefined}
+                        className={`z8-sidebar__item text-t-md ${sec !== "الرئيسية" ? "z8-sidebar__item--sub" : ""}
+                              ${active ? "z8-sidebar__item--active" : ""}`}>
+                        <NavIcon name={m.icon} className="z8-sidebar__icon" />
+                        <span className="z8-sidebar__label">{label}</span>
                         {m.path === "/service-notes" && unread > 0 && (
                           <span className={`grid h-5 min-w-5 place-items-center rounded-full bg-emerald px-1.5 text-t-xs font-black text-white ${collapsed ? "md:absolute md:-left-1 md:-top-1 md:h-4 md:min-w-4 md:text-t-xs" : ""}`}>
                             {unread > 99 ? "99+" : unread}
@@ -327,9 +326,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
                           <div key={m.path} className="relative">
                             <Tooltip label={label}>
                               <Link href={m.path}
-                                className={`mx-auto flex h-10 w-10 items-center justify-center text-t-md font-bold transition-all duration-200
-                                      ${active ? "m3 rounded-lg bg-nav-active font-black text-white" : "m3 rounded-lg text-white/70 hover:bg-white/10 hover:text-white"}`}>
-                                <NavIcon name={m.icon} />
+                                aria-current={active ? "page" : undefined} aria-label={label}
+                                className={`z8-sidebar__item z8-sidebar__item--icon ${active ? "z8-sidebar__item--active" : ""}`}>
+                                <NavIcon name={m.icon} className="z8-sidebar__icon" />
                               </Link>
                             </Tooltip>
                             {m.path === "/service-notes" && unread > 0 && (
@@ -348,16 +347,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className={`border-t border-white/10 px-3 py-2 ${collapsed ? "md:px-0" : ""}`}>
+        <div className="z8-sidebar__footer">
           <Tooltip label={collapsed ? "توسيع القائمة" : "طيّ القائمة"} side="end">
             <button onClick={toggleCollapsed}
-              className={`m3 hidden h-9 items-center gap-2 rounded-lg text-t-sm font-bold text-white/60 transition hover:bg-white/10 hover:text-white md:flex ${collapsed ? "md:w-10 md:justify-center md:mx-auto" : "w-full px-3"}`}>
-              <MIcon name={collapsed ? "right_panel_open" : "left_panel_close"} />
+              className={`z8-sidebar__collapse hidden text-t-sm md:flex ${collapsed ? "md:w-10 md:justify-center md:mx-auto" : "w-full px-3"}`}>
+              <MIcon name={collapsed ? "right_panel_open" : "left_panel_close"} className="msr-18" />
               {!collapsed && <span>طيّ القائمة</span>}
             </button>
           </Tooltip>
         </div>
-        <div className={`border-t border-white/10 px-3 py-3 text-t-xs text-white/45 ${collapsed ? "hidden md:hidden" : ""}`}>
+        <div className={`z8-sidebar__version text-t-xs ${collapsed ? "hidden md:hidden" : ""}`}>
           Z8 Platform · المرحلة 5 · {process.env.NEXT_PUBLIC_BUILD}
         </div>
       </aside>
