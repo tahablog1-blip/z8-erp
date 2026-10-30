@@ -486,7 +486,7 @@ async def return_invoice(company_id: str, user_id: str, user_email: str, invoice
                 await conn.execute(
                     """UPDATE inventory SET qty = qty + $1, updated_at = now()
                        WHERE loc_type='branch' AND loc_id=$2 AND product_id=$3""",
-                    it["qty"], invoice["branch_id"], it["product_id"],
+                    it["qty"], str(invoice["branch_id"]), it["product_id"],
                 )
 
             # 2) عكس القيود المحاسبية (بيع + تكلفة)
@@ -635,7 +635,7 @@ async def partial_return_invoice(company_id: str, user_id: str, user_email: str,
                     await conn.execute(
                         """UPDATE inventory SET qty = qty + $1, updated_at = now()
                            WHERE loc_type='branch' AND loc_id=$2 AND product_id=$3""",
-                        qty, invoice["branch_id"], product_id,
+                        qty, str(invoice["branch_id"]), product_id,
                     )
 
             # ── رأس المرتجع + بنوده ──
