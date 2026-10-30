@@ -73,7 +73,7 @@ async def create_invoice(company_id: str, user_id: str, user_email: str, d: dict
 
     async with transaction() as conn:
         async with conn.transaction():
-            # 0) لازم وردية مفتوحة قبل أي بيع
+            # 0) لازم جلسة مفتوحة قبل أي بيع
             shift_id = await require_open_shift(company_id, user_id)
 
             # 1) الإجماليات — مع خصم البند (على القيمة شاملة الضريبة، والباقي يُشتق بنفس نسبة الضريبة)

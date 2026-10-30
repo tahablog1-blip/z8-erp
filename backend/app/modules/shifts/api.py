@@ -10,7 +10,7 @@ router = APIRouter()
 
 @router.get("/current")
 async def get_current(user: CurrentUser = Depends(require_permission("shifts.manage_own"))):
-    """الوردية المفتوحة حالياً للمستخدم الحالي — null لو مفيش"""
+    """الجلسة المفتوحة حالياً للمستخدم الحالي — null لو مفيش"""
     return await service.get_current(user.company_id, user.user_id)
 
 
@@ -28,7 +28,7 @@ async def close_shift(shift_id: str, body: CloseShiftBody,
 
 @router.get("", response_model=list[ShiftOut])
 async def list_shifts(user: CurrentUser = Depends(require_permission("shifts.manage_own", "shifts.view_branch"))):
-    """سجل الورديات — لصاحب الصلاحية الإدارية بس"""
+    """سجل الجلسات — لصاحب الصلاحية الإدارية بس"""
     return await service.list_shifts(user.company_id, user.user_id, user.has("shifts.view_branch"), user.branch_scope)
 
 

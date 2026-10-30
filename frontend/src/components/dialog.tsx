@@ -40,7 +40,7 @@ export function DialogHost() {
     if (!cur) return;
     function onKey(e: KeyboardEvent) {
       // Enter = تأكيد، إلا في الإجراءات الخطرة (حذف/مرتجع...) — لازم ضغطة صريحة على الزر
-      if (e.key === "Enter" && !/حذف|مسح|إلغاء|مرتجع|إنهاء|إغلاق الوردية/.test(cur!.message)) { e.preventDefault(); close(true); }
+      if (e.key === "Enter" && !/حذف|مسح|إلغاء|مرتجع|إنهاء|إغلاق الجلسة/.test(cur!.message)) { e.preventDefault(); close(true); }
       if (e.key === "Escape") { e.preventDefault(); close(cur!.kind === "alert"); }
     }
     window.addEventListener("keydown", onKey);
@@ -50,7 +50,7 @@ export function DialogHost() {
 
   if (!cur) return null;
   const danger = cur.kind === "confirm" &&
-    /حذف|مسح|إلغاء|مرتجع|إنهاء|إغلاق الوردية/.test(cur.message);
+    /حذف|مسح|إلغاء|مرتجع|إنهاء|إغلاق الجلسة/.test(cur.message);
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4"
          onClick={() => close(cur.kind === "alert")}>
