@@ -128,6 +128,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
     setOpenSecs(init);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    const cur = NAV_MODULES.filter((m) => pathname === m.path || pathname.startsWith(m.path + "/"))
+      .sort((a, b) => b.path.length - a.path.length)[0]?.section;
+    if (cur && cur !== "الرئيسية") setOpenSecs((prev) => (prev[cur] ? prev : { ...prev, [cur]: true }));
+  }, [pathname]);
   function toggleSec(sec: string) {
     setOpenSecs((prev) => {
       const next = { ...prev, [sec]: !prev[sec] };
@@ -275,13 +280,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
             if (items.length === 0) return null;
             const sectionLabel = t(SECTION_TITLE_KEYS[sec] || "", sec);
             const sectionOpen = collapsed ? true : (sec === "الرئيسية" || openSecs[sec]);
+            const isCurrentSec = sec !== "الرئيسية" && sec === activeModule?.section;
             return (
               <div key={sec}>
                 {/* رأس القسم — حواف حادة، نفس لون القضيب */}
                 {sec !== "الرئيسية" && !collapsed && (
                   <button onClick={() => toggleSec(sec)}
                     aria-expanded={!!openSecs[sec]}
-                    className="z8-sidebar__group text-t-sm">
+                    className={`z8-sidebar__group text-t-sm ${isCurrentSec ? "z8-sidebar__group--current" : ""} ${isCurrentSec && openSecs[sec] ? "z8-sidebar__group--joined" : ""}`}>
                     <NavIcon name={SECTION_ICONS[sec] || "sec_ops"} className="z8-sidebar__icon" />
                     <span className="z8-sidebar__group-label">{sectionLabel}</span>
                     <MIcon name="expand_more" className={`z8-sidebar__chev ${openSecs[sec] ? "" : "z8-sidebar__chev--closed"}`} />
@@ -291,7 +297,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   <div className="z8-sidebar__sep" role="separator" aria-label={sectionLabel} />
                 )}
                 {/* القائمة المنسدلة — مستطيل واحد بنفس عرض رأس القسم بالظبط، حواف حادة، درجة رمادي فاتح */}
-                <div className={`z8-sidebar__submenu ${sec !== "الرئيسية" && !collapsed ? "z8-sidebar__submenu--sub" : ""}
+                <div className={`z8-sidebar__submenu ${sec !== "الرئيسية" && !collapsed ? "z8-sidebar__submenu--sub" : ""} ${isCurrentSec && !collapsed ? "z8-sidebar__submenu--current" : ""}
                        ${sectionOpen ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"}`}>
                   {items.map((m) => {
                     const active = m.path === activePath;
