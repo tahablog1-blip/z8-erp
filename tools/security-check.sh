@@ -64,10 +64,10 @@ sec "4) SSH"
 sshd_t=$(sshd -T 2>/dev/null)
 if [ -n "$sshd_t" ]; then
   echo "$sshd_t" | grep -q "^passwordauthentication no" && pass "الدخول بكلمة مرور معطّل" || fail "SSH يقبل كلمة المرور — استعمل المفاتيح وعطّل PasswordAuthentication"
-  echo "$sshd_t" | grep -qE "^permitrootlogin (no|prohibit-password|without-password)" && pass "دخول root المباشر مقيّد" || warnf "PermitRootLogin يسمح بكلمة مرور root"
+  echo "$sshd_t" | grep -qE "^permitrootlogin (no|prohibit-password|without-password)" && pass "دخول root المباشر مقيّد" || warnf "PermitRootLogin yes — مع تعطيل كلمة المرور يبقى المفتاح فقط، لكن الأفضل prohibit-password أو مستخدم عادي + sudo"
 else warnf "تعذّر قراءة إعداد sshd (شغّل بـ sudo)"; fi
 if [ -f /var/log/auth.log ]; then
-  n=$(grep -c "Failed password" /var/log/auth.log 2>/dev/null || echo 0)
+  n=$(grep -c "Failed password" /var/log/auth.log 2>/dev/null || true); n=${n:-0}
   [ "$n" -gt 200 ] && warnf "محاولات دخول SSH فاشلة في auth.log: $n (هجمات تخمين نشطة — fail2ban + مفاتيح فقط)" || pass "محاولات SSH الفاشلة في السجل الحالي: $n"
 fi
 
