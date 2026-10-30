@@ -58,6 +58,7 @@ const dateFmt = (s: string) =>
 export default function SalesPage() {
   const { hasPerm } = useAuth();
   const canManageShift = hasPerm("shifts.manage_own");
+  const canSeeShiftAmounts = hasPerm("shifts.view_branch");   // إغلاق أعمى: صاحب الجلسة العادي لا يرى أي مبلغ
   const canCreateInvoiceBase = hasPerm("invoices.create");
   const canReturn = hasPerm("invoices.return");
   const canViewInvoices = hasPerm("invoices.view_today", "invoices.view_all", "invoices.view_pending");
@@ -515,7 +516,7 @@ export default function SalesPage() {
         body: JSON.stringify({ countedCash: Number(countedCash) || 0, notes: closeNotes.trim() || null }),
       });
       setCloseModal(false);
-      printShiftReport(report); // تقرير الإغلاق النهائي — يُطبع تلقائياً
+      if (canSeeShiftAmounts) printShiftReport(report); // تقرير الإغلاق النهائي — لأصحاب صلاحية الفرع فقط (فيه المتوقع والفرق)
       await load();
     } catch (e: any) { setShiftErr(e.message); }
     finally { setShiftBusy(false); }
@@ -1075,13 +1076,15 @@ export default function SalesPage() {
                     <span className="h-2.5 w-2.5 rounded-full bg-emerald" />
                     جلسة {shift.shift.branch_name} — نشطة
                   </span>
-                  <b className="tnum">{money(shift.sales.totalInc)}</b>
+                  {canSeeShiftAmounts && <b className="tnum">{money(shift.sales.totalInc)}</b>}
                 </div>
                 <div className="flex gap-1.5">
-                  <Button variant="ghost" size="xs" className="flex-1 justify-center"
-                          onClick={() => { printShiftReport(shift); setGearOpen(false); }}>
-                    تقرير الجلسة
-                  </Button>
+                  {canSeeShiftAmounts && (
+                    <Button variant="ghost" size="xs" className="flex-1 justify-center"
+                            onClick={() => { printShiftReport(shift); setGearOpen(false); }}>
+                      تقرير الجلسة
+                    </Button>
+                  )}
                   <Button variant="danger" size="xs" className="flex-1 justify-center"
                           onClick={() => { setCountedCash(""); setCloseNotes(""); setShiftErr(""); setCloseModal(true); setGearOpen(false); }}>
                     إغلاق الجلسة
@@ -1832,10 +1835,14 @@ export default function SalesPage() {
       {/* ══════════ إغلاق الجلسة ══════════ */}
       <Modal open={closeModal} onClose={() => setCloseModal(false)} title="إغلاق الجلسة">
         <div className="space-y-3">
-          <div className="rounded-lg bg-ink-3 p-3 text-t-sm">
-            <div className="flex justify-between"><span className="text-text-dim">النقد المتوقع في الدرج</span>
-              <b className="tnum">{money(shift.cash.expected)}</b></div>
-          </div>
+          {canSeeShiftAmounts ? (
+            <div className="rounded-lg bg-ink-3 p-3 text-t-sm">
+              <div className="flex justify-between"><span className="text-text-dim">النقد المتوقع في الدرج</span>
+                <b className="tnum">{money(shift.cash.expected)}</b></div>
+            </div>
+          ) : (
+            <div className="rounded-lg bg-ink-3 p-3 text-t-sm text-text-dim">عُدّ النقد في الدرج وأدخل المبلغ كما هو — لا يظهر لك المبلغ المتوقع.</div>
+          )}
           <Field label="النقد المعدود فعلياً">
             <Input type="number" min={0} step="0.01" className="tnum" value={countedCash} autoFocus
                    onChange={(e) => setCountedCash(e.target.value)} />

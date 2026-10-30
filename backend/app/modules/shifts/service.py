@@ -110,6 +110,23 @@ async def _build_shift_report(company_id: str, shift_id: str) -> dict | None:
     }
 
 
+def redact_amounts(r: dict | None) -> dict | None:
+    """إغلاق أعمى: صاحب الجلسة (بلا صلاحية «جلسات الفرع») لا يرى أي مبلغ — لا المبيعات ولا المتوقع بالدرج ولا الفرق،
+    حتى لا يطابق عدّه على الرقم المتوقع. الحجب هنا في الخادم (الواجهة وحدها لا تكفي: الرد يُرى في أدوات المتصفح)."""
+    if not r:
+        return r
+    out = dict(r)
+    out["shift"] = {**r["shift"], "opening_cash": 0.0, "closing_cash_counted": None}
+    out["sales"] = {"invoiceCount": r["sales"]["invoiceCount"], "totalEx": 0.0, "totalVat": 0.0, "totalInc": 0.0}
+    out["byMethod"] = {k: 0.0 for k in r["byMethod"]}
+    out["returns"] = {"count": r["returns"]["count"], "totalInc": 0.0, "cashRefunds": 0.0}
+    out["cash"] = {"opening": 0.0, "expected": 0.0, "counted": None, "difference": None}
+    out["treasury"] = {"cashReceipts": 0.0, "cashPayments": 0.0}
+    out["topItems"] = [{"label": t["label"], "qty": t["qty"], "total": 0.0} for t in r["topItems"]]
+    out["redacted"] = True
+    return out
+
+
 async def get_current(company_id: str, user_id: str) -> dict | None:
     row = await fetchrow(
         """SELECT s.id FROM shifts s
