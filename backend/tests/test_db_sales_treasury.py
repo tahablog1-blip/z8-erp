@@ -401,3 +401,39 @@ def test_employee_advance_flow_and_limits(w):
         run(lambda: service.cancel_voucher(CO, w["u"], adv["id"], "إلغاء"))
     assert e.value.status_code == 409
     assert_balanced()
+
+
+# ══════════════════ إغلاق أعمى: صاحب الجلسة لا يرى أي مبلغ ══════════════════
+
+def test_shift_report_redaction_hides_every_amount(w):
+    from app.modules.shifts import service as shifts
+    sell(w, [item(w["oil"], 2)], [{"method": "cash", "amount": 230}])
+    full = run(lambda: shifts.get_current(CO, w["u"]))
+    assert full["sales"]["totalInc"] == 230 and full["cash"]["expected"] == 330        # 100 عهدة + 230 تحصيل نقدي
+    red = shifts.redact_amounts(full)
+    assert red["sales"] == {"invoiceCount": 1, "totalEx": 0.0, "totalVat": 0.0, "totalInc": 0.0}
+    assert red["cash"] == {"opening": 0.0, "expected": 0.0, "counted": None, "difference": None}
+    assert all(v == 0 for v in red["byMethod"].values()) and red["returns"]["totalInc"] == 0
+    assert all(t["total"] == 0 for t in red["topItems"]) and red["shift"]["opening_cash"] == 0
+    assert red["shift"]["id"] == full["shift"]["id"] and red["shift"]["branch_name"] == full["shift"]["branch_name"]   # الهوية تبقى للواجهة
+    assert shifts.redact_amounts(None) is None
+
+
+def test_shift_endpoints_redact_unless_branch_permission(w):
+    import json
+    from app.core.deps import CurrentUser
+    from app.modules.shifts import api as shifts_api
+
+    def user(perms, role="employee"):
+        return CurrentUser(user_id=w["u"], company_id=CO, branch_id=None, email="c@x", full_name="كاشير", role=role, permissions=perms)
+    sell(w, [item(w["oil"], 1)], [{"method": "cash", "amount": 115}])
+    cashier = run(lambda: shifts_api.get_current(user(["shifts.manage_own"])))
+    assert cashier["sales"]["totalInc"] == 0 and cashier["cash"]["expected"] == 0
+    manager = run(lambda: shifts_api.get_current(user(["shifts.manage_own", "shifts.view_branch"])))
+    assert manager["sales"]["totalInc"] == 115 and manager["cash"]["expected"] == 215
+    sid = cashier["shift"]["id"]
+    rep = run(lambda: shifts_api.get_report(sid, user(["shifts.manage_own"])))
+    assert rep["sales"]["totalInc"] == 0
+    closed = run(lambda: shifts_api.close_shift(sid, type("B", (), {"countedCash": 215, "notes": None})(), user(["shifts.manage_own"])))
+    assert closed["cash"]["expected"] == 0 and closed["cash"]["difference"] is None            # لا يعرف إن كان عدّه مطابقاً
+    assert q("SELECT closing_cash_counted FROM shifts")[0]["closing_cash_counted"] == D("215")  # لكن العدّ سُجّل فعلاً للمدير

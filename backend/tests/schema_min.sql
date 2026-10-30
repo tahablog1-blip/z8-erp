@@ -127,3 +127,6 @@ ALTER TABLE treasury_vouchers ADD COLUMN IF NOT EXISTS cancel_reason text;
 ALTER TABLE employee_advances ADD COLUMN IF NOT EXISTS voucher_id uuid;
 ALTER TABLE employee_advances ADD COLUMN IF NOT EXISTS note text;
 ALTER TABLE employee_advances ADD COLUMN IF NOT EXISTS created_by uuid;
+ALTER TABLE invoice_returns ADD COLUMN IF NOT EXISTS refund_method text;
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS closing_cash_counted numeric(12,2);
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS closing_notes text;
