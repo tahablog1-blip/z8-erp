@@ -7,6 +7,7 @@ from .core.config import settings
 from .core.db import init_pool, close_pool
 from .core import module_loader
 from . import modules as modules_pkg
+from .modules.notifications.schema import NOTIFICATIONS_ENSURE_SQL
 
 
 # ══════════════════ المشرف الآلي: مراقبة دورية لسيارات الخدمة بالكاميرات ══════════════════
@@ -991,20 +992,7 @@ async def lifespan(app: FastAPI):
         "CREATE INDEX IF NOT EXISTS idx_bank_stmt_account ON bank_statement_lines(bank_account_id)",
 
         # ── المرحلة 8: محرك الإشعارات — مركز داخلي (راجع core/notify.py + modules/notifications) ──
-        """CREATE TABLE IF NOT EXISTS notifications (
-             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-             company_id uuid NOT NULL,
-             user_id uuid NOT NULL,
-             type text NOT NULL,
-             title text NOT NULL,
-             body text,
-             link text,
-             severity text NOT NULL DEFAULT 'info',
-             is_read boolean NOT NULL DEFAULT FALSE,
-             dedupe_key text,
-             created_at timestamptz NOT NULL DEFAULT now()
-           )""",
-        "CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(company_id, user_id, is_read, created_at DESC)",
+        *NOTIFICATIONS_ENSURE_SQL,   # تصميم الإشعارات الحالي + ترقية الجدول القديم (recipient_user_id) إن وُجد
 
         # ── المرحلة 9: عهد الموظفين (مالية/عينية) ──
         """CREATE TABLE IF NOT EXISTS hr_custody_items (
