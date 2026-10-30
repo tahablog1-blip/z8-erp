@@ -175,25 +175,22 @@ a:focus-visible, [role="tab"]:focus-visible, summary:focus-visible {
   transform: none !important;
 }
 
-/* ── شاشة التحميل الفاخرة: شعار الشركة بأنيميشن (LoadingScreen component) ──
+/* ── شاشة التحميل الفاخرة (LoadingScreen): صفيحة الشعار بحواف حادة + أقواس ذهبية في الزوايا + شريط تقدّم ذهبي ناعم.
    prefers-reduced-motion مُغطّاة بالقاعدة العامة أعلى الملف (animation: none !important) */
-@keyframes z8-loader-ring { to { transform: rotate(360deg); } }
-@keyframes z8-loader-breathe {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-@keyframes z8-loader-glow {
-  0%, 100% { opacity: .35; transform: scale(.9); }
-  50% { opacity: .7; transform: scale(1.1); }
-}
-@keyframes z8-loader-dot {
-  0%, 80%, 100% { opacity: .25; transform: translateY(0); }
-  40% { opacity: 1; transform: translateY(-3px); }
-}
-.z8-loader-ring { animation: z8-loader-ring 2.4s linear infinite; }
-.z8-loader-breathe { animation: z8-loader-breathe 2.6s ease-in-out infinite; }
-.z8-loader-glow { animation: z8-loader-glow 2.6s ease-in-out infinite; }
-.z8-loader-dot { animation: z8-loader-dot 1.1s ease-in-out infinite; }
+@keyframes z8-ld-corner { 0%, 100% { opacity: .35; transform: translate(0, 0); } 50% { opacity: 1; transform: translate(var(--dx), var(--dy)); } }
+@keyframes z8-ld-logo { 0%, 100% { opacity: .82; } 50% { opacity: 1; } }
+@keyframes z8-ld-sweep { 0% { inset-inline-start: -40%; } 100% { inset-inline-start: 100%; } }
+@keyframes z8-ld-shine { 0% { transform: translateX(-120%); } 60%, 100% { transform: translateX(120%); } }
+.z8-ld-plate { position: relative; overflow: hidden; background: #fff; border: 1px solid var(--line); box-shadow: 0 10px 30px -12px rgba(11,47,103,.35); }
+.z8-ld-plate::after { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgba(201,162,39,.22) 50%, transparent 65%); animation: z8-ld-shine 2.8s ease-in-out infinite; }
+.z8-ld-logo { animation: z8-ld-logo 2.4s ease-in-out infinite; }
+.z8-ld-corner { position: absolute; width: 16px; height: 16px; border: 0 solid var(--brass); animation: z8-ld-corner 2.4s ease-in-out infinite; }
+.z8-ld-corner--tl { top: 0; inset-inline-start: 0; border-top-width: 2px; border-inline-start-width: 2px; --dx: -4px; --dy: -4px; }
+.z8-ld-corner--tr { top: 0; inset-inline-end: 0; border-top-width: 2px; border-inline-end-width: 2px; --dx: 4px; --dy: -4px; animation-delay: .15s; }
+.z8-ld-corner--bl { bottom: 0; inset-inline-start: 0; border-bottom-width: 2px; border-inline-start-width: 2px; --dx: -4px; --dy: 4px; animation-delay: .3s; }
+.z8-ld-corner--br { bottom: 0; inset-inline-end: 0; border-bottom-width: 2px; border-inline-end-width: 2px; --dx: 4px; --dy: 4px; animation-delay: .45s; }
+.z8-ld-track { position: relative; width: 168px; height: 2px; overflow: hidden; background: var(--line); }
+.z8-ld-bar { position: absolute; top: 0; bottom: 0; width: 40%; background: linear-gradient(90deg, transparent, var(--brass), transparent); animation: z8-ld-sweep 1.6s ease-in-out infinite; }
 
 
 /* ارتفاع الشاشة الكاملة: vh كأساس (كل المتصفحات) ثم dvh للمتصفحات الحديثة — المتصفح القديم يتجاهل السطر التاني بدل ما يسقط الارتفاع كله */
