@@ -26,6 +26,10 @@ from .ws_hub import hub
 # ربط بنظام المصادقة والاتصال بالداتابيز الفعلي في هذا المشروع
 # ---------------------------------------------------------------------------
 from ...core.deps import CurrentUser, get_current_user, require_permission
+# صلاحيات العمليات الحساسة (كانت كلها «أي مستخدم مسجّل»): الإدارة / طاقم خط الخدمة / استيراد الأصناف
+_ADMIN_PERMS = ("settings.company",)
+_LINE_ADMIN_PERMS = ("settings.company", "cars.create", "cars.confirm_entry", "cars.confirm_exit", "cars.edit")
+_IMPORT_PERMS = ("products.import", "settings.company")
 from ...core.db import fetch as _fetch, fetchrow as _fetchrow, execute as _execute, transaction as _transaction
 
 
@@ -171,7 +175,7 @@ async def gate_socket(websocket: WebSocket, branch_id: str = Query(...)):
 
 # ═══ تعبئة لمرة واحدة: plate_normalized + plate_loose لكل السيارات الموجودة ═══
 @router.post("/backfill-plate-keys")
-async def backfill_plate_keys(user=Depends(get_current_user)):
+async def backfill_plate_keys(user=Depends(require_permission(*_ADMIN_PERMS))):
     from ...core.plate_utils import normalize_plate
     rows = await _fetch("SELECT id, plate FROM cars WHERE plate IS NOT NULL")
     updated, skipped = 0, 0
@@ -190,10 +194,12 @@ async def backfill_plate_keys(user=Depends(get_current_user)):
 
 # ═══ حذف لقطات "غير مسجّلة" القديمة — تنظيف لوحة "سيارات جديدة" ═══
 @router.post("/clear-unknown")
-async def clear_unknown(branch_id: str = Query(...), user=Depends(get_current_user)):
+async def clear_unknown(branch_id: str = Query(...), user=Depends(require_permission(*_LINE_ADMIN_PERMS))):
+    # الفرع لازم يكون تابعاً لشركة المستخدم — بدونها كان أي مستخدم يمسح لقطات فرع شركة أخرى
     await _execute(
-        "DELETE FROM plate_scans WHERE branch_id=$1 AND status='unknown'",
-        branch_id,
+        """DELETE FROM plate_scans WHERE branch_id=$1 AND status='unknown'
+           AND branch_id IN (SELECT id FROM branches WHERE company_id=$2)""",
+        branch_id, user.company_id,
     )
     return {"ok": True}
 
@@ -208,7 +214,7 @@ async def watcher_status(user=Depends(get_current_user)):
 
 
 @router.post("/watcher-toggle")
-async def watcher_toggle(enabled: bool, user=Depends(get_current_user)):
+async def watcher_toggle(enabled: bool, user=Depends(require_permission(*_LINE_ADMIN_PERMS))):
     _watcher_mod.set_enabled(enabled)
     return {"enabled": _watcher_mod.is_enabled(), "running": _watcher_mod.is_started()}
 
@@ -234,7 +240,7 @@ async def gate_cameras_status(user=Depends(get_current_user)):
 
 @router.post("/camera-toggle")
 async def gate_camera_toggle(camera_id: str, enabled: bool,
-                             user=Depends(get_current_user)):
+                             user=Depends(require_permission(*_LINE_ADMIN_PERMS))):
     await _execute(
         "UPDATE station_cameras SET is_active=$2 WHERE id=$1::uuid AND company_id=$3",
         camera_id, enabled, user.company_id)
@@ -250,7 +256,7 @@ async def get_vision_model(user=Depends(get_current_user)):
 
 
 @router.post("/vision-model")
-async def set_vision_model(model: str, user=Depends(get_current_user)):
+async def set_vision_model(model: str, user=Depends(require_permission(*_LINE_ADMIN_PERMS))):
     from . import vision as _v
     if not _v.set_model(model):
         raise HTTPException(400, "نموذج غير مدعوم")
@@ -261,7 +267,7 @@ async def set_vision_model(model: str, user=Depends(get_current_user)):
 
 # ═══ 📸 استيراد صور المنتجات جماعياً من مجلد على الجهاز — مرة واحدة سريعة ═══
 @router.post("/import-images")
-async def import_product_images(folder: str, user=Depends(get_current_user)):
+async def import_product_images(folder: str, user=Depends(require_permission(*_IMPORT_PERMS))):
     """يقرأ كل الصور من مجلد محلي، يطابق كل صورة باسم ملفها مع المنتجات،
     يضغطها تلقائياً، ويحفظها. التسمية: باركود المنتج، أو جزء من اسمه،
     أو اسم الشركة (تصبح شعاراً لكل منتجاتها التي بلا صورة)."""
@@ -334,7 +340,7 @@ async def import_product_images(folder: str, user=Depends(get_current_user)):
 
 # ═══ 📸 استيراد الصور عبر ملف CSV — مطابقة دقيقة بالباركود ═══
 @router.post("/import-images-csv")
-async def import_images_csv(folder: str, user=Depends(get_current_user)):
+async def import_images_csv(folder: str, user=Depends(require_permission(*_IMPORT_PERMS))):
     """يقرأ products.csv من المجلد: يستخرج الباركود من رابط المنتج،
     ويحمّل الصورة من (الملف المحلي)، يضغطها، ويربطها بالمنتج المطابق."""
     import base64
@@ -423,7 +429,7 @@ async def import_images_csv(folder: str, user=Depends(get_current_user)):
 
 # ══ مزامنة شاملة v2: صور + شركات — مطابقة ضبابية محصنة ══
 @router.post("/sync-products-v2")
-async def sync_products_v2(folder: str, user=Depends(get_current_user)):
+async def sync_products_v2(folder: str, user=Depends(require_permission(*_IMPORT_PERMS))):
     import base64
     import csv as _csv
     import difflib as _dl
@@ -546,7 +552,7 @@ async def sync_products_v2(folder: str, user=Depends(get_current_user)):
 
 # ══ مزامنة شاملة v2: صور + شركات — مطابقة ضبابية محصنة ══
 @router.post("/sync-products-v3")
-async def sync_products_v3(folder: str, user=Depends(get_current_user)):
+async def sync_products_v3(folder: str, user=Depends(require_permission(*_IMPORT_PERMS))):
     import traceback as _tbmod
     try:
         return await _sync_v3_inner(folder, user)

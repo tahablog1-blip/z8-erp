@@ -516,7 +516,7 @@ from ...core.deps import CurrentUser as _CU, get_current_user as _gcu
 
 
 @router.post("/health-check")
-async def cameras_health_check(user: _CU = _Dep(_gcu)):
+async def cameras_health_check(user: _CU = _Dep(require_permission(_PERM))):
     import asyncio
     import cv2
     rows = await fetch(
