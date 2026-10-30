@@ -10,7 +10,7 @@ CREATE TABLE customer_vehicles (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), c
   car_category text, cylinders text, engine_size text, color text, chassis_number text, notes text, created_at timestamptz DEFAULT now());
 CREATE TABLE invoices (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, branch_id uuid, invoice_no text, source text, customer_id uuid, customer_name text, issued_at timestamptz DEFAULT now(),
   total_ex numeric(12,2), total_inc numeric(12,2), paid_total numeric(12,2), credit_total numeric(12,2) DEFAULT 0, cogs_total numeric(12,2), is_returned boolean DEFAULT false, created_by uuid, created_at timestamptz DEFAULT now(), qr_tlv text, zatca_status text DEFAULT 'pending', total_vat numeric(12,2) DEFAULT 0, car_id uuid);
-CREATE TABLE invoice_items (id serial PRIMARY KEY, invoice_id uuid, product_id uuid, label text, qty numeric, unit_price_vat numeric, discount_amount numeric DEFAULT 0, line_ex numeric, line_vat numeric DEFAULT 0, line_inc numeric);
+CREATE TABLE invoice_items (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), invoice_id uuid, product_id uuid, label text, qty int, unit_price numeric DEFAULT 0, returned_qty int NOT NULL DEFAULT 0, unit_price_vat numeric, discount_amount numeric DEFAULT 0, line_ex numeric, line_vat numeric DEFAULT 0, line_inc numeric);
 CREATE TABLE invoice_payments (id serial PRIMARY KEY, invoice_id uuid, company_id uuid, method text, amount numeric, created_at timestamptz DEFAULT now());
 CREATE TABLE products (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, category text DEFAULT '', name text, spec text DEFAULT '', unit text DEFAULT 'قطعة', barcode text, sku text,
   price numeric(12,2) DEFAULT 0, price_vat numeric(12,2) DEFAULT 0, cost_price numeric(12,2) DEFAULT 0, min_qty int DEFAULT 0, service_interval_km int, is_service boolean DEFAULT false,
@@ -85,3 +85,44 @@ CREATE TABLE cars (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uui
 CREATE TABLE user_sessions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid, company_id uuid, created_at timestamptz DEFAULT now(), last_seen_at timestamptz DEFAULT now(), revoked_at timestamptz);
 CREATE TABLE integration_log (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, provider text, event text, status text, detail text, created_at timestamptz DEFAULT now());
 CREATE TABLE roles (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, name text);
+
+-- ── المبيعات والخزينة (اختبارات test_db_sales_treasury) — أعمدة/جداول يقرؤها create_invoice / المرتجعات / سندات الخزينة ──
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS invoice_type text DEFAULT 'simplified';
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS invoice_uuid uuid DEFAULT gen_random_uuid();
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS customer_vat text;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS shift_id uuid;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS discount_total numeric(12,2) DEFAULT 0;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS idempotency_key text;
+ALTER TABLE branches ADD COLUMN IF NOT EXISTS invoice_prefix text;
+ALTER TABLE branches ADD COLUMN IF NOT EXISTS independent_invoice_numbering boolean DEFAULT false;
+ALTER TABLE cars ADD COLUMN IF NOT EXISTS work_status text DEFAULT 'pending';
+ALTER TABLE cars ADD COLUMN IF NOT EXISTS exited_at timestamptz;
+ALTER TABLE cars ADD COLUMN IF NOT EXISTS draft_items jsonb;
+ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS description text;
+ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS created_by text;
+ALTER TABLE journal_lines ADD COLUMN IF NOT EXISTS description text;
+ALTER TABLE invoice_returns ADD COLUMN IF NOT EXISTS approved_by uuid;
+ALTER TABLE invoice_returns ADD COLUMN IF NOT EXISTS approved_name text;
+ALTER TABLE invoice_returns ADD COLUMN IF NOT EXISTS created_by uuid;
+CREATE TABLE invoice_return_items (id serial PRIMARY KEY, return_id uuid, invoice_item_id uuid, product_id uuid, label text, qty int, unit_price numeric(12,2), unit_price_vat numeric(12,2),
+  line_ex numeric(12,2), line_vat numeric(12,2), line_inc numeric(12,2));
+CREATE TABLE document_counters (company_id uuid, doc_type text, last_number int, PRIMARY KEY (company_id, doc_type));
+CREATE TABLE invoice_counters (company_id uuid PRIMARY KEY, last_number int);
+CREATE TABLE branch_invoice_counters (company_id uuid, branch_id uuid, last_number int, PRIMARY KEY (company_id, branch_id));
+CREATE TABLE shifts (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, branch_id uuid, user_id uuid, opening_cash numeric(12,2) DEFAULT 0, opened_at timestamptz DEFAULT now(),
+  closed_at timestamptz, status text DEFAULT 'open');
+ALTER TABLE treasury_vouchers ADD COLUMN IF NOT EXISTS party_type text;
+ALTER TABLE treasury_vouchers ADD COLUMN IF NOT EXISTS customer_id uuid;
+ALTER TABLE treasury_vouchers ADD COLUMN IF NOT EXISTS employee_id uuid;
+ALTER TABLE treasury_vouchers ADD COLUMN IF NOT EXISTS party_name text;
+ALTER TABLE treasury_vouchers ADD COLUMN IF NOT EXISTS description text;
+ALTER TABLE treasury_vouchers ADD COLUMN IF NOT EXISTS reason text;
+ALTER TABLE treasury_vouchers ADD COLUMN IF NOT EXISTS reference_no text;
+ALTER TABLE treasury_vouchers ADD COLUMN IF NOT EXISTS created_by uuid;
+ALTER TABLE treasury_vouchers ADD COLUMN IF NOT EXISTS voucher_date date DEFAULT (now() AT TIME ZONE 'Asia/Riyadh')::date;
+ALTER TABLE treasury_vouchers ADD COLUMN IF NOT EXISTS cancelled_at timestamptz;
+ALTER TABLE treasury_vouchers ADD COLUMN IF NOT EXISTS cancelled_by uuid;
+ALTER TABLE treasury_vouchers ADD COLUMN IF NOT EXISTS cancel_reason text;
+ALTER TABLE employee_advances ADD COLUMN IF NOT EXISTS voucher_id uuid;
+ALTER TABLE employee_advances ADD COLUMN IF NOT EXISTS note text;
+ALTER TABLE employee_advances ADD COLUMN IF NOT EXISTS created_by uuid;
