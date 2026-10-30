@@ -7,6 +7,7 @@ import { DialogHost } from "@/components/dialog";
 import { ToastHost } from "@/components/toast";
 import { Tooltip, Breadcrumb } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
+import { formatDateLong } from "@/lib/format";
 import { useEffect as useRippleEffect } from "react";
 
 /** زارع تموّج اللمس Material — مستمع واحد يخدم كل عناصر .m3 في النظام */
@@ -238,6 +239,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
     .filter((p) => pathname === p || pathname.startsWith(p + "/"))
     .sort((a, b) => b.length - a.length)[0];
   const activeModule = NAV_MODULES.find((m) => m.path === activePath);
+  // اليوم والتاريخ في الهيدر (لوحة القيادة) — يُحسب بعد التحميل لتفادي اختلاف التوقيت بين الخادم والمتصفح
+  const [todayLabel, setTodayLabel] = useState("");
+  useEffect(() => { setTodayLabel(formatDateLong(new Date().toISOString())); }, [pathname]);
   const pageTitle = activeModule ? t(NAV_TITLE_KEYS[activeModule.title] || "", activeModule.title) : "";
   const sectionTitle = activeModule && activeModule.section !== "الرئيسية"
     ? t(SECTION_TITLE_KEYS[activeModule.section] || "", activeModule.section)
@@ -385,6 +389,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <div className="min-w-0 flex-1">
               {sectionTitle && <div className="hidden sm:block"><Breadcrumb items={[{ label: sectionTitle }, { label: pageTitle }]} /></div>}
               <div className="truncate text-t-lg font-extrabold leading-6 text-text sm:text-page-title">{pageTitle}</div>
+              {activePath === "/dashboard" && todayLabel && <div className="truncate text-t-xs text-text-dim">{todayLabel}</div>}
             </div>
 
             {/* البحث الشامل (Ctrl+K) */}

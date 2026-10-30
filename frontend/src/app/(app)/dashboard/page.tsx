@@ -1,15 +1,14 @@
 "use client";
 // لوحة القيادة التنفيذية — طلب واحد /reports/executive يغذّي كل الأقسام، والأقسام تظهر حسب صلاحيات المستخدم
 // (data.access). التصميم: فلتر شامل → مؤشرات → رسوم وتحليلات → جداول → تنبيهات/إجراءات. RTL أولاً والإنجليزية جاهزة.
-import { Button, PageHeader } from "@/components/ui";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { MIcon } from "@/components/m-icon";
 import { useDx } from "@/lib/dashboard/i18n";
 import { useExecutive } from "@/lib/dashboard/useExecutive";
 import { PERIODS, rangeFor, type PeriodKey } from "@/lib/dashboard/periods";
-import { formatDateLong } from "@/lib/format";
 import { GlobalFilters, type FilterState } from "@/components/dashboard/GlobalFilters";
 import { Kpis } from "@/components/dashboard/sections/Kpis";
 import { FinancialOverview, PnlSnapshot, ExpenseAnalytics } from "@/components/dashboard/sections/Financial";
@@ -38,7 +37,7 @@ function initialFilter(): FilterState {
 }
 
 export default function DashboardPage() {
-  const { user, hasPerm } = useAuth();
+  const { hasPerm } = useAuth();
   const { d } = useDx();
   const [filter, setFilter] = useState<FilterState>(initialFilter);
   const { data, loading, refreshing, error, reload } = useExecutive(filter.from, filter.to, filter.branchId);
@@ -62,7 +61,6 @@ export default function DashboardPage() {
 
   const access = data?.access;
   const nothing = !!access && !access.sales && !access.finance && !access.inventory && !access.ops;
-  const branchName = useMemo(() => branches?.find((b) => b.id === filter.branchId)?.name, [branches, filter.branchId]);
   const L = loading;
 
   if (error && !data) {
@@ -89,7 +87,6 @@ export default function DashboardPage() {
   // ترتيب الجوال: مؤشرات ← تنبيهات ← مبيعات ← نقدية ← ذمم ← تحليلات ← جداول؛ على الشاشات الكبيرة الترتيب الطبيعي
   return (
     <div className="mx-auto w-full max-w-[1600px] space-y-4 pb-8">
-      <PageHeader title={d("title")} description={<>{user?.fullName ? `${user.fullName} · ` : ""}{branchName ? `${branchName} · ` : ""}{formatDateLong(new Date().toISOString())}</>} />
 
       <GlobalFilters value={filter} branches={branches} onChange={change} onRefresh={reload} refreshing={refreshing} lastUpdated={updated} />
 
