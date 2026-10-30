@@ -314,7 +314,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                         <NavIcon name={m.icon} className="z8-sidebar__icon" />
                         <span className="z8-sidebar__label">{label}</span>
                         {m.path === "/service-notes" && unread > 0 && (
-                          <span className={`grid h-5 min-w-5 place-items-center rounded-full bg-emerald px-1.5 text-t-xs font-black text-white ${collapsed ? "md:absolute md:-left-1 md:-top-1 md:h-4 md:min-w-4 md:text-t-xs" : ""}`}>
+                          <span className={`grid h-5 min-w-5 place-items-center rounded-none bg-emerald px-1.5 text-t-xs font-black text-white ${collapsed ? "md:absolute md:-left-1 md:-top-1 md:h-4 md:min-w-4 md:text-t-xs" : ""}`}>
                             {unread > 99 ? "99+" : unread}
                           </span>
                         )}
@@ -342,7 +342,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                               </Link>
                             </Tooltip>
                             {m.path === "/service-notes" && unread > 0 && (
-                              <span className="pointer-events-none absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-emerald px-1 text-t-xs font-black text-white">
+                              <span className="pointer-events-none absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-none bg-emerald px-1 text-t-xs font-black text-white">
                                 {unread > 99 ? "99+" : unread}
                               </span>
                             )}
@@ -406,7 +406,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol">
                   <MIcon name="notifications_active" className="!text-[19px]" />
                   {notifUnread > 0 && (
-                    <span className="absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-ember px-1 text-t-xs font-black text-white">
+                    <span className="absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-none bg-ember px-1 text-t-xs font-black text-white">
                       {notifUnread > 99 ? "99+" : notifUnread}
                     </span>
                   )}
@@ -454,7 +454,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 className="relative hidden h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-text-dim transition hover:border-petrol hover:text-petrol sm:grid">
                 <MIcon name="chat" className="!text-[19px]" />
                 {unread > 0 && (
-                  <span className="absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-ember px-1 text-t-xs font-black text-white">
+                  <span className="absolute -left-1 -top-1 grid h-4 min-w-4 place-items-center rounded-none bg-ember px-1 text-t-xs font-black text-white">
                     {unread > 99 ? "99+" : unread}
                   </span>
                 )}

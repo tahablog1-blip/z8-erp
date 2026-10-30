@@ -191,7 +191,7 @@ export default function StocktakePage() {
                         <td className="p-3">{s.createdByName || "—"}</td>
                         <td className="p-3">
                           <span className="tnum text-t-xs">{s.countedItems}/{s.totalItems} · {p}%</span>
-                          <div className="mt-1 h-1.5 w-24 overflow-hidden rounded-full bg-ink-3"><div className="h-full bg-petrol" style={{ width: `${p}%` }} /></div>
+                          <div className="mt-1 h-1.5 w-24 overflow-hidden rounded-none bg-ink-3"><div className="h-full bg-petrol" style={{ width: `${p}%` }} /></div>
                         </td>
                         <td className="tnum p-3" dir="ltr">{signed(s.diffItems).replace("+", "")}</td>
                         <td className="tnum p-3 text-ember">{s.shortageValue ? fmtMoney(s.shortageValue) : "—"}</td>

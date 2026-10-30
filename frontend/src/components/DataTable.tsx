@@ -90,7 +90,7 @@ export function DataTable<T extends Record<string, any>>({
               [1, 2, 3].map((sk) => (
                 <tr key={sk} className="border-t border-line/70">
                   {columns.map((c) => (
-                    <td key={c.key} className="px-3 py-3.5"><div className="h-3.5 animate-pulse rounded-full bg-ink-4/70" /></td>
+                    <td key={c.key} className="px-3 py-3.5"><div className="h-3.5 animate-pulse rounded-none bg-ink-4/70" /></td>
                   ))}
                 </tr>
               ))

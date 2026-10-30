@@ -15,7 +15,7 @@
   --nav-active:#3B82F6;   /* حالة العنصر النشط في القائمة الجانبية الداكنة */
 
   /* شكل الأزرار/البطاقات — قابل للتخصيص من الإعدادات ← التصميم (حاد/دائري/كبسولة) */
-  --radius-sm:6px; --radius:8px; --radius-lg:12px; --radius-xl:16px; --radius-card:16px;
+  --radius-sm:0px; --radius:0px; --radius-lg:0px; --radius-xl:0px; --radius-card:0px;
 }
 
 /* ── الوضع الليلي ── */
@@ -253,10 +253,10 @@ a:focus-visible, [role="tab"]:focus-visible, summary:focus-visible {
   background: var(--sb-bg); color: var(--sb-text);
 }
 .z8-sidebar__header { display: flex; align-items: center; gap: 12px; padding: 16px 16px 14px; border-bottom: 1px solid var(--sb-divider); }
-.z8-sidebar__logo { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; padding: 6px; border-radius: 10px; background: rgba(255,255,255,0.10); }
+.z8-sidebar__logo { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; padding: 6px; border-radius: 0; background: rgba(255,255,255,0.10); }
 .z8-sidebar__name { color: var(--sb-text); }
 .z8-sidebar__sub { color: var(--sb-text2); }
-.z8-sidebar__close { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: var(--sb-text2); transition: background-color 150ms ease, color 150ms ease; }
+.z8-sidebar__close { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 0; color: var(--sb-text2); transition: background-color 150ms ease, color 150ms ease; }
 .z8-sidebar__close:hover { background: var(--sb-hover); color: var(--sb-text); }
 
 .z8-sidebar__nav { padding: 10px 0 12px; display: flex; flex-direction: column; gap: 6px; scrollbar-width: none; -ms-overflow-style: none; }
@@ -292,7 +292,7 @@ a:focus-visible, [role="tab"]:focus-visible, summary:focus-visible {
   outline: 2px solid var(--sb-text); outline-offset: -2px; }
 
 .z8-sidebar__footer { border-top: 1px solid var(--sb-divider); padding: 8px 10px; }
-.z8-sidebar__collapse { display: flex; align-items: center; gap: 10px; height: 36px; border-radius: 8px; color: var(--sb-text2); font-weight: 700;
+.z8-sidebar__collapse { display: flex; align-items: center; gap: 10px; height: 36px; border-radius: 0; color: var(--sb-text2); font-weight: 700;
   transition: background-color 150ms ease, color 150ms ease; }
 .z8-sidebar__collapse:hover { background: var(--sb-hover); color: var(--sb-text); }
 .z8-sidebar__version { border-top: 1px solid var(--sb-divider); padding: 10px 16px; color: var(--sb-text2); opacity: .8; }

@@ -93,7 +93,7 @@ export function ReportCenter() {
         <div className="no-scrollbar mt-3 flex gap-1.5 overflow-x-auto" role="tablist" aria-label="تصنيفات التقارير">
           {[{ id: "all", title: "الكل" }, ...cats].map((c) => (
             <button key={c.id} role="tab" aria-selected={active === c.id} onClick={() => setActive(c.id)}
-                    className={`shrink-0 rounded-full border px-3.5 py-1.5 text-t-sm font-bold ${active === c.id ? "border-petrol bg-petrol text-white" : "border-line text-text-dim hover:border-petrol"}`}>{c.title}</button>
+                    className={`shrink-0 rounded-none border px-3.5 py-1.5 text-t-sm font-bold ${active === c.id ? "border-petrol bg-petrol text-white" : "border-line text-text-dim hover:border-petrol"}`}>{c.title}</button>
           ))}
         </div>
       </div>
@@ -105,7 +105,7 @@ export function ReportCenter() {
           {quick.length > 0 && (<>
             <h2 className="text-t-md font-black">الأكثر استخدامًا</h2>
             <div className="flex flex-wrap gap-2">{quick.map((r) => (
-              <button key={r.id} onClick={() => open(r)} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-ink-2 px-3 py-1.5 text-t-sm font-bold hover:border-petrol">
+              <button key={r.id} onClick={() => open(r)} className="inline-flex items-center gap-1.5 rounded-none border border-line bg-ink-2 px-3 py-1.5 text-t-sm font-bold hover:border-petrol">
                 <MIcon name={r.icon} className="!text-[16px] text-petrol" />{r.title}{prefs.favorites.includes(r.id) && <MIcon name="star" className="!text-[14px] text-brass" />}</button>))}</div>
           </>)}
           {prefs.saved.length > 0 && (<>
@@ -113,7 +113,7 @@ export function ReportCenter() {
             <div className="flex flex-wrap gap-2">{prefs.saved.map((s, i) => {
               const r = byId.get(s.reportId); if (!r) return null;
               return (
-                <span key={`${s.id}-${i}`} className="inline-flex items-center gap-1 rounded-full border border-petrol/40 bg-petrol-soft ps-3 pe-1 text-t-sm font-bold text-petrol">
+                <span key={`${s.id}-${i}`} className="inline-flex items-center gap-1 rounded-none border border-petrol/40 bg-petrol-soft ps-3 pe-1 text-t-sm font-bold text-petrol">
                   <button onClick={() => open(r, s.filters)} className="py-1.5">{s.name}</button>
                   <button aria-label={`حذف ${s.name}`} onClick={() => removeSaved(i)} className="grid h-6 w-6 place-items-center rounded-full hover:bg-ink-2"><MIcon name="close" className="!text-[14px]" /></button>
                 </span>);

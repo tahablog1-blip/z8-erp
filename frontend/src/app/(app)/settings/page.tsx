@@ -123,8 +123,8 @@ export default function SettingsDashboard() {
               <h2 className="text-t-md font-extrabold">إعداد النظام</h2>
               {setup.length > 0 && <span className="text-t-xs font-bold text-text-dim">{done} من {setup.length} مكتمل</span>}
             </div>
-            {setup.length > 0 && <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-ink-3" role="progressbar" aria-valuenow={done} aria-valuemin={0} aria-valuemax={setup.length}>
-              <div className="h-full rounded-full bg-emerald transition-all" style={{ width: `${(done / setup.length) * 100}%` }} /></div>}
+            {setup.length > 0 && <div className="mb-3 h-1.5 w-full overflow-hidden rounded-none bg-ink-3" role="progressbar" aria-valuenow={done} aria-valuemin={0} aria-valuemax={setup.length}>
+              <div className="h-full rounded-none bg-emerald transition-all" style={{ width: `${(done / setup.length) * 100}%` }} /></div>}
             <ul className="space-y-1.5">
               {setup.map((s) => (
                 <li key={s.key}>

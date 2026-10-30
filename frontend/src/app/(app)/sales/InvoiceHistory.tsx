@@ -284,13 +284,13 @@ export function InvoiceHistory({ onOpen, onPrint, refreshKey }: {
       {hasFilters && (
         <div className="flex flex-wrap items-center gap-2 border-b border-line bg-ink-3/50 px-3 py-2">
           {f.q.trim() && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-ink-2 py-1 pl-1.5 pr-3 text-t-sm font-bold">
+            <span className="inline-flex items-center gap-1.5 rounded-none border border-line bg-ink-2 py-1 pl-1.5 pr-3 text-t-sm font-bold">
               بحث: {f.q.trim()}
               <button aria-label="إزالة البحث" onClick={() => { setQInput(""); setF({ ...f, q: "" }); }} className="grid h-5 w-5 place-items-center rounded-full text-text-dim hover:bg-ink-3 hover:text-ember"><MIcon name="close" className="!text-[14px]" /></button>
             </span>
           )}
           {chips.map((c) => (
-            <span key={c.key} className="inline-flex items-center gap-1.5 rounded-full border border-petrol/30 bg-petrol-soft py-1 pl-1.5 pr-3 text-t-sm font-bold text-petrol">
+            <span key={c.key} className="inline-flex items-center gap-1.5 rounded-none border border-petrol/30 bg-petrol-soft py-1 pl-1.5 pr-3 text-t-sm font-bold text-petrol">
               {c.label}
               <button aria-label={`إزالة ${c.label}`} onClick={() => removeChip(c.key)} className="grid h-5 w-5 place-items-center rounded-full hover:bg-petrol/15"><MIcon name="close" className="!text-[14px]" /></button>
             </span>
@@ -309,7 +309,7 @@ export function InvoiceHistory({ onOpen, onPrint, refreshKey }: {
       <ul className="divide-y divide-line md:hidden">
         {loading && Array.from({ length: 4 }).map((_, i) => (
           <li key={i} className="space-y-2 px-4 py-4" aria-hidden>
-            <div className="h-3.5 w-1/3 animate-pulse rounded-full bg-ink-4/60" /><div className="h-3 w-2/3 animate-pulse rounded-full bg-ink-4/40" />
+            <div className="h-3.5 w-1/3 animate-pulse rounded-none bg-ink-4/60" /><div className="h-3 w-2/3 animate-pulse rounded-none bg-ink-4/40" />
           </li>
         ))}
         {!loading && rows.length === 0 && (
@@ -357,7 +357,7 @@ export function InvoiceHistory({ onOpen, onPrint, refreshKey }: {
             {loading && Array.from({ length: 6 }).map((_, i) => (
               <tr key={i} className="border-b border-line/60" aria-hidden>
                 {Array.from({ length: 8 }).map((__, j) => (
-                  <td key={j} className="px-3.5 py-4"><div className="h-3.5 animate-pulse rounded-full bg-ink-4/60" style={{ width: `${50 + ((i + j) * 13) % 45}%` }} /></td>
+                  <td key={j} className="px-3.5 py-4"><div className="h-3.5 animate-pulse rounded-none bg-ink-4/60" style={{ width: `${50 + ((i + j) * 13) % 45}%` }} /></td>
                 ))}
               </tr>
             ))}

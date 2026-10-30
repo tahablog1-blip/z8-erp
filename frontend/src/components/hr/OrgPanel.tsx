@@ -99,7 +99,7 @@ export function OrgPanel({ canManage }: { canManage: boolean }) {
                 const on = sch.weeklyOff.includes(i);
                 return <button key={d} type="button" aria-pressed={on}
                   onClick={() => setSch({ ...sch, weeklyOff: on ? sch.weeklyOff.filter((x) => x !== i) : [...sch.weeklyOff, i] })}
-                  className={`rounded-full border px-3 py-1 text-t-xs font-bold ${on ? "border-petrol bg-petrol-soft text-petrol" : "border-line text-text-dim"}`}>{d}</button>;
+                  className={`rounded-none border px-3 py-1 text-t-xs font-bold ${on ? "border-petrol bg-petrol-soft text-petrol" : "border-line text-text-dim"}`}>{d}</button>;
               })}
             </div>
           </Field>

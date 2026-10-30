@@ -347,7 +347,7 @@ export default function NoteDetailsPage() {
                 <div className="mb-2 flex flex-wrap gap-1.5">
                   {templates.map((t) => (
                     <button key={t.id}
-                      className="rounded-full border border-line bg-ink-3 px-3 py-1 text-t-xs font-bold hover:border-petrol"
+                      className="rounded-none border border-line bg-ink-3 px-3 py-1 text-t-xs font-bold hover:border-petrol"
                       onClick={() => setNotifyText(t.message)}>
                       {t.title}
                     </button>

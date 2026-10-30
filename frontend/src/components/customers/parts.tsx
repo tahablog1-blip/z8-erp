@@ -21,7 +21,7 @@ export function statusOf(r: Pick<CustomerRow, "isActive" | "overdue" | "segment"
 
 export function StatusBadge({ status }: { status: StatusKey }) {
   const { c } = useCx();
-  return <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-t-xs font-extrabold ${TONES[status]}`}>
+  return <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-none px-2 py-0.5 text-t-xs font-extrabold ${TONES[status]}`}>
     <i className="h-1.5 w-1.5 rounded-full bg-current" />{c(`st.${status}` as CKey)}</span>;
 }
 export function SegmentBadge({ seg }: { seg: Segment | "credit" }) {

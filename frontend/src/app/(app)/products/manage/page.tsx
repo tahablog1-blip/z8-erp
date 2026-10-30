@@ -884,7 +884,7 @@ export default function ProductsPage() {
                   <MIcon name="tune" className="!text-[16px]" />
                   الفلاتر
                   {activeFilterCount > 0 && (
-                    <span className="rounded-full bg-petrol px-2 py-0.5 text-t-xs font-black text-white">
+                    <span className="rounded-none bg-petrol px-2 py-0.5 text-t-xs font-black text-white">
                       {activeFilterCount}
                     </span>
                   )}
@@ -1676,7 +1676,7 @@ export default function ProductsPage() {
           <div className="flex gap-2">
             {Object.entries(FILTER_KINDS).map(([k, label]) => (
               <button key={k} onClick={() => { setCfKind(k as any); setCfProductId(""); }}
-                className="rounded-full px-3.5 py-1.5 text-t-xs font-black transition"
+                className="rounded-none px-3.5 py-1.5 text-t-xs font-black transition"
                 style={{
                   background: cfKind === k ? "var(--petrol, #0f766e)" : "transparent",
                   color: cfKind === k ? "#fff" : undefined,

@@ -14,7 +14,7 @@ export function DeltaBadge({ pct, goodWhenUp = true }: { pct: number | null; goo
   const good = up ? goodWhenUp : down ? !goodWhenUp : true;
   const tone = !up && !down ? "bg-ink-3 text-text-dim" : good ? "bg-emerald-bg text-emerald" : "bg-ember-bg text-ember";
   return (
-    <span title={d("vsPrev")} className={`tnum inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-t-xs font-extrabold ${tone}`} dir="ltr">
+    <span title={d("vsPrev")} className={`tnum inline-flex items-center gap-0.5 rounded-none px-1.5 py-0.5 text-t-xs font-extrabold ${tone}`} dir="ltr">
       <MIcon name={up ? "arrow_upward" : down ? "arrow_downward" : "remove"} className="!text-[13px]" />
       {fmtPct(Math.abs(pct))}
     </span>

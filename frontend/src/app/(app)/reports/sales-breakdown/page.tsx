@@ -48,7 +48,7 @@ export default function SalesBreakdown() {
       <ReportFilters value={f} onChange={setF} lockedBranch={d?.meta.branchLocked} />
       <div className="no-scrollbar flex gap-1.5 overflow-x-auto" role="tablist" aria-label="بُعد التحليل">
         {DIMS.map(([k, l]) => <button key={k} role="tab" aria-selected={dim === k} onClick={() => setDim(k)}
-          className={`shrink-0 rounded-full border px-3 py-1.5 text-t-sm font-bold ${dim === k ? "border-petrol bg-petrol text-white" : "border-line text-text-dim hover:border-petrol"}`}>{l}</button>)}
+          className={`shrink-0 rounded-none border px-3 py-1.5 text-t-sm font-bold ${dim === k ? "border-petrol bg-petrol text-white" : "border-line text-text-dim hover:border-petrol"}`}>{l}</button>)}
       </div>
       <CompareToggle value={cmp} onChange={setCmp} />
       {error ? <ReportError msg={error} onRetry={reload} /> : loading || !d ? <ReportSkeleton /> : (<>

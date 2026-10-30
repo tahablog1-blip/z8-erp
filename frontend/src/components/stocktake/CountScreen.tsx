@@ -298,8 +298,8 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
             <span className="tnum">{counted.toLocaleString("en-US")} / {total.toLocaleString("en-US")} صنف</span>
             <span className="tnum">{pct}%</span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-ink-3" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="تقدم الجرد">
-            <div className="h-full rounded-full bg-petrol transition-all" style={{ width: `${pct}%` }} />
+          <div className="h-2 overflow-hidden rounded-none bg-ink-3" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="تقدم الجرد">
+            <div className="h-full rounded-none bg-petrol transition-all" style={{ width: `${pct}%` }} />
           </div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
@@ -379,7 +379,7 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="تصفية الحالة">
             {FILTERS.map((f) => (
               <button key={f.key} onClick={() => setFilter(f.key)} aria-pressed={filter === f.key}
-                className={`rounded-full border px-3 py-1 text-t-xs font-bold transition ${filter === f.key ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol"}`}>{f.label}</button>
+                className={`rounded-none border px-3 py-1 text-t-xs font-bold transition ${filter === f.key ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol"}`}>{f.label}</button>
             ))}
             <span className="tnum self-center text-t-xs text-text-dim">{visible.length.toLocaleString("en-US")} صنف</span>
           </div>
@@ -449,7 +449,7 @@ export function CountScreen({ detail, locName, canApprove, onChange, onClose }: 
             <span className="text-t-sm font-bold">ترتيب:</span>
             {([["shortage", "أعلى عجز"], ["surplus", "أعلى زيادة"], ["value", "أعلى قيمة"]] as [Sort, string][]).map(([k, l]) => (
               <button key={k} onClick={() => setSort(k)} aria-pressed={sort === k}
-                className={`rounded-full border px-3 py-1 text-t-xs font-bold ${sort === k ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim"}`}>{l}</button>
+                className={`rounded-none border px-3 py-1 text-t-xs font-bold ${sort === k ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim"}`}>{l}</button>
             ))}
           </div>
           {reportRows.length === 0 ? <EmptyState icon="task_alt" title="لا توجد فروقات" description="كل الأصناف المعدودة مطابقة للنظام." /> : (

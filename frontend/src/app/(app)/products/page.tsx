@@ -275,7 +275,7 @@ export default function ProductsPage() {
       <div role="tablist" aria-label="عروض سريعة" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
         {QUICK.map((v) => (
           <button key={v.key} role="tab" aria-selected={quickKey === v.key} onClick={() => { setFilters(v.key === "all" ? EMPTY_PFILTERS : { ...EMPTY_PFILTERS, ...v.patch }); setPage(1); }}
-            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-t-sm font-bold transition ${quickKey === v.key ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol"}`}>
+            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-none border px-3 py-1.5 text-t-sm font-bold transition ${quickKey === v.key ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol"}`}>
             <MIcon name={v.icon} className="!text-[16px]" />{v.label}</button>))}
       </div>
 
@@ -288,7 +288,7 @@ export default function ProductsPage() {
         {data && data.facets.locations.length > 1 && (
           <select value={filters.loc} onChange={(e) => { setFilters({ ...filters, loc: e.target.value }); setPage(1); }} aria-label="الموقع" className="h-10 rounded-card border border-line bg-ink-2 px-3 text-t-sm font-bold">
             <option value="">كل المواقع</option>{data.facets.locations.map((l) => <option key={l.id} value={l.type === "warehouse" ? "warehouse" : l.id}>{l.name}</option>)}</select>)}
-        <Button variant="outline" onClick={() => setFiltersOpen(true)}><MIcon name="tune" className="!text-[18px]" />فلاتر متقدمة{activeCount > 0 && <span className="tnum grid h-5 min-w-5 place-items-center rounded-full bg-petrol px-1 text-t-xs font-black text-white">{activeCount}</span>}</Button>
+        <Button variant="outline" onClick={() => setFiltersOpen(true)}><MIcon name="tune" className="!text-[18px]" />فلاتر متقدمة{activeCount > 0 && <span className="tnum grid h-5 min-w-5 place-items-center rounded-none bg-petrol px-1 text-t-xs font-black text-white">{activeCount}</span>}</Button>
         {filtered && <button onClick={clearAll} className="text-t-sm font-bold text-petrol hover:underline">مسح الكل</button>}
         <div className="ms-auto flex items-center gap-1.5">
           <select value={density} onChange={(e) => setDensity(e.target.value as Density)} aria-label="كثافة الجدول" className="hidden h-9 rounded-lg border border-line bg-ink-2 px-2 text-t-sm md:block"><option value="comfortable">مريح</option><option value="compact">مضغوط</option><option value="dense">كثيف</option></select>

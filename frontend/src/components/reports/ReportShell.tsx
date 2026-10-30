@@ -55,7 +55,7 @@ export function ReportFilters({ value, onChange, branches = true, period = true,
   const [bl, setBl] = useState<{ id: string; name: string }[]>([]);
   useEffect(() => { if (branches) api<{ id: string; name: string }[]>("/branches").then(setBl).catch(() => setBl([])); }, [branches]);
   const [custom, setCustom] = useState(value.key === "custom");
-  const chip = (on: boolean) => `rounded-full border px-3 py-1 text-t-xs font-bold ${on ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol"}`;
+  const chip = (on: boolean) => `rounded-none border px-3 py-1 text-t-xs font-bold ${on ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol"}`;
   return (
     <div className="space-y-2 rounded-card border border-line bg-ink-2 p-3 shadow-card" role="group" aria-label="فلاتر التقرير">
       {period && (
@@ -201,7 +201,7 @@ export function CompareToggle({ value, onChange }: { value: CompareMode; onChang
   return (
     <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="المقارنة">
       {opts.map(([k, l]) => <button key={k} aria-pressed={value === k} onClick={() => onChange(k)}
-        className={`rounded-full border px-3 py-1 text-t-xs font-bold ${value === k ? "border-petrol bg-petrol-soft text-petrol" : "border-line text-text-dim hover:border-petrol"}`}>{l}</button>)}
+        className={`rounded-none border px-3 py-1 text-t-xs font-bold ${value === k ? "border-petrol bg-petrol-soft text-petrol" : "border-line text-text-dim hover:border-petrol"}`}>{l}</button>)}
     </div>
   );
 }

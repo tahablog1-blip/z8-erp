@@ -150,7 +150,7 @@ export default function Supplier360Page() {
               {open.loading && !open.data ? <Skeleton className="w-full" height={100} /> : (open.data ?? []).length === 0 ? <EmptyState icon="task_alt" title="لا فواتير مستحقة" /> : (
                 <div className="space-y-2">{aging.map((a) => (
                   <div key={a.key} className="grid grid-cols-[60px_1fr_auto] items-center gap-3"><span dir="ltr" className="justify-self-start text-t-sm font-bold">{a.label}</span>
-                    <span className="h-3 overflow-hidden rounded-full bg-ink-3"><span className={`block h-full rounded-full ${BUCKET_TONE[a.key]}`} style={{ width: `${(a.amount / agingMax) * 100}%` }} /></span>
+                    <span className="h-3 overflow-hidden rounded-none bg-ink-3"><span className={`block h-full rounded-none ${BUCKET_TONE[a.key]}`} style={{ width: `${(a.amount / agingMax) * 100}%` }} /></span>
                     <span className="tnum text-t-sm"><b>{fmtM(a.amount)}</b> <small className="text-text-dim">({a.count})</small></span></div>))}</div>
               )}
             </Panel>
@@ -195,7 +195,7 @@ export default function Supplier360Page() {
         {tab === "ledger" && (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2"><button aria-pressed={!period} onClick={() => setPeriod(null)} className={`rounded-full border px-3 py-1 text-t-xs font-bold ${!period ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim"}`}>كل الحركات</button>
+              <div className="flex flex-wrap items-center gap-2"><button aria-pressed={!period} onClick={() => setPeriod(null)} className={`rounded-none border px-3 py-1 text-t-xs font-bold ${!period ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim"}`}>كل الحركات</button>
                 <PeriodPicker value={period ?? { key: "month", ...rangeFor("month") }} onChange={setPeriod} keys={PERIOD_KEYS} /></div>
               <span className="flex gap-2"><Button variant="tool" size="sm" onClick={exportStatement}><MIcon name="download" className="!text-[16px]" />تصدير</Button><Button variant="tool" size="sm" onClick={printStatement}><MIcon name="print" className="!text-[16px]" />طباعة</Button></span>
             </div>

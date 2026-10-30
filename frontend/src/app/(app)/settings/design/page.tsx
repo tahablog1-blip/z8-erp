@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
-  cacheDesign, ensureFontLoaded, FONT_LABELS_AR, FONT_LABELS_EN, FONT_STACKS_AR, FONT_STACKS_EN, BUTTON_SHAPE_LABELS,
+  cacheDesign, ensureFontLoaded, FONT_LABELS_AR, FONT_LABELS_EN, FONT_STACKS_AR, FONT_STACKS_EN,
   FONT_SCALE_LABELS, FONT_SCALE_PERCENT,
-  type DesignInfo, type ArFontKey, type EnFontKey, type ButtonShape, type FontScale,
+  type DesignInfo, type ArFontKey, type EnFontKey, type FontScale,
 } from "@/lib/design";
 import { Button, Card, ErrorNote, Field, Select, Switch, PageHeader } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
@@ -24,8 +24,6 @@ const TONES: { key: ToneKey; label: string; fallback: string; hint: string }[] =
 const FONT_KEYS_AR = Object.keys(FONT_LABELS_AR) as ArFontKey[];
 const FONT_KEYS_EN = Object.keys(FONT_LABELS_EN) as EnFontKey[];
 const SCALE_KEYS = Object.keys(FONT_SCALE_LABELS) as FontScale[];
-const SHAPE_KEYS = Object.keys(BUTTON_SHAPE_LABELS) as ButtonShape[];
-const RADIUS_PREVIEW: Record<ButtonShape, string> = { sharp: "4px", rounded: "10px", pill: "999px" };
 
 export default function DesignSettingsPage() {
   const { hasPerm } = useAuth();
@@ -201,24 +199,6 @@ export default function DesignSettingsPage() {
             الجداول المزدحمة (مثل المخزون والتقارير) قد تبدو متقاربة على الشاشات الصغيرة بهذا الحجم.
           </div>
         )}
-      </Card>
-
-      {/* ── شكل الأزرار ── */}
-      <Card>
-        <h2 className="mb-3 text-t-md font-black">شكل الأزرار والبطاقات</h2>
-        <div className="flex flex-wrap gap-3">
-          {SHAPE_KEYS.map((shape) => (
-            <button key={shape} type="button" onClick={() => save({ ...settings, buttonShape: shape })}
-                    className={`flex flex-col items-center gap-2 rounded-card border-2 px-5 py-4 transition
-                      ${settings.buttonShape === shape ? "border-petrol bg-petrol-soft/40" : "border-line hover:border-petrol/50"}`}>
-              <span className="grid h-9 w-24 place-items-center bg-petrol text-t-xs font-bold text-white"
-                    style={{ borderRadius: RADIUS_PREVIEW[shape] }}>
-                زر مثال
-              </span>
-              <span className="text-t-xs font-bold">{BUTTON_SHAPE_LABELS[shape]}</span>
-            </button>
-          ))}
-        </div>
       </Card>
 
       {/* ── حركة الأزرار — زر Button/IconButton فقط، بلا أي تأثير على القوائم أو حجمها أو مكانها ── */}

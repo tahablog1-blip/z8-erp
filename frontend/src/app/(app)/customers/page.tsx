@@ -231,9 +231,9 @@ export default function CustomersPage() {
       </section>
       {fin && k && (k.receivables ?? 0) > 0 && (
         <div className="-mt-1 flex flex-wrap gap-2 text-t-xs">
-          <button onClick={() => applyDrill({ hasBalance: true })} className="rounded-full border border-line px-2.5 py-1 font-bold text-petrol hover:border-petrol">{isEn ? "Show customers with a balance" : "عرض العملاء أصحاب الأرصدة"}</button>
-          {(k.overdue ?? 0) > 0 && <button onClick={() => applyDrill({ overdue: true })} className="rounded-full border border-ember/30 px-2.5 py-1 font-bold text-ember hover:bg-ember-bg">{isEn ? "Show overdue customers" : "عرض العملاء المتأخرين"}</button>}
-          <Link href="/reports/analysis?tab=ar" className="rounded-full border border-line px-2.5 py-1 font-bold text-petrol hover:border-petrol">{isEn ? "Receivables report" : "تقرير أعمار الذمم"}</Link>
+          <button onClick={() => applyDrill({ hasBalance: true })} className="rounded-none border border-line px-2.5 py-1 font-bold text-petrol hover:border-petrol">{isEn ? "Show customers with a balance" : "عرض العملاء أصحاب الأرصدة"}</button>
+          {(k.overdue ?? 0) > 0 && <button onClick={() => applyDrill({ overdue: true })} className="rounded-none border border-ember/30 px-2.5 py-1 font-bold text-ember hover:bg-ember-bg">{isEn ? "Show overdue customers" : "عرض العملاء المتأخرين"}</button>}
+          <Link href="/reports/analysis?tab=ar" className="rounded-none border border-line px-2.5 py-1 font-bold text-petrol hover:border-petrol">{isEn ? "Receivables report" : "تقرير أعمار الذمم"}</Link>
         </div>
       )}
 
@@ -245,7 +245,7 @@ export default function CustomersPage() {
         </div>
         <Button variant="outline" onClick={() => setFiltersOpen(true)}>
           <MIcon name="tune" className="!text-[18px]" />{c("filters")}
-          {activeFilterCount > 0 && <span className="tnum grid h-5 min-w-5 place-items-center rounded-full bg-petrol px-1 text-t-xs font-black text-white">{activeFilterCount}</span>}
+          {activeFilterCount > 0 && <span className="tnum grid h-5 min-w-5 place-items-center rounded-none bg-petrol px-1 text-t-xs font-black text-white">{activeFilterCount}</span>}
         </Button>
         {filtered && <button onClick={clearAll} className="text-t-sm font-bold text-petrol hover:underline">{c("clearAll")}</button>}
         <div className="ms-auto flex items-center gap-1.5">

@@ -390,7 +390,7 @@ function InvoicesTab({ invoices, busyKey, onAction }: { invoices: NonNullable<Pr
                 <Td cls="whitespace-nowrap text-text-dim">{fmtDT(i.at)}</Td><Td cls="text-text-dim">{i.branch ?? "—"}</Td>
                 <Td end cls="tnum font-extrabold">{fmtCurrency(i.total, 2)}</Td><Td end cls="tnum">{fmtCurrency(i.paid, 2)}</Td>
                 <Td end cls={`tnum ${i.due > 0 ? "font-bold text-ember" : "text-text-dim"}`}>{fmtCurrency(i.due, 2)}</Td>
-                <Td><span className={`rounded-full px-2 py-0.5 text-t-xs font-extrabold ${s[1]}`}>{s[0]}</span></Td>
+                <Td><span className={`rounded-none px-2 py-0.5 text-t-xs font-extrabold ${s[1]}`}>{s[0]}</span></Td>
                 <Td end><div className="flex justify-end gap-1.5">
                   <button className={btn} disabled={busyKey === `view:${i.id}`} onClick={() => onAction("view", i)} aria-label={`عرض الفاتورة ${i.invoiceNo}`} title="عرض PDF"><MIcon name="visibility" className="!text-[17px]" /></button>
                   <button className={btn} disabled={busyKey === `dl:${i.id}`} onClick={() => onAction("dl", i)} aria-label={`تحميل الفاتورة ${i.invoiceNo}`} title="تحميل PDF"><MIcon name="download" className="!text-[17px]" /></button>

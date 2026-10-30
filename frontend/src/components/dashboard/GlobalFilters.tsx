@@ -24,13 +24,13 @@ export function GlobalFilters({ value, branches, onChange, onRefresh, refreshing
             const on = value.period === p.key;
             return (
               <button key={p.key} role="tab" aria-selected={on} onClick={() => { setCustomOpen(false); onChange({ ...value, period: p.key }); }}
-                className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-t-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol ${on ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol"}`}>
+                className={`shrink-0 whitespace-nowrap rounded-none border px-3 py-1.5 text-t-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol ${on ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol"}`}>
                 {isEn ? p.en : p.ar}
               </button>
             );
           })}
           <button role="tab" aria-selected={value.period === "custom"} onClick={() => setCustomOpen((o) => !o)}
-            className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-3 py-1.5 text-t-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol ${value.period === "custom" ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol"}`}>
+            className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-none border px-3 py-1.5 text-t-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol ${value.period === "custom" ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol"}`}>
             <MIcon name="date_range" className="!text-[16px]" />{d("custom")}
           </button>
         </div>

@@ -6,7 +6,7 @@ export function StackedBar({ segments, format, ariaLabel }: { segments: StackSeg
   const total = segments.reduce((s, x) => s + Math.max(0, x.value), 0);
   return (
     <div>
-      <div className="flex h-3 w-full overflow-hidden rounded-full bg-ink-3" role="img" aria-label={ariaLabel} dir="ltr">
+      <div className="flex h-3 w-full overflow-hidden rounded-none bg-ink-3" role="img" aria-label={ariaLabel} dir="ltr">
         {total > 0 && segments.filter((s) => s.value > 0).map((s) => (
           <span key={s.key} title={`${s.label}: ${format(s.value)}`} style={{ width: `${(s.value / total) * 100}%`, background: s.color, minWidth: 4 }} />
         ))}

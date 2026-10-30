@@ -129,7 +129,7 @@ function ThreadRow({ t, typeLabels, onOpen, onOpenNote }: {
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {notes.slice(0, 4).map((n) => (
                 <button key={n.id} onClick={() => onOpenNote(n.id)}
-                  className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-line bg-ink-2 px-2.5 py-1 text-t-xs font-bold transition hover:border-petrol hover:text-petrol">
+                  className="pointer-events-auto inline-flex items-center gap-1.5 rounded-none border border-line bg-ink-2 px-2.5 py-1 text-t-xs font-bold transition hover:border-petrol hover:text-petrol">
                   <span className={`h-2 w-2 rounded-full ${STATUS_DOT[n.status] ?? "bg-text-dim"}`} aria-hidden />
                   <span className="tnum">{n.note_number}</span>
                   <span className="font-medium text-text-dim">{typeLabels[n.type] ?? n.type}</span>
@@ -143,7 +143,7 @@ function ThreadRow({ t, typeLabels, onOpen, onOpenNote }: {
         <div className="flex shrink-0 flex-col items-end gap-2">
           <span className="tnum text-t-xs text-text-dim">{timeLabel(t.last_at)}</span>
           {unread > 0 ? (
-            <span className="grid h-6 min-w-6 place-items-center rounded-full bg-emerald px-1.5 text-t-sm font-black text-white" aria-hidden>{unread}</span>
+            <span className="grid h-6 min-w-6 place-items-center rounded-none bg-emerald px-1.5 text-t-sm font-black text-white" aria-hidden>{unread}</span>
           ) : (
             <MIcon name="chevron_left" className="!text-[20px] text-text-dim opacity-0 transition group-hover:opacity-100" />
           )}
@@ -160,8 +160,8 @@ function SkeletonRows({ n = 4 }: { n?: number }) {
         <li key={i} className="flex items-center gap-4 px-4 py-4">
           <div className="h-11 w-11 animate-pulse rounded-full bg-ink-4/70" />
           <div className="flex-1 space-y-2">
-            <div className="h-3.5 w-1/3 animate-pulse rounded-full bg-ink-4/70" />
-            <div className="h-3 w-2/3 animate-pulse rounded-full bg-ink-4/50" />
+            <div className="h-3.5 w-1/3 animate-pulse rounded-none bg-ink-4/70" />
+            <div className="h-3 w-2/3 animate-pulse rounded-none bg-ink-4/50" />
           </div>
         </li>
       ))}
@@ -263,7 +263,7 @@ export default function ServiceNotesPage() {
     <div className="mx-auto max-w-[1200px] space-y-4">
       {/* ═══ العنوان ═══ */}
       <PageHeader title={<>المحادثات والملاحظات{totalUnread > 0 && (
-              <span className="ms-2.5 rounded-full bg-emerald px-2.5 py-0.5 align-middle text-t-sm font-black text-white tnum">{totalUnread} غير مقروءة</span>
+              <span className="ms-2.5 rounded-none bg-emerald px-2.5 py-0.5 align-middle text-t-sm font-black text-white tnum">{totalUnread} غير مقروءة</span>
             )}</>} description="محادثات العملاء وملاحظات الخدمة في مكان واحد. الرسائل غير المقروءة تظهر أولاً." actions={<><div className="flex items-center gap-2">
           <div className="flex rounded-card border border-line bg-ink-2 p-0.5" role="tablist" aria-label="طريقة العرض">
             {([["threads", "المحادثات", "forum"], ["table", "جدول الملاحظات", "table_rows"]] as const).map(([k, label, icon]) => (
@@ -305,11 +305,11 @@ export default function ServiceNotesPage() {
             const on = filter === f.key;
             return (
               <button key={f.key} role="tab" aria-selected={on} onClick={() => setFilter(f.key)}
-                className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-t-sm font-bold transition
+                className={`inline-flex shrink-0 items-center gap-2 rounded-none border px-3.5 py-2 text-t-sm font-bold transition
                   ${on ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol hover:text-petrol"}`}>
                 {f.key !== "all" && <span className={`h-2 w-2 rounded-full ${on ? "bg-ink-2" : f.tone}`} aria-hidden />}
                 {f.label}
-                <span className={`tnum rounded-full px-1.5 text-t-xs ${on ? "bg-white/20" : "bg-ink-3"}`}>{chipCount[f.key]}</span>
+                <span className={`tnum rounded-none px-1.5 text-t-xs ${on ? "bg-white/20" : "bg-ink-3"}`}>{chipCount[f.key]}</span>
               </button>
             );
           })}

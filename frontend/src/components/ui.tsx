@@ -150,7 +150,7 @@ export function Badge({ tone = "neutral", dot = false, className = "", children 
   { tone?: Tone | "good" | "warn"; dot?: boolean; className?: string; children: ReactNode }) {
   const t = (LEGACY[tone] ?? tone) as Tone;
   return (
-    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-t-xs font-bold ${TONE_CLASS[t]} ${className}`}>
+    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-none px-2.5 py-0.5 text-t-xs font-bold ${TONE_CLASS[t]} ${className}`}>
       {dot && <i aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />}{children}
     </span>
   );

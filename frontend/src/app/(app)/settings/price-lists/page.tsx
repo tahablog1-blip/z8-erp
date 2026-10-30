@@ -222,7 +222,7 @@ export default function PriceListsSettingsPage() {
                                        placeholder={money(it.base_price_vat)}
                                        onChange={(e) => setDrafts((d) => ({ ...d, [it.product_id]: e.target.value }))} />
                                 {it.is_override && !draft && (
-                                  <span className="rounded-full bg-petrol/10 px-1.5 py-0.5 text-t-xs font-bold text-petrol">مخصّص</span>
+                                  <span className="rounded-none bg-petrol/10 px-1.5 py-0.5 text-t-xs font-bold text-petrol">مخصّص</span>
                                 )}
                               </div>
                             </td>

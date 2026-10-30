@@ -453,7 +453,7 @@ export default function InventoryPage() {
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {r.items.map((it) => (
-                          <span key={it.id} className="rounded-full bg-ink-3 px-2.5 py-1 text-t-xs font-bold">
+                          <span key={it.id} className="rounded-none bg-ink-3 px-2.5 py-1 text-t-xs font-bold">
                             {it.label} × <span className="tnum">{it.qtyRequested}</span>
                             {r.status !== "pending" && it.qtyApproved !== null && it.qtyApproved !== it.qtyRequested && (
                               <span className="text-text-dim"> (اعتُمد {it.qtyApproved})</span>

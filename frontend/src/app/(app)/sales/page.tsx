@@ -858,7 +858,7 @@ export default function SalesPage() {
 
             <div className="flex flex-wrap gap-2">
               {viewInvoice.payments.map((p) => (
-                <span key={p.id} className="rounded-full bg-ink-3 px-3 py-1 text-t-xs font-bold">
+                <span key={p.id} className="rounded-none bg-ink-3 px-3 py-1 text-t-xs font-bold">
                   {PAYMENT_LABELS[p.method]}: <span className="tnum">{money(p.amount)}</span>
                 </span>
               ))}
@@ -1063,7 +1063,7 @@ export default function SalesPage() {
         {/* الإعدادات — الوردية والتقارير والتفضيلات كلها هنا */}
         <div className="relative">
           <button onClick={() => setGearOpen((v) => !v)} aria-label="الإعدادات" title="الإعدادات — الوردية والتقارير"
-                  className="flex items-center justify-center rounded-full p-1.5 transition hover:rotate-45"
+                  className="flex items-center justify-center rounded-none p-1.5 transition hover:rotate-45"
                   style={{ color: "var(--text-dim)" }}>
             <MIcon name="settings" className="!text-[24px]" />
           </button>
@@ -1098,7 +1098,7 @@ export default function SalesPage() {
               </label>
               <div className="flex items-center justify-between text-t-sm font-bold text-text-dim">
                 اللغة
-                <span className="rounded-full bg-ink-3 px-2 py-0.5 text-t-xs">العربية — English قريباً</span>
+                <span className="rounded-none bg-ink-3 px-2 py-0.5 text-t-xs">العربية — English قريباً</span>
               </div>
             </div>
           )}
@@ -1140,7 +1140,7 @@ export default function SalesPage() {
       )}
 
       {toast && (
-        <div className="fixed bottom-6 right-1/2 z-50 translate-x-1/2 rounded-full bg-text px-5 py-2.5 text-t-md font-bold text-ink-2 shadow-lg">
+        <div className="fixed bottom-6 right-1/2 z-50 translate-x-1/2 rounded-none bg-text px-5 py-2.5 text-t-md font-bold text-ink-2 shadow-lg">
           {toast}
         </div>
       )}
@@ -1236,8 +1236,8 @@ export default function SalesPage() {
                   Array.from({ length: 10 }).map((_, i) => (
                     <div key={i} className="rounded-card border border-line bg-ink-2 p-2">
                       <div className="h-16 animate-pulse rounded-card bg-ink-3" />
-                      <div className="mt-2 h-3 animate-pulse rounded-full bg-ink-3" />
-                      <div className="mt-1.5 h-3 w-2/3 animate-pulse rounded-full bg-ink-3" />
+                      <div className="mt-2 h-3 animate-pulse rounded-none bg-ink-3" />
+                      <div className="mt-1.5 h-3 w-2/3 animate-pulse rounded-none bg-ink-3" />
                     </div>
                   ))
                 ) : gridProducts.length === 0 ? (
@@ -1268,7 +1268,7 @@ export default function SalesPage() {
                           </span>
                         )}
                         {stockTone && (
-                          <span className={`tnum absolute left-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-t-xs font-black ${stockTone.cls}`}>{stockTone.label}</span>
+                          <span className={`tnum absolute left-1.5 top-1.5 rounded-none px-1.5 py-0.5 text-t-xs font-black ${stockTone.cls}`}>{stockTone.label}</span>
                         )}
                       </div>
                       <div className="mt-1.5 line-clamp-2 min-h-[32px] text-t-sm font-bold leading-tight text-text">
@@ -1301,10 +1301,10 @@ export default function SalesPage() {
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="tnum rounded-full bg-white/15 px-2 py-0.5 text-t-xs font-bold">{cart.length} صنف</span>
+                  <span className="tnum rounded-none bg-white/15 px-2 py-0.5 text-t-xs font-bold">{cart.length} صنف</span>
                   <button onClick={() => setHeldModal(true)}
                           className="rounded-lg bg-white/15 px-2.5 py-1 text-t-xs font-black hover:bg-white/25">
-                    المعلقة {held.length > 0 && <span className="tnum rounded-full bg-brass px-1.5 text-petrol-deep">{held.length}</span>}
+                    المعلقة {held.length > 0 && <span className="tnum rounded-none bg-brass px-1.5 text-petrol-deep">{held.length}</span>}
                   </button>
                 </div>
               </div>
@@ -1769,7 +1769,7 @@ export default function SalesPage() {
               <div>
                 <span className="tnum font-extrabold">{i.invoice_no}</span>
                 <span className="mr-2 text-text-dim">{i.customer_name || "بيع نقدي"}</span>
-                <span className={`mr-2 rounded-full px-2 py-0.5 text-t-xs font-bold ${i.source === "car" ? "bg-petrol-soft text-petrol" : "bg-ink-3 text-text-dim"}`}>
+                <span className={`mr-2 rounded-none px-2 py-0.5 text-t-xs font-bold ${i.source === "car" ? "bg-petrol-soft text-petrol" : "bg-ink-3 text-text-dim"}`}>
                   {i.source === "car" ? "خدمة" : "بيع"}
                 </span>
                 {i.is_returned && <Badge tone="danger" className="mr-1">مرتجعة</Badge>}

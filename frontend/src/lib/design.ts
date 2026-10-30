@@ -28,7 +28,7 @@ export type DesignInfo = {
 const FALLBACK: DesignInfo = {
   primaryColor: null, successColor: null, warningColor: null, errorColor: null,
   fontFamilyAr: "cairo", fontFamilyEn: "inter", fontScale: "md",
-  buttonShape: "rounded", buttonAnimation: true, sidebarDefault: "expanded", hasBackup: false,
+  buttonShape: "sharp", buttonAnimation: true, sidebarDefault: "expanded", hasBackup: false,
 };
 
 const CACHE_KEY = "z8_design";
@@ -169,7 +169,7 @@ export const FONT_SCALE_PERCENT: Record<FontScale, number> = {
 };
 
 const RADIUS_PRESETS: Record<ButtonShape, { sm: string; base: string; lg: string; xl: string; card: string }> = {
-  sharp:   { sm: "3px", base: "4px", lg: "6px", xl: "8px", card: "10px" },
+  sharp:   { sm: "0px", base: "0px", lg: "0px", xl: "0px", card: "0px" },     // حواف حادة في كل النظام
   rounded: { sm: "6px", base: "8px", lg: "12px", xl: "16px", card: "16px" },
   pill:    { sm: "10px", base: "14px", lg: "18px", xl: "22px", card: "22px" },
 };
@@ -204,7 +204,7 @@ export function applyDesignVars(d: DesignInfo, isDark: boolean, lang: "ar" | "en
     }
   }
 
-  const radii = RADIUS_PRESETS[d.buttonShape] || RADIUS_PRESETS.rounded;
+  const radii = RADIUS_PRESETS.sharp;   // قرار تصميم: حواف حادة للجميع — لا يتأثر بقيمة buttonShape المخزّنة قديماً
   root.setProperty("--radius-sm", radii.sm);
   root.setProperty("--radius", radii.base);
   root.setProperty("--radius-lg", radii.lg);
