@@ -2,7 +2,7 @@
 // شاشة الأصناف — كتالوج المنتجات (زيوت، فلاتر، سوائل...)
 // مبنية على نفس نمط شاشة الفروع: DataTable موحّد + Modal + أفعال محكومة بالصلاحيات
 import { useEffect, useState, useMemo, useRef } from "react";
-import { api, getToken } from "@/lib/api";
+import { api, authHeaders } from "@/lib/api";
 import { MIcon } from "@/components/m-icon";
 import { useAuth } from "@/lib/auth";
 import { DataTable, Column } from "@/components/DataTable";
@@ -169,7 +169,7 @@ export default function ProductsPage() {
     fd.append("file", file);
     const res = await fetch(`/api/products/import-excel?dryRun=${dryRun}`, {
       method: "POST", body: fd,
-      headers: { Authorization: `Bearer ${getToken() || ""}` },
+      headers: authHeaders(),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || data.error || `فشل الاستيراد (${res.status})`);
@@ -208,7 +208,7 @@ export default function ProductsPage() {
     setWipeBusy(true);
     try {
       const res = await fetch("/api/products/wipe-all?confirm=WIPE", {
-        method: "POST", headers: { Authorization: `Bearer ${getToken() || ""}` },
+        method: "POST", headers: authHeaders(),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "فشل المسح");

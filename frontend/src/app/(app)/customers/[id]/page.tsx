@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { api, getToken } from "@/lib/api";
+import { api, authHeaders } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { printReport, tableHTML, kpisHTML } from "@/lib/print";
 import { MIcon } from "@/components/m-icon";
@@ -79,8 +79,7 @@ export default function CustomerProfilePage() {
   const flash = (ok: boolean, msg: string) => { setNotice({ ok, msg }); setTimeout(() => setNotice(null), 6000); };
 
   async function fetchPdf(invId: string): Promise<Blob> {
-    const token = getToken();
-    const res = await fetch(`/api/invoices/${invId}/pdf`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    const res = await fetch(`/api/invoices/${invId}/pdf`, { headers: authHeaders() });
     if (!res.ok) { let m = `تعذر تحميل الفاتورة (${res.status})`; try { const d = await res.json(); m = d?.error || d?.detail || m; } catch { /* */ } throw new Error(m); }
     return res.blob();
   }

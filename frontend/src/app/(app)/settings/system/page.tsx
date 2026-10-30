@@ -2,7 +2,7 @@
 // الإعدادات ← النظام — صفحة كاملة، DB-backed بالكامل — 7 إعدادات جديدة
 // + حالة الخادم (كانت موجودة من قبل، محتفظ بيها)
 import { useEffect, useState } from "react";
-import { api, getToken } from "@/lib/api";
+import { api, authHeaders } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { setFormatSettings } from "@/lib/format";
 import { Button, Card, ErrorNote, Field, Input, Select, Switch, PageHeader } from "@/components/ui";
@@ -126,9 +126,8 @@ export default function SystemSettingsPage() {
 
   async function downloadBackup(b: BackupFile) {
     try {
-      const token = getToken();
       const res = await fetch(`/api/settings/backup/${b.filename}/download`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: authHeaders(),
       });
       if (!res.ok) throw new Error(`تعذّر تحميل النسخة (${res.status})`);
       const url = URL.createObjectURL(await res.blob());

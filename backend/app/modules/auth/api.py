@@ -5,11 +5,11 @@ import json
 import secrets
 from datetime import datetime, timezone
 import pyotp
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr
 from ...core.db import fetchrow, execute
 from ...core.security import verify_password, hash_password, create_token, create_totp_pending_token, decode_token
-from ...core.deps import get_current_user, require_permission, CurrentUser
+from ...core.deps import get_current_user, require_permission, CurrentUser, SESSION_COOKIE, token_from_request
 from ...core.permissions import PERMISSIONS, ALL_KEYS
 from ..settings import service as settings_service
 
@@ -49,6 +49,17 @@ async def _start_session(row, sys: dict, request: Request) -> tuple[str, str | N
     landing_path = (sys["landingAdmin"] if is_admin else sys["landingEmployee"]) or None
     return token, landing_path
 
+def set_session_cookie(response: Response, request: Request, token: str) -> None:
+    """كوكي الجلسة للمتصفح: HttpOnly (لا يقرؤه JavaScript فلا تسرقه XSS)، Secure خلف HTTPS، SameSite=Lax.
+    التوكن يبقى في جسم الرد أيضاً لتطبيقات الموبايل التي تستعمل Bearer."""
+    try:
+        ttl = max(60, int(decode_token(token)["exp"] - datetime.now(timezone.utc).timestamp()))
+    except Exception:
+        ttl = None
+    secure = (request.headers.get("x-forwarded-proto") or request.url.scheme) == "https"
+    response.set_cookie(SESSION_COOKIE, token, max_age=ttl, httponly=True, secure=secure, samesite="lax", path="/api")
+
+
 def _user_payload(row_or_user) -> dict:
     if isinstance(row_or_user, CurrentUser):
         u = row_or_user
@@ -63,7 +74,7 @@ def _user_payload(row_or_user) -> dict:
             "permissions": perms}
 
 @router.post("/login")
-async def login(body: LoginBody, request: Request):
+async def login(body: LoginBody, request: Request, response: Response):
     if len(body.password) < 6:
         raise HTTPException(400, "البريد أو كلمة المرور غير صالحة الصيغة")
     row = await fetchrow(
@@ -110,6 +121,7 @@ async def login(body: LoginBody, request: Request):
         return {"requiresTotp": True, "tempToken": create_totp_pending_token(row["id"])}
 
     token, landing_path = await _start_session(row, sys, request)
+    set_session_cookie(response, request, token)
     # وجهة ما بعد الدخول المخصّصة (إعداد 8) — فاضية/None لو الإدارة ما ضبطتش شيء،
     # والواجهة عندها سلوك اكتشاف تلقائي احتياطي لو المسار ده غير متاح لصلاحيات المستخدم
     return {"token": token, "user": _user_payload(row), "landingPath": landing_path}
@@ -121,7 +133,7 @@ class Verify2faLoginBody(BaseModel):
 
 
 @router.post("/2fa/verify-login")
-async def verify_2fa_login(body: Verify2faLoginBody, request: Request):
+async def verify_2fa_login(body: Verify2faLoginBody, request: Request, response: Response):
     """الخطوة الثانية من تسجيل الدخول لمستخدم فعّل المصادقة الثنائية."""
     import jwt as _pyjwt
     try:
@@ -160,7 +172,23 @@ async def verify_2fa_login(body: Verify2faLoginBody, request: Request):
         "UPDATE users SET last_login_at = now(), failed_login_count=0, locked_until=NULL WHERE id = $1",
         row["id"])
     token, landing_path = await _start_session(row, sys, request)
+    set_session_cookie(response, request, token)
     return {"token": token, "user": _user_payload(row), "landingPath": landing_path}
+
+
+@router.post("/logout", status_code=204)
+async def logout(request: Request, response: Response):
+    """يمسح كوكي الجلسة وينهي صف الجلسة (إن وُجد) — يعمل حتى لو التوكن منتهي"""
+    token, _ = token_from_request(request)
+    if token:
+        try:
+            sid = decode_token(token).get("sid")
+            if sid:
+                await execute("UPDATE user_sessions SET revoked_at=now() WHERE id=$1 AND revoked_at IS NULL", sid)
+        except Exception:
+            pass
+    response.delete_cookie(SESSION_COOKIE, path="/api")
+
 
 @router.get("/me")
 async def me(user: CurrentUser = Depends(get_current_user)):

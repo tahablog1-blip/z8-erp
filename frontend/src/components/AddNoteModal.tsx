@@ -11,7 +11,7 @@
 //     <AddNoteModal workOrderId={active.id} onClose={() => setNoteOpen(false)} />
 //   )}
 import { useEffect, useRef, useState } from "react";
-import { api, getToken } from "@/lib/api";
+import { api, authHeaders } from "@/lib/api";
 import { Button, Card, Input } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
@@ -85,7 +85,7 @@ export default function AddNoteModal({ workOrderId, onClose }:
         fd.append("file", file);
         const res = await fetch(`/api/service-notes/${r.id}/attachments`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${getToken() ?? ""}` },
+          headers: authHeaders(),
           body: fd,
         });
         if (!res.ok) throw new Error("الملاحظة سُجلت لكن رفع الصورة فشل");

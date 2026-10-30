@@ -2,7 +2,7 @@
 // تفاصيل الملاحظة — بيانات كاملة + مرفقات + محادثة + إبلاغ العميل (بنود 6/9/14)
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { api, getToken } from "@/lib/api";
+import { api, authHeaders } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Badge, Button, Card, Input } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
@@ -209,7 +209,7 @@ export default function NoteDetailsPage() {
       fd.append("file", blob, "voice.wav");
       const resp = await fetch(`/api/service-notes/messages/${note.work_order_id}/voice`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${getToken()}` },
+        headers: authHeaders(),
         body: fd,
       });
       if (resp.ok) await load();

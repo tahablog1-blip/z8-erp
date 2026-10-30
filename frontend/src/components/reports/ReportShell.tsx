@@ -3,7 +3,7 @@
 // لا حسابات مالية هنا: الأرقام كلها من الخادم، والواجهة تعرض وتنسّق فقط.
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { api, getToken } from "@/lib/api";
+import { api, authHeaders } from "@/lib/api";
 import { Badge, Button, EmptyState, ErrorNote, PageHeader } from "@/components/ui";
 import { Skeleton } from "@/components/dashboard/Widget";
 import { MIcon } from "@/components/m-icon";
@@ -148,7 +148,7 @@ export const pdfParams = (f: Filters, extra: Record<string, string> = {}) => ({ 
 
 async function downloadPdf(id: string, params: Record<string, string>): Promise<string> {
   const q = new URLSearchParams(params).toString();
-  const res = await fetch(`/api/reports/pdf/${id}?${q}`, { headers: { Authorization: `Bearer ${getToken() ?? ""}` } });
+  const res = await fetch(`/api/reports/pdf/${id}?${q}`, { headers: authHeaders() });
   if (!res.ok) { let m = `تعذر إنشاء PDF (${res.status})`; try { const j = await res.json(); m = j.error || j.detail || m; } catch { /* بلا جسم */ } throw new Error(m); }
   const name = /filename="?([^";]+)"?/.exec(res.headers.get("content-disposition") || "")?.[1] || `${id}.pdf`;
   const url = URL.createObjectURL(await res.blob());

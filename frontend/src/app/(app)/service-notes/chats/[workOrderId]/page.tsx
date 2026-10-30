@@ -3,7 +3,7 @@
 //     تحديث كل 5 ثوانٍ + فتح الغرفة يعلّم رسائل العميل كمقروءة تلقائياً ═══
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { api, getToken } from "@/lib/api";
+import { api, authHeaders } from "@/lib/api";
 import { Button, Card, Badge } from "@/components/ui";
 import { MIcon } from "@/components/m-icon";
 
@@ -160,7 +160,7 @@ export default function ChatRoomPage() {
       fd.append("file", blob, "voice.wav");
       const resp = await fetch(`/api/service-notes/messages/${woId}/voice`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${getToken()}` },
+        headers: authHeaders(),
         body: fd,
       });
       if (resp.ok) await load();

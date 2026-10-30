@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { authHeaders } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:4001";
 const WS_BASE = API_BASE.replace(/^http/, "ws");
@@ -166,7 +167,7 @@ export default function GatePage() {
   /* ---- قارئ اللوحة الحالي (API القراءة) + التبديل الفوري ---- */
   useEffect(() => {
     fetch(`${API_BASE}/api/auto-checkin/vision-model`, {
-      headers: { Authorization: `Bearer ${window.localStorage?.getItem("z8_token") ?? ""}` },
+      headers: authHeaders(),
     })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(setReader)
@@ -181,7 +182,7 @@ export default function GatePage() {
         `${API_BASE}/api/auto-checkin/vision-model?model=${encodeURIComponent(m)}`,
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${window.localStorage?.getItem("z8_token") ?? ""}` },
+          headers: authHeaders(),
         },
       );
       if (!res.ok) throw new Error();
@@ -199,7 +200,7 @@ export default function GatePage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${window.localStorage?.getItem("z8_token") ?? ""}`,
+          ...authHeaders(),
         },
         body: JSON.stringify({ plate, branch_id: branchId, auto_checkin: true }),
       });
@@ -233,7 +234,7 @@ export default function GatePage() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${window.localStorage?.getItem("z8_token") ?? ""}`,
+            ...authHeaders(),
           },
           body: JSON.stringify({ car_id: carId }),
         },

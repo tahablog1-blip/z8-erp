@@ -2,7 +2,7 @@
 // InvoicePreviewModal — معاينة الفاتورة قبل الطباعة بنفس القالب الذي يُطبع (A4 أو حراري 80مم) + إجراءات: طباعة / PDF / واتساب.
 // عرض فقط: لا يعدّل أي بيانات — القيم كلها من InvoiceDetail القادم من الـ API.
 import { useEffect, useRef, useState } from "react";
-import { api, getToken } from "@/lib/api";
+import { api, authHeaders } from "@/lib/api";
 import { MIcon } from "@/components/m-icon";
 import { Button } from "@/components/ui";
 import FullScreenModal from "@/components/FullScreenModal";
@@ -39,8 +39,7 @@ export function InvoicePreviewModal({ invoice, initialFormat = "a4", onClose }: 
   async function pdf() {
     setBusy("pdf");
     try {
-      const token = getToken();
-      const res = await fetch(`/api/invoices/${invoice.id}/pdf`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const res = await fetch(`/api/invoices/${invoice.id}/pdf`, { headers: authHeaders() });
       if (!res.ok) { let m = `تعذر إنشاء ملف PDF (${res.status})`; try { const d = await res.json(); m = d?.detail || d?.error || m; } catch { /* */ } throw new Error(m); }
       const url = URL.createObjectURL(await res.blob());
       const a = document.createElement("a"); a.href = url; a.download = `${invoice.invoice_no}.pdf`; document.body.appendChild(a); a.click(); a.remove();
