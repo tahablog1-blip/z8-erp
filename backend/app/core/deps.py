@@ -16,6 +16,8 @@ class CurrentUser:
     full_name: str
     role: str                      # 'admin' | 'employee'
     permissions: list[str] = field(default_factory=list)
+    device_id: str | None = None   # تابلت الكاشير الذي سجّل منه (الجلسة تتبع الجهاز لا المستخدم)
+    scope: str | None = None       # نطاق التوكن المقيَّد (pos / service_notes / cars / workorder) — يحدّ المسارات المسموحة
 
     def has(self, *keys: str) -> bool:
         """الأدمن يملك كل الصلاحيات ضمنياً — نفس قاعدة hasPerm في النظام القديم"""
@@ -76,6 +78,7 @@ async def resolve_user_from_token(token: str) -> CurrentUser:
         branch_id=str(row["branch_id"]) if row["branch_id"] else None,
         email=row["email"], full_name=row["full_name"],
         role=row["role"], permissions=perms,
+        device_id=payload.get("dev"), scope=payload.get("scope"),
     )
 
 SESSION_COOKIE = "z8_session"
@@ -100,7 +103,12 @@ async def get_current_user(request: Request) -> CurrentUser:
     # وSameSite=Lax يمنع إرسال الكوكي أصلاً في الطلبات المتقاطعة. طلبات Bearer لا تحتاجه (لا تُرسَل تلقائياً).
     if from_cookie and request.method not in _SAFE_METHODS and request.headers.get(CSRF_HEADER) != "1":
         raise HTTPException(403, "طلب غير موثوق (CSRF)")
-    return await resolve_user_from_token(token)
+    user = await resolve_user_from_token(token)
+    if user.scope:                      # توكن تابلت مقيَّد: لا يصل إلا لمسارات نطاقه
+        from .terminal_scopes import path_allowed
+        if not path_allowed(user.scope, request.url.path):
+            raise HTTPException(403, "هذا الجهاز غير مخوَّل بهذا المسار")
+    return user
 
 def require_permission(*keys: str):
     """مصنع تبعية: المقابل لـ requirePermission('branches.manage') — أي مفتاح يكفي"""

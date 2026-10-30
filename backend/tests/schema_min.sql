@@ -130,3 +130,9 @@ ALTER TABLE employee_advances ADD COLUMN IF NOT EXISTS created_by uuid;
 ALTER TABLE invoice_returns ADD COLUMN IF NOT EXISTS refund_method text;
 ALTER TABLE shifts ADD COLUMN IF NOT EXISTS closing_cash_counted numeric(12,2);
 ALTER TABLE shifts ADD COLUMN IF NOT EXISTS closing_notes text;
+-- تابلت الكاشير (test_db_terminal)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at timestamptz;
+ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS device_label text;
+ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS ip text;
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS device_id uuid;
+ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS pos_device_id uuid;

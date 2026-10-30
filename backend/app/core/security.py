@@ -15,7 +15,7 @@ def verify_password(plain: str, password_hash: str) -> bool:
 def hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt(rounds=10)).decode("utf-8")
 
-def create_token(user_id: str, expire_hours: int | None = None, session_id: str | None = None) -> str:
+def create_token(user_id: str, expire_hours: int | None = None, session_id: str | None = None, extra: dict | None = None) -> str:
     """expire_hours: مدة الجلسة القابلة للتخصيص من الإعدادات ← النظام (إعداد 9) —
     None أو 0 = السلوك الافتراضي الأصلي (JWT_EXPIRES_DAYS الثابت) بلا أي تغيير.
     session_id: معرّف صف user_sessions — يسمح بفصل الجلسة عن بُعد (إدارة الأجهزة).
@@ -29,6 +29,8 @@ def create_token(user_id: str, expire_hours: int | None = None, session_id: str 
     }
     if session_id:
         payload["sid"] = str(session_id)
+    if extra:
+        payload.update({k: v for k, v in extra.items() if k not in ("userId", "iat", "exp", "sid", "purpose")})   # dev / scope لتابلت الكاشير
     return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
 
 def create_totp_pending_token(user_id: str, ttl_seconds: int = 300) -> str:
