@@ -77,7 +77,7 @@ export default function MyInvoicesPage() {
             <div className="text-t-xs text-white/70">كل فواتيرك — معاينة وتحميل</div>
           </div>
           <a href={`/booking/${branchId}`}
-             className="rounded-full bg-white/15 px-4 py-2 text-t-sm font-black text-white">‹ رجوع للحجز</a>
+             className="rounded-none bg-white/15 px-4 py-2 text-t-sm font-black text-white">‹ رجوع للحجز</a>
         </div>
 
         {err && (
@@ -118,7 +118,7 @@ export default function MyInvoicesPage() {
                 </div>
                 <div className="text-left">
                   <div className="tnum text-t-lg font-black" style={{ color: GREEN }}>{money(inv.total)} ر.س</div>
-                  {st && <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-t-xs font-black"
+                  {st && <span className="mt-1 inline-block rounded-none px-2 py-0.5 text-t-xs font-black"
                                style={{ color: st.color, background: st.bg }}>{st.label}</span>}
                 </div>
               </div>

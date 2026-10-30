@@ -30,10 +30,10 @@ export function PeriodPicker({ value, onChange, keys = DEFAULT_KEYS }: { value: 
     <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="فترة الحركة">
       {QUICK.map((p) => (
         <button key={p.key} aria-pressed={value.key === p.key} onClick={() => { setCustom(false); onChange({ key: p.key, ...rangeFor(p.key) }); }}
-          className={`rounded-full border px-3 py-1 text-t-xs font-bold ${value.key === p.key ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol"}`}>{p.ar}</button>
+          className={`rounded-none border px-3 py-1 text-t-xs font-bold ${value.key === p.key ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol"}`}>{p.ar}</button>
       ))}
       <button aria-pressed={custom || value.key === "custom"} onClick={() => setCustom((c) => !c)}
-        className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-t-xs font-bold ${value.key === "custom" ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol"}`}>
+        className={`inline-flex items-center gap-1 rounded-none border px-3 py-1 text-t-xs font-bold ${value.key === "custom" ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol"}`}>
         <MIcon name="date_range" className="!text-[14px]" />مخصص</button>
       {custom && (
         <span className="flex items-center gap-1">

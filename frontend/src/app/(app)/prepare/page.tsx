@@ -524,7 +524,7 @@ export default function PreparePage() {
                 <div className="no-scrollbar flex gap-1.5 overflow-x-auto pb-0.5" role="tablist" aria-label="فئات الأصناف">
                   {quickCats.map((c) => (
                     <button key={c} role="tab" aria-selected={quickCat === c} onClick={() => setQuickCat(quickCat === c ? "" : c)}
-                      className={`shrink-0 rounded-full px-4 py-2 text-t-md font-bold transition
+                      className={`shrink-0 rounded-none px-4 py-2 text-t-md font-bold transition
                         ${quickCat === c ? "bg-petrol text-white" : "border border-line text-text-dim hover:border-petrol hover:text-petrol"}`}>
                       {c}
                     </button>

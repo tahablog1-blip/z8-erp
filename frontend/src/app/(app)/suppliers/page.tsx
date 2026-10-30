@@ -172,7 +172,7 @@ export default function SuppliersPage() {
             {ov.aging.map((a) => (
               <button key={a.key} onClick={() => { setBucket(bucket === a.key ? "" : a.key); setOnlyOverdue(false); setTab("payables"); }} className="grid w-full grid-cols-[70px_1fr_auto] items-center gap-3 text-start hover:opacity-90" aria-label={`${a.label}: ${fmtM(a.amount)}`}>
                 <span dir="ltr" className="justify-self-start text-t-sm font-bold">{a.label}</span>
-                <span className="h-3 overflow-hidden rounded-full bg-ink-3"><span className={`block h-full rounded-full ${BUCKET_TONE[a.key]}`} style={{ width: `${(a.amount / agingMax) * 100}%` }} /></span>
+                <span className="h-3 overflow-hidden rounded-none bg-ink-3"><span className={`block h-full rounded-none ${BUCKET_TONE[a.key]}`} style={{ width: `${(a.amount / agingMax) * 100}%` }} /></span>
                 <span className="tnum text-t-sm"><b>{fmtM(a.amount)}</b> <small className="text-text-dim">({a.count})</small></span>
               </button>
             ))}
@@ -200,7 +200,7 @@ export default function SuppliersPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="تصفية الأرصدة">
-          {CHIPS.map((c) => <button key={c.key} aria-pressed={chip === c.key} onClick={() => setChip(c.key)} className={`rounded-full border px-3 py-1 text-t-xs font-bold ${chip === c.key ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol"}`}>{c.label}</button>)}
+          {CHIPS.map((c) => <button key={c.key} aria-pressed={chip === c.key} onClick={() => setChip(c.key)} className={`rounded-none border px-3 py-1 text-t-xs font-bold ${chip === c.key ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol"}`}>{c.label}</button>)}
           {sel.size > 0 && (
             <span className="ms-auto flex flex-wrap items-center gap-1.5 rounded-lg bg-petrol-soft px-2 py-1 text-t-xs font-bold text-petrol">محدد {sel.size}
               <Button size="xs" variant="outline" onClick={() => exportCsv(true)}>تصدير</Button>
@@ -252,9 +252,9 @@ export default function SuppliersPage() {
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-1.5">
-              <button aria-pressed={!bucket && !onlyOverdue} onClick={() => { setBucket(""); setOnlyOverdue(false); }} className={`rounded-full border px-3 py-1 text-t-xs font-bold ${!bucket && !onlyOverdue ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim"}`}>كل المستحق</button>
-              <button aria-pressed={onlyOverdue} onClick={() => { setOnlyOverdue(!onlyOverdue); setBucket(""); }} className={`rounded-full border px-3 py-1 text-t-xs font-bold ${onlyOverdue ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim"}`}>المتأخر فقط</button>
-              {ov?.aging.map((a) => <button key={a.key} aria-pressed={bucket === a.key} onClick={() => { setBucket(bucket === a.key ? "" : a.key); setOnlyOverdue(false); }} className={`rounded-full border px-3 py-1 text-t-xs font-bold ${bucket === a.key ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim"}`}>{a.label}</button>)}
+              <button aria-pressed={!bucket && !onlyOverdue} onClick={() => { setBucket(""); setOnlyOverdue(false); }} className={`rounded-none border px-3 py-1 text-t-xs font-bold ${!bucket && !onlyOverdue ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim"}`}>كل المستحق</button>
+              <button aria-pressed={onlyOverdue} onClick={() => { setOnlyOverdue(!onlyOverdue); setBucket(""); }} className={`rounded-none border px-3 py-1 text-t-xs font-bold ${onlyOverdue ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim"}`}>المتأخر فقط</button>
+              {ov?.aging.map((a) => <button key={a.key} aria-pressed={bucket === a.key} onClick={() => { setBucket(bucket === a.key ? "" : a.key); setOnlyOverdue(false); }} className={`rounded-none border px-3 py-1 text-t-xs font-bold ${bucket === a.key ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim"}`}>{a.label}</button>)}
             </div>
             <span className="flex gap-2">
               <Button variant="tool" size="sm" onClick={() => pay.data && downloadCsv("payables.csv", ["المورد", "الفاتورة", "مرجع المورد", "الاستحقاق", "أيام التأخر", "الإجمالي", "المدفوع", "المتبقي"], pay.data.map((p) => [p.supplier, p.invoiceNo, p.supplierRef, p.dueDate, p.daysLate, p.total, p.paid, p.outstanding]))} disabled={!pay.data?.length}><MIcon name="download" className="!text-[16px]" />تصدير</Button>
@@ -279,7 +279,7 @@ export default function SuppliersPage() {
       {tab === "top" && (
         <div className="space-y-3">
           <div className="flex gap-1.5" role="group" aria-label="الترتيب">
-            {([["purchases", "حسب قيمة المشتريات"], ["invoices", "حسب عدد الفواتير"]] as ["purchases" | "invoices", string][]).map(([key, label]) => <button key={key} aria-pressed={topBy === key} onClick={() => setTopBy(key)} className={`rounded-full border px-3 py-1 text-t-xs font-bold ${topBy === key ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim"}`}>{label}</button>)}
+            {([["purchases", "حسب قيمة المشتريات"], ["invoices", "حسب عدد الفواتير"]] as ["purchases" | "invoices", string][]).map(([key, label]) => <button key={key} aria-pressed={topBy === key} onClick={() => setTopBy(key)} className={`rounded-none border px-3 py-1 text-t-xs font-bold ${topBy === key ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim"}`}>{label}</button>)}
           </div>
           {top.loading && !top.data ? <Skeleton className="w-full" height={220} /> : !top.data || top.data.items.length === 0 ? <EmptyState icon="leaderboard" title="لا مشتريات في هذه الفترة" /> : (
             <div className="overflow-x-auto rounded-card border border-line bg-ink-2 shadow-card"><table className="w-full min-w-[560px] text-t-sm"><thead className="bg-ink-3 text-t-xs text-text-dim"><tr>{["#", "المورد", "المشتريات", "فواتير الفترة", "المدفوع", "المستحق"].map((h) => <th key={h} className="p-2.5 text-start font-bold">{h}</th>)}</tr></thead>

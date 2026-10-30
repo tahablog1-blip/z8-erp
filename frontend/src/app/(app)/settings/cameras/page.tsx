@@ -263,7 +263,7 @@ export default function CamerasSettingsPage() {
             </div>
             {/* المفتاح الرئيسي */}
             <button onClick={toggleMaster} disabled={gwOn === null}
-                    className="relative inline-flex h-7 w-13 shrink-0 items-center rounded-full transition-colors disabled:opacity-50"
+                    className="relative inline-flex h-7 w-13 shrink-0 items-center rounded-none transition-colors disabled:opacity-50"
                     style={{ background: gwOn ? "var(--emerald)" : "var(--ink4)", width: 52 }}>
               <span className="absolute h-6 w-6 rounded-full bg-ink-2 shadow transition-all"
                     style={{ right: gwOn ? 2 : 24 }} />
@@ -281,7 +281,7 @@ export default function CamerasSettingsPage() {
                   {c.last && <span className="tnum shrink-0 text-t-xs text-text-dim">{c.last}</span>}
                 </span>
                 <button onClick={() => toggleGwCam(c.id, !c.is_active)}
-                        className="relative inline-flex h-6 shrink-0 items-center rounded-full transition-colors"
+                        className="relative inline-flex h-6 shrink-0 items-center rounded-none transition-colors"
                         style={{ background: c.is_active ? "var(--emerald)" : "var(--ink4)", width: 44 }}>
                   <span className="absolute h-5 w-5 rounded-full bg-ink-2 shadow transition-all"
                         style={{ right: c.is_active ? 2 : 22 }} />
@@ -320,7 +320,7 @@ export default function CamerasSettingsPage() {
               <div className="flex items-center gap-2 text-t-md font-black">
                 <MIcon name="smart_toy" filled={!!aiSup} className={`!text-[22px] ${aiSup ? "text-emerald" : "text-text-dim"}`} />
                 المراقبة الذكية بالكاميرات
-                <span className={`rounded-full px-2 py-0.5 text-t-xs font-black ${aiSup ? "bg-emerald text-white" : "bg-ink-4 text-text-dim"}`}>
+                <span className={`rounded-none px-2 py-0.5 text-t-xs font-black ${aiSup ? "bg-emerald text-white" : "bg-ink-4 text-text-dim"}`}>
                   {aiSup === null ? "..." : aiSup ? "شغالة" : "متوقفة"}
                 </span>
               </div>
@@ -331,7 +331,7 @@ export default function CamerasSettingsPage() {
             </div>
             {/* زر أندرويد */}
             <button onClick={toggleAiSup} aria-label="تبديل المراقبة الذكية" disabled={aiSup === null}
-                    className={`relative h-8 w-14 shrink-0 rounded-full transition-colors duration-300
+                    className={`relative h-8 w-14 shrink-0 rounded-none transition-colors duration-300
                       ${aiSup ? "bg-emerald" : "bg-ink-4"}`}>
               <span className={`absolute top-1 h-6 w-6 rounded-full bg-ink-2 shadow-md transition-all duration-300
                   ${aiSup ? "right-1" : "right-7"}`} />

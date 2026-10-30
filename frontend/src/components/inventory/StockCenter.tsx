@@ -202,7 +202,7 @@ export function StockCenter({ loc, locs, onLoc, period, deadDays, canTransfer, c
       <Panel title="حالة المخزون" icon="monitor_heart">
         {!h ? <Skeleton className="w-full" height={44} /> : (
           <div>
-            <div className="flex h-3 overflow-hidden rounded-full bg-ink-3" role="img" aria-label="توزيع حالة المخزون">
+            <div className="flex h-3 overflow-hidden rounded-none bg-ink-3" role="img" aria-label="توزيع حالة المخزون">
               {HSEG.map((s) => h[s.key] > 0 && <div key={s.key} className={s.color} style={{ width: `${(h[s.key] / healthTotal) * 100}%` }} title={`${STATUS_LABEL[s.key]}: ${h[s.key]}`} />)}
             </div>
             <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
@@ -222,7 +222,7 @@ export function StockCenter({ loc, locs, onLoc, period, deadDays, canTransfer, c
       <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="تصفية الحالة">
         {CHIPS.map((c) => (
           <button key={c.key} aria-pressed={chip === c.key} onClick={() => setChip(c.key)}
-            className={`rounded-full border px-3 py-1 text-t-xs font-bold ${chip === c.key ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol"}`}>{c.label}</button>
+            className={`rounded-none border px-3 py-1 text-t-xs font-bold ${chip === c.key ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 text-text-dim hover:border-petrol"}`}>{c.label}</button>
         ))}
         {sel.size > 0 && (
           <span className="ms-auto flex flex-wrap items-center gap-1.5 rounded-lg bg-petrol-soft px-2 py-1 text-t-xs font-bold text-petrol">
@@ -391,7 +391,7 @@ function ProductDrawer({ id, canTransfer, onClose, onTransfer, onShowMoves }: {
                 <ul className="space-y-1.5">
                   {data.moves.map((m, i) => (
                     <li key={i} className="flex items-center gap-2 rounded-lg bg-ink-3/60 p-2 text-t-xs">
-                      <span className={`rounded-full px-2 py-0.5 font-bold ${MOVE_TONE[m.type] || "bg-ink-3 text-text-dim"}`}>{m.typeLabel}</span>
+                      <span className={`rounded-none px-2 py-0.5 font-bold ${MOVE_TONE[m.type] || "bg-ink-3 text-text-dim"}`}>{m.typeLabel}</span>
                       <span className="tnum font-black">{fmtN(m.qty)}</span>
                       <span className="min-w-0 flex-1 truncate text-text-dim">{m.from} ← {m.to}</span>
                       <span className="text-text-dim">{fmtD(m.at)}</span>

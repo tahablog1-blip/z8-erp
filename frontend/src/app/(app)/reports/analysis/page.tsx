@@ -307,7 +307,7 @@ export default function ReportsAnalysisPage() {
       </div>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {Object.entries(s.byMethod).filter(([, v]) => v > 0).map(([m, v]) => (
-          <span key={m} className="rounded-full bg-ink-3 px-2.5 py-1 text-t-xs font-bold">
+          <span key={m} className="rounded-none bg-ink-3 px-2.5 py-1 text-t-xs font-bold">
             {m === "cash" ? "نقدي" : m === "card" ? "شبكة" : m === "transfer" ? "تحويل" : "آجل"}: <span className="tnum">{money(v)}</span>
           </span>
         ))}
@@ -339,18 +339,18 @@ export default function ReportsAnalysisPage() {
           <div className="flex flex-wrap items-center gap-1.5">
             {[7, 30, 90].map((d) => (
               <button key={d} onClick={() => { setCmpMonth(null); setCmpDays(d); }}
-                      className={`m3 rounded-full px-3 py-1.5 text-t-xs font-bold transition
+                      className={`m3 rounded-none px-3 py-1.5 text-t-xs font-bold transition
                         ${!cmpMonth && cmpDays === d ? "bg-petrol text-white" : "border border-line bg-ink-2 text-text-dim hover:border-petrol"}`}>
                 {d === 7 ? "أسبوع" : d === 30 ? "30 يوم" : "90 يوم"}
               </button>
             ))}
             <button onClick={() => setCmpMonth(thisMonth)}
-                    className={`m3 rounded-full px-3 py-1.5 text-t-xs font-bold transition
+                    className={`m3 rounded-none px-3 py-1.5 text-t-xs font-bold transition
                       ${cmpMonth ? "bg-petrol text-white" : "border border-line bg-ink-2 text-text-dim hover:border-petrol"}`}>
               الشهر التقويمي
             </button>
             {cmpMonth && (
-              <span className="flex items-center gap-1 rounded-full border border-line bg-ink-2 px-1.5 py-1">
+              <span className="flex items-center gap-1 rounded-none border border-line bg-ink-2 px-1.5 py-1">
                 <button onClick={() => shiftMonth(-1)}
                         className="m3 grid h-6 w-6 place-items-center rounded-full text-t-md font-black text-text-dim hover:text-petrol">‹</button>
                 <span className="tnum min-w-[92px] text-center text-t-xs font-black">
@@ -379,8 +379,8 @@ export default function ReportsAnalysisPage() {
                       {money(b.revenue)} ر.س · <span className="font-black text-emerald">ربح {money(b.grossProfit ?? 0)}</span> · {b.invoices} فاتورة · متوسط {money(b.avgInvoice)} · {b.carsServed} سيارة
                     </span>
                   </div>
-                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-ink-3">
-                    <div className="h-full rounded-full bg-petrol transition-all duration-500"
+                  <div className="mt-1 h-2 overflow-hidden rounded-none bg-ink-3">
+                    <div className="h-full rounded-none bg-petrol transition-all duration-500"
                          style={{ width: `${max ? (b.revenue / max) * 100 : 0}%` }} />
                   </div>
                 </div>
@@ -455,7 +455,7 @@ export default function ReportsAnalysisPage() {
                   <div className="mb-1.5 text-t-xs text-text-dim">المقارنة مع {cmpData.prevFrom} → {cmpData.prevTo}. لا تظهر نسبة التغيّر إذا كانت قيمة الفترة المقارنة صفراً.</div>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(cmpData.metrics).map(([k, m]) => (
-                      <span key={k} className="rounded-full border border-line bg-ink-2 px-3 py-1 text-t-xs font-bold">
+                      <span key={k} className="rounded-none border border-line bg-ink-2 px-3 py-1 text-t-xs font-bold">
                         {METRIC_AR[k] ?? k}: <span className="tnum">{k === "invoiceCount" ? m.cur : money(m.cur)}</span>{" "}
                         {m.pct == null ? <span className="text-text-dim">(لا أساس للمقارنة)</span>
                           : <span className={m.pct >= 0 ? "text-emerald" : "text-ember"} dir="ltr">{m.pct >= 0 ? "↑" : "↓"} {Math.abs(m.pct).toFixed(1)}%</span>}
@@ -591,8 +591,8 @@ export default function ReportsAnalysisPage() {
                             <td className="tnum px-3 py-2.5 text-center font-bold">{r.checking || "—"}</td>
                             <td className="tnum px-3 py-2.5 text-center font-black text-petrol">{r.totalCars}</td>
                             <td className="px-3 py-2.5">
-                              <div className="h-2 w-full min-w-[80px] overflow-hidden rounded-full bg-ink-3">
-                                <div className="h-full rounded-full bg-petrol transition-all duration-500"
+                              <div className="h-2 w-full min-w-[80px] overflow-hidden rounded-none bg-ink-3">
+                                <div className="h-full rounded-none bg-petrol transition-all duration-500"
                                      style={{ width: `${(r.totalCars / max) * 100}%` }} />
                               </div>
                             </td>

@@ -15,8 +15,8 @@ export function HBars({ rows, color = "var(--petrol)" }: { rows: HBarRow[]; colo
               <span className="truncate font-bold">{r.label}</span>
               <span className="tnum shrink-0 font-extrabold">{r.display}</span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-ink-3">
-              <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${(Math.abs(r.value) / max) * 100}%`, background: r.color ?? color }} />
+            <div className="h-1.5 overflow-hidden rounded-none bg-ink-3">
+              <div className="h-full rounded-none transition-[width] duration-500" style={{ width: `${(Math.abs(r.value) / max) * 100}%`, background: r.color ?? color }} />
             </div>
             {r.sub && <div className="mt-1 text-t-xs text-text-dim">{r.sub}</div>}
           </>

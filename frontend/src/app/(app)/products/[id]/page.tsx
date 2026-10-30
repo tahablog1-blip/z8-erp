@@ -182,9 +182,9 @@ export default function ProductProfilePage() {
             {d.trend && (
               <Card title="اتجاه المبيعات" icon="monitoring" actions={
                 <div className="flex gap-1.5">
-                  {(["daily", "weekly", "monthly"] as const).map((x) => <button key={x} onClick={() => setTrendKey(x)} aria-pressed={trendKey === x} className={`rounded-full border px-2.5 py-1 text-t-xs font-bold ${trendKey === x ? "border-petrol bg-petrol text-white" : "border-line text-text-dim"}`}>{{ daily: "يومي", weekly: "أسبوعي", monthly: "شهري" }[x]}</button>)}
+                  {(["daily", "weekly", "monthly"] as const).map((x) => <button key={x} onClick={() => setTrendKey(x)} aria-pressed={trendKey === x} className={`rounded-none border px-2.5 py-1 text-t-xs font-bold ${trendKey === x ? "border-petrol bg-petrol text-white" : "border-line text-text-dim"}`}>{{ daily: "يومي", weekly: "أسبوعي", monthly: "شهري" }[x]}</button>)}
                   <span className="mx-1 w-px bg-line" />
-                  {(["revenue", "qty"] as const).map((x) => <button key={x} onClick={() => setTrendMetric(x)} aria-pressed={trendMetric === x} className={`rounded-full border px-2.5 py-1 text-t-xs font-bold ${trendMetric === x ? "border-petrol bg-petrol text-white" : "border-line text-text-dim"}`}>{x === "revenue" ? "الإيراد" : "الكمية"}</button>)}
+                  {(["revenue", "qty"] as const).map((x) => <button key={x} onClick={() => setTrendMetric(x)} aria-pressed={trendMetric === x} className={`rounded-none border px-2.5 py-1 text-t-xs font-bold ${trendMetric === x ? "border-petrol bg-petrol text-white" : "border-line text-text-dim"}`}>{x === "revenue" ? "الإيراد" : "الكمية"}</button>)}
                 </div>}>
                 {trend.values.length === 0 ? <p className="py-8 text-center text-t-sm text-text-dim">لا مبيعات في هذه الفترة</p> :
                   <AreaChart ariaLabel="اتجاه المبيعات" labels={trend.labels} height={220} formatValue={(n) => (trendMetric === "revenue" ? fmtCurrency(n, 2) : fmtMoney(n, 0))} formatTick={fmtCompact}

@@ -51,7 +51,7 @@ export function MovementsPanel({ loc, period, product, onClearProduct, canCost }
                 <tr key={m.id} onClick={() => setDetail(m)} className="cursor-pointer border-t border-line hover:bg-ink-3/50">
                   <td className="p-2.5 text-t-xs text-text-dim">{fmtDT(m.at)}</td>
                   <td className="p-2.5 font-bold">{m.label}</td>
-                  <td className="p-2.5"><span className={`rounded-full px-2 py-0.5 text-t-xs font-bold ${MOVE_TONE[m.type] || "bg-ink-3"}`}>{m.typeLabel}</span></td>
+                  <td className="p-2.5"><span className={`rounded-none px-2 py-0.5 text-t-xs font-bold ${MOVE_TONE[m.type] || "bg-ink-3"}`}>{m.typeLabel}</span></td>
                   <td className="tnum p-2.5 font-black">{fmtN(m.qty)}</td>
                   <td className="p-2.5 text-t-xs">{m.from}</td><td className="p-2.5 text-t-xs">{m.to}</td>
                   <td className="tnum p-2.5 text-t-xs">{m.moveNo || "—"}</td><td className="p-2.5 text-t-xs">{m.user || "—"}</td>

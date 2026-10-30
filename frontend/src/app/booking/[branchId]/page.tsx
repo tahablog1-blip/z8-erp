@@ -394,7 +394,7 @@ function RegisterForm({ sType, initial, busy, err, branchId, lockPhone, onBack, 
         <button onClick={() => onBack(f)} className="flex items-center gap-1.5 rounded-lg bg-ink-3 px-3 py-1.5 text-t-sm font-black text-text hover:bg-ink-4 transition">
           <MIcon name="arrow_forward" className="!text-[15px]" /> رجوع
         </button>
-        <span className="rounded-full px-3 py-1 text-t-xs font-black text-white" style={{ background: NAVY }}>
+        <span className="rounded-none px-3 py-1 text-t-xs font-black text-white" style={{ background: NAVY }}>
           {TYPE_META[sType].title}
         </span>
       </div>
@@ -607,7 +607,7 @@ function ChatNoteCard({ n, labels }: { n: ChatNote; labels: Record<string, strin
   return (
     <div className="rounded-card border px-3.5 py-2.5" style={{ borderColor: "var(--brass-soft)", background: "var(--brass-soft)" }}>
       <div className="flex items-center justify-between gap-2">
-        <span className="rounded-full px-2.5 py-0.5 text-t-xs font-black" style={{ background: "var(--brass-soft)", color: "var(--brass)" }}>
+        <span className="rounded-none px-2.5 py-0.5 text-t-xs font-black" style={{ background: "var(--brass-soft)", color: "var(--brass)" }}>
           {labels[n.type] ?? n.type}
         </span>
         <span className="tnum text-t-xs font-bold" style={{ color: "var(--brass)" }}>{n.note_number}</span>
@@ -777,7 +777,7 @@ function ChatSection({ carId, urlToken }: { carId?: string | null; urlToken?: st
       <div className="flex flex-wrap gap-1.5">
         {QUICK_REPLIES.map((q) => (
           <button key={q} disabled={sending} onClick={() => sendMsg(q)}
-            className="rounded-full border px-3 py-1.5 text-t-xs font-black transition active:scale-[.97] disabled:opacity-40"
+            className="rounded-none border px-3 py-1.5 text-t-xs font-black transition active:scale-[.97] disabled:opacity-40"
             style={{ borderColor: LINE, color: NAVY, background: "var(--ink2)" }}>
             {q}
           </button>
@@ -1261,7 +1261,7 @@ function FilterPicker({ branchId, sel, setSel, carBrand, carModel, carYear, carC
                           <span className="block text-t-md font-black leading-snug" style={{ color: NAVY }}>{f.name}</span>
                           {f.spec && <span className="tnum text-t-xs font-bold" style={{ color: DIM }}>{f.spec}</span>}
                           {matchedFilter?.id === f.id && (
-                            <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-t-xs font-black"
+                            <span className="mt-0.5 inline-block rounded-none px-2 py-0.5 text-t-xs font-black"
                               style={{ background: GREEN, color: "var(--ink2)" }}>الأصلي لسيارتك</span>
                           )}
                         </span>
@@ -1583,7 +1583,7 @@ function ChatFab({ carId, urlToken }: { carId?: string | null; urlToken?: string
   return (
     <>
       <button onClick={() => setOpen(true)}
-        className="fixed bottom-5 left-5 z-40 flex items-center gap-2 rounded-full px-4 py-3.5 text-t-md font-black text-white shadow-xl transition active:scale-95"
+        className="fixed bottom-5 left-5 z-40 flex items-center gap-2 rounded-none px-4 py-3.5 text-t-md font-black text-white shadow-xl transition active:scale-95"
         style={{ background: GREEN }}>
         <MIcon name="support_agent" className="!text-[20px] text-white" />
         تحدث مع موظف الخدمة
@@ -1592,8 +1592,8 @@ function ChatFab({ carId, urlToken }: { carId?: string | null; urlToken?: string
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3" onClick={() => setOpen(false)}>
           <div className="w-full max-w-md rounded-card" onClick={(e) => e.stopPropagation()}>
             <div className="mb-2 flex justify-between px-1">
-              <span className="rounded-full bg-white/90 px-3 py-1 text-t-xs font-black" style={{ color: GREEN }}>● الموظف متاح خلال ساعات العمل</span>
-              <button onClick={() => setOpen(false)} className="flex items-center gap-1 rounded-full bg-white/90 px-3 py-1 text-t-sm font-black" style={{ color: NAVY }}><MIcon name="close" className="!text-[14px]" /> إغلاق</button>
+              <span className="rounded-none bg-white/90 px-3 py-1 text-t-xs font-black" style={{ color: GREEN }}>● الموظف متاح خلال ساعات العمل</span>
+              <button onClick={() => setOpen(false)} className="flex items-center gap-1 rounded-none bg-white/90 px-3 py-1 text-t-sm font-black" style={{ color: NAVY }}><MIcon name="close" className="!text-[14px]" /> إغلاق</button>
             </div>
             <div className="max-h-[75vh] overflow-y-auto">
               <ChatSection carId={carId} urlToken={urlToken} />
@@ -1852,7 +1852,7 @@ export default function PublicBookingPage() {
           <div className="text-t-xl font-black">مصدر الزيوت</div>
           <div className="text-t-sm text-white/70">{info?.branchName || "..."} — حجز الدور الذاتي</div>
           {info && view !== "ticket" && (
-            <div className="mx-auto mt-2 flex w-fit gap-4 rounded-full bg-white/10 px-4 py-1 text-t-xs font-bold">
+            <div className="mx-auto mt-2 flex w-fit gap-4 rounded-none bg-white/10 px-4 py-1 text-t-xs font-bold">
               <span>{info.waiting} منتظر</span><span>{info.inService} في الخدمة</span><span>~{info.estWaitMinutes} دقيقة</span>
             </div>
           )}

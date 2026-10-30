@@ -32,7 +32,7 @@ export function BranchPerformance({ data, loading, activeId, onPick }: { data: E
                 <tr key={r.id} className={`border-b border-line/60 last:border-0 ${activeId === r.id ? "bg-petrol-soft" : ""}`}>
                   <td className="py-2 pe-2">
                     <button onClick={() => onPick(activeId === r.id ? null : r.id)} title={d("branches.open")} className="text-start font-bold text-petrol hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-petrol">{r.name}</button>
-                    <div className="mt-1 h-1 w-full max-w-[120px] overflow-hidden rounded-full bg-ink-3"><div className="h-full rounded-full bg-petrol" style={{ width: `${best ? (r.sales / best) * 100 : 0}%` }} /></div>
+                    <div className="mt-1 h-1 w-full max-w-[120px] overflow-hidden rounded-none bg-ink-3"><div className="h-full rounded-none bg-petrol" style={{ width: `${best ? (r.sales / best) * 100 : 0}%` }} /></div>
                   </td>
                   <td className="tnum px-2 py-2 text-end font-extrabold">{fmtCurrency(r.sales)}</td>
                   <td className="tnum px-2 py-2 text-end">{r.transactions}</td>

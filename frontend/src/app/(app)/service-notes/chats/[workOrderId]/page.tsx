@@ -255,13 +255,13 @@ export default function ChatRoomPage() {
           <input value={text} onChange={(e) => setText(e.target.value)}
                  onKeyDown={(e) => { if (e.key === "Enter") sendText(); }}
                  placeholder="اكتب رسالة…" maxLength={2000}
-                 className="min-w-0 flex-1 rounded-full border border-line bg-ink px-4 py-2.5 text-t-md font-bold outline-none focus:border-petrol" />
-          <Button disabled={busy || !text.trim()} onClick={sendText} className="!rounded-full gap-1">
+                 className="min-w-0 flex-1 rounded-none border border-line bg-ink px-4 py-2.5 text-t-md font-bold outline-none focus:border-petrol" />
+          <Button disabled={busy || !text.trim()} onClick={sendText} className="!rounded-none gap-1">
             {busy ? "…" : <>إرسال <MIcon name="send" className="!text-[15px]" /></>}
           </Button>
         </div>
       ) : (
-        <div className="flex items-center gap-2 rounded-full bg-ember-bg px-4 py-2.5">
+        <div className="flex items-center gap-2 rounded-none bg-ember-bg px-4 py-2.5">
           <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-ember" />
           <span className="tnum min-w-0 flex-1 text-t-sm font-black text-ember">جارِ التسجيل… {recSec} ث / 60</span>
           <Button disabled={busy} onClick={() => stopRec(true)}>إيقاف وإرسال</Button>

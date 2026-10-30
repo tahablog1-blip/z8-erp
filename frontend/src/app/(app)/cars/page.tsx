@@ -123,7 +123,7 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
       {[{ n: 1, t: "الشركة" }, { n: 2, t: "الزيت" }, { n: 3, t: "الفلتر" }, { n: 4, t: "التأكيد" }].map((st, i) => (
         <div key={st.n} className="flex items-center gap-1.5">
           {i > 0 && <span className="h-px w-4 bg-line" />}
-          <span className={`flex h-6 items-center gap-1 rounded-full px-2.5 transition-all duration-300
+          <span className={`flex h-6 items-center gap-1 rounded-none px-2.5 transition-all duration-300
               ${current === st.n ? "bg-petrol text-white" : current > st.n ? "bg-emerald-bg text-emerald" : "bg-ink-3 text-text-dim"}`}>
             {current > st.n ? <MIcon name="check" className="!text-[13px]" /> : st.n} {st.t}
           </span>
@@ -281,7 +281,7 @@ function OilKiosk({ carId, onDone }: { carId: string; onDone: () => void }) {
               <div className="rounded-card p-[2px] shadow-panel"
                    style={{ background: "linear-gradient(135deg, var(--emerald), var(--petrol-deep))" }}>
                 <div className="flex flex-col items-center gap-2.5 rounded-card bg-emerald-bg px-5 py-6">
-                  <span className="flex items-center gap-1.5 rounded-full bg-emerald px-3.5 py-1 text-t-sm font-black text-white">
+                  <span className="flex items-center gap-1.5 rounded-none bg-emerald px-3.5 py-1 text-t-sm font-black text-white">
                     <MIcon name="auto_awesome" className="!text-[16px] text-white" /> مقترحنا لسيارتك
                   </span>
                   <ProductImg p={recOil} big />
@@ -451,7 +451,7 @@ function StatusPill({ tone, icon, children, pulse }: {
     neutral: { bg: "var(--ink3)", fg: "var(--text-dim)" },
   }[tone];
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-t-xs font-bold transition-colors duration-200"
+    <span className="inline-flex items-center gap-1.5 rounded-none px-2.5 py-1 text-t-xs font-bold transition-colors duration-200"
           style={{ background: map.bg, color: map.fg }}>
       {pulse && <span className="relative flex h-1.5 w-1.5">
         <span className="absolute h-full w-full animate-ping rounded-full opacity-60" style={{ background: map.fg }} />
@@ -1736,7 +1736,7 @@ export default function CarsPage() {
                        style={{ background: "var(--ink3)" }}>
                     <span className="text-t-sm font-black text-text">المراقب التلقائي (الكل)</span>
                     <button onClick={toggleGateSw} disabled={gateSwOn === null || gateSwBusy}
-                            className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50"
+                            className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-none transition-colors disabled:opacity-50"
                             style={{ background: gateSwOn ? UI.success : "var(--ink4)" }}>
                       <span className="absolute h-5 w-5 rounded-full bg-ink-2 shadow transition-all"
                             style={{ right: gateSwOn ? "2px" : "22px" }} />
@@ -1759,7 +1759,7 @@ export default function CarsPage() {
                           {c.last && <span className="tnum shrink-0 text-t-xs text-text-dim">{c.last}</span>}
                         </span>
                         <button onClick={() => toggleCam(c.id, !c.is_active)}
-                                className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
+                                className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-none transition-colors"
                                 style={{ background: c.is_active ? UI.success : "var(--ink4)" }}>
                           <span className="absolute h-5 w-5 rounded-full bg-ink-2 shadow transition-all"
                                 style={{ right: c.is_active ? "2px" : "22px" }} />
@@ -1855,7 +1855,7 @@ export default function CarsPage() {
             <h2 className="flex items-center gap-2 text-t-md font-extrabold text-text">
               <span style={{ color: UI.primary }}><MIcon name="build" className="!text-[17px]" /></span> في الخدمة
             </h2>
-            <span className="tnum rounded-full px-2.5 py-0.5 text-t-sm font-black" style={{ background: "var(--petrol-soft)", color: UI.primary }}>{inService.length}</span>
+            <span className="tnum rounded-none px-2.5 py-0.5 text-t-sm font-black" style={{ background: "var(--petrol-soft)", color: UI.primary }}>{inService.length}</span>
           </div>
           <div className="max-h-56 divide-y overflow-y-auto" style={{ borderColor: UI.border }}>
             {inService.length === 0 ? (
@@ -1879,8 +1879,8 @@ export default function CarsPage() {
                     </div>
                   </div>
                   <div className="mt-1.5 flex items-center gap-2">
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink-3">
-                      <div className="h-full rounded-full transition-all duration-500"
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-none bg-ink-3">
+                      <div className="h-full rounded-none transition-all duration-500"
                            style={{ width: `${p.pct}%`, background: p.ready ? UI.success : UI.primary }} />
                     </div>
                     <span className="tnum shrink-0 text-t-xs font-bold text-text-dim">{p.finished}/{p.total}</span>
@@ -1952,7 +1952,7 @@ export default function CarsPage() {
                 [1, 2, 3].map((i) => (
                   <tr key={i} className="border-b" style={{ borderColor: UI.border }}>
                     {Array.from({ length: 8 }).map((_, j) => (
-                      <td key={j} className="px-4 py-4"><div className="h-3.5 animate-pulse rounded-full bg-ink-3" /></td>
+                      <td key={j} className="px-4 py-4"><div className="h-3.5 animate-pulse rounded-none bg-ink-3" /></td>
                     ))}
                   </tr>
                 ))
@@ -2194,8 +2194,8 @@ export default function CarsPage() {
             return (
               <div>
                 <div className="flex items-center gap-2">
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-ink-3">
-                    <div className={`h-full rounded-full transition-all duration-500 ${ready ? "bg-emerald" : "bg-petrol"}`}
+                  <div className="h-2 flex-1 overflow-hidden rounded-none bg-ink-3">
+                    <div className={`h-full rounded-none transition-all duration-500 ${ready ? "bg-emerald" : "bg-petrol"}`}
                          style={{ width: `${Math.round((fin / CHECKPOINTS.length) * 100)}%` }} />
                   </div>
                   <span className="tnum text-t-xs font-bold text-text-dim">{fin}/{CHECKPOINTS.length}</span>
@@ -2252,7 +2252,7 @@ export default function CarsPage() {
               {workLog.length > 0 && (
                 <span className="flex flex-wrap justify-end gap-1">
                   {[...new Map(workLog.map((w) => [w.employee_name, w])).values()].map((w) => (
-                    <span key={w.employee_name} className="rounded-full bg-emerald-bg px-2 py-0.5 text-t-xs font-black text-emerald">
+                    <span key={w.employee_name} className="rounded-none bg-emerald-bg px-2 py-0.5 text-t-xs font-black text-emerald">
                       {w.employee_name}
                     </span>
                   ))}

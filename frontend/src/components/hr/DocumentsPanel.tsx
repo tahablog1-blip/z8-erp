@@ -41,7 +41,7 @@ export function DocumentsPanel({ canManage, employees }: { canManage: boolean; e
     <Panel title="مستندات الموظفين" icon="folder_managed" actions={canManage && <Button size="sm" onClick={() => { setErr(""); setM({ employeeId: employees.find((e) => e.is_active)?.id ?? "", docType: DOC_TYPES[0], docNumber: "", issueDate: "", expiryDate: "", notes: "" }); }}>+ مستند</Button>}>
       <div className="mb-3 flex flex-wrap gap-1.5">
         {FILTERS.map(([k, l]) => <button key={k} type="button" aria-pressed={f === k} onClick={() => setF(k)}
-          className={`rounded-full border px-3 py-1 text-t-xs font-bold ${f === k ? "border-petrol bg-petrol-soft text-petrol" : "border-line text-text-dim"}`}>{l}</button>)}
+          className={`rounded-none border px-3 py-1 text-t-xs font-bold ${f === k ? "border-petrol bg-petrol-soft text-petrol" : "border-line text-text-dim"}`}>{l}</button>)}
       </div>
       <ErrorNote msg={error} />
       <DataTable columns={cols} rows={data ?? []} loading={loading} searchKeys={["employee_name", "doc_type"]} searchPlaceholder="بحث بالموظف أو نوع المستند..." emptyText="لا توجد مستندات" />
