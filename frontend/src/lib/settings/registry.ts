@@ -31,6 +31,8 @@ export const ITEMS: SettingsItem[] = [
     keywords: "طباعة طابعة طابعات فاتورة 80mm 80مم a4 حراري نسخ معاينة تذييل qr شعار" },
   { id: "cameras", group: "operations", title: "كاميرات المحطات", desc: "ربط الكاميرات بالمحطات وفحص قراءة اللوحات.", icon: "videocam", path: "/settings/cameras", perms: ["settings.company"],
     keywords: "كاميرا كاميرات محطة بوابة لوحات اتصال rtsp" },
+  { id: "terminal", group: "operations", title: "تابلت الكاشير", desc: "رموز دخول التابلت لكل فرع، ورموز الكاشيرين، والأجهزة المفعّلة وإيقافها.", icon: "tablet_android", path: "/settings/terminal", perms: ["settings.users"],
+    keywords: "تابلت كاشير رمز رموز جهاز أجهزة pos أندرويد تفعيل pin بطاقة" },
   { id: "security", group: "security", title: "الأمان وتسجيل الدخول", desc: "المصادقة الثنائية وكلمة المرور والجلسات والأجهزة المسجّلة.", icon: "verified_user", path: "/settings/security", perms: [],
     keywords: "أمان مصادقة ثنائية 2fa otp كلمة المرور جلسات أجهزة تسجيل الدخول" },
   { id: "audit-log", group: "security", title: "سجل المراجعة", desc: "من فعل ماذا ومتى في النظام.", icon: "history", path: "/settings/audit-log", perms: ["audit.view"],

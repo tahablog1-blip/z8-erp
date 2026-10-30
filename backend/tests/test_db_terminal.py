@@ -273,6 +273,8 @@ def test_admin_overview_and_devices(t):
     got = {c["kind"]: c["hasCode"] for c in main["codes"]}
     assert got == {"cashier": True, "service_notes": True, "cars": False, "workorder": False}
     assert all("code" not in c and "codeHash" not in c for c in main["codes"])      # الرمز لا يُرجَع أبداً
+    assert {c["fullName"]: c["hasPin"] for c in main["cashiers"]} == {"أحمد": True, "سارة": False}      # بطاقات الفرع مع حالة الرمز
+    assert [u["fullName"] for u in main["candidates"]["service_notes"]] == ["موظف ملاحظات"]            # من يصلح لقسم الملاحظات فقط
     enter(set_code(t))
     devs = run(lambda: svc().admin_devices(CO))
     assert devs[0]["name"] == "تابلت 1" and devs[0]["revoked"] is False

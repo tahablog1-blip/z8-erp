@@ -194,6 +194,18 @@ async def admin_overview(company_id: str) -> dict:
     codes = await fetch("""SELECT c.branch_id, c.kind, c.rotated_at, c.acts_as_user_id, u.full_name AS acts_as_name
                            FROM pos_access_codes c LEFT JOIN users u ON u.id=c.acts_as_user_id WHERE c.company_id=$1""", company_id)
     by = {(str(c["branch_id"]), c["kind"]): c for c in codes}
+    users = await fetch("SELECT id, full_name, branch_id, role, permissions FROM users WHERE company_id=$1 AND is_active=TRUE ORDER BY full_name", company_id)
+
+    def candidates(kind: str, branch_id: str) -> list[dict]:
+        """مستخدمون يصلحون ليعمل القسم باسمهم: يملكون صلاحية القسم (أو مدير) وفرعهم هذا الفرع أو بلا فرع"""
+        out = []
+        for u in users:
+            if u["branch_id"] is not None and str(u["branch_id"]) != branch_id:
+                continue
+            perms = u["permissions"] if isinstance(u["permissions"], list) else []
+            if u["role"] == "admin" or any(p in perms for p in KIND_PERMS[kind]):
+                out.append({"id": str(u["id"]), "fullName": u["full_name"]})
+        return out
     out = []
     for b in branches:
         items = []
@@ -202,7 +214,10 @@ async def admin_overview(company_id: str) -> dict:
             items.append({"kind": k, "label": KIND_LABEL[k], "hasCode": bool(c), "rotatedAt": c["rotated_at"] if c else None,
                           "actsAsUserId": str(c["acts_as_user_id"]) if c and c["acts_as_user_id"] else None,
                           "actsAsName": c["acts_as_name"] if c else None})
-        out.append({"branchId": str(b["id"]), "branchName": b["name"], "codes": items})
+        bid = str(b["id"])
+        out.append({"branchId": bid, "branchName": b["name"], "codes": items,
+                    "cashiers": await list_cashiers(company_id, bid),
+                    "candidates": {k: candidates(k, bid) for k in KINDS if k != "cashier"}})
     return {"branches": out}
 
 

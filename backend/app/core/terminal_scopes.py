@@ -4,7 +4,7 @@ _COMMON = ("/api/auth/me", "/api/auth/logout", "/api/terminal/", "/api/notificat
 
 SCOPE_PREFIXES: dict[str, tuple[str, ...]] = {
     "pos": _COMMON + ("/api/invoices", "/api/products", "/api/customers", "/api/shifts", "/api/cars", "/api/branches",
-                      "/api/price-lists", "/api/inventory/qty", "/api/settings/printing", "/api/settings/company",
+                      "/api/price-lists", "/api/inventory/qty", "/api/inventory/levels", "/api/settings/printing", "/api/settings/company",
                       "/api/settings/system", "/api/settings/design", "/api/service-notes/unread-count", "/api/treasury/summary"),
     "service_notes": _COMMON + ("/api/service-notes", "/api/customers", "/api/cars", "/api/branches", "/api/products"),
     "cars": _COMMON + ("/api/cars", "/api/customers", "/api/branches", "/api/products", "/api/auto-checkin", "/api/settings/printing"),
