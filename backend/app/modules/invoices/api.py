@@ -47,7 +47,9 @@ async def create_invoice(body: InvoiceCreate,
                     f"الرصيد الحالي {status['balance']:.2f} + هذه الفاتورة {credit_amount:.2f} ر.س. "
                     "راجع مشرفك لتجاوز الحد.")
 
-    inv = await service.create_invoice(user.company_id, user.user_id, user.email, body.model_dump())
+    data = body.model_dump()
+    data["deviceId"] = user.device_id        # جلسة تابلت الكاشير تتبع الجهاز
+    inv = await service.create_invoice(user.company_id, user.user_id, user.email, data)
 
     # 🎁 نقاط الولاء: اكتساب تلقائي حسب إجمالي الفاتورة — صفر تأثير لو معدّل
     # الاكتساب غير مفعّل من الإعدادات (0 الافتراضي)، وما بيعطّلش إصدار الفاتورة لو فشل

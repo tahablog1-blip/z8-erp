@@ -127,30 +127,36 @@ def redact_amounts(r: dict | None) -> dict | None:
     return out
 
 
-async def get_current(company_id: str, user_id: str) -> dict | None:
-    row = await fetchrow(
-        """SELECT s.id FROM shifts s
-           WHERE s.company_id=$1 AND s.user_id=$2 AND s.status='open'""",
-        company_id, user_id,
-    )
+async def get_current(company_id: str, user_id: str, device_id: str | None = None) -> dict | None:
+    if device_id:      # تابلت الكاشير: الجلسة المفتوحة على هذا الجهاز أياً كان من فتحها
+        row = await fetchrow("SELECT id FROM shifts WHERE company_id=$1 AND device_id=$2 AND status='open'", company_id, device_id)
+    else:
+        row = await fetchrow(
+            """SELECT s.id FROM shifts s
+               WHERE s.company_id=$1 AND s.user_id=$2 AND s.status='open'""",
+            company_id, user_id,
+        )
     if not row:
         return None
     return await _build_shift_report(company_id, str(row["id"]))
 
 
-async def open_shift(company_id: str, user_id: str, branch_id: str, opening_cash: float) -> dict:
+async def open_shift(company_id: str, user_id: str, branch_id: str, opening_cash: float, device_id: str | None = None) -> dict:
     async with transaction() as conn:
-        existing = await conn.fetchrow(
-            "SELECT id FROM shifts WHERE company_id=$1 AND user_id=$2 AND status='open'",
-            company_id, user_id,
-        )
+        if device_id:
+            existing = await conn.fetchrow("SELECT id FROM shifts WHERE company_id=$1 AND device_id=$2 AND status='open'", company_id, device_id)
+        else:
+            existing = await conn.fetchrow(
+                "SELECT id FROM shifts WHERE company_id=$1 AND user_id=$2 AND status='open'",
+                company_id, user_id,
+            )
         if existing:
-            raise HTTPException(409, "عندك جلسة مفتوحة بالفعل — اقفلها الأول")
+            raise HTTPException(409, "عندك جلسة مفتوحة بالفعل — اقفلها الأول" if not device_id else "على هذا الجهاز جلسة مفتوحة بالفعل — أكمل عليها أو أغلقها")
         row = await conn.fetchrow(
-            """INSERT INTO shifts (company_id, branch_id, user_id, opening_cash)
-               VALUES ($1,$2,$3,$4) RETURNING id, branch_id, user_id, opening_cash,
+            """INSERT INTO shifts (company_id, branch_id, user_id, opening_cash, device_id)
+               VALUES ($1,$2,$3,$4,$5) RETURNING id, branch_id, user_id, opening_cash,
                                                 opened_at, closed_at, status""",
-            company_id, branch_id, user_id, Decimal(str(opening_cash)),
+            company_id, branch_id, user_id, Decimal(str(opening_cash)), device_id,
         )
     out = dict(row)
     out["id"] = str(out["id"]); out["branch_id"] = str(out["branch_id"]); out["user_id"] = str(out["user_id"])
@@ -159,11 +165,12 @@ async def open_shift(company_id: str, user_id: str, branch_id: str, opening_cash
 
 
 async def close_shift(company_id: str, shift_id: str, counted_cash: float, notes: str | None,
-                      caller_id: str | None = None, can_close_any: bool = False) -> dict:
+                      caller_id: str | None = None, can_close_any: bool = False, device_id: str | None = None) -> dict:
     if caller_id and not can_close_any:
-        owner = await fetchrow("SELECT user_id FROM shifts WHERE id=$1 AND company_id=$2",
+        owner = await fetchrow("SELECT user_id, device_id FROM shifts WHERE id=$1 AND company_id=$2",
                                shift_id, company_id)
-        if owner and str(owner["user_id"]) != caller_id:
+        same_device = bool(device_id and owner and owner["device_id"] and str(owner["device_id"]) == device_id)
+        if owner and str(owner["user_id"]) != caller_id and not same_device:
             raise HTTPException(403, "لا يمكنك إغلاق جلسة موظف آخر")
     row = await fetchrow(
         "SELECT id FROM shifts WHERE id=$1 AND company_id=$2 AND status='open'",
@@ -226,11 +233,12 @@ async def list_shifts(company_id: str, viewer_id: str, can_view_branch: bool,
 
 
 async def get_report(company_id: str, shift_id: str,
-                     caller_id: str | None = None, can_view_any: bool = False) -> dict:
+                     caller_id: str | None = None, can_view_any: bool = False, device_id: str | None = None) -> dict:
     if caller_id and not can_view_any:
-        owner = await fetchrow("SELECT user_id FROM shifts WHERE id=$1 AND company_id=$2",
+        owner = await fetchrow("SELECT user_id, device_id FROM shifts WHERE id=$1 AND company_id=$2",
                                shift_id, company_id)
-        if owner and str(owner["user_id"]) != caller_id:
+        same_device = bool(device_id and owner and owner["device_id"] and str(owner["device_id"]) == device_id)
+        if owner and str(owner["user_id"]) != caller_id and not same_device:
             raise HTTPException(403, "لا يمكنك عرض تقرير جلسة موظف آخر")
     report = await _build_shift_report(company_id, shift_id)
     if not report:
@@ -238,12 +246,16 @@ async def get_report(company_id: str, shift_id: str,
     return report
 
 
-async def require_open_shift(company_id: str, user_id: str) -> str:
-    """تُستخدم من موديول الفواتير: بترجّع id الجلسة المفتوحة أو ترمي 409"""
-    row = await fetchrow(
-        "SELECT id FROM shifts WHERE company_id=$1 AND user_id=$2 AND status='open'",
-        company_id, user_id,
-    )
+async def require_open_shift(company_id: str, user_id: str, device_id: str | None = None) -> str:
+    """تُستخدم من موديول الفواتير: بترجّع id الجلسة المفتوحة أو ترمي 409.
+    على تابلت الكاشير الجلسة تتبع الجهاز (أي كاشير على نفس الجهاز يبيع على الجلسة المفتوحة)."""
+    if device_id:
+        row = await fetchrow("SELECT id FROM shifts WHERE company_id=$1 AND device_id=$2 AND status='open'", company_id, device_id)
+    else:
+        row = await fetchrow(
+            "SELECT id FROM shifts WHERE company_id=$1 AND user_id=$2 AND status='open'",
+            company_id, user_id,
+        )
     if not row:
         raise HTTPException(409, "لازم تفتح جلسة الأول قبل ما تقدر تصدر فواتير")
     return str(row["id"])

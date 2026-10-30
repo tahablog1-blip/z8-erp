@@ -74,7 +74,7 @@ async def create_invoice(company_id: str, user_id: str, user_email: str, d: dict
     async with transaction() as conn:
         async with conn.transaction():
             # 0) لازم جلسة مفتوحة قبل أي بيع
-            shift_id = await require_open_shift(company_id, user_id)
+            shift_id = await require_open_shift(company_id, user_id, d.get("deviceId"))
 
             # 1) الإجماليات — مع خصم البند (على القيمة شاملة الضريبة، والباقي يُشتق بنفس نسبة الضريبة)
             item_discount_total = sum(accounting.dec(it.get("discountAmount", 0)) for it in d["items"])
