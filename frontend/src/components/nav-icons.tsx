@@ -6,6 +6,10 @@ const MAP: Record<string, string> = {
   dashboard: "space_dashboard",
   sales: "point_of_sale",
   invoices: "receipt_long",
+  direct_sales: "shopping_cart_checkout",   // البيع المباشر (مميّزة عن نقطة بيع الخدمة)
+  prepare: "assignment",                    // إعداد أوامر العمل
+  service_notes: "forum",                   // مركز ملاحظات الخدمة (محادثات وملاحظات)
+  stocktake: "fact_check",                  // الجرد الفعلي (مميّزة عن المخزون)
   car: "directions_car",
   customers: "group",
   products: "inventory_2",

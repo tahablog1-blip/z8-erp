@@ -24,18 +24,18 @@ export const NAV_MODULES: NavModule[] = [
   // ── الرئيسية (خارج القوائم المنسدلة — دايماً ظاهرة) ──
   { path: "/dashboard",     title: "لوحة القيادة",   icon: "dashboard", section: "الرئيسية", permissions: ["reports.view", "reports.sales", "accounting.view_reports", "invoices.view_all", "products.view_stock"] },
   { path: "/sales",         title: "نقطة بيع الخدمة", icon: "sales", section: "الرئيسية", permissions: ["invoices.create", "invoices.create_service"] },
-  { path: "/sales/direct",  title: "البيع المباشر",   icon: "sales", section: "الرئيسية", permissions: ["invoices.create", "invoices.create_direct"] },
+  { path: "/sales/direct",  title: "البيع المباشر",   icon: "direct_sales", section: "الرئيسية", permissions: ["invoices.create", "invoices.create_direct"] },
 
   // ── العمليات اليومية ──
-  { path: "/prepare",       title: "إعداد أوامر العمل", icon: "invoices", section: "العمليات", permissions: ["invoices.prepare"] },
-  { path: "/service-notes", title: "مركز ملاحظات الخدمة", icon: "invoices", section: "العمليات", permissions: ["service_notes.view", "service_notes.create", "service_notes.manage"] },
+  { path: "/prepare",       title: "إعداد أوامر العمل", icon: "prepare", section: "العمليات", permissions: ["invoices.prepare"] },
+  { path: "/service-notes", title: "مركز ملاحظات الخدمة", icon: "service_notes", section: "العمليات", permissions: ["service_notes.view", "service_notes.create", "service_notes.manage"] },
   { path: "/sales/history", title: "سجل الفواتير",   icon: "invoices", section: "العمليات", permissions: ["invoices.view_today", "invoices.view_all"] },
   { path: "/cars",          title: "خط الخدمة",      icon: "car", section: "العمليات", permissions: ["cars.create", "cars.confirm_entry", "cars.confirm_exit"] },
   { path: "/customers",     title: "العملاء",        icon: "customers", section: "العمليات", permissions: ["customers.create", "customers.edit", "customers.view_statement"] },
 
   // ── المخزون والمشتريات ──
   { path: "/products",   title: "الأصناف",        icon: "products", section: "المخزون والمشتريات", permissions: ["products.create", "products.edit", "products.view_stock"] },
-  { path: "/inventory/stocktake", title: "الجرد الفعلي", icon: "inventory", section: "المخزون والمشتريات", permissions: ["inventory.stocktake"] },
+  { path: "/inventory/stocktake", title: "الجرد الفعلي", icon: "stocktake", section: "المخزون والمشتريات", permissions: ["inventory.stocktake"] },
   { path: "/inventory",  title: "المخزون",        icon: "inventory", section: "المخزون والمشتريات", permissions: ["products.view_stock"] },
   { path: "/suppliers",  title: "الموردون",       icon: "suppliers", section: "المخزون والمشتريات", permissions: ["purchasing.suppliers"] },
   { path: "/purchases",  title: "المشتريات",      icon: "purchases", section: "المخزون والمشتريات", permissions: ["purchasing.invoices"] },
