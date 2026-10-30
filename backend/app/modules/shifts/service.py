@@ -13,7 +13,7 @@ def _num(v) -> float:
 
 
 async def _build_shift_report(company_id: str, shift_id: str) -> dict | None:
-    """يبني تقرير الوردية المفصّل — نفس الدالة تُستخدم عند العرض وعند الإغلاق"""
+    """يبني تقرير الجلسة المفصّل — نفس الدالة تُستخدم عند العرض وعند الإغلاق"""
     shift = await fetchrow(
         """SELECT s.*, b.name AS branch_name, u.full_name AS user_name
            FROM shifts s JOIN branches b ON b.id = s.branch_id JOIN users u ON u.id = s.user_id
@@ -23,7 +23,7 @@ async def _build_shift_report(company_id: str, shift_id: str) -> dict | None:
     if not shift:
         return None
 
-    # إجماليات الفواتير في الوردية (المرتجعة بالكامل مستبعدة من المبيعات)
+    # إجماليات الفواتير في الجلسة (المرتجعة بالكامل مستبعدة من المبيعات)
     sales = await fetchrow(
         """SELECT COUNT(*)::int AS invoice_count,
                   COALESCE(SUM(total_ex),0)::numeric(12,2)  AS total_ex,
@@ -45,7 +45,7 @@ async def _build_shift_report(company_id: str, shift_id: str) -> dict | None:
     for r in pay_rows:
         by_method[r["method"]] = _num(r["amount"])
 
-    # المرتجعات خلال الوردية (حسب وقت إنشاء المرتجع نفسه، مش وقت الفاتورة الأصلية)
+    # المرتجعات خلال الجلسة (حسب وقت إنشاء المرتجع نفسه، مش وقت الفاتورة الأصلية)
     returns = await fetchrow(
         """SELECT COUNT(*)::int AS return_count,
                   COALESCE(SUM(total_inc),0)::numeric(12,2) AS total_inc,
@@ -69,7 +69,7 @@ async def _build_shift_report(company_id: str, shift_id: str) -> dict | None:
     counted_cash = None if shift["closing_cash_counted"] is None else _num(shift["closing_cash_counted"])
     difference = None if counted_cash is None else round(counted_cash - expected_cash, 2)
 
-    # أكثر الأصناف مبيعاً في الوردية
+    # أكثر الأصناف مبيعاً في الجلسة
     top_items = await fetch(
         """SELECT ii.label, SUM(ii.qty)::int AS qty, COALESCE(SUM(ii.line_inc),0)::numeric(12,2) AS total
            FROM invoice_items ii JOIN invoices i ON i.id = ii.invoice_id
@@ -128,7 +128,7 @@ async def open_shift(company_id: str, user_id: str, branch_id: str, opening_cash
             company_id, user_id,
         )
         if existing:
-            raise HTTPException(409, "عندك وردية مفتوحة بالفعل — اقفلها الأول")
+            raise HTTPException(409, "عندك جلسة مفتوحة بالفعل — اقفلها الأول")
         row = await conn.fetchrow(
             """INSERT INTO shifts (company_id, branch_id, user_id, opening_cash)
                VALUES ($1,$2,$3,$4) RETURNING id, branch_id, user_id, opening_cash,
@@ -147,13 +147,13 @@ async def close_shift(company_id: str, shift_id: str, counted_cash: float, notes
         owner = await fetchrow("SELECT user_id FROM shifts WHERE id=$1 AND company_id=$2",
                                shift_id, company_id)
         if owner and str(owner["user_id"]) != caller_id:
-            raise HTTPException(403, "لا يمكنك إغلاق وردية موظف آخر")
+            raise HTTPException(403, "لا يمكنك إغلاق جلسة موظف آخر")
     row = await fetchrow(
         "SELECT id FROM shifts WHERE id=$1 AND company_id=$2 AND status='open'",
         shift_id, company_id,
     )
     if not row:
-        raise HTTPException(404, "الوردية غير موجودة أو مقفولة بالفعل")
+        raise HTTPException(404, "الجلسة غير موجودة أو مقفولة بالفعل")
 
     await execute(
         """UPDATE shifts SET status='closed', closed_at=now(),
@@ -169,7 +169,7 @@ async def close_shift(company_id: str, shift_id: str, counted_cash: float, notes
         user_name = report["shift"].get("user_name") or ""
         await notify.notify_users_with_permission(
             company_id, "shifts.view_branch", "shift_cash_variance",
-            f"فرق صندوق في وردية {user_name}".strip(),
+            f"فرق صندوق في جلسة {user_name}".strip(),
             body=f"المتوقع {report['cash']['expected']} — المعدود {report['cash']['counted']} "
                  f"— الفرق {diff:+.2f} ر.س",
             link="/shifts", severity="danger",
@@ -180,8 +180,8 @@ async def close_shift(company_id: str, shift_id: str, counted_cash: float, notes
 
 async def list_shifts(company_id: str, viewer_id: str, can_view_branch: bool,
                       branch_scope: str | None) -> list[dict]:
-    """عزل الرؤية: بلا صلاحية عرض الفرع = ورديات الموظف نفسه فقط؛
-    بصلاحية عرض الفرع = ورديات فرعه فقط (None = إدارة الشركة كلها)."""
+    """عزل الرؤية: بلا صلاحية عرض الفرع = جلسات الموظف نفسه فقط؛
+    بصلاحية عرض الفرع = جلسات فرعه فقط (None = إدارة الشركة كلها)."""
     conds, args = ["s.company_id=$1"], [company_id]
     if not can_view_branch:
         args.append(viewer_id)
@@ -214,19 +214,19 @@ async def get_report(company_id: str, shift_id: str,
         owner = await fetchrow("SELECT user_id FROM shifts WHERE id=$1 AND company_id=$2",
                                shift_id, company_id)
         if owner and str(owner["user_id"]) != caller_id:
-            raise HTTPException(403, "لا يمكنك عرض تقرير وردية موظف آخر")
+            raise HTTPException(403, "لا يمكنك عرض تقرير جلسة موظف آخر")
     report = await _build_shift_report(company_id, shift_id)
     if not report:
-        raise HTTPException(404, "الوردية غير موجودة")
+        raise HTTPException(404, "الجلسة غير موجودة")
     return report
 
 
 async def require_open_shift(company_id: str, user_id: str) -> str:
-    """تُستخدم من موديول الفواتير: بترجّع id الوردية المفتوحة أو ترمي 409"""
+    """تُستخدم من موديول الفواتير: بترجّع id الجلسة المفتوحة أو ترمي 409"""
     row = await fetchrow(
         "SELECT id FROM shifts WHERE company_id=$1 AND user_id=$2 AND status='open'",
         company_id, user_id,
     )
     if not row:
-        raise HTTPException(409, "لازم تفتح وردية الأول قبل ما تقدر تصدر فواتير")
+        raise HTTPException(409, "لازم تفتح جلسة الأول قبل ما تقدر تصدر فواتير")
     return str(row["id"])

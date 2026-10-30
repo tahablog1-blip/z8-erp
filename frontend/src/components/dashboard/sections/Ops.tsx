@@ -10,7 +10,7 @@ import { MIcon } from "@/components/m-icon";
 
 type Shift = { shift: { branch_name: string | null }; sales: { totalInc: number; invoiceCount: number } } | null;
 
-/** شريط التشغيل اللحظي: طابور الخدمة + وردية الكاشير الحالية */
+/** شريط التشغيل اللحظي: طابور الخدمة + جلسة الكاشير الحالية */
 export function OpsStrip({ data }: { data: Executive | null }) {
   const { d } = useDx();
   const { hasPerm } = useAuth();

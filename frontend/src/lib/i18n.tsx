@@ -183,11 +183,11 @@ const DICT: Record<string, { ar: string; en: string }> = {
     en: "Live Dashboard",
   },
   "dash.openShift": {
-    ar: "وردية مفتوحة",
+    ar: "جلسة مفتوحة",
     en: "Open Shift",
   },
   "dash.openShiftAction": {
-    ar: "افتح وردية",
+    ar: "افتح جلسة",
     en: "Open Shift",
   },
   "dash.askYourData": { ar: "اسأل بياناتك", en: "Ask your data" },

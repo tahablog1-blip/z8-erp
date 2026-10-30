@@ -1,4 +1,4 @@
-// modules/invoices/types.ts — عقود الفاتورة والوردية المشتركة بين الشاشات
+// modules/invoices/types.ts — عقود الفاتورة والجلسة المشتركة بين الشاشات
 
 export type PaymentMethod = "cash" | "card" | "transfer" | "credit";
 

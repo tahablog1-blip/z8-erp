@@ -1,5 +1,5 @@
 "use client";
-// شاشة المبيعات (نقطة البيع) — وردية + طابور فوترة + سلة + دفع مجزّأ + فواتير معلقة
+// شاشة المبيعات (نقطة البيع) — جلسة + طابور فوترة + سلة + دفع مجزّأ + فواتير معلقة
 // + طباعة حرارية 80مم بالـ QR (ZATCA) + سجل الفواتير — مطابقة لوظائف النظام القديم
 import { useEffect, useMemo, useState, useRef } from "react";
 import { usePathname } from "next/navigation";
@@ -72,7 +72,7 @@ export default function SalesPage() {
   const [loading, setLoading] = useState(true);
   const [pageErr, setPageErr] = useState("");
 
-  // ── فتح/إغلاق وردية ──
+  // ── فتح/إغلاق جلسة ──
   const [openBranchId, setOpenBranchId] = useState("");
   const [openingCash, setOpeningCash] = useState("0");
   const [closeModal, setCloseModal] = useState(false);
@@ -488,11 +488,11 @@ export default function SalesPage() {
           ["الفرق", money(r.cash.difference ?? 0)],
         ] : []),
       ], { numericCols: [1] });
-    printReport("تقرير وردية", `${r.shift.branch_name ?? ""}`, body);
+    printReport("تقرير جلسة", `${r.shift.branch_name ?? ""}`, body);
   }
 
 
-  // ══════════════════ الوردية ══════════════════
+  // ══════════════════ الجلسة ══════════════════
 
   async function openShift() {
     setShiftErr(""); setShiftBusy(true);
@@ -979,7 +979,7 @@ export default function SalesPage() {
     </>
   );
 
-  // ── صفحة "سجل الفواتير" (/sales/history): سجل كل الفواتير فقط — بدون نقطة البيع ولا شرط الوردية ──
+  // ── صفحة "سجل الفواتير" (/sales/history): سجل كل الفواتير فقط — بدون نقطة البيع ولا شرط الجلسة ──
   if (historyOnly) {
     if (!canViewInvoices)
       return <Card><div className="p-6 text-text-dim">لا تملك صلاحية عرض الفواتير</div></Card>;
@@ -993,7 +993,7 @@ export default function SalesPage() {
 
   if (loading) return <LoadingScreen />;
 
-  // ── لا توجد وردية مفتوحة: شاشة فتح وردية فقط ──
+  // ── لا توجد جلسة مفتوحة: شاشة فتح جلسة فقط ──
   if (!shift) {
     return (
       <div className="mx-auto max-w-md space-y-4">
@@ -1008,7 +1008,7 @@ export default function SalesPage() {
       )}
         <Card>
           <p className="mb-3 text-t-md text-text-dim">
-            لازم تفتح وردية الأول قبل ما تقدر تصدر فواتير.
+            لازم تفتح جلسة الأول قبل ما تقدر تصدر فواتير.
           </p>
           <div className="space-y-3">
             <Field label="الفرع">
@@ -1022,7 +1022,7 @@ export default function SalesPage() {
             </Field>
             <ErrorNote msg={shiftErr} />
             <Button className="w-full justify-center" onClick={openShift} disabled={shiftBusy || !openBranchId}>
-              {shiftBusy ? "جارِ الفتح..." : "فتح الوردية"}
+              {shiftBusy ? "جارِ الفتح..." : "فتح الجلسة"}
             </Button>
           </div>
         </Card>
@@ -1034,7 +1034,7 @@ export default function SalesPage() {
 
   return (
     <div className="space-y-3">
-      {/* ══════════ الشريط العلوي: العنوان + الوردية + التبويبات ══════════ */}
+      {/* ══════════ الشريط العلوي: العنوان + الجلسة + التبويبات ══════════ */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <h1 className="page-title">{posTitle}</h1>
@@ -1052,17 +1052,17 @@ export default function SalesPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-        {/* حالة الوردية: لمبة + نشطة */}
+        {/* حالة الجلسة: لمبة + نشطة */}
         <div className="flex items-center gap-2 rounded-lg border border-line bg-ink-2 px-3 py-1.5 text-t-sm font-bold">
           <span className="relative flex h-2.5 w-2.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald opacity-60" />
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald" />
           </span>
-          الوردية: نشطة
+          الجلسة: نشطة
         </div>
-        {/* الإعدادات — الوردية والتقارير والتفضيلات كلها هنا */}
+        {/* الإعدادات — الجلسة والتقارير والتفضيلات كلها هنا */}
         <div className="relative">
-          <button onClick={() => setGearOpen((v) => !v)} aria-label="الإعدادات" title="الإعدادات — الوردية والتقارير"
+          <button onClick={() => setGearOpen((v) => !v)} aria-label="الإعدادات" title="الإعدادات — الجلسة والتقارير"
                   className="flex items-center justify-center rounded-none p-1.5 transition hover:rotate-45"
                   style={{ color: "var(--text-dim)" }}>
             <MIcon name="settings" className="!text-[24px]" />
@@ -1073,18 +1073,18 @@ export default function SalesPage() {
                 <div className="flex items-center justify-between text-t-sm font-bold">
                   <span className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full bg-emerald" />
-                    وردية {shift.shift.branch_name} — نشطة
+                    جلسة {shift.shift.branch_name} — نشطة
                   </span>
                   <b className="tnum">{money(shift.sales.totalInc)}</b>
                 </div>
                 <div className="flex gap-1.5">
                   <Button variant="ghost" size="xs" className="flex-1 justify-center"
                           onClick={() => { printShiftReport(shift); setGearOpen(false); }}>
-                    تقرير الوردية
+                    تقرير الجلسة
                   </Button>
                   <Button variant="danger" size="xs" className="flex-1 justify-center"
                           onClick={() => { setCountedCash(""); setCloseNotes(""); setShiftErr(""); setCloseModal(true); setGearOpen(false); }}>
-                    إغلاق الوردية
+                    إغلاق الجلسة
                   </Button>
                 </div>
               </div>
@@ -1829,8 +1829,8 @@ export default function SalesPage() {
         )}
       </Modal>
 
-      {/* ══════════ إغلاق الوردية ══════════ */}
-      <Modal open={closeModal} onClose={() => setCloseModal(false)} title="إغلاق الوردية">
+      {/* ══════════ إغلاق الجلسة ══════════ */}
+      <Modal open={closeModal} onClose={() => setCloseModal(false)} title="إغلاق الجلسة">
         <div className="space-y-3">
           <div className="rounded-lg bg-ink-3 p-3 text-t-sm">
             <div className="flex justify-between"><span className="text-text-dim">النقد المتوقع في الدرج</span>

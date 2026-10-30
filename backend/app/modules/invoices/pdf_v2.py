@@ -238,7 +238,7 @@ async def build_invoice_pdf_v2(company_id: str, invoice_id: str) -> bytes:
     pay_rows += [("الإجمالي", _num(_money(total_inc)), True), ("المدفوع", _num(_money(paid_total)), True),
                  ("المتبقي", _num(_money(credit_total)), True)]
     extra = _kv([("نوع العملية", "فاتورة خدمة" if inv["source"] == "car" else "بيع مباشر", False), ("نقطة البيع", inv["branch_name"], False),
-                 ("الوردية", _num(str(inv["shift_id"])[:8]) if inv.get("shift_id") else "", True)])
+                 ("الجلسة", _num(str(inv["shift_id"])[:8]) if inv.get("shift_id") else "", True)])
     pay_card = (f'<div class="card"><h2>حالة الدفع <small>Payment</small></h2>{_kv(pay_rows)}'
                 + (f'<h2 style="margin-top:8px">معلومات إضافية <small>Additional</small></h2>{extra}' if extra else "") + '</div>')
     tot_rows = [("الإجمالي قبل الضريبة", _num(_money(total_ex)), True)]

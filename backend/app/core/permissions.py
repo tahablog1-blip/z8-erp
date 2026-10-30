@@ -67,9 +67,9 @@ PERMISSIONS = [
         {"key": "reports.cashiers", "label": "تقرير الكاشيرات"},
         {"key": "reports.view",     "label": "تقارير الإدارة المتقدمة (مقارنة الفروع والمساعد الذكي)"},
     ]},
-    {"group": "الورديات", "items": [
-        {"key": "shifts.manage_own",  "label": "إدارة ورديتي"},
-        {"key": "shifts.view_branch", "label": "ورديات الفرع"},
+    {"group": "الجلسات", "items": [
+        {"key": "shifts.manage_own",  "label": "إدارة جلستي"},
+        {"key": "shifts.view_branch", "label": "جلسات الفرع"},
     ]},
     {"group": "الموارد البشرية", "items": [
         {"key": "hr.view",          "label": "عرض الموظفين"},

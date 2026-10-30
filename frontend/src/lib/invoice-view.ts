@@ -76,7 +76,7 @@ export function buildInvoiceView(inv: InvoiceDetail): InvoiceView {
     extra: clean([
       pair("نوع العملية", inv.source === "car" ? "فاتورة خدمة" : "بيع مباشر"),
       pair("نقطة البيع", inv.branch_name),
-      pair("الوردية", inv.shift_id ? inv.shift_id.slice(0, 8) : null, true),
+      pair("الجلسة", inv.shift_id ? inv.shift_id.slice(0, 8) : null, true),
     ]),
     next,
   };

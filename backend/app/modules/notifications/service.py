@@ -1,6 +1,6 @@
 # modules/notifications/service.py — مركز الإشعارات: قراءة المستخدم لإشعاراته
 # الإنشاء نفسه (fan-out حسب الصلاحية) مركزي في core/notify.py، تستخدمه الموديولات
-# الأخرى (مخزون، مشتريات، ورديات...) مباشرة — هذا الملف للقراءة والتعليم كمقروء فقط.
+# الأخرى (مخزون، مشتريات، جلسات...) مباشرة — هذا الملف للقراءة والتعليم كمقروء فقط.
 from fastapi import HTTPException
 
 from ...core.db import execute, fetch, fetchrow
