@@ -375,8 +375,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ── مساحة العمل ── */}
-      <div className="flex min-w-0 flex-1 flex-col z8-h-screen p-2 sm:p-3 md:p-4">
-        <div className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border border-line elev-1 ${panelBgStyle(bg) ? "" : "bg-ink-2"}`}
+      <div className="flex min-w-0 flex-1 flex-col z8-h-screen">
+        <div className={`flex min-h-0 flex-1 flex-col overflow-hidden ${panelBgStyle(bg) ? "" : "bg-ink-2"}`}
              style={panelBgStyle(bg)}>
           <header className="flex h-14 shrink-0 items-center gap-1.5 border-b border-line px-3 sm:gap-2.5 sm:px-5">
             {/* زر القائمة — الشاشات الضيقة بس (موبايل/تابلت عمودي) */}
