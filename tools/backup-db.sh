@@ -25,10 +25,21 @@ chmod 700 "$BACKUP_DIR"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 OUT="$BACKUP_DIR/z8-$STAMP.dump"
 TMP="$OUT.partial"
-trap 'rm -f "$TMP"' EXIT
+trap 'rm -f "$TMP" "$TMP.err"' EXIT
 
 echo "==> نسخ احتياطي إلى $OUT"
-pg_dump --format=custom --compress=6 --no-owner --no-privileges --dbname="$DATABASE_URL" --file="$TMP"
+if ! pg_dump --format=custom --compress=6 --no-owner --no-privileges --dbname="$DATABASE_URL" --file="$TMP" 2>"$TMP.err"; then
+  # مستخدم التطبيق قد لا يملك صلاحية قراءة كل الجداول (permission denied for table ...) فتفشل النسخة الكاملة.
+  # عند التشغيل كـ root نعيد المحاولة بمستخدم postgres عبر المقبس المحلي (peer) — الكتابة تتم من هنا فلا يحتاج postgres صلاحية على المجلد.
+  if [ "$(id -u)" -eq 0 ] && id postgres >/dev/null 2>&1; then
+    DBNAME="$(printf '%s' "$DATABASE_URL" | sed -E 's#^[a-z]+://[^/]*/([^?]+).*#\1#')"
+    echo "! pg_dump بمستخدم التطبيق فشل ($(head -1 "$TMP.err")) — إعادة المحاولة بمستخدم postgres على القاعدة $DBNAME"
+    runuser -u postgres -- pg_dump --format=custom --compress=6 --no-owner --no-privileges --dbname="$DBNAME" > "$TMP"
+  else
+    cat "$TMP.err" >&2; rm -f "$TMP.err"; exit 1
+  fi
+fi
+rm -f "$TMP.err"
 pg_restore --list "$TMP" >/dev/null          # تحقق: الملف قابل للقراءة
 mv "$TMP" "$OUT"
 chmod 600 "$OUT"
