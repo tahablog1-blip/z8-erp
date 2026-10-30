@@ -259,12 +259,7 @@ a:focus-visible, [role="tab"]:focus-visible, summary:focus-visible {
 .z8-sidebar__close { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: var(--sb-text2); transition: background-color 150ms ease, color 150ms ease; }
 .z8-sidebar__close:hover { background: var(--sb-hover); color: var(--sb-text); }
 
-.z8-sidebar__nav { padding: 10px 0 12px; display: flex; flex-direction: column; gap: 6px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) transparent; }
-.z8-sidebar__nav::-webkit-scrollbar { width: 6px; }
-.z8-sidebar__nav::-webkit-scrollbar-track { background: transparent; }
-.z8-sidebar__nav::-webkit-scrollbar-button { display: none; width: 0; height: 0; }   /* بلا أسهم أعلى/أسفل الشريط */
-.z8-sidebar__nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 999px; }
-.z8-sidebar__nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.30); }
+.z8-sidebar__nav { padding: 10px 0 12px; display: flex; flex-direction: column; gap: 6px; scrollbar-width: none; -ms-overflow-style: none; }
 
 .z8-sidebar__group { display: flex; align-items: center; gap: 10px; width: 100%; height: 38px; padding: 0 16px; border-radius: 0;
   background: var(--sb-group); color: var(--sb-text); font-weight: 800; text-align: start;
@@ -276,6 +271,7 @@ a:focus-visible, [role="tab"]:focus-visible, summary:focus-visible {
 /* القسم الذي فيه الصفحة الحالية: الرأس والبنود كتلة واحدة ممتلئة */
 .z8-sidebar__group--current { background: var(--sb-hover); }
 .z8-sidebar__submenu.z8-sidebar__submenu--current { background: var(--sb-group); border-radius: 0; padding: 4px 0 6px; }
+.z8-sidebar__nav::-webkit-scrollbar { display: none; }   /* التمرير يعمل بالعجلة واللمس بلا شريط */
 .z8-sidebar__sep { height: 1px; margin: 8px 0; background: var(--sb-divider); }
 
 .z8-sidebar__submenu { display: flex; flex-direction: column; gap: 2px; overflow: hidden; transition: max-height 180ms ease, opacity 150ms ease; }
@@ -295,9 +291,6 @@ a:focus-visible, [role="tab"]:focus-visible, summary:focus-visible {
 .z8-sidebar__group:focus-visible, .z8-sidebar__item:focus-visible, .z8-sidebar__collapse:focus-visible, .z8-sidebar__close:focus-visible {
   outline: 2px solid var(--sb-text); outline-offset: -2px; }
 
-.z8-sidebar__user { display: flex; align-items: center; gap: 10px; margin: auto 10px 8px; padding: 10px 12px; border-radius: 10px; background: var(--sb-group); }
-.z8-sidebar__avatar { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 999px; background: var(--sb-active); color: var(--sb-text); font-weight: 800; }
-.z8-sidebar__user-name { color: var(--sb-text); }
 .z8-sidebar__footer { border-top: 1px solid var(--sb-divider); padding: 8px 10px; }
 .z8-sidebar__collapse { display: flex; align-items: center; gap: 10px; height: 36px; border-radius: 8px; color: var(--sb-text2); font-weight: 700;
   transition: background-color 150ms ease, color 150ms ease; }

@@ -353,30 +353,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* بطاقة الحساب — تملأ أسفل القائمة وتعرّف بالمستخدم الحالي */}
-        {user && (
-          <div className={`z8-sidebar__user ${collapsed ? "md:justify-center md:!px-0" : ""}`}>
-            <Tooltip label={`${user.fullName} — ${user.role === "admin" ? "مدير النظام" : "موظف"}`} side="end">
-              <div className="z8-sidebar__avatar" aria-hidden>{(user.fullName || "?").trim().charAt(0)}</div>
-            </Tooltip>
-            <div className={`min-w-0 flex-1 leading-tight ${collapsed ? "md:hidden" : ""}`}>
-              <div className="z8-sidebar__user-name truncate text-t-sm font-extrabold">{user.fullName}</div>
-              <div className="z8-sidebar__sub truncate text-t-xs">{user.role === "admin" ? "مدير النظام" : "موظف"}</div>
-            </div>
-          </div>
-        )}
-
         <div className="z8-sidebar__footer">
           <Tooltip label={collapsed ? "توسيع القائمة" : "طيّ القائمة"} side="end">
             <button onClick={toggleCollapsed}
-              className={`z8-sidebar__collapse hidden text-t-sm md:flex ${collapsed ? "md:w-10 md:justify-center md:mx-auto" : "w-full px-3"}`}>
+              aria-label={collapsed ? "توسيع القائمة" : "طيّ القائمة"}
+              className="z8-sidebar__collapse hidden w-full justify-center md:flex">
               <MIcon name={collapsed ? "right_panel_open" : "left_panel_close"} className="msr-18" />
-              {!collapsed && <span>طيّ القائمة</span>}
             </button>
           </Tooltip>
         </div>
         <div className={`z8-sidebar__version text-t-xs ${collapsed ? "hidden md:hidden" : ""}`}>
-          Z8 Platform · المرحلة 5 · {process.env.NEXT_PUBLIC_BUILD}
+          Z8 Platform · {process.env.NEXT_PUBLIC_BUILD}
         </div>
       </aside>
 
