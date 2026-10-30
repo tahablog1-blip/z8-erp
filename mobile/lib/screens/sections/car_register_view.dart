@@ -62,6 +62,7 @@ class _CarRegisterViewState extends State<CarRegisterView> {
       for (final c in [name, phone, letters, numbers, brand, model, year, color, odo, chassis, notes]) { c.clear(); }
       fuel = '';
       if (!mounted) return;
+      setState(() => busy = false);      // يتوقف مؤشر الانتظار قبل ظهور نافذة النجاح
       await showDialog<void>(context: context, builder: (c) => AlertDialog(
         title: Row(children: [const Icon(Icons.check_circle_rounded, color: Z8.emerald), const SizedBox(width: 10), Text('تم تسجيل السيارة', style: tx(Fs.lg, w: 800))]),
         content: Column(mainAxisSize: MainAxisSize.min, children: [Text('${r['plate'] ?? ''}', style: tx(Fs.x2, w: 800, tnum: true)), Text('رقم الدور #${r['queue_no'] ?? ''}', style: tx(Fs.md, color: Z8.textDim))]),

@@ -24,15 +24,19 @@ void main() {
     await t.tap(find.text('تسجيل السيارة في الدور')); await t.pumpAndSettle();
     expect(find.text('اسم العميل إجباري'), findsOneWidget);
     expect(box.carBody, isNull);
-    Future<void> fill(String label, String v) async { await t.enterText(find.widgetWithText(Column, label).last.evaluate().isEmpty ? find.byType(TextField).first : find.descendant(of: find.widgetWithText(Column, label).last, matching: find.byType(TextField)), v); }
-    await fill('اسم العميل *', 'محمد');
-    await fill('الجوال * (05xxxxxxxx)', '0512345678');
-    await fill('حروف اللوحة * (3 إنجليزي)', 'abc');
-    await fill('أرقام اللوحة * (1–4)', '1234');
-    await fill('الماركة *', 'تويوتا'); await fill('الموديل *', 'كامري'); await fill('سنة الصنع *', '2022');
-    await fill('اللون *', 'أبيض'); await fill('الممشى الحالي *', '45000'); await fill('رقم الهيكل * (17 حرف/رقم)', 'jtd12345678901234');
+    Future<void> fill(int i, String v) async { await t.enterText(find.byType(TextField).at(i), v); await t.pump(); }
+    await fill(0, 'محمد'); await fill(1, '0512345678'); await fill(2, 'abc'); await fill(3, '1234');
+    await fill(4, 'تويوتا'); await fill(5, 'كامري'); await fill(6, '2022');
+    await fill(7, 'أبيض'); await fill(8, '45000'); await fill(9, 'jtd12345678901234');
     await t.tap(find.text('تسجيل السيارة في الدور')); await t.pumpAndSettle();
     expect(find.text('نوع السيارة إجباري'), findsOneWidget);       // لم يُختر نوع الوقود بعد
+    await t.tap(find.text('اختر')); await t.pumpAndSettle();
+    await t.tap(find.text('بنزين').last); await t.pumpAndSettle();
+    await t.tap(find.text('تسجيل السيارة في الدور')); await t.pumpAndSettle();
+    final c = box.carBody!;
+    expect(c['plateLetters'], 'ABC'); expect(c['plateNumbers'], '1234'); expect(c['customerPhone'], '0512345678');
+    expect(c['chassisNumber'], 'JTD12345678901234'); expect(c['fuelType'], 'gasoline'); expect(c['branchId'], 'b1'); expect(c['odometerCurrent'], 45000);
+    expect(find.text('تم تسجيل السيارة'), findsOneWidget);
   });
 
   testWidgets('أمر العمل: اختيار سيارة وإضافة صنف وتأكيد وإرسال للكاشير', (t) async {

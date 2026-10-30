@@ -1,17 +1,21 @@
-# z8_pos
+# Z8 POS — تطبيق الكاشير للتابلت (Flutter، واجهة أصلية)
 
-Z8 POS tablet
+## التشغيل لأول مرة (للمدير)
+1. من الموقع: **الإعدادات ← تابلت الكاشير**: أنشئ لكل فرع «رمز الكاشير» (9 أرقام — يظهر مرة واحدة)، واضبط رمز كل كاشير (4–8 أرقام).
+   ولأقسام ملاحظات الخدمة وتسجيل السيارات وأمر العمل: أنشئ رمزاً لكل قسم واختر المستخدم الذي يعمل باسمه.
+2. ثبّت الـ APK على التابلت (السماح بالتثبيت من مصدر غير معروف)، وافتح التطبيق وأدخل رمز الفرع.
+3. تظهر بطاقات كاشيري الفرع → يختار اسمه → يدخل رمزه → يفتح/يكمل جلسة الجهاز.
 
-## Getting Started
+## السلوك
+- **الجلسة تتبع الجهاز**: تسجيل الخروج لا يغلق الجلسة؛ كاشير آخر يدخل باسمه ويكمل نفس الجلسة. «إغلاق الجلسة» من قائمة الترس (إغلاق أعمى: لا يرى الكاشير المبالغ).
+- توكنات التابلت **مقيّدة النطاق** (لا تصل لبقية النظام) وتُقطع فوراً بإيقاف الجهاز من الإعدادات.
+- «رمز قسم آخر» في شاشة البطاقات يفتح الأقسام الخاصة.
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## البناء
+```bash
+cd mobile
+flutter pub get && flutter test
+flutter build apk --release --dart-define=API_BASE=https://your-domain
+```
+الـ APK الناتج موقَّع بمفتاح debug (يصلح للتثبيت المباشر). للنشر على Google Play أنشئ keystore وفعّله في `android/app/build.gradle.kts`.
+CI: `.github/workflows/mobile-apk.yml` يبني الـ APK ويرفعه كـ artifact.
