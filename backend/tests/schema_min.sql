@@ -86,6 +86,7 @@ CREATE TABLE user_sessions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_
 CREATE TABLE integration_log (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, provider text, event text, status text, detail text, created_at timestamptz DEFAULT now());
 CREATE TABLE roles (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, name text);
 
+ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id uuid;
 -- ── المبيعات والخزينة (اختبارات test_db_sales_treasury) — أعمدة/جداول يقرؤها create_invoice / المرتجعات / سندات الخزينة ──
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS invoice_type text DEFAULT 'simplified';
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS invoice_uuid uuid DEFAULT gen_random_uuid();

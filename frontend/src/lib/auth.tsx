@@ -2,7 +2,7 @@
 // lib/auth.tsx — سياق الهوية: المستخدم، الصلاحيات، الدخول/الخروج
 // نفس قاعدة النظام القديم: الأدمن يملك كل الصلاحيات ضمنياً
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { api, setToken, clearToken, getToken } from "./api";
+import { api, setToken, clearToken, hasSession } from "./api";
 import { setFormatSettings } from "./format";
 
 // تحميل إعدادي التاريخ الهجري/تنسيق الأرقام مرة واحدة فور معرفة هوية المستخدم —
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // استعادة الجلسة بعد الريفريش — التوكن شايل الهوية والباقي بييجي Live من /me
-    if (!getToken()) { setLoading(false); return; }
+    if (!hasSession()) { setLoading(false); return; }
     api<{ user: User }>("/auth/me")
       .then((d) => { setUser(d.user); loadFormatSettings(); })
       .catch(() => clearToken())
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password }),
     });
     if (d.requiresTotp) return { requiresTotp: true, tempToken: d.tempToken! };
-    setToken(d.token!);
+    setToken();
     setUser(d.user!);
     loadFormatSettings();
     return { user: d.user!, landingPath: d.landingPath ?? null };
@@ -73,13 +73,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: "POST",
       body: JSON.stringify({ tempToken, code }),
     });
-    setToken(d.token);
+    setToken();
     setUser(d.user);
     loadFormatSettings();
     return { user: d.user, landingPath: d.landingPath ?? null };
   }
 
-  function logout() { clearToken(); setUser(null); location.href = "/login"; }
+  function logout() {
+    // الخادم يمسح الكوكي وينهي الجلسة؛ نكمل الخروج حتى لو فشل الطلب
+    api("/auth/logout", { method: "POST" }).catch(() => {}).finally(() => { clearToken(); setUser(null); location.href = "/login"; });
+  }
 
   function hasPerm(...keys: string[]) {
     if (!user) return false;

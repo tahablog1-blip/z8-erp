@@ -78,11 +78,29 @@ async def resolve_user_from_token(token: str) -> CurrentUser:
         role=row["role"], permissions=perms,
     )
 
-async def get_current_user(request: Request) -> CurrentUser:
+SESSION_COOKIE = "z8_session"
+CSRF_HEADER = "x-z8-csrf"
+_SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+
+
+def token_from_request(request) -> tuple[str | None, bool]:
+    """(التوكن، جاء من الكوكي؟) — الهيدر Bearer أولاً (تطبيقات الموبايل والبوابات)، ثم كوكي HttpOnly للمتصفح"""
     auth = request.headers.get("authorization", "")
-    if not auth.startswith("Bearer "):
+    if auth.startswith("Bearer ") and auth[7:].strip():
+        return auth[7:].strip(), False
+    c = request.cookies.get(SESSION_COOKIE)
+    return (c, True) if c else (None, False)
+
+
+async def get_current_user(request: Request) -> CurrentUser:
+    token, from_cookie = token_from_request(request)
+    if not token:
         raise HTTPException(401, "غير مسجّل الدخول")
-    return await resolve_user_from_token(auth[7:])
+    # حماية CSRF للكوكي: أي عملية تغيير عبر الكوكي لازم تحمل هيدراً مخصّصاً — المتصفح لا يسمح بإرساله من موقع آخر بلا CORS،
+    # وSameSite=Lax يمنع إرسال الكوكي أصلاً في الطلبات المتقاطعة. طلبات Bearer لا تحتاجه (لا تُرسَل تلقائياً).
+    if from_cookie and request.method not in _SAFE_METHODS and request.headers.get(CSRF_HEADER) != "1":
+        raise HTTPException(403, "طلب غير موثوق (CSRF)")
+    return await resolve_user_from_token(token)
 
 def require_permission(*keys: str):
     """مصنع تبعية: المقابل لـ requirePermission('branches.manage') — أي مفتاح يكفي"""

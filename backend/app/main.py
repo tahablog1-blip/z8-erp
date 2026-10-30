@@ -83,6 +83,9 @@ async def _auto_supervisor():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # ⚠ سر التوقيع الافتراضي منشور في المستودع — لو بقي كما هو يستطيع أي شخص تزوير توكن دخول (حتى مدير). لا نوقف الإقلاع لتفادي تعطيل نظام يعمل، لكن نصرخ.
+    if settings.JWT_SECRET == "z8SecretKey2026XyzAbc123456789QwErTy":
+        print("🚨🚨 JWT_SECRET هو القيمة الافتراضية المنشورة في الكود — اضبط JWT_SECRET عشوائياً (32+ حرفاً) في backend/.env الآن ثم أعد تشغيل z8-api", flush=True)
     # ═══ البوابة الذكية: تشغيل المراقب الخلفي الدائم مع إقلاع الخادم ═══
     try:
         from app.modules.auto_checkin.watcher import start_watcher
