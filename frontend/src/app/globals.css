@@ -262,6 +262,7 @@ a:focus-visible, [role="tab"]:focus-visible, summary:focus-visible {
 .z8-sidebar__nav { padding: 10px 10px 12px; display: flex; flex-direction: column; gap: 6px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) transparent; }
 .z8-sidebar__nav::-webkit-scrollbar { width: 6px; }
 .z8-sidebar__nav::-webkit-scrollbar-track { background: transparent; }
+.z8-sidebar__nav::-webkit-scrollbar-button { display: none; width: 0; height: 0; }   /* بلا أسهم أعلى/أسفل الشريط */
 .z8-sidebar__nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 999px; }
 .z8-sidebar__nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.30); }
 
