@@ -1,9 +1,8 @@
 @echo off
-chcp 65001 >nul
 cd /d "%~dp0"
-rem يعيد التشغيل تلقائياً لو توقف البرنامج لأي سبب
+rem Restarts the agent automatically if it stops for any reason
 :loop
 python z8_agent.py
-echo [%date% %time%] توقف الوكيل — إعادة التشغيل بعد 5 ثوان >> agent-restarts.log
+echo [%date% %time%] agent stopped - restarting in 5s >> agent-restarts.log
 timeout /t 5 /nobreak >nul
 goto loop
