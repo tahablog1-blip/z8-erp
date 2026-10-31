@@ -10,6 +10,7 @@ from ...core.db import execute, fetch, fetchrow
 from ...core.deps import CurrentUser, require_permission
 
 router = APIRouter()
+from ...core.camera_grab import grab_jpeg
 _PERM = "settings.company"
 
 
@@ -108,11 +109,11 @@ def _grab_frame(rtsp_url: str) -> bytes:
 @router.post("/{camera_id}/snapshot")
 async def snapshot(camera_id: str, user: CurrentUser = Depends(require_permission(_PERM))):
     cam = await fetchrow(
-        "SELECT rtsp_url, name FROM station_cameras WHERE id=$1 AND company_id=$2",
+        "SELECT id, branch_id, rtsp_url, name FROM station_cameras WHERE id=$1 AND company_id=$2",
         camera_id, user.company_id)
     if not cam:
         raise HTTPException(404, "الكاميرا غير موجودة")
-    jpeg = await asyncio.to_thread(_grab_frame, cam["rtsp_url"])
+    jpeg = await grab_jpeg(cam["id"], user.company_id, cam["branch_id"], cam["rtsp_url"])
     return {"name": cam["name"], "image_base64": base64.b64encode(jpeg).decode()}
 
 
@@ -161,11 +162,11 @@ async def grab_for_line(camera_id: str,
                         user: CurrentUser = Depends(require_permission(*_LINE_PERMS))):
     """لقطة خام من كاميرا المحطة — تُستخدم لقراءة اللوحة من كاميرا الدخول"""
     cam = await fetchrow(
-        "SELECT rtsp_url, name FROM station_cameras WHERE id=$1 AND company_id=$2",
+        "SELECT id, branch_id, rtsp_url, name FROM station_cameras WHERE id=$1 AND company_id=$2",
         camera_id, user.company_id)
     if not cam:
         raise HTTPException(404, "الكاميرا غير موجودة")
-    jpeg = await asyncio.to_thread(_grab_frame, cam["rtsp_url"])
+    jpeg = await grab_jpeg(cam["id"], user.company_id, cam["branch_id"], cam["rtsp_url"])
     return {"name": cam["name"], "image_base64": base64.b64encode(jpeg).decode()}
 
 
@@ -225,12 +226,12 @@ async def analyze_stage(camera_id: str, stage: int,
     if not key:
         raise HTTPException(503, "المراقبة الذكية غير مفعّلة — أضف ANTHROPIC_API_KEY في backend/.env")
     cam = await fetchrow(
-        "SELECT rtsp_url, name, station FROM station_cameras WHERE id=$1 AND company_id=$2",
+        "SELECT id, branch_id, rtsp_url, name, station FROM station_cameras WHERE id=$1 AND company_id=$2",
         camera_id, user.company_id)
     if not cam:
         raise HTTPException(404, "الكاميرا غير موجودة")
 
-    jpeg = await asyncio.to_thread(_grab_frame, cam["rtsp_url"])
+    jpeg = await grab_jpeg(cam["id"], user.company_id, cam["branch_id"], cam["rtsp_url"])
     img_b64 = base64.b64encode(jpeg).decode()
     try:
         items = await asyncio.to_thread(_analyze_call, key, img_b64, stage)
@@ -389,7 +390,7 @@ async def error_scan(body: ErrorScanIn,
     if comp and not comp["en"]:
         return {"available": False, "faults": []}   # النظام مقفول من الإعدادات — الدفع يكمل عادي
     car = await fetchrow(
-        """SELECT c.id, c.plate, c.station, c.ref_photo_b64, cam.rtsp_url
+        """SELECT c.id, c.plate, c.station, c.ref_photo_b64, cam.rtsp_url, cam.id AS cam_id, cam.branch_id AS cam_branch_id
            FROM cars c
            JOIN station_cameras cam
              ON cam.company_id=c.company_id AND cam.branch_id=c.branch_id AND cam.is_active=TRUE
@@ -398,7 +399,7 @@ async def error_scan(body: ErrorScanIn,
            LIMIT 1""", body.carId, user.company_id)
     if not car:
         return {"available": False, "faults": []}
-    jpeg = await asyncio.to_thread(_grab_frame, car["rtsp_url"])
+    jpeg = await grab_jpeg(car["cam_id"], user.company_id, car["cam_branch_id"], car["rtsp_url"])
     img_b64 = base64.b64encode(jpeg).decode()
     compared = bool(car["ref_photo_b64"])
     try:
@@ -483,7 +484,7 @@ _LIVE_CACHE: dict = {}
 @router.get("/public-live/{camera_id}.jpg")
 async def public_live_frame(camera_id: str):
     row = await fetchrow(
-        "SELECT rtsp_url FROM station_cameras WHERE id=$1::uuid",
+        "SELECT id, company_id, branch_id, rtsp_url FROM station_cameras WHERE id=$1::uuid",
         camera_id)
     if not row:
         raise HTTPException(404, "الكاميرا غير موجودة")
@@ -491,20 +492,7 @@ async def public_live_frame(camera_id: str):
     cached = _LIVE_CACHE.get(camera_id)
     if cached and now - cached[0] < 2.0:
         return _ImgResponse(content=cached[1], media_type="image/jpeg")
-    import cv2
-    cap = cv2.VideoCapture(row["rtsp_url"], cv2.CAP_FFMPEG)
-    try:
-        ok, frame = False, None
-        for _ in range(3):
-            ok, frame = cap.read()
-            if ok:
-                break
-    finally:
-        cap.release()
-    if not ok or frame is None:
-        raise HTTPException(502, "تعذر الالتقاط من الكاميرا")
-    ok, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
-    data = buf.tobytes()
+    data = await grab_jpeg(row["id"], row["company_id"], row["branch_id"], row["rtsp_url"])
     _LIVE_CACHE[camera_id] = (now, data)
     return _ImgResponse(content=data, media_type="image/jpeg")
 
@@ -520,9 +508,11 @@ async def cameras_health_check(user: _CU = _Dep(require_permission(_PERM))):
     import asyncio
     import cv2
     rows = await fetch(
-        """SELECT id, name, rtsp_url FROM station_cameras
+        """SELECT id, branch_id, name, rtsp_url FROM station_cameras
            WHERE company_id=$1 AND is_active=TRUE ORDER BY station""",
         user.company_id)
+    from ..edge import service as _edge
+    agents = {str(a["branch_id"]): a for a in [await _edge.online_agent_for_branch(user.company_id, str(b)) for b in {r["branch_id"] for r in rows}] if a}
 
     def _grab_ok(url: str) -> bool:
         cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
@@ -534,6 +524,11 @@ async def cameras_health_check(user: _CU = _Dep(require_permission(_PERM))):
 
     out = []
     for r in rows:
+        ag = agents.get(str(r["branch_id"]))
+        if ag:      # يقرأ الكاميرا وكيل المحطة محلياً — نستعمل حالته المبلَّغة (لا محاولة من السيرفر)
+            st = (ag["cameras"] if isinstance(ag["cameras"], dict) else {}).get(str(r["id"]), {})
+            out.append({"id": str(r["id"]), "name": r["name"], "ok": bool(st.get("ok")), "via": "agent", "reason": st.get("reason", "")})
+            continue
         try:
             ok = await asyncio.wait_for(asyncio.to_thread(_grab_ok, r["rtsp_url"]), timeout=8)
         except Exception:

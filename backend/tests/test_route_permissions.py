@@ -9,7 +9,8 @@ from app.core.permissions import PERMISSIONS
 PUBLIC_PREFIXES = ("/api/cars/public/", "/api/service-notes/public/", "/api/products/public/")
 PUBLIC_EXACT = {
     ("POST", "/api/auth/login"), ("POST", "/api/auth/2fa/verify-login"),
-    ("POST", "/api/auth/logout"), ("POST", "/api/terminal/enter"), ("POST", "/api/terminal/cashiers"), ("POST", "/api/terminal/cashier-login"),                              # يمسح الكوكي ويعمل حتى بجلسة منتهية
+    ("POST", "/api/auth/logout"), ("POST", "/api/terminal/enter"), ("POST", "/api/terminal/cashiers"), ("POST", "/api/terminal/cashier-login"),
+    ("POST", "/api/edge/hello"), ("GET", "/api/edge/commands"), ("POST", "/api/edge/commands/{command_id}/result"),   # بمفتاح الوكيل X-Agent-Key                              # يمسح الكوكي ويعمل حتى بجلسة منتهية
     ("GET", "/api/health"), ("GET", "/api/modules"),
     ("POST", "/api/payments/webhook"),                         # موقّع بـ PAYMENTS_WEBHOOK_SECRET داخل الخدمة (501 قبل الضبط)
     ("GET", "/api/shortage-overrides"), ("POST", "/api/shortage-overrides"),   # مفتاح X-API-Key اختياري

@@ -9,6 +9,7 @@ from .core import module_loader
 from . import modules as modules_pkg
 from .modules.notifications.schema import NOTIFICATIONS_ENSURE_SQL
 from .modules.terminal.schema import TERMINAL_ENSURE_SQL
+from .modules.edge.schema import EDGE_ENSURE_SQL
 
 
 # ══════════════════ المشرف الآلي: مراقبة دورية لسيارات الخدمة بالكاميرات ══════════════════
@@ -35,7 +36,7 @@ async def _auto_supervisor():
                 await _exec("UPDATE cars SET ref_photo_b64=NULL WHERE ref_photo_b64 IS NOT NULL AND exited_at < now() - interval '2 days'")
                 cars = await _fetch(
                     """SELECT c.id, c.company_id, c.plate, c.station, c.checklist, c.ref_photo_b64 IS NOT NULL AS has_ref,
-                              cam.id AS cam_id, cam.rtsp_url
+                              cam.id AS cam_id, cam.branch_id AS cam_branch_id, cam.rtsp_url
                        FROM cars c
                        JOIN companies co ON co.id = c.company_id
                         AND COALESCE(co.ai_supervisor_enabled, TRUE) = TRUE
@@ -59,7 +60,8 @@ async def _auto_supervisor():
                         continue   # اتفحصت من أقل من دقيقتين — دورها الجاي
                     _last_scan[str(car["id"])] = _now
                     try:
-                        jpeg = await _aio.to_thread(_grab_frame, car["rtsp_url"])
+                        from .core.camera_grab import grab_jpeg as _grab_via
+                        jpeg = await _grab_via(car["cam_id"], car["company_id"], car["cam_branch_id"], car["rtsp_url"])
                         img = _b64.b64encode(jpeg).decode()
                         if not car["has_ref"]:
                             # أول لقطة بعد الدخول = المرجعية (حالة السيارة قبل الشغل)
@@ -994,7 +996,8 @@ async def lifespan(app: FastAPI):
 
         # ── المرحلة 8: محرك الإشعارات — مركز داخلي (راجع core/notify.py + modules/notifications) ──
         *NOTIFICATIONS_ENSURE_SQL,
-        *TERMINAL_ENSURE_SQL,   # تصميم الإشعارات الحالي + ترقية الجدول القديم (recipient_user_id) إن وُجد
+        *TERMINAL_ENSURE_SQL,
+        *EDGE_ENSURE_SQL,   # تصميم الإشعارات الحالي + ترقية الجدول القديم (recipient_user_id) إن وُجد
 
         # ── المرحلة 9: عهد الموظفين (مالية/عينية) ──
         """CREATE TABLE IF NOT EXISTS hr_custody_items (

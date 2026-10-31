@@ -368,6 +368,13 @@ async def _watch_loop() -> None:
                     )
                 # كل الكاميرات النشطة تعمل: RTSP (لقطة ISAPI فورية) وHTTP (الجوال)
                 cameras = [dict(r) for r in rows]
+                # فرع له وكيل متصل في محطته => الوكيل يقرأ الكاميرات محلياً ويرسل لقطات الحركة؛ لا نحاول من السيرفر (كان ConnectTimeout)
+                try:
+                    from ..edge.service import online_branch_ids
+                    _agent_branches = await online_branch_ids()
+                    cameras = [c for c in cameras if str(c["branch_id"]) not in _agent_branches]
+                except Exception:
+                    pass
                 last_cam_refresh = now
 
                 # ═══ معالج ذاتي دائم: أي سيارة سُجلت (يدوياً/حجزاً) بلا تطبيع

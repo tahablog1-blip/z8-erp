@@ -136,3 +136,5 @@ ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS device_label text;
 ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS ip text;
 ALTER TABLE shifts ADD COLUMN IF NOT EXISTS device_id uuid;
 ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS pos_device_id uuid;
+-- وكلاء المحطات (test_db_edge)
+CREATE TABLE IF NOT EXISTS station_cameras (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, branch_id uuid, station int, name text, rtsp_url text, is_active boolean DEFAULT true);
