@@ -93,8 +93,8 @@ async def scan_plate(
     نقطة الدخول الرئيسية للكاميرا.
     مؤمّنة بمفتاح Z8_GATE_API_KEY (لأن الكاميرا مش هتعمل login).
     """
-    if GATE_API_KEY and gate_key != GATE_API_KEY:
-        raise HTTPException(status_code=401, detail="مفتاح البوابة غير صحيح")
+    from ..edge.service import authorize_scan      # مفتاح وكيل المحطة (لفرعه) أو مفتاح البوابة العام
+    await authorize_scan(gate_key, branch_id, GATE_API_KEY)
 
     data = await image.read()
     if not data:

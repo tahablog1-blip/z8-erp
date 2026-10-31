@@ -6,6 +6,7 @@ import { MIcon } from "@/components/m-icon";
 import { useAuth } from "@/lib/auth";
 import { Button, Card, ErrorNote, Field, Input, Select, PageHeader, Badge } from "@/components/ui";
 import { appAlert, appConfirm } from "@/components/dialog";
+import { AgentsPanel } from "./AgentsPanel";
 
 type Branch = { id: string; name: string };
 type Camera = {
@@ -248,6 +249,7 @@ export default function CamerasSettingsPage() {
   return (
     <div className="space-y-4">
       <PageHeader title="الإعدادات — كاميرات المحطات" description="كاميرات المحطات والبوابة الذكية." />
+      <AgentsPanel />
       {/* ═══ مركز تحكم البوابة الذكية — رسمي ومنظم في مكان واحد ═══ */}
       <Card>
         <div className="space-y-3">

@@ -1,0 +1,17 @@
+# لينكس / Raspberry Pi:  sudo cp z8-agent.service /etc/systemd/system/ && sudo systemctl enable --now z8-agent
+# عدّل User وWorkingDirectory حسب مكان التثبيت (يُفترض /opt/z8-agent وبيئة venv)
+[Unit]
+Description=Z8 Camera Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/opt/z8-agent
+ExecStart=/opt/z8-agent/venv/bin/python /opt/z8-agent/z8_agent.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
