@@ -81,16 +81,25 @@ class GrabError(Exception):
 
 def _grab_http(url: str, timeout: float = 8) -> bytes:
     import requests
+    from requests.auth import HTTPBasicAuth, HTTPDigestAuth
     sp = urlsplit(url)
-    auth = None
+    user, pw = unquote(sp.username or ""), unquote(sp.password or "")
     if sp.username:
-        from requests.auth import HTTPBasicAuth
-        auth = HTTPBasicAuth(unquote(sp.username), unquote(sp.password or ""))
         url = url.replace(f"{sp.username}:{sp.password}@" if sp.password else f"{sp.username}@", "", 1)
-    r = requests.get(url, auth=auth, timeout=timeout)
-    if r.status_code == 200 and r.content[:2] == b"\xff\xd8":
-        return r.content
-    raise GrabError(f"HTTP {r.status_code}")
+    path = sp.path or ""
+    # Hikvision: ISAPI streaming path without /picture returns XML, not an image -> use the picture endpoint
+    if "/ISAPI/Streaming/channels/" in path and not path.rstrip("/").endswith("/picture"):
+        url = url.replace(path, path.rstrip("/") + "/picture", 1)
+    # Basic first, then Digest on 401 (Hikvision and most IP cameras require Digest)
+    last = "HTTP ?"
+    for auth in ((HTTPBasicAuth(user, pw), HTTPDigestAuth(user, pw)) if user else (None,)):
+        r = requests.get(url, auth=auth, timeout=timeout)
+        if r.status_code == 200 and r.content[:2] == b"\xff\xd8":
+            return r.content
+        last = f"HTTP {r.status_code}"
+        if r.status_code != 401:
+            break
+    raise GrabError(last)
 
 
 def _grab_isapi(url: str) -> bytes:
