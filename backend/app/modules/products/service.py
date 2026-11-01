@@ -547,7 +547,7 @@ _OIL_TYPE_RULES: list[tuple[str, tuple[str, ...]]] = [
     ("brake", ("فرامل", "brake", "dot3", "dot 3", "dot4", "dot 4", "dot5", "dot 5")),
     ("steering", ("دركسيون", "دريكسيون", "باور", "power steering", "steering", "psf", "هيدروليك")),
     ("transfer", ("دبل", "transfer case", "transfer", "علبه نقل")),
-    ("differential", ("دفرنس", "دفرنشال", "ديفرنس", "ديفر", "differential", "gl-5", "gl5", "gl 5", "limited slip")),
+    ("differential", ("دفرنس", "دفرين", "دفرنشال", "ديفرنس", "ديفر", "differential", "gl-5", "gl5", "gl 5", "limited slip")),
     ("gearbox", ("قير", "جير", "gear", "atf", "اتف", "اي تي اف", "dexron", "ديكسرون", "cvt", "سي في تي", "dct", "dsg", "mtf",
                  "transmission", "ناقل الحركه", "gl-4", "gl4", "gl 4", "اوتوماتيك")),
     ("engine", ("ماكينه", "محرك", "engine", "motor", "موتور", "ماجنتك", "ماجينتك", "magnatec", "ايدج", "edge", "هيلكس", "helix",
@@ -761,6 +761,57 @@ def _filter_kind_of(text: str) -> str:
     return "oil"
 
 
+# فئات المنتج العامة في أودو (لا تدل على شيء): نرجع فيها لفئة نقطة البيع ثم للاسم
+_GENERIC_PROD_CATS = {"", "all", "all / saleable", "all / saleable / pos", "all / expenses", "saleable", "expenses"}
+# فئة المنتج (إنجليزي) → نوع الزيت للزيوت الحقيقية فقط (المضافات والشحوم والفريون والسيليكون ليست «زيت» يُختار في الحجز)
+_PROD_CAT_OIL_TYPE = (
+    ("engine oil", "engine"), ("gear oil", "gearbox"), ("brake oil", "brake"), ("brake fluid", "brake"),
+    ("steering oil", "steering"), ("hydraulic oil", "steering"), ("differential oil", "differential"), ("transfer", "transfer"),
+)
+
+
+def resolve_import_class(row: dict) -> dict:
+    """يحدّد لكل صف: الفئة (حرفياً من الملف) ونوع الصنف ونوع الزيت/الفلتر — آلياً من العمودين:
+    «فئة نقطة البيع» (للعرض والفئة) و«فئة المنتج» (أدق: Engine Oil / Air Filters / … Services).
+    فئة المنتج غير العامة تحسم النوع؛ وإلا تُستخدم فئة نقطة البيع ثم الاسم."""
+    name = row.get("name") or ""
+    pos = clean_category(row.get("category") or "")
+    prod = clean_category(row.get("product_category") or "")
+    pl = prod.lower()
+    generic = pl in _GENERIC_PROD_CATS
+    category = pos or ("" if generic else prod) or "أخرى"
+
+    kind, oil_type, filter_kind = "normal", None, None
+    if generic:
+        kind = category_kind(pos) if pos else "normal"
+        # فئة نقطة البيع قد تكون خاطئة لبعض الأصناف (بطاقة هدايا تحت «زيت الفرامل»): الزيت يلزم أن يبدو زيتاً
+        if kind == "oil" and not (re.search(r"زيت|oil", _norm_ar(name)) or _ENGINE_GRADE.search(name)):
+            kind = "normal"
+    elif any(w in pl for w in ("service", "maintenance", "repair", "delivery")):
+        kind = "service"
+    elif "filter" in pl:
+        kind = "filter"
+    elif any(k in pl for k, _ in _PROD_CAT_OIL_TYPE) or pl.endswith(" oil") and "additive" not in pl and "wasted" not in pl and "clutch" not in pl:
+        kind = "oil"
+    # (غير ذلك مع فئة منتج محددة = عادي: Additive/Grease/Coolant/Cleaning…)
+    if kind == "service" and not generic and pos and category_kind(pos) == "service":
+        pass
+    if kind == "filter":
+        filter_kind = "air" if "air" in pl and "ac" not in pl.split() else ("ac" if pl.startswith("ac") or "cabin" in pl else None)
+        filter_kind = filter_kind or _filter_kind_of(f"{prod if not generic else pos} {name}")
+    if kind == "oil":
+        for k, t in _PROD_CAT_OIL_TYPE:
+            if k in pl:
+                oil_type = t
+                break
+        by_name = classify_oil_type(name)
+        if oil_type == "gearbox" and by_name in ("differential", "transfer"):
+            oil_type = by_name                          # «زيت جير» بالاسم دفرنس/دبل
+        elif oil_type is None and generic:
+            oil_type = by_name or None
+    return {"category": category, "kind": kind, "oilType": oil_type, "filterKind": filter_kind}
+
+
 async def import_products_rows(company_id: str, rows: list[dict], kinds: dict[str, str] | None = None) -> dict:
     """kinds: تعيين صريح فئة→نوع من شاشة المراجعة (يتقدّم على الاستنتاج من اسم الفئة)"""
     kinds = {clean_category(k): v for k, v in (kinds or {}).items() if v in IMPORT_KINDS}
@@ -776,8 +827,9 @@ async def import_products_rows(company_id: str, rows: list[dict], kinds: dict[st
             price_vat_in = r.get("price_vat")
             cost = r.get("cost")
             unit = (r.get("unit") or "").strip() or "قطعة"
-            category = clean_category(r.get("category") or "")
-            file_category = category            # فئة الملف الحرفية — تُحدّد نوع الصنف أدناه
+            klass = resolve_import_class({**r, "name": name})
+            category = klass["category"] if (r.get("category") or r.get("product_category")) else ""
+            file_category = category if category and category != "أخرى" else ""     # فئة الملف الحرفية
 
             price_ex = round(float(price_vat_in) / 1.15, 6) if price_vat_in not in (None, "") else None
             cost_val = round(float(cost), 4) if cost not in (None, "") else None
@@ -845,15 +897,15 @@ async def import_products_rows(company_id: str, rows: list[dict], kinds: dict[st
 
             # نوع الصنف يتبع فئة الملف: خدمة / زيت / فلتر / عادي (الأصناف بلا فئة في الملف لا تُمس)
             if file_category:
-                kind = kinds.get(file_category) or category_kind(file_category)
+                kind = kinds.get(file_category) or klass["kind"]
+                fk = (klass["filterKind"] or _filter_kind_of(f"{file_category} {name}")) if kind == "filter" else None
                 await execute(
                     """UPDATE products SET is_service=$2, is_oil=$3, is_oil_filter=$4,
-                              filter_kind=CASE WHEN $4 THEN $5 ELSE NULL END
+                              filter_kind=CASE WHEN $4 THEN $5 ELSE NULL END,
+                              oil_type=CASE WHEN $3 THEN COALESCE($6, oil_type) ELSE NULL END
                        WHERE id=$1""",
-                    pid, kind == "service", kind == "oil", kind == "filter",
-                    _filter_kind_of(f"{file_category} {name}") if kind == "filter" else None)
-                if kind == "service":   # الخدمة ليست زيتاً: لا يبقى عليها نوع زيت من تصنيف سابق
-                    await execute("UPDATE products SET oil_type=NULL WHERE id=$1", pid)
+                    pid, kind == "service", kind == "oil", kind == "filter", fk,
+                    (klass["oilType"] or classify_oil_type(name)) if kind == "oil" else None)
 
             # تثبيت السعر شامل الضريبة على قيمة الملف حرفياً — لو العمود قابل للكتابة.
             # لو generated في قاعدة بياناتك، الأمر بيفشل بأمان والقيمة المحسوبة تبقى

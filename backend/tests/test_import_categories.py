@@ -32,9 +32,9 @@ def test_import_sets_category_and_type_flags(db_ready):
         async with db.pool().acquire() as c:
             await c.execute("TRUNCATE products RESTART IDENTITY CASCADE")
             # صنف قديم مصنّف خطأً كخدمة سيُعاد تصنيفه من الملف
-            await c.execute("INSERT INTO products (company_id, name, barcode, category, is_service) VALUES ($1,'كاسترول ماكينة','111','قديمة',true)", CID)
+            await c.execute("INSERT INTO products (company_id, name, barcode, category, is_service) VALUES ($1,'كاسترول زيت ماكينة','111','قديمة',true)", CID)
         rows = [
-            {"name": "كاسترول ماكينة", "barcode": "111", "price_vat": "40", "category": "زيوت"},
+            {"name": "كاسترول زيت ماكينة", "barcode": "111", "price_vat": "40", "category": "زيوت"},
             {"name": "تغيير زيت ماكينة", "barcode": "222", "price_vat": "30", "category": "خدمات"},
             {"name": "فلتر زيت تويوتا", "barcode": "333", "price_vat": "25", "category": "فلاتر"},
             {"name": "فلتر هواء كامري", "barcode": "334", "price_vat": "35", "category": "فلتر هواء"},
@@ -54,3 +54,31 @@ def test_import_sets_category_and_type_flags(db_ready):
         assert got["666"]["category"] == "إطارات" and got["666"]["is_oil"]
         assert not (got["555"]["is_service"] or got["555"]["is_oil"])                                      # بلا فئة: لا تغيير
     run(go)
+
+
+def test_resolve_uses_product_category_and_pos_category():
+    from app.modules.products.service import resolve_import_class as r
+    def x(name, pos, prod=""):
+        return r({"name": name, "category": pos, "product_category": prod})
+    a = x("كاسترول 5-30", "زيت المحرك", "Engine Oil")
+    assert (a["category"], a["kind"], a["oilType"]) == ("زيت المحرك", "oil", "engine")             # فئة نقطة البيع حرفياً
+    b = x("زيت دفرينس 80-90", "زيت القير", "Gear Oil")
+    assert (b["kind"], b["oilType"]) == ("oil", "differential")                                      # زيت قير بالاسم دفرنس
+    assert x("زيت قير ATF", "زيت القير", "Gear Oil")["oilType"] == "gearbox"
+    assert x("زيت دركسيون", "زيوت ومواد تشحيم أخرى", "Steering Oil")["oilType"] == "steering"
+    assert x("إضافة محرك", "زيوت ومواد تشحيم أخرى", "Additive Oil")["kind"] == "normal"            # المضافات ليست زيتاً يُختار
+    assert x("شحم", "زيوت ومواد تشحيم أخرى", "Grease")["kind"] == "normal"
+    assert x("زيت مستهلك", "الزيت المستهلك", "Wasted Oil")["kind"] == "normal"
+    f = x("فلتر مكيف", "الفلاتر", "AC Filters")
+    assert (f["kind"], f["filterKind"]) == ("filter", "ac")
+    assert x("فلتر", "الفلاتر", "Air Filters")["filterKind"] == "air"
+    assert x("فلتر", "الفلاتر", "Oil Filters")["filterKind"] == "oil"
+    assert x("معطر", "الفلاتر", "Air Freshener")["kind"] == "normal"                                 # فئة المنتج تحسم لا فئة نقطة البيع
+    assert x("فلتر هواء", "الأدوات والإكسسوارات", "Air Filters")["kind"] == "filter"
+    s = x("خدمة تغيير زيت دفرنس", "خدمة زيت الدفرنس", "Differential Oil Service")
+    assert (s["kind"], s["oilType"]) == ("service", None)                                            # الخدمة ليست زيتاً
+    assert x("بطاقة الهدايا", "زيت الفرامل", "All")["kind"] == "normal"                              # فئة نقطة البيع خاطئة
+    assert x("زيت فرامل", "زيت الفرامل", "All")["kind"] == "oil"
+    assert x("خدمة", "خدمات العناية بالسيارة", "All")["kind"] == "service"
+    assert x("مادة", "", "Tools & Accessories")["category"] == "Tools & Accessories"                 # بلا فئة نقطة بيع: فئة المنتج
+    assert x("مادة", "", "All")["category"] == "أخرى"

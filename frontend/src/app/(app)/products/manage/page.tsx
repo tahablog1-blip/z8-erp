@@ -158,7 +158,7 @@ export default function ProductsPage() {
     columns: Record<string, string>;
     sample: { name: string; barcode: string; priceVat: string; priceEx: string | number; cost: string; unit: string; category: string }[];
     rawHeaders?: string[];
-    categories?: { name: string; count: number; kind: string }[];
+    categories?: { name: string; count: number; kind: string; mix?: Record<string, number> }[];
   };
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   // نوع الصنف لكل فئة في الملف (تُدخَل الفئة كما هي، والنوع يحدد: خدمة/زيت/فلتر/عادي)
@@ -199,7 +199,10 @@ export default function ProductsPage() {
     if (!pendingFile) return;
     setImportBusy(true);
     try {
-      const data = await callImport(pendingFile, false, catKinds);
+      // نرسل فقط ما غيّره المستخدم؛ الباقي يُحسم لكل صنف من فئة المنتج الدقيقة (Engine Oil / Air Filters / …)
+      const changed = Object.fromEntries((preview?.categories || [])
+        .filter((c) => catKinds[c.name] && catKinds[c.name] !== c.kind).map((c) => [c.name, catKinds[c.name]]));
+      const data = await callImport(pendingFile, false, changed);
       setImportOk(true); setImportMsg(`استيراد ناجح: ${data.added} صنف جديد + ${data.updated} تحديث` +
         (data.warningsTotal ? ` — ${data.warningsTotal} صف حُدّث سعره/تكلفته فقط لأن اسمه وفئته مكرران مع صنف آخر (مثال: ${(data.warnings || [])[0]})` : "") +
         (data.errorsTotal ? ` — ${data.errorsTotal} صف فيه مشكلة: ${(data.errors || []).slice(0, 3).join(" | ")}` : ""));
@@ -1942,13 +1945,19 @@ export default function ProductsPage() {
             {(preview.categories || []).length > 0 && (
               <div className="rounded-lg border border-line">
                 <div className="border-b border-line bg-ink-3 px-3 py-2 text-t-xs">
-                  <b>فئات ملفك ({preview.categories!.length})</b> — تُدخَل كما هي حرفياً، ونوع الصنف يتبع فئته (خدمة أو زيت أو فلتر أو عادي).
-                  راجع النوع المقترح وعدّله إن لزم.
+                  <b>فئات ملفك ({preview.categories!.length})</b> — تُدخَل كما هي حرفياً (فئة نقطة البيع). ونوع كل صنف (خدمة/زيت/فلتر/عادي) يُحدَّد
+                  من «فئة المنتج» الدقيقة إن وُجدت. غيّر نوع فئة كاملة هنا فقط إن أردتَ تجاوز ذلك.
                 </div>
                 <div className="max-h-56 divide-y divide-line overflow-y-auto">
                   {preview.categories!.map((c) => (
                     <div key={c.name} className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 text-t-xs">
-                      <span className="min-w-0 flex-1 font-bold">{c.name} <span className="tnum font-normal text-text-dim">({c.count})</span></span>
+                      <span className="min-w-0 flex-1 font-bold">{c.name} <span className="tnum font-normal text-text-dim">({c.count})</span>
+                        {c.mix && Object.keys(c.mix).length > 1 && (
+                          <span className="block font-normal text-text-dim">
+                            {Object.entries(c.mix).map(([k, n]) => `${KIND_LABELS.find(([x]) => x === k)?.[1] || k} ${n}`).join(" · ")}
+                          </span>
+                        )}
+                      </span>
                       <span className="flex gap-1">
                         {KIND_LABELS.map(([k, l]) => (
                           <button key={k} type="button" onClick={() => setCatKinds({ ...catKinds, [c.name]: k })}

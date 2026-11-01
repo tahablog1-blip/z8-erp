@@ -318,6 +318,7 @@ _IMPORT_HEADERS = {
     "cost":      ("التكلفة", "سعر التكلفة", "cost"),
     "unit":      ("وحدة القياس", "الوحدة"),
     "category":  ("فئة نقطة البيع", "الفئة", "فئة المنتج", "pos_categ"),
+    "product_category": ("فئة المنتج", "product category", "categ_id"),   # أدق فئة في أودو (Engine Oil / Air Filters / …)
 }
 
 _INVISIBLE = dict.fromkeys(map(ord, "\u200e\u200f\u202a\u202b\u202c\u200b\ufeff\u0640"))
@@ -378,14 +379,14 @@ async def import_excel(file: UploadFile = _File(...),
         detected = {k: (headers[col_of[k]] if k in col_of else "❌ مش موجود") for k in _IMPORT_HEADERS}
         total = sum(1 for r in rows if (r.get("name") or "").strip())
         # فئات الملف الحرفية مع عدد أصنافها والنوع المستنتج (يعدّله المستخدم قبل الاعتماد)
-        counts: dict[str, int] = {}
+        counts: dict[str, dict[str, int]] = {}
         for r in rows:
-            if (r.get("name") or "").strip():
-                c = service.clean_category(r.get("category") or "")
-                if c:
-                    counts[c] = counts.get(c, 0) + 1
-        categories = [{"name": c, "count": n, "kind": service.category_kind(c)}
-                      for c, n in sorted(counts.items(), key=lambda x: -x[1])]
+            if (r.get("name") or "").strip() and (r.get("category") or r.get("product_category")):
+                k = service.resolve_import_class(r)
+                by = counts.setdefault(k["category"], {})
+                by[k["kind"]] = by.get(k["kind"], 0) + 1
+        categories = [{"name": c, "count": sum(by.values()), "kind": max(by, key=by.get), "mix": by}
+                      for c, by in sorted(counts.items(), key=lambda x: -sum(x[1].values()))]
         return {"preview": True, "totalRows": total, "columns": detected, "sample": sample,
                 "rawHeaders": headers, "categories": categories}
 
