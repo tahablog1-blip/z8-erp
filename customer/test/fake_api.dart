@@ -83,12 +83,23 @@ class FakeApi implements CustomerApi {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> oils(String b) async => [
-        {'id': 'o-eng', 'name': 'شل هيلكس', 'spec': '5W-30', 'brand': 'شل', 'price': 40.0, 'oilType': 'engine'},
-        {'id': 'o-gear', 'name': 'كاسترول قير', 'spec': '75W-90', 'brand': 'كاسترول', 'price': 55.0, 'oilType': 'gearbox'},
-        {'id': 'o-diff', 'name': 'موبيل دفرنس', 'spec': '80W', 'brand': 'موبيل', 'price': 35.0, 'oilType': 'differential'},
-        {'id': 'o-misc', 'name': 'زيت عام', 'spec': '', 'brand': '', 'price': 20.0, 'oilType': null},
-      ];
+  Future<Map<String, dynamic>> catalog(String b) async => {
+        'oils': [
+          {'id': 'o-eng', 'name': 'شل هيلكس', 'spec': '5W-30', 'brand': 'شل', 'price': 40.0, 'oilType': 'engine', 'image': null},
+          {'id': 'o-gear', 'name': 'كاسترول قير', 'spec': '75W-90', 'brand': 'كاسترول', 'price': 55.0, 'oilType': 'gearbox', 'image': '/api/products/public/product-image/o-gear'},
+          {'id': 'o-diff', 'name': 'موبيل دفرنس', 'spec': '80W', 'brand': 'موبيل', 'price': 35.0, 'oilType': 'differential', 'image': null},
+          {'id': 'o-misc', 'name': 'زيت عام', 'spec': '', 'brand': '', 'price': 20.0, 'oilType': null, 'image': null},
+        ],
+        'brands': [
+          {'name': 'شل', 'logo': '/api/products/public/brand-logo/b1'},
+          {'name': 'كاسترول', 'logo': null},
+          {'name': 'موبيل', 'logo': null},
+        ],
+        'filters': <dynamic>[],
+        'services': [
+          {'id': 'fee-gear', 'name': 'أجرة تغيير زيت قير', 'oilType': 'gearbox', 'price': 25.0},
+        ],
+      };
   @override
   Future<Map<String, dynamic>?> autoService(String b, {required String brand, required String model, required String year}) async =>
       {'id': 'svc1', 'name': 'خدمة تغيير زيت', 'price': 30.0};

@@ -149,3 +149,34 @@ class InvoiceList {
   final List<Invoice> invoices;
   final String pdfPhone;
 }
+
+class OilBrand {
+  const OilBrand(this.name, this.logo);
+  final String name;
+  final String? logo;
+  factory OilBrand.fromJson(Map<String, dynamic> j) => OilBrand(_s(j['name']), j['logo'] == null ? null : _s(j['logo']));
+}
+
+/// أجرة خدمة مرتبطة بنوع زيت (من شاشة الصنف في الموقع)
+class ServiceFee {
+  const ServiceFee({required this.id, required this.name, required this.oilType, required this.price});
+  final String id, name, oilType;
+  final double price;
+  factory ServiceFee.fromJson(Map<String, dynamic> j) => ServiceFee(
+        id: _s(j['id']), name: _s(j['name']), oilType: _s(j['oilType']), price: j['price'] is num ? (j['price'] as num).toDouble() : 0);
+}
+
+class Catalog {
+  const Catalog({required this.oils, required this.brands, required this.fees});
+  final List<OilProduct> oils;
+  final List<OilBrand> brands;
+  final List<ServiceFee> fees;
+  static const empty = Catalog(oils: [], brands: [], fees: []);
+  factory Catalog.fromJson(Map<String, dynamic> j) {
+    List<T> l<T>(String k, T Function(Map<String, dynamic>) f) {
+      final v = j[k];
+      return v is List ? v.whereType<Map>().map((e) => f(Map<String, dynamic>.from(e))).toList() : <T>[];
+    }
+    return Catalog(oils: l('oils', OilProduct.fromJson), brands: l('brands', OilBrand.fromJson), fees: l('services', ServiceFee.fromJson));
+  }
+}

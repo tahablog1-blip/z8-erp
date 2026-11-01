@@ -6,3 +6,9 @@ class Config {
   static const String companyId = String.fromEnvironment('COMPANY_ID', defaultValue: '');
   static const String appName = 'مصدر الزيوت';
 }
+
+/// رابط صورة قادم من الخادم (قد يكون نسبياً مثل /api/products/public/product-image/ID)
+String? absUrl(String? p) {
+  if (p == null || p.isEmpty) return null;
+  return p.startsWith('http') ? p : '${Config.apiBase}$p';
+}
