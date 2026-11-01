@@ -196,6 +196,9 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.text('تغيير زيت جير'));
     await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('اختر الزيت'), 200, scrollable: find.byType(Scrollable).first);
+    await t.ensureVisible(find.text('اختر الزيت'));
+    await t.pumpAndSettle();
     await t.tap(find.text('اختر الزيت'));
     await t.pumpAndSettle();
     await t.tap(find.text('كاسترول'));
@@ -205,6 +208,9 @@ void main() {
 
     await t.scrollUntilVisible(find.text('تغيير زيت دبل'), 200, scrollable: find.byType(Scrollable).first);
     await t.tap(find.text('تغيير زيت دبل'));                       // لا زيت مصنّف دبل → كل الزيوت
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('اختر الزيت'), 200, scrollable: find.byType(Scrollable).first);
+    await t.ensureVisible(find.text('اختر الزيت'));
     await t.pumpAndSettle();
     await t.tap(find.text('اختر الزيت'));
     await t.pumpAndSettle();
@@ -230,6 +236,58 @@ void main() {
     expect(items.first['qty'], 4.5);
     expect(items.first['label'], 'تغيير زيت ماكينة: شل هيلكس 5W-30');
     expect(api.lastSelection!['withFilter'], true);
+    expect(find.text('تذكرتي'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('منتج نافد: تظهر «غير متوفر الآن» على بطاقته، والضغط عليه يُنبّه ولا يُختار', (t) async {
+    await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    await t.tap(find.text('احجز دورك الآن'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('التالي: اختيار الخدمة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('تغيير زيت ماكينة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('اختر الزيت'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('شل'));
+    await t.pumpAndSettle();
+    expect(find.text('غير متوفر الآن'), findsNWidgets(2));            // شارة البطاقة + مكان السعر
+    expect(find.text('90.00 ر.س'), findsNothing);                    // لا سعر لمنتج غير متوفر
+    await t.tap(find.text('شل ألترا'));
+    await t.pump();
+    expect(find.text('هذا المنتج غير متوفر الآن'), findsOneWidget);   // رسالة التنبيه
+    expect(find.text('شل هيلكس'), findsOneWidget);                   // ما زلنا في قائمة الشركة (لم يُختر)
+    await t.tap(find.text('شل هيلكس'));                               // المتوفر يُختار عادياً
+    await t.pumpAndSettle();
+    expect(find.text('اختر الخدمة'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('زيت خارجي: بلا اختيار زيت، الأجرة فقط، وملاحظة تصل الموظف', (t) async {
+    final (_, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    await t.tap(find.text('احجز دورك الآن'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('التالي: اختيار الخدمة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('تغيير زيت ماكينة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('زيت خارجي (أحضره بنفسي)'));
+    await t.pumpAndSettle();
+    expect(find.text('اختر الزيت'), findsNothing);                    // لا اختيار زيت
+    expect(find.textContaining('سيحضر الزيت من عندك'), findsOneWidget);
+    await t.tap(find.text('تغيير زيت جير'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('زيت خارجي (أحضره بنفسي)').last);
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('ملخص الفاتورة'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('30.00 ر.س'), findsWidgets);                     // أجرة الماكينة فقط (خدمة تغيير زيت)
+    expect(find.textContaining('زيت من العميل (خارجي) — الأجرة فقط'), findsNWidgets(2));
+    await t.tap(find.text('تأكيد الحجز'));
+    await t.pumpAndSettle();
+    final sel = api.lastSelection!;
+    expect((sel['items'] as List).map((e) => (e as Map)['productId']), ['svc1']);       // أجرة الماكينة بلا زيت
+    expect(sel['customerNote'], 'زيت من العميل (خارجي) — الأجرة فقط: تغيير زيت ماكينة + تغيير زيت جير');
     expect(find.text('تذكرتي'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });

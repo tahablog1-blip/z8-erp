@@ -6,8 +6,10 @@ class ServicePick {
   ServicePick(this.kind) : qty = kind.defaultQty;
   final ServiceKind kind;
   OilProduct? oil;
+  bool external = false;     // العميل يحضر الزيت بنفسه (زيت خارجي): تُحتسب الأجرة فقط
   double qty;
-  double get total => (oil?.price ?? 0) * qty;
+  double get total => external ? 0 : (oil?.price ?? 0) * qty;
+  bool get ready => oil != null || external;
 }
 
 typedef Line = ({String label, double qty, double line});
@@ -27,7 +29,18 @@ class BookingSelection extends ChangeNotifier {
   }
 
   void setOil(ServiceKind k, OilProduct o) {
-    picks[k]?.oil = o;
+    picks[k]
+      ?..oil = o
+      ..external = false;
+    notifyListeners();
+  }
+
+  /// زيت خارجي: لا اختيار زيت ولا كمية، والأجرة فقط
+  void setExternal(ServiceKind k, bool on) {
+    final p = picks[k];
+    if (p == null) return;
+    p.external = on;
+    if (on) p.oil = null;
     notifyListeners();
   }
 
@@ -54,14 +67,16 @@ class BookingSelection extends ChangeNotifier {
   List<ServiceKind> get feeAtBranch => [for (final k in picks.keys) if (k != ServiceKind.engine) k];
 
   /// كل خدمة مختارة يجب أن يكون لها زيت
-  bool get complete => picks.isNotEmpty && picks.values.every((p) => p.oil != null);
+  bool get complete => picks.isNotEmpty && picks.values.every((p) => p.ready);
 
   /// بنود الفاتورة التقديرية بالترتيب: (زيت + أجرة الماكينة) لكل خدمة ثم الفلتر
   List<Line> get lines {
     final out = <Line>[];
     for (final p in picks.values) {
-      if (p.oil == null) continue;
-      out.add((label: '${p.kind.label}: ${p.oil!.title}', qty: p.qty, line: p.total));
+      if (!p.ready) continue;
+      out.add(p.external
+          ? (label: '${p.kind.label}: زيت من العميل (خارجي) — الأجرة فقط', qty: 1, line: 0)
+          : (label: '${p.kind.label}: ${p.oil!.title}', qty: p.qty, line: p.total));
       final fee = feeFor(p.kind);
       if (fee != null) out.add((label: fee.name, qty: 1, line: fee.price));
     }
@@ -77,14 +92,19 @@ class BookingSelection extends ChangeNotifier {
     final items = <Map<String, dynamic>>[];
     for (final p in picks.values) {
       final o = p.oil;
-      if (o == null) continue;
-      items.add({'productId': o.id, 'label': '${p.kind.label}: ${o.title}', 'qty': p.qty, 'priceInc': o.price});
+      if (!p.ready) continue;
+      if (o != null) items.add({'productId': o.id, 'label': '${p.kind.label}: ${o.title}', 'qty': p.qty, 'priceInc': o.price});
       final fee = feeFor(p.kind);
       if (fee != null) items.add({'productId': fee.id, 'label': fee.name, 'qty': 1, 'priceInc': fee.price});
     }
     if (withFilter && filter != null && has(ServiceKind.engine)) {
       items.add({'productId': filter!.id, 'label': filter!.title, 'qty': 1, 'priceInc': filter!.price});
     }
-    return {'items': items, 'withFilter': has(ServiceKind.engine) ? withFilter : null, 'fromInvoice': null};
+    final ext = [for (final p in picks.values) if (p.external) p.kind.label];
+    return {
+      'items': items, 'withFilter': has(ServiceKind.engine) ? withFilter : null, 'fromInvoice': null,
+      // يصل الموظف في ملاحظات السيارة: العميل يحضر الزيت بنفسه
+      if (ext.isNotEmpty) 'customerNote': 'زيت من العميل (خارجي) — الأجرة فقط: ${ext.join(' + ')}',
+    };
   }
 }

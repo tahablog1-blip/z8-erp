@@ -107,15 +107,17 @@ enum ServiceKind {
 }
 
 class OilProduct {
-  const OilProduct({required this.id, required this.name, required this.spec, required this.brand, required this.price, required this.oilType, required this.image});
+  const OilProduct({required this.id, required this.name, required this.spec, required this.brand, required this.price, required this.oilType, required this.image, this.inStock = true});
   final String id, name, spec, brand;
+  final bool inStock;   // متوفر بمخزون الفرع؟
   final double price;
   final String? oilType, image;
   String get title => spec.isEmpty ? name : '$name $spec';
   factory OilProduct.fromJson(Map<String, dynamic> j) => OilProduct(
         id: _s(j['id']), name: _s(j['name']), spec: _s(j['spec']), brand: _s(j['brand']),
         price: j['price'] is num ? (j['price'] as num).toDouble() : double.tryParse(_s(j['price'])) ?? 0,
-        oilType: j['oilType'] == null ? null : _s(j['oilType']), image: j['image'] == null ? null : _s(j['image']));
+        oilType: j['oilType'] == null ? null : _s(j['oilType']), image: j['image'] == null ? null : _s(j['image']),
+        inStock: j['inStock'] != false);
 }
 
 class InvoiceItem {
