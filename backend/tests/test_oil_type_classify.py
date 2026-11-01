@@ -57,17 +57,15 @@ def test_preview_apply_and_redo(db_ready):
         from app.core.deps import get_current_user, CurrentUser  # noqa: F401
         from app.modules.products import service
         pre = await service.auto_classify_oil_types(CO, apply=False)
-        assert not pre["applied"] and pre["scanned"] == 4 and pre["matched"] == 3 and pre["unmatched"] == 1
-        assert {t["type"] for t in pre["byType"]} == {"engine", "differential", "gearbox"}
-        gb = next(t for t in pre["byType"] if t["type"] == "gearbox")
-        assert gb["services"] == 1 and gb["oils"] == 0                     # «تغيير زيت قير» خدمة
+        assert not pre["applied"] and pre["scanned"] == 3 and pre["matched"] == 2 and pre["unmatched"] == 1     # الخدمة خارج الفحص
+        assert {t["type"] for t in pre["byType"]} == {"engine", "differential"}
         async with db.pool().acquire() as c:                                # المعاينة لا تكتب
             assert await c.fetchval("SELECT count(*) FROM products WHERE oil_type IS NOT NULL") == 1
         done = await service.auto_classify_oil_types(CO, apply=True)
         assert done["applied"]
         async with db.pool().acquire() as c:
             got = {r["name"]: r["oil_type"] for r in await c.fetch("SELECT name, oil_type FROM products")}
-        assert got["شل هيلكس"] == "engine" and got["كاسترول"] == "differential" and got["تغيير زيت قير"] == "gearbox"
+        assert got["شل هيلكس"] == "engine" and got["كاسترول"] == "differential" and got["تغيير زيت قير"] is None    # خدمة: لا نوع زيت
         assert got["زيت غامض"] is None and got["فلتر زيت تويوتا"] is None   # الغامض والفلاتر لا تُمس
         assert got["زيت فرامل"] == "engine"                                 # المصنّف لا يُغيَّر بلا redo
         redo = await service.auto_classify_oil_types(CO, apply=True, redo=True)

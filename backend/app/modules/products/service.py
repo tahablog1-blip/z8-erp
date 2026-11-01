@@ -576,9 +576,10 @@ async def auto_classify_oil_types(company_id: str, apply: bool, redo: bool = Fal
         """SELECT id, name, spec, category, is_service, oil_type FROM products
            WHERE company_id=$1 AND is_active=TRUE AND is_oil_filter=FALSE
              AND ($2 OR oil_type IS NULL OR oil_type = '')
-             AND ( (is_service=FALSE AND (is_oil=TRUE OR name ILIKE '%زيت%' OR category ILIKE '%زيت%')
-                    AND name NOT ILIKE '%فلتر%' AND name NOT ILIKE '%فلاتر%' AND COALESCE(category,'') NOT ILIKE '%فلتر%')
-                   OR (is_service=TRUE AND name ILIKE '%زيت%') )""",
+             AND is_service=FALSE          -- الخدمات تبقى خارج أنواع الزيت (خدمة «تغيير زيت دفرنس» ليست زيتاً)
+             AND (is_oil=TRUE OR name ILIKE '%زيت%' OR category ILIKE '%زيت%' OR category ILIKE '%oil%')
+             AND name NOT ILIKE '%فلتر%' AND name NOT ILIKE '%فلاتر%'
+             AND COALESCE(category,'') NOT ILIKE '%فلتر%' AND COALESCE(category,'') NOT ILIKE '%filter%'""",
         company_id, redo)
     groups: dict[str, list] = {}
     unmatched: list[str] = []
@@ -603,11 +604,11 @@ async def auto_classify_oil_types(company_id: str, apply: bool, redo: bool = Fal
 
 
 async def clear_all_oil_types(company_id: str) -> dict:
-    """إلغاء نوع كل الزيوت (غير الخدمات) دفعة واحدة — لإعادة التصنيف من الصفر.
-    لا يمس شركات الزيوت ولا علامة «زيت» ولا الفلاتر."""
+    """إلغاء نوع كل الأصناف دفعة واحدة — لإعادة التصنيف من الصفر. يشمل أي خدمة كانت مربوطة بنوع زيت
+    (الخدمات لا تُصنَّف بنوع الزيت). لا يمس شركات الزيوت ولا علامة «زيت» ولا الفلاتر."""
     rows = await fetch(
         """UPDATE products SET oil_type=NULL
-           WHERE company_id=$1 AND is_service=FALSE AND COALESCE(oil_type,'') <> ''
+           WHERE company_id=$1 AND COALESCE(oil_type,'') <> ''
            RETURNING id""", company_id)
     return {"ok": True, "count": len(rows)}
 
@@ -851,6 +852,8 @@ async def import_products_rows(company_id: str, rows: list[dict], kinds: dict[st
                        WHERE id=$1""",
                     pid, kind == "service", kind == "oil", kind == "filter",
                     _filter_kind_of(f"{file_category} {name}") if kind == "filter" else None)
+                if kind == "service":   # الخدمة ليست زيتاً: لا يبقى عليها نوع زيت من تصنيف سابق
+                    await execute("UPDATE products SET oil_type=NULL WHERE id=$1", pid)
 
             # تثبيت السعر شامل الضريبة على قيمة الملف حرفياً — لو العمود قابل للكتابة.
             # لو generated في قاعدة بياناتك، الأمر بيفشل بأمان والقيمة المحسوبة تبقى

@@ -617,7 +617,7 @@ export default function ProductsPage() {
   const oilRows = rows.filter((r) => !r.is_service && !r.is_oil_filter
     && (r.is_oil || /زيت/.test(`${r.name} ${r.category || ""}`)) && !/فلتر|فلاتر/.test(`${r.name} ${r.category || ""}`));
   async function clearAllOilTypes() {
-    if (!(await appConfirm(`إلغاء نوع كل الزيوت (${oilRows.filter((r) => r.oil_type).length} صنف) لإعادة تصنيفها من الصفر؟ لا يمس الشركات ولا الفلاتر ولا الخدمات.`))) return;
+    if (!(await appConfirm(`إلغاء نوع كل الزيوت (${oilRows.filter((r) => r.oil_type).length} صنف) لإعادة تصنيفها من الصفر؟ لا يمس الشركات ولا الفلاتر، ويفكّ أي خدمة كانت مربوطة بنوع زيت.`))) return;
     setTypeBusy(true); setTypeErr("");
     try {
       const r = await api<{ count: number }>("/products/oil-types/clear-all", { method: "POST" });
