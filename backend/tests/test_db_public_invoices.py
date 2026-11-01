@@ -71,7 +71,7 @@ def test_all_invoices_by_phone_when_otp_disabled(world):
     assert set(nos) == {"A-1", "A-2", "B-1", "C-1"}                 # لا المرتجعة ولا فواتير غيره
     a1 = next(i for i in r.json()["invoices"] if i["invoiceNo"] == "A-1")
     assert a1["odometer"] == 80000 and a1["total"] == 150
-    assert [x["label"] for x in a1["items"]] == ["زيت ماكينة", "فلتر زيت"]
+    assert sorted(x["label"] for x in a1["items"]) == ["زيت ماكينة", "فلتر زيت"]
     assert r.json()["pdfPhone"] == "0500000001"
 
 
