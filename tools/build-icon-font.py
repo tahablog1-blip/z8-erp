@@ -5,7 +5,7 @@
     python3 tools/build-icon-font.py
 
 المتطلبات: python3 + fonttools + brotli (pip install fonttools brotli) واتصال بالإنترنت وقت البناء فقط.
-يقرأ قائمة أسماء الأيقونات الرسمية من حزمة npm «material-symbols» (تُحمَّل مؤقتاً)، ويحصر المستخدم منها
+يقرأ قائمة أسماء الأيقونات الرسمية من بيانات جوجل، ويحصر المستخدم منها
 (أي نص بين علامتي اقتباس في frontend/src أو backend/app يطابق اسم أيقونة)، ثم يجلب الخط الجزئي من خدمة جوجل
 بنسختين: عادي (FILL=0) وممتلئ (FILL=1)، ويحوّلهما إلى woff2 داخل frontend/public/fonts.
 بعد التشغيل ارفع رقم ?v= في globals.css و layout.tsx ليتجدد الكاش.
@@ -24,12 +24,10 @@ COMMON = ("add close check search menu home settings person edit delete save ref
 
 
 def official_names() -> set[str]:
-    with tempfile.TemporaryDirectory() as d:
-        subprocess.run(["npm", "pack", "material-symbols"], cwd=d, check=True, capture_output=True)
-        tgz = [f for f in os.listdir(d) if f.endswith(".tgz")][0]
-        subprocess.run(["tar", "xzf", tgz], cwd=d, check=True)
-        txt = open(os.path.join(d, "package", "index.d.ts"), encoding="utf-8").read()
-    return set(re.findall(r'"([a-z0-9][a-z0-9_]*)"', txt))
+    """قائمة جوجل الرسمية لكل أيقونات Material Symbols (أكمل من حزمة npm التي تنقصها أسماء صحيحة مثل expand_less)"""
+    raw = urllib.request.urlopen(urllib.request.Request(
+        "https://fonts.google.com/metadata/icons?key=material_symbols&incomplete=true", headers={"User-Agent": UA}), timeout=60).read().decode()
+    return {x["name"] for x in json.loads(raw[raw.index("{"):])["icons"]}
 
 
 def used_names(valid: set[str]) -> set[str]:

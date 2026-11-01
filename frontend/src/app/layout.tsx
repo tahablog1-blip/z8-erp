@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
         {/* خط الأيقونات من نفس الخادم (لا يعتمد على خطوط جوجل) — أسماء الأيقونات المضمّنة: frontend/public/fonts/icons.json */}
-        <link rel="preload" as="font" type="font/woff2" crossOrigin="anonymous" href="/fonts/material-symbols-rounded.woff2?v=1" />
+        <link rel="preload" as="font" type="font/woff2" crossOrigin="anonymous" href="/fonts/material-symbols-rounded.woff2?v=2" />
         <script dangerouslySetInnerHTML={{ __html:
           `try{
             var t=localStorage.getItem("z8_theme");
