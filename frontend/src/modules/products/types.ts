@@ -30,7 +30,6 @@ export type Product = {
   year_to: number | null;
   counts?: Record<string, number> | null;
   price_overridden?: boolean;
-  qty_discount_rules?: { min_qty: number; discount_percent: number }[];
 };
 
 export type ProductLink = {

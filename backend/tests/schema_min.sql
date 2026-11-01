@@ -155,3 +155,4 @@ ALTER TABLE cars ADD COLUMN IF NOT EXISTS customer_id uuid;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_status text;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS customer_phone text;
 CREATE TABLE IF NOT EXISTS customer_cars (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, customer_id uuid, plate text, brand text, name text);
+CREATE TABLE IF NOT EXISTS service_price_rules (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid NOT NULL, service_product_id uuid NOT NULL, brand text, model text, year_from int, year_to int, price numeric(12,2) NOT NULL, created_at timestamptz NOT NULL DEFAULT now());

@@ -74,7 +74,6 @@ class ProductOut(BaseModel):
     stock_qty: float = 0          # مجموع أرصدة الفروع
     has_image: bool = False
     price_overridden: bool = False   # السعر راجع من قائمة أسعار مخصّصة (priceListId) لا السعر العادي
-    qty_discount_rules: list[dict] = Field(default_factory=list)   # [{min_qty, discount_percent}, ...] تصاعدياً
 
 
 class ProductLinkIn(BaseModel):

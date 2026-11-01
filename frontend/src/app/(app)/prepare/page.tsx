@@ -181,13 +181,8 @@ export default function PreparePage() {
       .slice(0, 12);
   }, [search, products]);
 
-  // خصومات الكمية: أعلى حد كمية (من قواعد الصنف) تحقّقته الكمية الحالية — ما
-  // بتتجاوزش سعراً يدوياً (manualPrice) ثبّته الموظف
-  function effectivePriceVat(p: Product, qty: number) {
-    const rules = p.qty_discount_rules || [];
-    let pct = 0;
-    for (const r of rules) { if (qty >= r.min_qty) pct = r.discount_percent; }
-    return Number(p.price_vat) * (1 - pct / 100);
+  function effectivePriceVat(p: Product, _qty: number) {
+    return Number(p.price_vat);
   }
 
   function addProduct(p: Product) {

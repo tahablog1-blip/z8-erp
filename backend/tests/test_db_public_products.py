@@ -1,4 +1,4 @@
-# كتالوج الحجز العام: الزيوت بشركاتها + أجرة الخدمة لكل نوع زيت (تُستخدم في تطبيق العميل)
+# كتالوج الحجز العام: الزيوت بشركاتها (يُستخدم في تطبيق العميل)
 import uuid
 
 import httpx
@@ -10,7 +10,7 @@ pytestmark = pytest.mark.db
 CID = uuid.UUID(CO)
 
 
-def test_products_include_oils_and_typed_service_fees(db_ready):
+def test_products_include_oils_and_brands_only(db_ready):
     from app.core import db
     from app.main import app
 
@@ -28,4 +28,4 @@ def test_products_include_oils_and_typed_service_fees(db_ready):
             return (await cl.get(f"/api/cars/public/booking-products/{br}")).json()
     d = run(go)
     assert {o["name"] for o in d["oils"]} == {"شل هيلكس", "كاسترول قير"}
-    assert {(s["oilType"], s["price"]) for s in d["services"]} == {("gearbox", 25.0), ("transfer", 30.0)}   # بلا النوع الفارغ ولا الموقوف
+    assert "services" not in d      # أجرة الجير/الدفرنس/الدبل تُحدَّد في الفرع حسب الخدمة المتوفرة

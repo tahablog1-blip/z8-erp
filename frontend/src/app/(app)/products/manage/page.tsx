@@ -605,6 +605,21 @@ export default function ProductsPage() {
   const [typeAssignFor, setTypeAssignFor] = useState<string | null>(null); // مفتاح النوع، مثال: "brake"
   const [typeAssignSel, setTypeAssignSel] = useState<Set<string>>(new Set());
   const [typeBusy, setTypeBusy] = useState(false);
+  const [typeQuery, setTypeQuery] = useState("");
+  const [typeShow, setTypeShow] = useState<"all" | "none" | "this">("all");
+  // أصناف الزيوت للتصنيف: المعلّمة «زيت» + أي صنف اسمه/فئته «زيت» (غير فلتر وغير خدمة)
+  const oilRows = rows.filter((r) => !r.is_service && !r.is_oil_filter
+    && (r.is_oil || /زيت/.test(`${r.name} ${r.category || ""}`)) && !/فلتر|فلاتر/.test(`${r.name} ${r.category || ""}`));
+  async function clearAllOilTypes() {
+    if (!(await appConfirm(`إلغاء نوع كل الزيوت (${oilRows.filter((r) => r.oil_type).length} صنف) لإعادة تصنيفها من الصفر؟ لا يمس الشركات ولا الفلاتر ولا الخدمات.`))) return;
+    setTypeBusy(true); setTypeErr("");
+    try {
+      const r = await api<{ count: number }>("/products/oil-types/clear-all", { method: "POST" });
+      await load();
+      await appAlert(`تم إلغاء تصنيف ${r.count} صنف. ابدأ التصنيف الذكي أو يدوياً.`);
+    } catch (e: any) { setTypeErr(e.message); }
+    finally { setTypeBusy(false); }
+  }
   const [typeErr, setTypeErr] = useState("");
   // صورة المنتج في نموذج التعديل
   const [prodImage, setProdImage] = useState<string | null | undefined>(undefined); // undefined = بدون تغيير
@@ -715,8 +730,9 @@ export default function ProductsPage() {
   function openTypeAssign(typeKey: string) {
     // تحديد مسبق: الأصناف المصنّفة بهذا النوع فعلاً
     const pre = new Set<string>();
-    rows.filter((r) => r.is_oil).forEach((r) => { if (r.oil_type === typeKey) pre.add(r.id); });
+    oilRows.forEach((r) => { if (r.oil_type === typeKey) pre.add(r.id); });
     setTypeAssignSel(pre);
+    setTypeQuery(""); setTypeShow("none");
     setTypeAssignFor(typeKey);
   }
 
@@ -733,27 +749,6 @@ export default function ProductsPage() {
     finally { setTypeBusy(false); }
   }
 
-  // ══════════ منظف الأسماء الذكي ══════════
-  const [cleanOpen, setCleanOpen] = useState(false);
-  const [cleanBusy, setCleanBusy] = useState(false);
-  const [cleanErr, setCleanErr] = useState("");
-  const [cleanRes, setCleanRes] = useState<null | {
-    scanned: number; changed: number; applied: boolean;
-    remaining: number; items: { id: string; old: string; name: string; spec: string | null }[]
-  }>(null);
-
-  async function runClean(apply: boolean) {
-    setCleanErr(""); setCleanBusy(true);
-    try {
-      const r = await api<typeof cleanRes>("/products/ai-clean-names", {
-        method: "POST", body: JSON.stringify({ apply, onlyOils: true }),
-      });
-      setCleanRes(r);
-      if (apply) await load();
-    } catch (e: any) { setCleanErr(e.message); }
-    finally { setCleanBusy(false); }
-  }
-
   // ══════════ قواعد تسعير الخدمة حسب السيارة ══════════
   type ServiceRule = {
     id: string; service_product_id: string; product_name: string; product_category: string | null;
@@ -763,6 +758,27 @@ export default function ProductsPage() {
   const [rules, setRules] = useState<ServiceRule[]>([]);
   const [ruleForm, setRuleForm] = useState({ serviceProductId: "", brand: "", model: "", yearFrom: "", yearTo: "", price: "" });
   const [ruleBusy, setRuleBusy] = useState(false);
+  // تسعير بالشركات: اختر ماركات (شرائح ظاهرة بلا قوائم منسدلة) ثم اكتب سعر الخدمة مرة واحدة
+  const [ruleBrands, setRuleBrands] = useState<Set<string>>(new Set());
+  const [ruleAll, setRuleAll] = useState(false);
+  const [ruleBrandQ, setRuleBrandQ] = useState("");
+  const [ruleBrandList, setRuleBrandList] = useState<string[]>([]);
+  useEffect(() => {
+    if (!rulesOpen) return;
+    api<string[]>("/cars/brands").then(setRuleBrandList).catch(() => setRuleBrandList([]));
+  }, [rulesOpen]);
+  async function saveBulkRule() {
+    setRuleErr(""); setRuleBusy(true);
+    try {
+      await api("/products/service-price-rules/bulk", {
+        method: "POST",
+        body: JSON.stringify({ serviceProductId: ruleForm.serviceProductId, price: Number(ruleForm.price), brands: Array.from(ruleBrands), allBrands: ruleAll }),
+      });
+      setRuleBrands(new Set()); setRuleAll(false); setRuleForm({ ...ruleForm, price: "" });
+      await loadRules();
+    } catch (e: any) { setRuleErr(e.message); }
+    finally { setRuleBusy(false); }
+  }
   const [ruleErr, setRuleErr] = useState("");
   const serviceProducts = useMemo(() => rows.filter((r) => r.is_service), [rows]);
 
@@ -789,41 +805,6 @@ export default function ProductsPage() {
   }
   async function removeRule(id: string) {
     try { await api(`/products/service-price-rules/${id}`, { method: "DELETE" }); await loadRules(); }
-    catch (e: any) { await appAlert(e.message); }
-  }
-
-  // ══════════ خصومات حسب الكمية ══════════
-  type QtyRule = {
-    id: string; product_id: string; product_name: string; product_category: string | null;
-    min_qty: number; discount_percent: number;
-  };
-  const [qtyRulesOpen, setQtyRulesOpen] = useState(false);
-  const [qtyRules, setQtyRules] = useState<QtyRule[]>([]);
-  const [qtyRuleForm, setQtyRuleForm] = useState({ productId: "", minQty: "", discountPercent: "" });
-  const [qtyRuleBusy, setQtyRuleBusy] = useState(false);
-  const [qtyRuleErr, setQtyRuleErr] = useState("");
-
-  async function loadQtyRules() {
-    try { setQtyRules(await api<QtyRule[]>("/products/quantity-discount-rules")); } catch { /* */ }
-  }
-  async function addQtyRule() {
-    setQtyRuleErr(""); setQtyRuleBusy(true);
-    try {
-      await api("/products/quantity-discount-rules", {
-        method: "POST",
-        body: JSON.stringify({
-          productId: qtyRuleForm.productId,
-          minQty: Number(qtyRuleForm.minQty),
-          discountPercent: Number(qtyRuleForm.discountPercent),
-        }),
-      });
-      setQtyRuleForm({ ...qtyRuleForm, minQty: "", discountPercent: "" });
-      await loadQtyRules();
-    } catch (e: any) { setQtyRuleErr(e.message); }
-    finally { setQtyRuleBusy(false); }
-  }
-  async function removeQtyRule(id: string) {
-    try { await api(`/products/quantity-discount-rules/${id}`, { method: "DELETE" }); await loadQtyRules(); }
     catch (e: any) { await appAlert(e.message); }
   }
 
@@ -1115,34 +1096,12 @@ export default function ProductsPage() {
                   <Button
                     variant="ghost"
                     onClick={() => {
-                      setCleanOpen(true);
-                      setCleanRes(null);
-                      setCleanErr("");
-                    }}
-                  >
-                    تنظيف الأسماء AI
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
                       setRulesOpen(true);
                       setRuleErr("");
                       loadRules();
                     }}
                   >
                     أسعار الخدمة
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setQtyRulesOpen(true);
-                      setQtyRuleErr("");
-                      loadQtyRules();
-                    }}
-                  >
-                    خصومات الكمية
                   </Button>
 
                   <Button
@@ -1651,7 +1610,7 @@ export default function ProductsPage() {
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {Object.entries(OIL_TYPES).map(([key, label]) => {
-              const count = rows.filter((r) => r.is_oil && r.oil_type === key).length;
+              const count = oilRows.filter((r) => r.oil_type === key).length;
               return (
                 <div key={key} className="rounded-card border border-line p-3 text-center">
                   <div className="text-t-sm font-black">{label}</div>
@@ -1666,8 +1625,12 @@ export default function ProductsPage() {
               );
             })}
           </div>
+          <div className="flex items-center justify-between rounded-lg border border-line px-3 py-2">
+            <span className="text-t-xs text-text-dim">تريد البدء من جديد؟ يُلغى نوع كل الزيوت ثم تصنّفها مرة أخرى (تلقائياً أو يدوياً).</span>
+            <Button variant="danger" size="xs" disabled={typeBusy || !oilRows.some((r) => r.oil_type)} onClick={clearAllOilTypes}>إلغاء تصنيف كل الزيوت</Button>
+          </div>
           {(() => {
-            const unclassified = rows.filter((r) => r.is_oil && !r.oil_type).length;
+            const unclassified = oilRows.filter((r) => !r.oil_type).length;
             return unclassified > 0 ? (
               <p className="rounded-lg bg-ink-3/40 px-3 py-2 text-t-xs font-bold text-text-dim">
                 {unclassified} صنف زيت لسه من غير نوع محدد.
@@ -1681,33 +1644,61 @@ export default function ProductsPage() {
       <Modal open={!!typeAssignFor} size="lg" onClose={() => setTypeAssignFor(null)}
         title={`تعيين الزيوت لنوع «${(typeAssignFor && OIL_TYPES[typeAssignFor]) || ""}»`}>
         <div className="space-y-3">
-          <p className="text-t-sm text-text-dim">
-            حدّد كل الأصناف اللي تتبع هذا النوع مرة واحدة ثم احفظ — بديل التعليم الفردي صنف بصنف.
-            المحدد: <b className="tnum">{typeAssignSel.size}</b>
-          </p>
-          <div className="max-h-80 divide-y divide-line overflow-y-auto rounded-lg border border-line">
-            {rows.filter((r) => r.is_oil).map((r) => (
-              <label key={r.id} className="flex cursor-pointer items-center gap-2 px-3 py-2 text-t-sm hover:bg-ink-3">
-                <input type="checkbox" checked={typeAssignSel.has(r.id)} className="h-4 w-4 accent-petrol"
-                  onChange={(e) => {
-                    const next = new Set(typeAssignSel);
-                    e.target.checked ? next.add(r.id) : next.delete(r.id);
-                    setTypeAssignSel(next);
-                  }} />
-                <span className="flex-1 font-bold">{productLabel(r)}</span>
-                {r.oil_type && r.oil_type !== typeAssignFor && (
-                  <Badge tone="neutral">
-                    حالياً: {OIL_TYPES[r.oil_type] || r.oil_type}
-                  </Badge>
-                )}
-              </label>
-            ))}
-            {rows.filter((r) => r.is_oil).length === 0 && (
-              <p className="p-6 text-center text-t-sm text-text-dim">
-                لا توجد أصناف زيت بعد — شغّل "تصنيف ذكي" أولاً أو فعّل "صنف زيت" على المنتجات
-              </p>
-            )}
-          </div>
+          {(() => {
+            const q = typeQuery.trim().toLowerCase();
+            const shown = oilRows.filter((r) => {
+              if (typeShow === "none" && r.oil_type) return false;
+              if (typeShow === "this" && r.oil_type !== typeAssignFor) return false;
+              return !q || productLabel(r).toLowerCase().includes(q) || (r.oil_brand || "").toLowerCase().includes(q);
+            });
+            const allOn = shown.length > 0 && shown.every((r) => typeAssignSel.has(r.id));
+            return (
+              <>
+                <p className="text-t-sm text-text-dim">
+                  ابحث وحدّد الأصناف التي تتبع هذا النوع ثم احفظ. المحدد: <b className="tnum">{typeAssignSel.size}</b>
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="min-w-[200px] flex-1">
+                    <Input value={typeQuery} placeholder="ابحث باسم الزيت أو الشركة أو اللزوجة (5W-30)" autoFocus
+                      onChange={(e) => setTypeQuery(e.target.value)} />
+                  </div>
+                  {([["none", "غير المصنّف"], ["this", "هذا النوع"], ["all", "الكل"]] as const).map(([k, l]) => (
+                    <Button key={k} size="xs" variant={typeShow === k ? "primary" : "ghost"} onClick={() => setTypeShow(k)}>{l}</Button>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between text-t-xs text-text-dim">
+                  <span><b className="tnum">{shown.length}</b> صنف ظاهر</span>
+                  <span className="flex gap-2">
+                    <Button size="xs" variant="ghost" disabled={shown.length === 0}
+                      onClick={() => { const n = new Set(typeAssignSel); shown.forEach((r) => (allOn ? n.delete(r.id) : n.add(r.id))); setTypeAssignSel(n); }}>
+                      {allOn ? "إلغاء تحديد الظاهر" : "تحديد كل الظاهر"}
+                    </Button>
+                  </span>
+                </div>
+                <div className="max-h-80 divide-y divide-line overflow-y-auto rounded-lg border border-line">
+                  {shown.map((r) => (
+                    <label key={r.id} className="flex cursor-pointer items-center gap-2 px-3 py-2 text-t-sm hover:bg-ink-3">
+                      <input type="checkbox" checked={typeAssignSel.has(r.id)} className="h-4 w-4 accent-petrol"
+                        onChange={(e) => {
+                          const next = new Set(typeAssignSel);
+                          e.target.checked ? next.add(r.id) : next.delete(r.id);
+                          setTypeAssignSel(next);
+                        }} />
+                      <span className="flex-1 font-bold">{productLabel(r)}</span>
+                      {r.oil_type && r.oil_type !== typeAssignFor && (
+                        <Badge tone="neutral">حالياً: {OIL_TYPES[r.oil_type] || r.oil_type}</Badge>
+                      )}
+                    </label>
+                  ))}
+                  {shown.length === 0 && (
+                    <p className="p-6 text-center text-t-sm text-text-dim">
+                      {oilRows.length === 0 ? "لا توجد أصناف زيت" : "لا نتائج — غيّر البحث أو اختر «الكل»"}
+                    </p>
+                  )}
+                </div>
+              </>
+            );
+          })()}
           <ErrorNote msg={typeErr} />
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setTypeAssignFor(null)}>إلغاء</Button>
@@ -1829,37 +1820,65 @@ export default function ProductsPage() {
             وقاعدة بدون ماركة = السعر الافتراضي لكل السيارات.
           </p>
 
-          <div className="grid gap-2 rounded-card border border-dashed border-line p-3 sm:grid-cols-2">
-            <Field label="الخدمة (من أصنافك المعلّمة خدمة)">
-              <Select value={ruleForm.serviceProductId} onChange={(e) => setRuleForm({ ...ruleForm, serviceProductId: e.target.value })}>
-                <option value="">— اختر الخدمة —</option>
-                {serviceProducts.map((p: Product) => <option key={p.id} value={p.id}>{productLabel(p)}</option>)}
-              </Select>
-            </Field>
-            <Field label="السعر شامل الضريبة (ر.س)">
-              <Input value={ruleForm.price} inputMode="decimal" placeholder="مثال: 40"
-                onChange={(e) => setRuleForm({ ...ruleForm, price: e.target.value.replace(/[^0-9.]/g, "") })} />
-            </Field>
-            <Field label="الماركة (فارغ = كل السيارات)">
-              <Input value={ruleForm.brand} placeholder="تويوتا" onChange={(e) => setRuleForm({ ...ruleForm, brand: e.target.value })} />
-            </Field>
-            <Field label="الموديل (اختياري)">
-              <Input value={ruleForm.model} placeholder="كامري" onChange={(e) => setRuleForm({ ...ruleForm, model: e.target.value })} />
-            </Field>
-            <Field label="من سنة (اختياري)">
-              <Input value={ruleForm.yearFrom} inputMode="numeric" placeholder="2015"
-                onChange={(e) => setRuleForm({ ...ruleForm, yearFrom: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
-            </Field>
-            <Field label="إلى سنة (اختياري)">
-              <Input value={ruleForm.yearTo} inputMode="numeric" placeholder="2024"
-                onChange={(e) => setRuleForm({ ...ruleForm, yearTo: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
-            </Field>
-            <div className="sm:col-span-2">
-              <Button className="w-full justify-center" disabled={ruleBusy || !ruleForm.serviceProductId || !ruleForm.price}
-                onClick={addRule}>
-                {ruleBusy ? "..." : "+ إضافة القاعدة"}
+          <div className="space-y-3 rounded-card border border-dashed border-line p-3">
+            <div>
+              <div className="mb-1 text-t-xs font-black">1) الخدمة</div>
+              <div className="flex flex-wrap gap-1.5">
+                {serviceProducts.map((p: Product) => (
+                  <button key={p.id} type="button" onClick={() => setRuleForm({ ...ruleForm, serviceProductId: p.id })}
+                    className={`rounded-md border px-3 py-1.5 text-t-sm font-bold transition ${ruleForm.serviceProductId === p.id ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 hover:bg-ink-3"}`}>
+                    {productLabel(p)}
+                  </button>
+                ))}
+                {serviceProducts.length === 0 && <span className="text-t-xs text-text-dim">لا أصناف خدمة — علّم صنف «خدمة» أولاً</span>}
+              </div>
+            </div>
+            <div>
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <span className="text-t-xs font-black">2) الماركات <span className="font-normal text-text-dim">(اختر واحدة أو أكثر) — المحدد: <b className="tnum">{ruleBrands.size + (ruleAll ? 1 : 0)}</b></span></span>
+                <div className="w-44"><Input value={ruleBrandQ} placeholder="ابحث عن ماركة" onChange={(e) => setRuleBrandQ(e.target.value)} /></div>
+              </div>
+              <div className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
+                <button type="button" onClick={() => setRuleAll(!ruleAll)}
+                  className={`rounded-md border px-3 py-1.5 text-t-sm font-bold transition ${ruleAll ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 hover:bg-ink-3"}`}>
+                  كل السيارات
+                </button>
+                {ruleBrandList.filter((b) => !ruleBrandQ.trim() || b.toLowerCase().includes(ruleBrandQ.trim().toLowerCase())).map((b) => (
+                  <button key={b} type="button"
+                    onClick={() => { const n = new Set(ruleBrands); n.has(b) ? n.delete(b) : n.add(b); setRuleBrands(n); }}
+                    className={`rounded-md border px-3 py-1.5 text-t-sm font-bold transition ${ruleBrands.has(b) ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 hover:bg-ink-3"}`}>
+                    {b}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="w-48">
+                <Field label="3) سعر الخدمة شامل الضريبة (ر.س)">
+                  <Input value={ruleForm.price} inputMode="decimal" placeholder="مثال: 40"
+                    onChange={(e) => setRuleForm({ ...ruleForm, price: e.target.value.replace(/[^0-9.]/g, "") })} />
+                </Field>
+              </div>
+              <Button disabled={ruleBusy || !ruleForm.serviceProductId || !ruleForm.price || (ruleBrands.size === 0 && !ruleAll)} onClick={saveBulkRule}>
+                {ruleBusy ? "..." : `حفظ السعر لـ ${ruleBrands.size + (ruleAll ? 1 : 0)} ماركة`}
               </Button>
             </div>
+            <details className="rounded-lg bg-ink-3 p-2">
+              <summary className="cursor-pointer text-t-xs font-bold">متقدم: تسعير لموديل أو نطاق سنة محدد</summary>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <Field label="الماركة"><Input value={ruleForm.brand} placeholder="تويوتا" onChange={(e) => setRuleForm({ ...ruleForm, brand: e.target.value })} /></Field>
+                <Field label="الموديل"><Input value={ruleForm.model} placeholder="كامري" onChange={(e) => setRuleForm({ ...ruleForm, model: e.target.value })} /></Field>
+                <Field label="من سنة"><Input value={ruleForm.yearFrom} inputMode="numeric" placeholder="2015"
+                  onChange={(e) => setRuleForm({ ...ruleForm, yearFrom: e.target.value.replace(/\D/g, "").slice(0, 4) })} /></Field>
+                <Field label="إلى سنة"><Input value={ruleForm.yearTo} inputMode="numeric" placeholder="2024"
+                  onChange={(e) => setRuleForm({ ...ruleForm, yearTo: e.target.value.replace(/\D/g, "").slice(0, 4) })} /></Field>
+                <div className="sm:col-span-2">
+                  <Button className="w-full justify-center" variant="ghost" disabled={ruleBusy || !ruleForm.serviceProductId || !ruleForm.price} onClick={addRule}>
+                    {ruleBusy ? "..." : "+ إضافة قاعدة محددة (السعر أعلاه)"}
+                  </Button>
+                </div>
+              </div>
+            </details>
           </div>
           <ErrorNote msg={ruleErr} />
 
@@ -1887,105 +1906,6 @@ export default function ProductsPage() {
         </div>
       </Modal>
 
-      {/* ══════════ خصومات حسب الكمية ══════════ */}
-      <Modal open={qtyRulesOpen} size="lg" onClose={() => setQtyRulesOpen(false)} title="خصومات حسب الكمية">
-        <div className="space-y-3">
-          <p className="text-t-sm leading-relaxed text-text-dim">
-            حدّد حد كمية لصنف معيّن ونسبة خصم — شاشة البيع بتطبّق أعلى حد تحقّق فيه الكمية المضافة
-            تلقائياً على سعر هذا الصنف (قبل أو بعد قائمة الأسعار المخصّصة لو العميل له قائمة).
-          </p>
-
-          <div className="grid gap-2 rounded-card border border-dashed border-line p-3 sm:grid-cols-2">
-            <Field label="الصنف">
-              <Select value={qtyRuleForm.productId} onChange={(e) => setQtyRuleForm({ ...qtyRuleForm, productId: e.target.value })}>
-                <option value="">— اختر الصنف —</option>
-                {rows.map((p: Product) => <option key={p.id} value={p.id}>{productLabel(p)}</option>)}
-              </Select>
-            </Field>
-            <Field label="نسبة الخصم (%)">
-              <Input value={qtyRuleForm.discountPercent} inputMode="decimal" placeholder="مثال: 10"
-                onChange={(e) => setQtyRuleForm({ ...qtyRuleForm, discountPercent: e.target.value.replace(/[^0-9.]/g, "") })} />
-            </Field>
-            <Field label="حد الكمية الأدنى (ومافوق)">
-              <Input value={qtyRuleForm.minQty} inputMode="decimal" placeholder="مثال: 5"
-                onChange={(e) => setQtyRuleForm({ ...qtyRuleForm, minQty: e.target.value.replace(/[^0-9.]/g, "") })} />
-            </Field>
-            <div className="sm:col-span-2">
-              <Button className="w-full justify-center"
-                disabled={qtyRuleBusy || !qtyRuleForm.productId || !qtyRuleForm.minQty || !qtyRuleForm.discountPercent}
-                onClick={addQtyRule}>
-                {qtyRuleBusy ? "..." : "+ إضافة القاعدة"}
-              </Button>
-            </div>
-          </div>
-          <ErrorNote msg={qtyRuleErr} />
-
-          <div className="max-h-64 divide-y divide-line overflow-y-auto rounded-lg border border-line">
-            {qtyRules.length === 0 && <p className="p-5 text-center text-t-sm text-text-dim">لا قواعد بعد</p>}
-            {qtyRules.map((r) => (
-              <div key={r.id} className="flex items-center justify-between px-3 py-2 text-t-sm">
-                <span>
-                  <Badge tone="neutral">{r.product_name}</Badge>
-                  <span className="tnum mr-2"> كمية ≥ {r.min_qty}</span>
-                </span>
-                <span className="flex items-center gap-2">
-                  <b className="tnum text-petrol">خصم {r.discount_percent}%</b>
-                  <button onClick={() => removeQtyRule(r.id)} className="mi-hover rounded-md px-1.5 py-1 text-text-dim hover:bg-ember-bg hover:text-ember">
-                    <MIcon name="delete" className="!text-[16px]" />
-                  </button>
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Modal>
-
-      {/* ══════════ منظف الأسماء الذكي ══════════ */}
-      <Modal open={cleanOpen} size="lg" onClose={() => setCleanOpen(false)} title="تنظيف أسماء الأصناف بالذكاء">
-        <div className="space-y-3">
-          <p className="text-t-sm leading-relaxed text-text-dim">
-            بيعيد صياغة الأسماء المستوردة الفوضوية لأسماء عربية نظيفة ويستخرج اللزوجة والسعة —
-            <b> دفعة 120 صنف في المرة</b> (الزيوت أولاً). الاسم الأصلي بيتحفظ ومش بيضيع،
-            وبتشوف المعاينة قبل التطبيق. كرر العملية لحد ما "المتبقي" يوصل صفر.
-          </p>
-          {!cleanRes && (
-            <Button className="w-full justify-center" disabled={cleanBusy} onClick={() => runClean(false)}>
-              {cleanBusy ? "الذكاء بيشتغل... (نص دقيقة تقريباً)" : "معاينة الدفعة الأولى"}
-            </Button>
-          )}
-          <ErrorNote msg={cleanErr} />
-          {cleanRes && (
-            <>
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-lg bg-ink-3 p-2"><div className="tnum text-t-lg font-black">{cleanRes.scanned}</div><div className="text-t-xs text-text-dim">اتفحصت</div></div>
-                <div className="rounded-lg bg-emerald-bg p-2"><div className="tnum text-t-lg font-black text-emerald">{cleanRes.changed}</div><div className="text-t-xs text-text-dim">{cleanRes.applied ? "اتنظفت" : "هتتنظف"}</div></div>
-                <div className="rounded-lg bg-ink-3 p-2"><div className="tnum text-t-lg font-black text-text-dim">{cleanRes.remaining}</div><div className="text-t-xs text-text-dim">متبقي</div></div>
-              </div>
-              <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-line p-2">
-                {cleanRes.items.map((it) => (
-                  <div key={it.id} className="rounded-lg bg-ink-3 px-3 py-1.5 text-t-xs">
-                    <div className="truncate text-text-dim line-through">{it.old}</div>
-                    <div className="font-black">{it.name}{it.spec ? <span className="mr-2 text-petrol">{it.spec}</span> : null}</div>
-                  </div>
-                ))}
-                {cleanRes.items.length === 0 && <p className="p-4 text-center text-t-sm text-text-dim">لا تغييرات في الدفعة دي</p>}
-              </div>
-              {cleanRes.applied ? (
-                <Button className="w-full justify-center gap-1" disabled={cleanBusy} onClick={() => runClean(false)}>
-                  {cleanBusy ? "..." : <><MIcon name="autorenew" className="!text-[15px]" /> {`الدفعة التالية (متبقي ${cleanRes.remaining})`}</>}
-                </Button>
-              ) : (
-                <div className="flex gap-2">
-                  <Button variant="ghost" className="flex-1 justify-center" onClick={() => setCleanRes(null)}>إلغاء</Button>
-                  <Button className="flex-[2] justify-center gap-1" disabled={cleanBusy || cleanRes.changed === 0} onClick={() => runClean(true)}>
-                    {cleanBusy ? "..." : <><MIcon name="check" className="!text-[15px]" /> {`تطبيق التنظيف (${cleanRes.changed})`}</>}
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </Modal>
       {/* ══════════ معاينة الاستيراد — القرار قبل الكتابة ══════════ */}
       <Modal open={!!preview} onClose={() => { setPreview(null); setPendingFile(null); }}
         title={`معاينة الاستيراد — ${preview?.totalRows ?? 0} صنف في الملف`}>

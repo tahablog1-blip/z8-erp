@@ -96,9 +96,6 @@ class FakeApi implements CustomerApi {
           {'name': 'موبيل', 'logo': null},
         ],
         'filters': <dynamic>[],
-        'services': [
-          {'id': 'fee-gear', 'name': 'أجرة تغيير زيت قير', 'oilType': 'gearbox', 'price': 25.0},
-        ],
       };
   @override
   Future<Map<String, dynamic>?> autoService(String b, {required String brand, required String model, required String year}) async =>

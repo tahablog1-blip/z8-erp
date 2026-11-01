@@ -1101,15 +1101,7 @@ async def public_booking_products(branch_id: str):
                   for r in brand_rows]
     except Exception:
         brands = []
-    # أجرة الخدمة لكل نوع زيت: أصناف الخدمة المربوطة بنوع (ماكينة/قير/دفرنس/دبل…) من شاشة الصنف
-    svc_rows = await _f(
-        """SELECT id, name, oil_type, price_vat FROM products
-           WHERE company_id=$1 AND is_active=TRUE AND is_service=TRUE
-             AND COALESCE(oil_type,'') <> '' ORDER BY name""", br["company_id"])
-    services = [{"id": str(r["id"]), "name": r["name"], "oilType": r["oil_type"], "price": float(r["price_vat"] or 0)}
-                for r in svc_rows]
-    return {"oils": [_prod(r) for r in oils], "filters": [_prod(r) for r in filters], "brands": brands,
-            "services": services}
+    return {"oils": [_prod(r) for r in oils], "filters": [_prod(r) for r in filters], "brands": brands}
 
 
 class _MyInvoicesIn(_BM):

@@ -39,7 +39,6 @@ class _ServicesScreenState extends State<ServicesScreen> {
     final b = s.branchId!;
     try {
       catalog = Catalog.fromJson(await s.api.catalog(b));
-      sel.fees = catalog.fees;
     } on ApiException catch (e) {
       err = e.message;
     }
@@ -209,6 +208,18 @@ class _Summary extends StatelessWidget {
             Text('${sel.total.toStringAsFixed(2)} ر.س', style: tx(Fs.xl, w: 900, color: Z8.petrolDeep, tnum: true)),
           ]),
         ])),
+        if (sel.feeAtBranch.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            color: Z8.petrolSoft,
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.build_circle_outlined, size: 20, color: Z8.petrolDeep),
+              const SizedBox(width: 8),
+              Expanded(child: Text('أجرة ${sel.feeAtBranch.map((k) => k.label.replaceFirst('تغيير ', '')).join(' و')} غير مضافة: لها أكثر من خدمة في قائمة الخدمات، فيُحدَّد سعرها داخل الفرع حسب الخدمة المتوفرة.', style: tx(Fs.sm, w: 700))),
+            ]),
+          ),
+        ],
         const SizedBox(height: 8),
         const _Disclaimer(),
       ]);
