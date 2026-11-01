@@ -158,43 +158,49 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('اختيار أكثر من خدمة: ماكينة + جير + دفرنس مع الزيت والكمية والفلتر، ويُرسل بنفس الحجز', (t) async {
+  testWidgets('اختيار أكثر من خدمة: شركات ثم زيوت، أجرة الخدمة، الإجمالي، وتنبيه السعر غير النهائي', (t) async {
     final (_, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
     await t.tap(find.text('احجز دورك الآن'));
     await t.pumpAndSettle();
     await t.tap(find.text('التالي: اختيار الخدمة'));
     await t.pumpAndSettle();
-    expect(find.text('تغيير زيت ماكينة'), findsOneWidget);
-    expect(find.text('تغيير زيت جير'), findsOneWidget);
-    expect(find.text('تغيير زيت دفرنس'), findsOneWidget);
-    expect(find.text('تغيير زيت دبل'), findsOneWidget);
-    // التأكيد معطّل قبل اختيار أي خدمة
-    expect(t.widget<InkWell>(find.ancestor(of: find.text('تأكيد الحجز'), matching: find.byType(InkWell)).first).onTap, isNull);
+    for (final k in ['تغيير زيت ماكينة', 'تغيير زيت جير', 'تغيير زيت دفرنس', 'تغيير زيت دبل']) {
+      expect(find.text(k), findsOneWidget);
+    }
 
+    // الماكينة: مرحلة الشركات ثم زيوت الشركة
     await t.tap(find.text('تغيير زيت ماكينة'));
     await t.pumpAndSettle();
     await t.tap(find.text('اختر الزيت'));
     await t.pumpAndSettle();
-    expect(find.text('شل هيلكس 5W-30'), findsOneWidget);          // زيوت الماكينة فقط
-    expect(find.text('كاسترول قير 75W-90'), findsNothing);
-    await t.tap(find.text('شل هيلكس 5W-30'));
+    expect(find.text('اختر شركة الزيت'), findsOneWidget);
+    expect(find.text('شل'), findsOneWidget);
+    expect(find.text('كاسترول'), findsNothing);                    // لا زيت ماكينة لها
+    await t.tap(find.text('شل'));
     await t.pumpAndSettle();
-    expect(find.text('160.00 ر.س'), findsWidgets);                 // 40 × 4 لتر
+    expect(find.text('شل هيلكس'), findsOneWidget);
+    expect(find.text('5W-30'), findsOneWidget);
+    await t.tap(find.text('شل هيلكس'));
+    await t.pumpAndSettle();
+    expect(find.text('اختر الخدمة'), findsOneWidget);              // عاد لشاشة الخدمات
     await t.tap(find.byIcon(Icons.add_circle_outline));            // 4.5 لتر
     await t.pumpAndSettle();
-    expect(find.text('180.00 ر.س'), findsWidgets);
 
     await t.scrollUntilVisible(find.text('مع تغيير فلتر الزيت'), 200, scrollable: find.byType(Scrollable).first);
-    await t.drag(find.byType(ListView).first, const Offset(0, -250));   // يخرج من تحت الشريط السفلي
+    await t.drag(find.byType(ListView).first, const Offset(0, -250));
     await t.pumpAndSettle();
-    await t.tap(find.text('مع تغيير فلتر الزيت'));                  // فلتر مطابق لتويوتا
+    await t.tap(find.text('مع تغيير فلتر الزيت'));
     await t.pumpAndSettle();
 
+    await t.drag(find.byType(ListView).first, const Offset(0, 600));
+    await t.pumpAndSettle();
     await t.tap(find.text('تغيير زيت جير'));
     await t.pumpAndSettle();
     await t.tap(find.text('اختر الزيت'));
     await t.pumpAndSettle();
-    await t.tap(find.text('كاسترول قير 75W-90'));
+    await t.tap(find.text('كاسترول'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('كاسترول قير'));
     await t.pumpAndSettle();
 
     await t.scrollUntilVisible(find.text('تغيير زيت دبل'), 200, scrollable: find.byType(Scrollable).first);
@@ -203,14 +209,23 @@ void main() {
     await t.tap(find.text('اختر الزيت'));
     await t.pumpAndSettle();
     expect(find.text('كل الزيوت المتاحة'), findsOneWidget);
+    await t.tap(find.text('أخرى'));
+    await t.pumpAndSettle();
     await t.tap(find.text('زيت عام'));
     await t.pumpAndSettle();
 
+    // ملخص الفاتورة: كل البنود وأجرة الخدمة والإجمالي + تنبيه غير نهائي
+    await t.scrollUntilVisible(find.text('ملخص الفاتورة'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('خدمة تغيير زيت'), findsOneWidget);
+    expect(find.text('أجرة تغيير زيت قير'), findsOneWidget);
+    expect(find.text('390.00 ر.س'), findsWidgets);                  // 180 + 30 + 110 + 25 + 20 + 25
+    expect(find.textContaining('هذا السعر غير نهائي'), findsOneWidget);
+    expect(find.text('السعر غير نهائي — قد تُضاف أصناف داخل الفرع'), findsOneWidget);   // نفس التنبيه في الشريط السفلي
+
     await t.tap(find.text('تأكيد الحجز'));
     await t.pumpAndSettle();
-
     final items = (api.lastSelection!['items'] as List).cast<Map<String, dynamic>>();
-    expect(items.map((e) => e['productId']), ['o-eng', 'o-gear', 'o-misc', 'svc1', 'f1']);
+    expect(items.map((e) => e['productId']), ['o-eng', 'svc1', 'o-gear', 'fee-gear', 'o-misc', 'f1']);
     expect(items.first['qty'], 4.5);
     expect(items.first['label'], 'تغيير زيت ماكينة: شل هيلكس 5W-30');
     expect(api.lastSelection!['withFilter'], true);

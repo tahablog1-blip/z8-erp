@@ -21,7 +21,7 @@ abstract class CustomerApi {
   Future<List<String>> models(String branchId, String brand);
   Future<Map<String, dynamic>> bookSaved(String branchId, {required String carId, String? otpToken, String? odometer, String serviceType = 'basic', Map<String, dynamic>? selection});
   Future<Map<String, dynamic>> bookNew(String branchId, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken, Map<String, dynamic>? selection});
-  Future<List<Map<String, dynamic>>> oils(String branchId);
+  Future<Map<String, dynamic>> catalog(String branchId);
   Future<Map<String, dynamic>?> autoService(String branchId, {required String brand, required String model, required String year});
   Future<Map<String, dynamic>?> filterMatch(String branchId, {required String brand, required String model, required String year});
   Future<Map<String, dynamic>> invoices(String branchId, {String phone = '', String? otpToken, String? savedCarId});
@@ -99,11 +99,7 @@ class Api implements CustomerApi {
       _map(await _send('POST', '/cars/public/booking/$b', body: {'serviceType': 'basic', 'name': name, 'phone': phone, 'car': car, 'otpToken': otpToken, ...?selection}));
 
   @override
-  Future<List<Map<String, dynamic>>> oils(String b) async {
-    final d = _map(await _send('GET', '/cars/public/booking-products/$b'));
-    final l = d['oils'];
-    return l is List ? l.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
-  }
+  Future<Map<String, dynamic>> catalog(String b) async => _map(await _send('GET', '/cars/public/booking-products/$b'));
 
   @override
   Future<Map<String, dynamic>?> autoService(String b, {required String brand, required String model, required String year}) async {
