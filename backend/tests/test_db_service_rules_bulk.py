@@ -36,11 +36,11 @@ def test_bulk_rules_upsert_and_clear_all_types(db_ready):
                     lambda: service.bulk_service_rules(CO, str(oil), 10, ["كيا"])):       # ليست خدمة
             with pytest.raises(HTTPException):
                 await bad()
-        # إلغاء تصنيف كل الزيوت لا يمس الخدمات ولا الشركة
+        # إلغاء التصنيف يشمل أي خدمة كانت مربوطة بنوع زيت، ولا يمس الشركة
         out = await service.clear_all_oil_types(CO)
-        assert out["count"] == 1
+        assert out["count"] == 2
         async with db.pool().acquire() as c:
             assert await c.fetchval("SELECT oil_type FROM products WHERE id=$1", oil) is None
             assert await c.fetchval("SELECT oil_brand FROM products WHERE id=$1", oil) == "شل"
-            assert await c.fetchval("SELECT oil_type FROM products WHERE id=$1", svc2) == "gearbox"
+            assert await c.fetchval("SELECT oil_type FROM products WHERE id=$1", svc2) is None
     run(go)
