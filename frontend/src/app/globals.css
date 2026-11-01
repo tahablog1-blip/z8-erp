@@ -68,6 +68,18 @@ a:focus-visible, [role="tab"]:focus-visible, summary:focus-visible {
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
+/* خط الأيقونات مستضاف محلياً (نسخة جزئية بالأيقونات المستخدمة فقط ≈ 30KB) — بدل خطوط جوجل التي كانت تتأخر/تُحجب فتظهر أسماء الأيقونات نصاً.
+   لإضافة أيقونة جديدة: python3 tools/build-icon-font.py */
+@font-face {
+  font-family: "Material Symbols Rounded";
+  font-style: normal; font-weight: 400; font-display: block;
+  src: url("/fonts/material-symbols-rounded.woff2?v=1") format("woff2");
+}
+@font-face {
+  font-family: "Material Symbols Rounded Fill";
+  font-style: normal; font-weight: 400; font-display: block;
+  src: url("/fonts/material-symbols-rounded-fill.woff2?v=1") format("woff2");
+}
 /* ── Material Symbols Rounded: مكتبة الأيقونات الموحدة ──
    24px · Weight 400 · Optical 24 · Rounded — لون افتراضي #64748B */
 .msr {
@@ -90,7 +102,7 @@ a:focus-visible, [role="tab"]:focus-visible, summary:focus-visible {
   transition: color .2s ease, transform .2s ease;
   user-select: none;
 }
-.msr-fill { font-variation-settings: "opsz" 24, "wght" 400, "GRAD" 0, "FILL" 1; }
+.msr-fill { font-family: "Material Symbols Rounded Fill", "Material Symbols Rounded"; }
 .msr-20 { font-size: 20px; }
 .msr-18 { font-size: 18px; }
 /* Hover الموحد: أخضر + تكبير 1.05 */
