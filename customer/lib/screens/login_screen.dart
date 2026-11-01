@@ -34,6 +34,14 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  /// الشركة لم تفعّل رمز التحقق: نكتفي برقم الجوال لعرض السيارات والفواتير
+  Future<void> _openPhone() async {
+    if (_p.length < 9) return setState(() => err = 'أدخل رقم جوال صحيح');
+    setState(() { busy = true; err = null; });
+    await widget.state.useOpenPhone(_p);
+    if (mounted) Navigator.of(context).pop(true);
+  }
+
   Future<void> _send() async {
     if (_p.length < 9) return setState(() => err = 'أدخل رقم جوال صحيح');
     setState(() { busy = true; err = null; });
@@ -68,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
             if (err != null) ...[const SizedBox(height: 12), ErrorBar(err!)],
             const SizedBox(height: 16),
-            Z8Button(sent ? 'تحقق' : 'إرسال الرمز', busy: busy, onTap: sent ? _verify : _send),
+            Z8Button(widget.state.info?.otpRequired != true ? 'متابعة' : (sent ? 'تحقق' : 'إرسال الرمز'), busy: busy, onTap: widget.state.info?.otpRequired != true ? _openPhone : (sent ? _verify : _send)),
             if (sent) ...[
               const SizedBox(height: 8),
               Z8Button(wait > 0 ? 'إعادة الإرسال بعد $wait ث' : 'إعادة إرسال الرمز', outline: true, onTap: wait > 0 || busy ? null : _send),

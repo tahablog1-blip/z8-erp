@@ -65,7 +65,7 @@ class Panel extends StatelessWidget {
         width: double.infinity,
         padding: EdgeInsets.all(pad),
         decoration: BoxDecoration(color: color ?? Z8.ink2, border: Border.all(color: Z8.line), boxShadow: Z8.shadowCard),
-        child: child,
+        child: Material(type: MaterialType.transparency, child: child),   // ليظهر تأثير اللمس فوق خلفية الكرت
       );
 }
 

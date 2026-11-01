@@ -198,10 +198,33 @@ class AppState extends ChangeNotifier {
   }
 
   // ── الحجز ──
-  Future<String?> bookSaved(SavedCar car, {String? odometer}) => _book(() => api.bookSaved(branchId!, carId: car.id, otpToken: otpToken, odometer: odometer, serviceType: car.serviceType));
+  Future<String?> bookSaved(SavedCar car, {String? odometer, Map<String, dynamic>? selection}) =>
+      _book(() => api.bookSaved(branchId!, carId: car.id, otpToken: otpToken, odometer: odometer, serviceType: car.serviceType, selection: selection));
 
-  Future<String?> bookNew({required String name, required String phoneNo, required Map<String, dynamic> car}) =>
-      _book(() => api.bookNew(branchId!, name: name, phone: phoneNo, car: car, otpToken: otpToken));
+  Future<String?> bookNew({required String name, required String phoneNo, required Map<String, dynamic> car, Map<String, dynamic>? selection}) =>
+      _book(() => api.bookNew(branchId!, name: name, phone: phoneNo, car: car, otpToken: otpToken, selection: selection));
+
+  // ── الفواتير: كلها أو لسيارة واحدة. تتطلب هوية موثّقة لو التحقق مفعّل ──
+  Future<InvoiceList> fetchInvoices({String? savedCarId}) async {
+    try {
+      final j = await api.invoices(branchId!, phone: phone, otpToken: otpToken, savedCarId: savedCarId);
+      final l = j['invoices'];
+      return InvoiceList(
+        l is List ? l.whereType<Map>().map((e) => Invoice.fromJson(Map<String, dynamic>.from(e))).toList() : const [],
+        '${j['pdfPhone'] ?? ''}');
+    } on ApiException catch (e) {
+      if (e.status == 401) {
+        await _dropOtp();
+        notifyListeners();
+      }
+      rethrow;
+    }
+  }
+
+  String pdfUrl(String invoiceId, String pdfPhone) => '${Config.apiBase}/api/cars/public/booking-invoice-pdf/$invoiceId?phone=$pdfPhone';
+
+  /// يحتاج العميل لتأكيد جواله قبل عرض فواتيره/سياراته؟
+  bool get needsLogin => info?.otpRequired == true ? !verified : phone.length < 9;
 
   Future<String?> _book(Future<Map<String, dynamic>> Function() call) async {
     busy = true;

@@ -19,8 +19,12 @@ abstract class CustomerApi {
   Future<Map<String, dynamic>> lookup(String branchId, {String phone = '', String? otpToken});
   Future<List<String>> brands(String branchId);
   Future<List<String>> models(String branchId, String brand);
-  Future<Map<String, dynamic>> bookSaved(String branchId, {required String carId, String? otpToken, String? odometer, String serviceType = 'basic'});
-  Future<Map<String, dynamic>> bookNew(String branchId, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken});
+  Future<Map<String, dynamic>> bookSaved(String branchId, {required String carId, String? otpToken, String? odometer, String serviceType = 'basic', Map<String, dynamic>? selection});
+  Future<Map<String, dynamic>> bookNew(String branchId, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken, Map<String, dynamic>? selection});
+  Future<List<Map<String, dynamic>>> oils(String branchId);
+  Future<Map<String, dynamic>?> autoService(String branchId, {required String brand, required String model, required String year});
+  Future<Map<String, dynamic>?> filterMatch(String branchId, {required String brand, required String model, required String year});
+  Future<Map<String, dynamic>> invoices(String branchId, {String phone = '', String? otpToken, String? savedCarId});
   Future<Map<String, dynamic>> bookingStatus(String bookingId);
   Future<String> chatToken(String bookingId);
   Future<Map<String, dynamic>> chatMessages(String token);
@@ -87,12 +91,36 @@ class Api implements CustomerApi {
   @override
   Future<List<String>> models(String b, String brand) async => _strings(await _send('GET', '/cars/public/car-models/$b', query: {'brand': brand}));
   @override
-  Future<Map<String, dynamic>> bookSaved(String b, {required String carId, String? otpToken, String? odometer, String serviceType = 'basic'}) async =>
+  Future<Map<String, dynamic>> bookSaved(String b, {required String carId, String? otpToken, String? odometer, String serviceType = 'basic', Map<String, dynamic>? selection}) async =>
       _map(await _send('POST', '/cars/public/booking/$b',
-          body: {'savedCarId': carId, 'odometer': odometer, 'serviceType': serviceType, 'otpToken': otpToken}));
+          body: {'savedCarId': carId, 'odometer': odometer, 'serviceType': serviceType, 'otpToken': otpToken, ...?selection}));
   @override
-  Future<Map<String, dynamic>> bookNew(String b, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken}) async =>
-      _map(await _send('POST', '/cars/public/booking/$b', body: {'serviceType': 'basic', 'name': name, 'phone': phone, 'car': car, 'otpToken': otpToken}));
+  Future<Map<String, dynamic>> bookNew(String b, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken, Map<String, dynamic>? selection}) async =>
+      _map(await _send('POST', '/cars/public/booking/$b', body: {'serviceType': 'basic', 'name': name, 'phone': phone, 'car': car, 'otpToken': otpToken, ...?selection}));
+
+  @override
+  Future<List<Map<String, dynamic>>> oils(String b) async {
+    final d = _map(await _send('GET', '/cars/public/booking-products/$b'));
+    final l = d['oils'];
+    return l is List ? l.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
+  }
+
+  @override
+  Future<Map<String, dynamic>?> autoService(String b, {required String brand, required String model, required String year}) async {
+    final d = _map(await _send('GET', '/products/public/booking-service/$b', query: {'brand': brand, 'model': model, 'year': year}));
+    final s = d['service'];
+    return s is Map ? Map<String, dynamic>.from(s) : null;
+  }
+
+  @override
+  Future<Map<String, dynamic>?> filterMatch(String b, {required String brand, required String model, required String year}) async {
+    final d = await _send('GET', '/cars/public/car-oil-filter-match/$b', query: {'brand': brand, 'model': model, 'year': year, 'kind': 'oil'});
+    return d is Map ? Map<String, dynamic>.from(d) : null;
+  }
+
+  @override
+  Future<Map<String, dynamic>> invoices(String b, {String phone = '', String? otpToken, String? savedCarId}) async =>
+      _map(await _send('POST', '/cars/public/booking/$b/invoices', body: {'phone': phone, 'otpToken': otpToken, 'savedCarId': savedCarId}));
   @override
   Future<Map<String, dynamic>> bookingStatus(String id) async => _map(await _send('GET', '/cars/public/booking-status/$id'));
   @override

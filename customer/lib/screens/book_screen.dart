@@ -4,6 +4,7 @@ import '../core/theme.dart';
 import '../core/widgets.dart';
 import '../models.dart';
 import '../state/app_state.dart';
+import 'services_screen.dart';
 
 /// حجز جديد: سيارة محفوظة بضغطة، أو سيارة جديدة بنموذج مختصر. يرجع true عند إنشاء الحجز.
 class BookScreen extends StatefulWidget {
@@ -13,7 +14,7 @@ class BookScreen extends StatefulWidget {
   State<BookScreen> createState() => _BookScreenState();
 }
 
-const fuelTypes = ['بنزين 91', 'بنزين 95', 'ديزل', 'هايبرد', 'كهرباء'];
+const fuelTypes = ['ديزل', 'بنزين', 'هايبرد'];
 
 class _BookScreenState extends State<BookScreen> {
   final name = TextEditingController(), phone = TextEditingController(), letters = TextEditingController(), numbers = TextEditingController(),
@@ -45,35 +46,39 @@ class _BookScreenState extends State<BookScreen> {
     }
   }
 
-  Future<void> _submit() async {
+  /// التالي: نتحقق من بيانات السيارة ثم ننتقل لاختيار الخدمات
+  Future<void> _next() async {
     setState(() => err = null);
-    String? e;
+    final nav = Navigator.of(context);
+    ServicesScreen screen;
     if (!newCar && picked != null) {
-      e = await s.bookSaved(picked!, odometer: arabicDigitsToLatin(odo.text.trim()).isEmpty ? null : arabicDigitsToLatin(odo.text.trim()));
+      final c = picked!;
+      final odometer = arabicDigitsToLatin(odo.text.trim()).isEmpty ? null : arabicDigitsToLatin(odo.text.trim());
+      screen = ServicesScreen(
+        state: s, carTitle: '${c.title.isEmpty ? 'سيارة' : c.title} · ${c.plate}', brand: c.brand, model: c.name, year: c.year,
+        submit: (selection, _) => s.bookSaved(c, odometer: odometer, selection: selection),
+      );
     } else {
-      final n = numbers.text.trim();
+      final n = arabicDigitsToLatin(numbers.text.trim());
       if (name.text.trim().length < 2) return setState(() => err = 'اكتب اسمك');
       if (arabicDigitsToLatin(phone.text).replaceAll(RegExp(r'[^0-9]'), '').length < 9) return setState(() => err = 'أدخل رقم جوال صحيح');
       if (n.isEmpty) return setState(() => err = 'أدخل أرقام اللوحة');
-      e = await s.bookNew(
-        name: name.text.trim(),
-        phoneNo: arabicDigitsToLatin(phone.text).trim(),
-        car: {
-          'plateLetters': letters.text.trim(), 'plateNumbers': arabicDigitsToLatin(n),
-          'brand': brand.text.trim().isEmpty ? null : brand.text.trim(),
-          'carName': model.text.trim().isEmpty ? null : model.text.trim(),
-          'modelYear': year.text.trim().isEmpty ? null : arabicDigitsToLatin(year.text.trim()),
-          'odometer': arabicDigitsToLatin(odo.text.trim()),
-          'fuelType': fuel.isEmpty ? null : fuel,
-        },
+      final car = {
+        'plateLetters': letters.text.trim(), 'plateNumbers': n,
+        'brand': brand.text.trim().isEmpty ? null : brand.text.trim(),
+        'carName': model.text.trim().isEmpty ? null : model.text.trim(),
+        'modelYear': year.text.trim().isEmpty ? null : arabicDigitsToLatin(year.text.trim()),
+        'odometer': arabicDigitsToLatin(odo.text.trim()),
+        'fuelType': fuel.isEmpty ? null : fuel,
+      };
+      screen = ServicesScreen(
+        state: s, carTitle: '${[brand.text.trim(), model.text.trim()].where((e) => e.isNotEmpty).join(' ')} · $n ${letters.text.trim()}'.trim(),
+        brand: brand.text.trim(), model: model.text.trim(), year: arabicDigitsToLatin(year.text.trim()),
+        submit: (selection, _) => s.bookNew(name: name.text.trim(), phoneNo: arabicDigitsToLatin(phone.text).trim(), car: car, selection: selection),
       );
     }
-    if (!mounted) return;
-    if (e == null) {
-      Navigator.of(context).pop(true);
-    } else {
-      setState(() => err = e);
-    }
+    final ok = await nav.push<bool>(MaterialPageRoute(builder: (_) => screen));
+    if (ok == true && mounted) nav.pop(true);
   }
 
   @override
@@ -156,7 +161,7 @@ class _BookScreenState extends State<BookScreen> {
               ],
               if (err != null) ...[const SizedBox(height: 16), ErrorBar(err!)],
               const SizedBox(height: 20),
-              Z8Button('تأكيد الحجز', busy: s.busy, onTap: _submit),
+              Z8Button('التالي: اختيار الخدمة', onTap: _next),
             ]),
           ),
         ),

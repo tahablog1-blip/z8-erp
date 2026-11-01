@@ -93,9 +93,13 @@ void main() {
 
     expect(find.text('حجز جديد'), findsOneWidget);
     expect(find.text('تويوتا كامري'), findsOneWidget);
-    await t.tap(find.text('تأكيد الحجز'));
+    await t.tap(find.text('التالي: اختيار الخدمة'));
+    await t.pumpAndSettle();
+    expect(find.text('اختر الخدمة'), findsOneWidget);
+    await t.tap(find.text('احجز دون تحديد الزيت (يحدده الفني)'));
     await t.pumpAndSettle();
     expect(api.lastOtpToken, 'tok-1');
+    expect(api.lastSelection, isNull);
     expect(find.text('تذكرتي'), findsOneWidget);
     expect(find.text('بانتظار دورك'), findsOneWidget);
     expect(find.text('4'), findsOneWidget);
@@ -126,8 +130,10 @@ void main() {
     await t.enterText(fields.at(1), '0555555555');
     await t.enterText(fields.at(2), '٥٦٧٨');
     await t.enterText(fields.at(3), 'ر ب ج');
-    await t.ensureVisible(find.text('تأكيد الحجز'));
-    await t.tap(find.text('تأكيد الحجز'));
+    await t.ensureVisible(find.text('التالي: اختيار الخدمة'));
+    await t.tap(find.text('التالي: اختيار الخدمة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('احجز دون تحديد الزيت (يحدده الفني)'));
     await t.pumpAndSettle();
     expect(api.bookings.single['name'], 'سالم');
     expect((api.bookings.single['car'] as Map)['plateNumbers'], '5678');
@@ -142,11 +148,110 @@ void main() {
     api.expireOtp = true;
     await t.tap(find.text('احجز دورك الآن'));
     await t.pumpAndSettle();
-    await t.tap(find.text('تأكيد الحجز'));
+    await t.tap(find.text('التالي: اختيار الخدمة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('احجز دون تحديد الزيت (يحدده الفني)'));
     await t.pumpAndSettle();
     expect(find.text('انتهت صلاحية التحقق — أعد التحقق برمز جديد'), findsOneWidget);
     expect(state.verified, isFalse);
     expect(state.profile.cars, isEmpty);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('اختيار أكثر من خدمة: ماكينة + جير + دفرنس مع الزيت والكمية والفلتر، ويُرسل بنفس الحجز', (t) async {
+    final (_, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    await t.tap(find.text('احجز دورك الآن'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('التالي: اختيار الخدمة'));
+    await t.pumpAndSettle();
+    expect(find.text('تغيير زيت ماكينة'), findsOneWidget);
+    expect(find.text('تغيير زيت جير'), findsOneWidget);
+    expect(find.text('تغيير زيت دفرنس'), findsOneWidget);
+    expect(find.text('تغيير زيت دبل'), findsOneWidget);
+    // التأكيد معطّل قبل اختيار أي خدمة
+    expect(t.widget<InkWell>(find.ancestor(of: find.text('تأكيد الحجز'), matching: find.byType(InkWell)).first).onTap, isNull);
+
+    await t.tap(find.text('تغيير زيت ماكينة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('اختر الزيت'));
+    await t.pumpAndSettle();
+    expect(find.text('شل هيلكس 5W-30'), findsOneWidget);          // زيوت الماكينة فقط
+    expect(find.text('كاسترول قير 75W-90'), findsNothing);
+    await t.tap(find.text('شل هيلكس 5W-30'));
+    await t.pumpAndSettle();
+    expect(find.text('160.00 ر.س'), findsWidgets);                 // 40 × 4 لتر
+    await t.tap(find.byIcon(Icons.add_circle_outline));            // 4.5 لتر
+    await t.pumpAndSettle();
+    expect(find.text('180.00 ر.س'), findsWidgets);
+
+    await t.scrollUntilVisible(find.text('مع تغيير فلتر الزيت'), 200, scrollable: find.byType(Scrollable).first);
+    await t.drag(find.byType(ListView).first, const Offset(0, -250));   // يخرج من تحت الشريط السفلي
+    await t.pumpAndSettle();
+    await t.tap(find.text('مع تغيير فلتر الزيت'));                  // فلتر مطابق لتويوتا
+    await t.pumpAndSettle();
+
+    await t.tap(find.text('تغيير زيت جير'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('اختر الزيت'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('كاسترول قير 75W-90'));
+    await t.pumpAndSettle();
+
+    await t.scrollUntilVisible(find.text('تغيير زيت دبل'), 200, scrollable: find.byType(Scrollable).first);
+    await t.tap(find.text('تغيير زيت دبل'));                       // لا زيت مصنّف دبل → كل الزيوت
+    await t.pumpAndSettle();
+    await t.tap(find.text('اختر الزيت'));
+    await t.pumpAndSettle();
+    expect(find.text('كل الزيوت المتاحة'), findsOneWidget);
+    await t.tap(find.text('زيت عام'));
+    await t.pumpAndSettle();
+
+    await t.tap(find.text('تأكيد الحجز'));
+    await t.pumpAndSettle();
+
+    final items = (api.lastSelection!['items'] as List).cast<Map<String, dynamic>>();
+    expect(items.map((e) => e['productId']), ['o-eng', 'o-gear', 'o-misc', 'svc1', 'f1']);
+    expect(items.first['qty'], 4.5);
+    expect(items.first['label'], 'تغيير زيت ماكينة: شل هيلكس 5W-30');
+    expect(api.lastSelection!['withFilter'], true);
+    expect(find.text('تذكرتي'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('سيارة جديدة: نوع الوقود ثلاثة فقط (ديزل/بنزين/هايبرد)', (t) async {
+    await boot(t, otp: false, seed: {'branch': branch});
+    await t.tap(find.text('احجز دورك الآن'));
+    await t.pumpAndSettle();
+    expect(find.text('ديزل'), findsOneWidget);
+    expect(find.text('بنزين'), findsOneWidget);
+    expect(find.text('هايبرد'), findsOneWidget);
+    expect(find.textContaining('بنزين 9'), findsNothing);
+    expect(find.text('كهرباء'), findsNothing);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('صفحة السيارة: فواتير هذه السيارة فقط، وفواتيري تعرض كل السيارات', (t) async {
+    final (_, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    await t.tap(find.text('تويوتا كامري'));
+    await t.pumpAndSettle();
+    expect(find.text('سجل التغييرات'), findsOneWidget);
+    expect(find.text('فاتورة A-100'), findsOneWidget);
+    expect(find.text('فاتورة A-101'), findsOneWidget);
+    expect(find.text('فاتورة B-200'), findsNothing);                // سيارة أخرى
+    expect(api.invoiceCalls.last, 'car-1');
+    expect(find.textContaining('80,000 كم'), findsOneWidget);
+    await t.tap(find.text('فاتورة A-100'));
+    await t.pumpAndSettle();
+    expect(find.text('فلتر زيت'), findsOneWidget);                  // أصناف الفاتورة
+    expect(find.text('عرض الفاتورة PDF'), findsOneWidget);
+
+    await t.tap(find.byType(BackButton));
+    await t.pumpAndSettle();
+    await t.tap(find.text('فواتيري'));
+    await t.pumpAndSettle();
+    expect(api.invoiceCalls.last, isNull);
+    expect(find.text('فاتورة B-200'), findsOneWidget);
+    expect(find.text('فاتورة A-100'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });
 }

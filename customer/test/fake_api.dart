@@ -15,6 +15,8 @@ class FakeApi implements CustomerApi {
   int ahead = 2;
   String state = 'waiting';
   bool expireOtp = false;
+  Map<String, dynamic>? lastSelection;
+  final invoiceCalls = <String?>[];
 
   List<Map<String, dynamic>> branchList = [
     {'id': branch, 'name': 'فرع الخليج', 'category': 'service', 'address': 'حي الخليج', 'latitude': 24.7136, 'longitude': 46.6753, 'waiting': 3, 'inService': 1, 'estWaitMinutes': 54, 'bookable': true},
@@ -58,7 +60,8 @@ class FakeApi implements CustomerApi {
       };
 
   @override
-  Future<Map<String, dynamic>> bookSaved(String b, {required String carId, String? otpToken, String? odometer, String serviceType = 'basic'}) async {
+  Future<Map<String, dynamic>> bookSaved(String b, {required String carId, String? otpToken, String? odometer, String serviceType = 'basic', Map<String, dynamic>? selection}) async {
+    lastSelection = selection;
     if (expireOtp) throw ApiException('انتهت صلاحية التحقق — أعد التحقق برمز جديد', status: 401);
     lastOtpToken = otpToken;
     bookings.add({'saved': carId});
@@ -66,7 +69,8 @@ class FakeApi implements CustomerApi {
   }
 
   @override
-  Future<Map<String, dynamic>> bookNew(String b, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken}) async {
+  Future<Map<String, dynamic>> bookNew(String b, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken, Map<String, dynamic>? selection}) async {
+    lastSelection = selection;
     lastOtpToken = otpToken;
     bookings.add({'name': name, 'phone': phone, 'car': car});
     return _booking('${car['plateNumbers']} ${car['plateLetters']}');
@@ -76,6 +80,32 @@ class FakeApi implements CustomerApi {
   Future<Map<String, dynamic>> bookingStatus(String id) async {
     if (id != 'bk-1') throw ApiException('الحجز غير موجود', status: 404);
     return _booking('1234 ABC');
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> oils(String b) async => [
+        {'id': 'o-eng', 'name': 'شل هيلكس', 'spec': '5W-30', 'brand': 'شل', 'price': 40.0, 'oilType': 'engine'},
+        {'id': 'o-gear', 'name': 'كاسترول قير', 'spec': '75W-90', 'brand': 'كاسترول', 'price': 55.0, 'oilType': 'gearbox'},
+        {'id': 'o-diff', 'name': 'موبيل دفرنس', 'spec': '80W', 'brand': 'موبيل', 'price': 35.0, 'oilType': 'differential'},
+        {'id': 'o-misc', 'name': 'زيت عام', 'spec': '', 'brand': '', 'price': 20.0, 'oilType': null},
+      ];
+  @override
+  Future<Map<String, dynamic>?> autoService(String b, {required String brand, required String model, required String year}) async =>
+      {'id': 'svc1', 'name': 'خدمة تغيير زيت', 'price': 30.0};
+  @override
+  Future<Map<String, dynamic>?> filterMatch(String b, {required String brand, required String model, required String year}) async =>
+      brand == 'تويوتا' ? {'id': 'f1', 'name': 'فلتر كامري', 'spec': '', 'price': 25.0} : null;
+
+  @override
+  Future<Map<String, dynamic>> invoices(String b, {String phone = '', String? otpToken, String? savedCarId}) async {
+    if (expireOtp) throw ApiException('انتهت صلاحية التحقق — أعد التحقق برمز جديد', status: 401);
+    invoiceCalls.add(savedCarId);
+    final all = [
+      {'id': 'i1', 'invoiceNo': 'A-100', 'issuedAt': '2026-10-01T09:00:00Z', 'total': 150.0, 'plate': '1234 ABC', 'carLabel': 'تويوتا كامري 2020', 'odometer': 80000, 'items': [{'label': 'زيت ماكينة', 'qty': 4.0, 'lineInc': 120.0}, {'label': 'فلتر زيت', 'qty': 1.0, 'lineInc': 30.0}]},
+      {'id': 'i2', 'invoiceNo': 'A-101', 'issuedAt': '2026-08-01T09:00:00Z', 'total': 90.0, 'plate': '1234 ABC', 'carLabel': 'تويوتا كامري 2020', 'odometer': 70000, 'items': [{'label': 'زيت قير', 'qty': 2.0, 'lineInc': 90.0}]},
+      {'id': 'i3', 'invoiceNo': 'B-200', 'issuedAt': '2026-09-01T09:00:00Z', 'total': 60.0, 'plate': '9999 XYZ', 'carLabel': 'هيونداي سوناتا', 'odometer': 50000, 'items': [{'label': 'زيت دفرنس', 'qty': 1.0, 'lineInc': 60.0}]},
+    ];
+    return {'pdfPhone': '0500000000', 'invoices': savedCarId == 'car-1' ? all.where((i) => i['plate'] == '1234 ABC').toList() : all};
   }
 
   @override

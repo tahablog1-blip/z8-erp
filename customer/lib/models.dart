@@ -92,3 +92,60 @@ class ServiceNote {
   factory ServiceNote.fromJson(Map<String, dynamic> j) =>
       ServiceNote(number: _s(j['note_number']), type: _s(j['type']), title: _s(j['title']), description: _s(j['description']));
 }
+
+/// أنواع الخدمة التي يختارها العميل (يمكن الجمع بينها في حجز واحد)
+enum ServiceKind {
+  engine('تغيير زيت ماكينة', 'engine', 4.0),
+  gear('تغيير زيت جير', 'gearbox', 2.0),
+  differential('تغيير زيت دفرنس', 'differential', 1.0),
+  transfer('تغيير زيت دبل', 'transfer', 1.0);
+
+  const ServiceKind(this.label, this.oilType, this.defaultQty);
+  final String label;
+  final String oilType;     // يطابق products.oil_type
+  final double defaultQty;  // لتر — الفني يؤكد الكمية الدقيقة
+}
+
+class OilProduct {
+  const OilProduct({required this.id, required this.name, required this.spec, required this.brand, required this.price, required this.oilType, required this.image});
+  final String id, name, spec, brand;
+  final double price;
+  final String? oilType, image;
+  String get title => spec.isEmpty ? name : '$name $spec';
+  factory OilProduct.fromJson(Map<String, dynamic> j) => OilProduct(
+        id: _s(j['id']), name: _s(j['name']), spec: _s(j['spec']), brand: _s(j['brand']),
+        price: j['price'] is num ? (j['price'] as num).toDouble() : double.tryParse(_s(j['price'])) ?? 0,
+        oilType: j['oilType'] == null ? null : _s(j['oilType']), image: j['image'] == null ? null : _s(j['image']));
+}
+
+class InvoiceItem {
+  const InvoiceItem({required this.label, required this.qty, required this.lineInc});
+  final String label;
+  final double qty, lineInc;
+  factory InvoiceItem.fromJson(Map<String, dynamic> j) => InvoiceItem(
+        label: _s(j['label']), qty: j['qty'] is num ? (j['qty'] as num).toDouble() : 0, lineInc: j['lineInc'] is num ? (j['lineInc'] as num).toDouble() : 0);
+}
+
+class Invoice {
+  const Invoice({required this.id, required this.no, required this.issuedAt, required this.total, required this.plate, required this.carLabel, required this.odometer, required this.items});
+  final String id, no;
+  final DateTime? issuedAt;
+  final double total;
+  final String? plate, carLabel;
+  final int? odometer;
+  final List<InvoiceItem> items;
+  factory Invoice.fromJson(Map<String, dynamic> j) {
+    final it = j['items'];
+    return Invoice(
+      id: _s(j['id']), no: _s(j['invoiceNo']), issuedAt: DateTime.tryParse(_s(j['issuedAt']))?.toLocal(),
+      total: j['total'] is num ? (j['total'] as num).toDouble() : 0, plate: j['plate'] == null ? null : _s(j['plate']),
+      carLabel: j['carLabel'] == null ? null : _s(j['carLabel']), odometer: j['odometer'] == null ? null : _i(j['odometer']),
+      items: it is List ? it.whereType<Map>().map((e) => InvoiceItem.fromJson(Map<String, dynamic>.from(e))).toList() : const []);
+  }
+}
+
+class InvoiceList {
+  const InvoiceList(this.invoices, this.pdfPhone);
+  final List<Invoice> invoices;
+  final String pdfPhone;
+}
