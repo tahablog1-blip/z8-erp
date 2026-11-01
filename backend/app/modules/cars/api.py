@@ -611,6 +611,7 @@ class PublicBookingIn(_BM):
     items: list = []
     withFilter: bool | None = None
     fromInvoice: str | None = None
+    customerNote: str | None = None     # مثل «زيت ماكينة من العميل (خارجي)» — يصل الموظف في ملاحظات السيارة
 
 
 class PublicLookupIn(_BM):
@@ -876,6 +877,7 @@ async def public_oil_filter_match(branch_id: str, brand: str = Query(...), model
         "id": str(match["id"]), "name": match["name"], "spec": match["spec"] or "",
         "price": float(match["price_vat"] or 0),
         "image": f"/api/products/public/product-image/{match['id']}" if match["has_image"] else None,
+        "inStock": await _branch_in_stock(branch_id, str(match["id"])),
     }
 
 
@@ -1048,6 +1050,14 @@ async def public_car_models(branch_id: str, brand: str = Query(...)):
     return _merge_with_catalog([r["display"] for r in rows], catalog_models)
 
 
+async def _branch_in_stock(branch_id: str, product_id: str) -> bool:
+    from ...core.db import fetchrow as _fr
+    row = await _fr(
+        "SELECT COALESCE(SUM(qty),0) AS q FROM inventory WHERE loc_type='branch' AND loc_id=$1 AND product_id=$2::uuid",
+        branch_id, product_id)
+    return bool(row and row["q"] and row["q"] > 0)
+
+
 @router.get("/public/booking-products/{branch_id}")
 async def public_booking_products(branch_id: str):
     _pub_guard(branch_id)
@@ -1061,6 +1071,8 @@ async def public_booking_products(branch_id: str):
                 "unit": r["unit"] or "",
                 "brand": _oil_brand_of(r["name"], r["oil_brand"], r["category"]),
                 "price": float(r["price_vat"] or 0),
+                # متوفر بمخزون هذا الفرع؟ (يعرض تطبيق العميل «غير متوفر الآن» ولا يسمح باختياره)
+                "inStock": bool(r["branch_qty"] and r["branch_qty"] > 0),
                 # نوع الزيت (ماكينة/دفرنس/دركسيون/فرامل/قير) لو مصنّف — يتيح لاحقاً
                 # حصر الزيوت المعروضة لخدمة معينة بنوعها الصحيح بدل عرض الكل.
                 "oilType": r["oil_type"] if "oil_type" in r.keys() else None,
@@ -1073,24 +1085,28 @@ async def public_booking_products(branch_id: str):
     # المستوردة بتظهر وتتبحث من غير تعليم يدوي لآلاف الأصناف.
     oils = await _f(
         """SELECT id, name, spec, unit, oil_brand, category, oil_type, price_vat,
-                  (image_base64 IS NOT NULL AND image_base64 <> '') AS has_image
+                  (image_base64 IS NOT NULL AND image_base64 <> '') AS has_image,
+                  COALESCE((SELECT SUM(i.qty) FROM inventory i WHERE i.product_id = products.id
+                            AND i.loc_type='branch' AND i.loc_id=$2), 0) AS branch_qty
            FROM products
            WHERE company_id=$1 AND is_active=TRUE AND is_service=FALSE AND is_oil_filter=FALSE
              AND ( is_oil=TRUE
                    OR ((category ILIKE '%زيت%' OR name ILIKE '%زيت%')
                        AND name NOT ILIKE '%فلتر%' AND name NOT ILIKE '%فلاتر%'
                        AND category NOT ILIKE '%فلتر%' AND category NOT ILIKE '%فلاتر%') )
-           ORDER BY name, spec LIMIT 1500""", br["company_id"])
+           ORDER BY name, spec LIMIT 1500""", br["company_id"], branch_id)
     filters = await _f(
         """SELECT id, name, spec, unit, oil_brand, category, price_vat,
-                  (image_base64 IS NOT NULL AND image_base64 <> '') AS has_image
+                  (image_base64 IS NOT NULL AND image_base64 <> '') AS has_image,
+                  COALESCE((SELECT SUM(i.qty) FROM inventory i WHERE i.product_id = products.id
+                            AND i.loc_type='branch' AND i.loc_id=$2), 0) AS branch_qty
            FROM products
            WHERE company_id=$1 AND is_active=TRUE AND is_service=FALSE
              AND ( is_oil_filter=TRUE
                    OR name ILIKE '%فلتر%زيت%' OR name ILIKE '%زيت%فلتر%'
                    OR ((category ILIKE '%فلتر%' OR category ILIKE '%فلاتر%')
                        AND (name ILIKE '%زيت%' OR category ILIKE '%زيت%')) )
-           ORDER BY name, spec LIMIT 500""", br["company_id"])
+           ORDER BY name, spec LIMIT 500""", br["company_id"], branch_id)
     # شعارات شركات الزيوت — كروابط لنقطة الشعار العامة (والجدول اختياري: غيابه لا يكسر الحجز)
     try:
         brand_rows = await _f(

@@ -1300,6 +1300,14 @@ async def _save_booking_items(car_id: str, d: dict) -> None:
     }
     await execute("UPDATE cars SET draft_items=$2 WHERE id=$1::uuid",
                   car_id, _json.dumps(payload, ensure_ascii=False))
+    # ملاحظة العميل (مثل «يحضر زيتاً من الخارج») تظهر للموظف في ملاحظات السيارة بشاشة التجهيز
+    note = " ".join(str(d.get("customerNote") or "").split())[:400]
+    if note:
+        await execute(
+            """UPDATE cars SET notes = CASE WHEN COALESCE(notes,'') = '' THEN $2
+                                            WHEN position($2 in notes) > 0 THEN notes
+                                            ELSE notes || E'\n' || $2 END
+               WHERE id=$1::uuid""", car_id, f"[العميل] {note}")
 
 
 # ══════════ كتالوج مرجعي شامل: أشهر الماركات والموديلات في السوق الخليجي ══════════
@@ -1547,7 +1555,7 @@ async def public_create_booking(branch_id: str, d: dict) -> dict:
         # كانت تتجاهل أي اختيار جديد للأصناف تماماً وترجع الحجز القديم كما هو —
         # لو العميل جرّب يحجز تاني (مثلاً بعد تعديل اختياره)، اختياره الجديد
         # كان يضيع بصمت. نحدّث الاختيار على نفس السيارة المفتوحة بدل تجاهله.
-        if d.get("items"):
+        if d.get("items") or d.get("customerNote"):
             await _save_booking_items(str(existing["id"]), d)
         return await public_booking_status(str(existing["id"]))
 
@@ -1597,7 +1605,7 @@ async def public_create_booking(branch_id: str, d: dict) -> dict:
         car.get("carCategory"), car.get("cylinders"), (car.get("engineSize") or "").strip() or None,
         car.get("color"), car.get("chassisNumber"),
         name, phone, cust["id"], odo, service_type)
-    if d.get("items"):
+    if d.get("items") or d.get("customerNote"):
         await _save_booking_items(str(row["id"]), d)
     # 📲 رسالة تأكيد الحجز للعميل — في الخلفية، فشلها ما بيأثرش على الحجز
     import asyncio

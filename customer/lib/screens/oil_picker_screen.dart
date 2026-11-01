@@ -24,18 +24,19 @@ class _OilPickerScreenState extends State<OilPickerScreen> {
   String _brandOf(OilProduct o) => o.brand.isEmpty ? _noBrand : o.brand;
 
   /// الشركات التي لها زيوت ضمن القائمة، بترتيب إعدادات الشركات في الموقع ثم الباقي
-  List<({String name, String? logo, int count})> get _brands {
-    final counts = <String, int>{};
+  List<({String name, String? logo, int count, int available})> get _brands {
+    final counts = <String, int>{}, avail = <String, int>{};
     for (final o in widget.oils) {
       counts[_brandOf(o)] = (counts[_brandOf(o)] ?? 0) + 1;
+      if (o.inStock) avail[_brandOf(o)] = (avail[_brandOf(o)] ?? 0) + 1;
     }
-    final out = <({String name, String? logo, int count})>[];
+    final out = <({String name, String? logo, int count, int available})>[];
     for (final b in widget.brands) {
-      if (counts.containsKey(b.name)) out.add((name: b.name, logo: b.logo, count: counts.remove(b.name)!));
+      if (counts.containsKey(b.name)) out.add((name: b.name, logo: b.logo, count: counts.remove(b.name)!, available: avail[b.name] ?? 0));
     }
     final rest = counts.keys.toList()..sort();
     for (final n in rest) {
-      out.add((name: n, logo: null, count: counts[n]!));
+      out.add((name: n, logo: null, count: counts[n]!, available: avail[n] ?? 0));
     }
     return out;
   }
@@ -67,7 +68,7 @@ class _OilPickerScreenState extends State<OilPickerScreen> {
       else
         GridView.count(
           crossAxisCount: 3, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: .82,
-          children: [for (final b in list) _BrandCard(b.name, b.logo, b.count, () => setState(() => brand = b.name))],
+          children: [for (final b in list) _BrandCard(b.name, b.logo, b.count, b.available, () => setState(() => brand = b.name))],
         ),
     ]);
   }
@@ -84,7 +85,15 @@ class _OilPickerScreenState extends State<OilPickerScreen> {
             ? Center(child: Text('لا توجد نتائج', style: tx(Fs.md, color: Z8.textDim)))
             : GridView.count(
                 padding: const EdgeInsets.all(16), crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: .72,
-                children: [for (final o in shown) _OilCard(o, () => Navigator.pop(context, o))],
+                children: [
+                  for (final o in shown)
+                    _OilCard(o, () {
+                      if (o.inStock) return Navigator.pop(context, o);
+                      ScaffoldMessenger.of(context)
+                        ..hideCurrentSnackBar()
+                        ..showSnackBar(SnackBar(content: Text('هذا المنتج غير متوفر الآن', style: tx(Fs.md, w: 800, color: Colors.white)), backgroundColor: Z8.ember));
+                    }),
+                ],
               ),
       ),
     ]);
@@ -105,10 +114,10 @@ class _Img extends StatelessWidget {
 }
 
 class _BrandCard extends StatelessWidget {
-  const _BrandCard(this.name, this.logo, this.count, this.onTap);
+  const _BrandCard(this.name, this.logo, this.count, this.available, this.onTap);
   final String name;
   final String? logo;
-  final int count;
+  final int count, available;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => Material(
@@ -122,7 +131,7 @@ class _BrandCard extends StatelessWidget {
               Expanded(child: _Img(logo, fallback: Icons.oil_barrel_outlined)),
               const SizedBox(height: 6),
               Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: tx(Fs.sm, w: 900)),
-              Text('$count منتج', style: tx(Fs.xs, color: Z8.textDim)),
+              Text(available == 0 ? 'غير متوفر الآن' : '$count منتج', style: tx(Fs.xs, w: available == 0 ? 800 : 500, color: available == 0 ? Z8.ember : Z8.textDim)),
             ]),
           ),
         ),
@@ -142,12 +151,20 @@ class _OilCard extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(10),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Expanded(child: _Img(o.image, fallback: Icons.oil_barrel_outlined)),
+              Expanded(child: Stack(fit: StackFit.expand, children: [
+                Opacity(opacity: o.inStock ? 1 : .35, child: _Img(o.image, fallback: Icons.oil_barrel_outlined)),
+                if (!o.inStock)
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 4), color: Z8.ember,
+                        child: Text('غير متوفر الآن', textAlign: TextAlign.center, style: tx(Fs.xs, w: 900, color: Colors.white))),
+                  ),
+              ])),
               const SizedBox(height: 8),
-              Text(o.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: tx(Fs.sm, w: 900)),
+              Text(o.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: tx(Fs.sm, w: 900, color: o.inStock ? Z8.text : Z8.textDim)),
               if (o.spec.isNotEmpty) Text(o.spec, maxLines: 1, overflow: TextOverflow.ellipsis, style: tx(Fs.xs, color: Z8.textDim)),
               const SizedBox(height: 4),
-              Text('${o.price.toStringAsFixed(2)} ر.س', style: tx(Fs.md, w: 900, color: Z8.petrolDeep, tnum: true)),
+              Text(o.inStock ? '${o.price.toStringAsFixed(2)} ر.س' : 'غير متوفر الآن', style: tx(Fs.md, w: 900, color: o.inStock ? Z8.petrolDeep : Z8.ember, tnum: true)),
             ]),
           ),
         ),

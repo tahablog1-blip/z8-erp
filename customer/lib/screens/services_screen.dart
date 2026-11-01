@@ -100,9 +100,13 @@ class _ServicesScreenState extends State<ServicesScreen> {
                           Panel(
                             pad: 4,
                             child: SwitchListTile(
-                              value: sel.withFilter, onChanged: sel.setFilter, activeThumbColor: Z8.petrol, contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                              value: sel.withFilter && sel.filter!.inStock, onChanged: sel.filter!.inStock ? sel.setFilter : null, activeThumbColor: Z8.petrol, contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                               title: Text('مع تغيير فلتر الزيت', style: tx(Fs.md, w: 800)),
-                              subtitle: Text('${sel.filter!.title} · ${sel.filter!.price.toStringAsFixed(2)} ر.س', style: tx(Fs.sm, color: Z8.textDim)),
+                              subtitle: Text(
+                                sel.filter!.inStock
+                                    ? '${sel.filter!.title} · ${sel.filter!.price.toStringAsFixed(2)} ر.س'
+                                    : '${sel.filter!.title} · هذا المنتج غير متوفر الآن',
+                                style: tx(Fs.sm, w: sel.filter!.inStock ? 500 : 800, color: sel.filter!.inStock ? Z8.textDim : Z8.ember)),
                             ),
                           ),
                         ],
@@ -154,18 +158,36 @@ class _ServiceTile extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                InkWell(
-                  onTap: onPick,
-                  child: Container(
+                // مصدر الزيت: من الفرع أو زيت خارجي يحضره العميل
+                Row(children: [
+                  Expanded(child: _Source('زيت من الفرع', !p.external, () => sel.setExternal(k, false))),
+                  const SizedBox(width: 8),
+                  Expanded(child: _Source('زيت خارجي (أحضره بنفسي)', p.external, () => sel.setExternal(k, true))),
+                ]),
+                const SizedBox(height: 10),
+                if (p.external)
+                  Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Z8.ink2, border: Border.all(color: p.oil == null ? Z8.brass : Z8.line, width: p.oil == null ? 1.5 : 1)),
-                    child: Row(children: [
-                      Expanded(child: Text(p.oil?.title ?? 'اختر الزيت', style: tx(Fs.md, w: 800, color: p.oil == null ? Z8.brass : Z8.text))),
-                      const Icon(Icons.arrow_drop_down),
+                    color: Z8.ink2,
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Icon(Icons.info_outline, size: 20, color: Z8.petrolDeep),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text('سيحضر الزيت من عندك وتُحتسب أجرة الخدمة فقط. أحضر الزيت للفرع عند الحضور.', style: tx(Fs.sm, w: 700))),
                     ]),
+                  )
+                else
+                  InkWell(
+                    onTap: onPick,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: Z8.ink2, border: Border.all(color: p.oil == null ? Z8.brass : Z8.line, width: p.oil == null ? 1.5 : 1)),
+                      child: Row(children: [
+                        Expanded(child: Text(p.oil?.title ?? 'اختر الزيت', style: tx(Fs.md, w: 800, color: p.oil == null ? Z8.brass : Z8.text))),
+                        const Icon(Icons.arrow_drop_down),
+                      ]),
+                    ),
                   ),
-                ),
-                if (p.oil != null) ...[
+                if (p.oil != null && !p.external) ...[
                   const SizedBox(height: 10),
                   Row(children: [
                     Text('الكمية (لتر)', style: tx(Fs.sm, w: 700, color: Z8.textDim)),
@@ -183,6 +205,25 @@ class _ServiceTile extends StatelessWidget {
       ),
     );
   }
+}
+
+class _Source extends StatelessWidget {
+  const _Source(this.label, this.on, this.onTap);
+  final String label;
+  final bool on;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Material(
+        color: on ? Z8.petrol : Z8.ink2,
+        shape: RoundedRectangleBorder(side: BorderSide(color: on ? Z8.petrol : Z8.line)),
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+            child: Center(child: Text(label, textAlign: TextAlign.center, style: tx(Fs.sm, w: 800, color: on ? Colors.white : Z8.text))),
+          ),
+        ),
+      );
 }
 
 class _Summary extends StatelessWidget {
