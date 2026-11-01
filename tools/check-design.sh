@@ -16,4 +16,10 @@ check "انحناء خارج السلم — استخدم rounded-md/lg/card/full
 EMO='[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}\x{231A}\x{231B}\x{23E9}-\x{23F3}\x{2B50}\x{2B55}\x{25B6}]'
 out=$(grep -rnP --include=*.tsx "$EMO" . 2>/dev/null | grep -Ev "$EXCL" | grep -Ev '^\S+:[0-9]+:\s*(//|\*|/\*)' | grep -v 'startsWith(' || true)
 if [ -n "$out" ]; then echo "✗ رموز تعبيرية (Emoji) — استخدم MIcon"; echo "$out" | head -8; fail=1; fi
+# أيقونات MIcon الثابتة يجب أن تكون ضمن خط الأيقونات المحلي (وإلا ظهر اسمها نصاً) — الإصلاح: python3 tools/build-icon-font.py
+ICONS=../public/fonts/icons.json
+if [ -f "$ICONS" ]; then
+  missing=$(grep -rhoP --include=*.tsx 'MIcon name="\K[a-z0-9_]+' . | sort -u | grep -vxF -f <(tr -d '[]" ' < "$ICONS" | tr ',' '\n') || true)
+  if [ -n "$missing" ]; then echo "✗ أيقونات غير موجودة في الخط المحلي (شغّل tools/build-icon-font.py):"; echo "$missing" | head -10; fail=1; fi
+fi
 [ $fail -eq 0 ] && echo "✓ نظام التصميم: لا مخالفات" || exit 1

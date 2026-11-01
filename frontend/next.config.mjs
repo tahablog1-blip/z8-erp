@@ -15,7 +15,7 @@ const CSP = [
   "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
   "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
-  "font-src 'self' data: https://fonts.gstatic.com",
+  "font-src 'self' data: https://fonts.gstatic.com",   // الطباعة وخطوط التخصيص ما زالت من جوجل (الأيقونات محلية)
   "img-src 'self' data: blob: https://api.qrserver.com",
   "media-src 'self' blob: data:",
   "connect-src 'self' ws: wss: https://cdnjs.cloudflare.com",
@@ -38,7 +38,11 @@ const SECURITY_HEADERS = [
 const nextConfig = {
   poweredByHeader: false,
   async headers() {
-    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+    return [
+      { source: "/:path*", headers: SECURITY_HEADERS },
+      // الخطوط المستضافة: كاش سنة (الاسم يتغير ?v= عند التحديث)
+      { source: "/fonts/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
+    ];
   },
   // deploy.sh يبني في مجلد منفصل (NEXT_DIST_DIR) ثم يبدّله بـ .next بعد نجاح البناء — فتبقى النسخة الشغّالة سليمة لو فشل البناء
   distDir: process.env.NEXT_DIST_DIR || ".next",
