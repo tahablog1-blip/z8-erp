@@ -500,11 +500,28 @@ export default function ProductsPage() {
   // ── تصنيف نوع الزيت (ماكينة/دفرنس/دركسيون/فرامل/قير) — جماعي بنفس نمط الشركات ──
   const OIL_TYPES: Record<string, string> = {
     engine: "زيت ماكينة", differential: "زيت دفرنس", steering: "زيت دركسيون",
-    brake: "زيت فرامل", gearbox: "زيت قير",
+    brake: "زيت فرامل", gearbox: "زيت قير", transfer: "زيت دبل",
   };
   // الأنواع الثلاثة لتصنيف الفلاتر — كانت كلها مخلوطة تحت "فلاتر زيت" واحدة
   const FILTER_KINDS: Record<string, string> = { oil: "فلتر زيت", air: "فلتر هواء", ac: "فلتر مكيف" };
   const [typesOpen, setTypesOpen] = useState(false);
+
+  // ── التصنيف الذكي لنوع الزيت من الأسماء: معاينة ثم تطبيق ──
+  type AutoTypes = { applied: boolean; scanned: number; matched: number; unmatched: number;
+    byType: { type: string; label: string; count: number; oils: number; services: number; samples: string[] }[];
+    unmatchedSamples: string[] };
+  const [aot, setAot] = useState<AutoTypes | null>(null);
+  const [aotBusy, setAotBusy] = useState(false);
+  const [aotErr, setAotErr] = useState("");
+  const [aotRedo, setAotRedo] = useState(false);
+  async function runAutoTypes(apply: boolean) {
+    setAotBusy(true); setAotErr("");
+    try {
+      setAot(await api<AutoTypes>("/products/oil-types/auto-classify", { method: "POST", body: JSON.stringify({ apply, redo: aotRedo }) }));
+      if (apply) await load();
+    } catch (e: any) { setAotErr(e.message); }
+    finally { setAotBusy(false); }
+  }
 
   // ── ربط فلتر السيارة: ماركة/موديل/نطاق سنة → صنف فلتر حقيقي من المخزون ──
   const [filtersMapOpen, setFiltersMapOpen] = useState(false);
@@ -1589,6 +1606,44 @@ export default function ProductsPage() {
       {/* ══════════ تصنيف نوع الزيت — الأنواع الخمسة الثابتة ══════════ */}
       <Modal open={typesOpen} size="lg" onClose={() => setTypesOpen(false)} title="تصنيف نوع الزيت">
         <div className="space-y-3">
+          <div className="space-y-2 rounded-card border border-line bg-ink-3 p-3">
+            <div className="text-t-sm font-black">تصنيف ذكي تلقائي (الأسهل)</div>
+            <p className="text-t-xs text-text-dim">
+              يقرأ أسماء كل الزيوت وأصناف «تغيير زيت …» ويستنتج النوع (ماكينة/قير/دفرنس/دبل/دركسيون/فرامل) من الكلمات ودرجات اللزوجة.
+              عاين النتيجة أولاً ثم طبّقها، وما لم يتضح اسمه يبقى لتصنّفه يدوياً.
+            </p>
+            <label className="flex items-center gap-2 text-t-xs font-bold">
+              <input type="checkbox" checked={aotRedo} onChange={(e) => { setAotRedo(e.target.checked); setAot(null); }} />
+              أعد تصنيف المصنّف أيضاً
+            </label>
+            <div className="flex gap-2">
+              <Button variant="ghost" disabled={aotBusy} onClick={() => runAutoTypes(false)}>{aotBusy ? "..." : "معاينة"}</Button>
+              {aot && !aot.applied && aot.matched > 0 && (
+                <Button disabled={aotBusy} onClick={() => runAutoTypes(true)}>تطبيق على {aot.matched} صنف</Button>
+              )}
+            </div>
+            {aotErr && <p className="rounded-lg bg-ember-bg px-3 py-2 text-t-xs font-bold text-ember">{aotErr}</p>}
+            {aot && (
+              <div className="space-y-1 text-t-xs">
+                <p className="font-bold">
+                  {aot.applied ? "تم التطبيق: " : "المعاينة: "}فُحص {aot.scanned} صنف — {aot.applied ? "صُنّف" : "سيُصنَّف"} {aot.matched}
+                  {aot.unmatched > 0 && ` — ${aot.unmatched} غير واضح`}
+                </p>
+                {aot.byType.map((t) => (
+                  <div key={t.type} className="rounded-lg bg-ink-2 px-2 py-1.5">
+                    <b>{t.label}</b> <span className="tnum">({t.count})</span>
+                    {t.services > 0 && <span className="text-text-dim"> · منها {t.services} خدمة</span>}
+                    <div className="text-text-dim">{t.samples.join(" · ")}</div>
+                  </div>
+                ))}
+                {aot.unmatchedSamples.length > 0 && (
+                  <div className="rounded-lg bg-brass-soft px-2 py-1.5">
+                    <b>تحتاج تصنيفاً يدوياً:</b> <span className="text-text-dim">{aot.unmatchedSamples.join(" · ")}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <p className="text-t-sm text-text-dim">
             صنّف كل زيت بنوعه (ماكينة/دفرنس/دركسيون/فرامل/قير) بالجملة دفعة واحدة بدل صنف بصنف —
             ونفس النوع يُستخدم لربط الخدمة (مثال: "تغيير زيت الفرامل") بالزيوت المناسبة لها فقط

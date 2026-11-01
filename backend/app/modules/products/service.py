@@ -520,9 +520,9 @@ async def auto_classify_filter_kind(company_id: str) -> dict:
     كتير بالفعل) — يوفر التحديد اليدوي صنفاً بصنف حين تكون البيانات موجودة
     أصلاً بنص واضح. لا يلمس أي صنف مصنّف بالفعل (يمس فقط filter_kind IS NULL)."""
     patterns = {
-        "oil": ["%فلتر%زيت%", "%فلاتر%زيت%", "%oil%filter%"],
+        "oil": ["%فلتر%زيت%", "%فلاتر%زيت%", "%oil%filter%", "%فلتر%محرك%", "%فلتر%ماكينة%"],
         "air": ["%فلتر%هواء%", "%فلاتر%هواء%", "%air%filter%"],
-        "ac": ["%فلتر%مكيف%", "%فلاتر%مكيف%", "%فلتر%تكييف%", "%cabin%filter%", "%ac%filter%"],
+        "ac": ["%فلتر%مكيف%", "%فلاتر%مكيف%", "%فلتر%تكييف%", "%فلتر%كابينة%", "%فلتر%كابينه%", "%cabin%filter%", "%pollen%", "%ac%filter%"],
     }
     counts: dict[str, int] = {}
     for kind, pats in patterns.items():
@@ -542,6 +542,70 @@ async def auto_classify_filter_kind(company_id: str) -> dict:
                 total += len(ids)
         counts[kind] = total
     return {"ok": True, "counts": counts}
+
+
+def _norm_ar(t: str) -> str:
+    t = (t or "").lower()
+    for a, b in (("أ", "ا"), ("إ", "ا"), ("آ", "ا"), ("ى", "ي"), ("ة", "ه"), ("ـ", "")):
+        t = t.replace(a, b)
+    return re.sub(r"\s+", " ", t)
+
+
+# قواعد النوع بالأولوية: الأخص أولاً (فرامل/دركسيون/دبل/دفرنس) ثم القير ثم الماكينة
+_OIL_TYPE_RULES: list[tuple[str, tuple[str, ...]]] = [
+    ("brake", ("فرامل", "brake", "dot3", "dot 3", "dot4", "dot 4", "dot5", "dot 5")),
+    ("steering", ("دركسيون", "دريكسيون", "باور", "power steering", "steering", "psf", "هيدروليك")),
+    ("transfer", ("دبل", "transfer case", "transfer", "علبه نقل")),
+    ("differential", ("دفرنس", "دفرنشال", "ديفرنس", "ديفر", "differential", "gl-5", "gl5", "gl 5", "limited slip")),
+    ("gearbox", ("قير", "جير", "gear", "atf", "cvt", "dct", "dsg", "mtf", "transmission", "ناقل الحركه", "gl-4", "gl4", "gl 4", "اوتوماتيك")),
+    ("engine", ("ماكينه", "محرك", "engine", "motor", "موتور")),
+]
+# درجات لزوجة الزيوت: الماكينة 0W/5W/10W/15W/20W/25W، والقير/الدفرنس 75W/80W/85W (لا تدل على النوع وحدها)
+_ENGINE_GRADE = re.compile(r"(?<!\d)(0|5|10|15|20|25)\s*w\s*[-/]?\s*\d{2}(?!\d)", re.I)
+
+
+def classify_oil_type(text: str) -> str | None:
+    """يستنتج نوع الزيت من اسمه/مواصفاته. None = غير واضح (يُصنَّف يدوياً)."""
+    t = _norm_ar(text)
+    for kind, words in _OIL_TYPE_RULES:
+        if any(w in t for w in words):
+            return kind
+    if _ENGINE_GRADE.search(t):
+        return "engine"
+    return None
+
+
+async def auto_classify_oil_types(company_id: str, apply: bool, redo: bool = False) -> dict:
+    """تصنيف ذكي لنوع الزيت (ماكينة/قير/دفرنس/دبل/دركسيون/فرامل) من أسماء الأصناف.
+    الزيوت وأصناف «أجرة/تغيير زيت …» معاً. المعاينة افتراضياً؛ redo=True يعيد تصنيف المصنّف أيضاً."""
+    rows = await fetch(
+        """SELECT id, name, spec, category, is_service, oil_type FROM products
+           WHERE company_id=$1 AND is_active=TRUE AND is_oil_filter=FALSE
+             AND ($2 OR oil_type IS NULL OR oil_type = '')
+             AND ( (is_service=FALSE AND (is_oil=TRUE OR name ILIKE '%زيت%' OR category ILIKE '%زيت%')
+                    AND name NOT ILIKE '%فلتر%' AND name NOT ILIKE '%فلاتر%' AND COALESCE(category,'') NOT ILIKE '%فلتر%')
+                   OR (is_service=TRUE AND name ILIKE '%زيت%') )""",
+        company_id, redo)
+    groups: dict[str, list] = {}
+    unmatched: list[str] = []
+    for r in rows:
+        kind = classify_oil_type(f"{r['name'] or ''} {r['spec'] or ''} {r['category'] or ''}")
+        if kind is None:
+            unmatched.append(r["name"] or "")
+        elif kind != (r["oil_type"] or None):
+            groups.setdefault(kind, []).append(r)
+    if apply:
+        for kind, items in groups.items():
+            await execute("UPDATE products SET oil_type=$1 WHERE company_id=$2 AND id = ANY($3::uuid[])",
+                          kind, company_id, [i["id"] for i in items])
+    return {
+        "applied": apply, "scanned": len(rows),
+        "matched": sum(len(v) for v in groups.values()), "unmatched": len(unmatched),
+        "byType": [{"type": k, "label": OIL_TYPES[k], "count": len(v),
+                    "oils": sum(1 for i in v if not i["is_service"]), "services": sum(1 for i in v if i["is_service"]),
+                    "samples": [i["name"] for i in v[:4]]} for k, v in sorted(groups.items())],
+        "unmatchedSamples": unmatched[:12],
+    }
 
 
 async def assign_oil_type(company_id: str, oil_type: str, product_ids: list[str]) -> dict:

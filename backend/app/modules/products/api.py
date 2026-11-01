@@ -201,6 +201,18 @@ async def oil_types(user: CurrentUser = Depends(get_current_user)):
     return service.OIL_TYPES
 
 
+class AutoOilTypesIn(BaseModel):
+    apply: bool = False
+    redo: bool = False
+
+
+@router.post("/oil-types/auto-classify")
+async def auto_classify_oil_types(body: AutoOilTypesIn,
+                                  user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
+    """تصنيف ذكي لنوع الزيت من الأسماء — معاينة ثم تطبيق (لا يلمس المصنّف إلا بـ redo)"""
+    return await service.auto_classify_oil_types(user.company_id, body.apply, body.redo)
+
+
 @router.post("/oil-types/{oil_type}/assign")
 async def assign_oil_type(oil_type: str, body: AssignIn,
                           user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
