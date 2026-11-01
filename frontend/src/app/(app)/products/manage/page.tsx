@@ -168,10 +168,12 @@ export default function ProductsPage() {
   const [wipeOpen, setWipeOpen] = useState(false);
   const [wipeBusy, setWipeBusy] = useState(false);
 
-  async function callImport(file: File, dryRun: boolean, kinds?: Record<string, string>) {
+  const [syncAll, setSyncAll] = useState(false);
+  async function callImport(file: File, dryRun: boolean, kinds?: Record<string, string>, sync = false) {
     const fd = new FormData();
     fd.append("file", file);
     if (!dryRun && kinds) fd.append("categoryKinds", JSON.stringify(kinds));
+    if (!dryRun && sync) fd.append("sync", "1");
     const res = await fetch(`/api/products/import-excel?dryRun=${dryRun}`, {
       method: "POST", body: fd,
       headers: authHeaders(),
@@ -202,11 +204,13 @@ export default function ProductsPage() {
       // نرسل فقط ما غيّره المستخدم؛ الباقي يُحسم لكل صنف من فئة المنتج الدقيقة (Engine Oil / Air Filters / …)
       const changed = Object.fromEntries((preview?.categories || [])
         .filter((c) => catKinds[c.name] && catKinds[c.name] !== c.kind).map((c) => [c.name, catKinds[c.name]]));
-      const data = await callImport(pendingFile, false, changed);
+      const data = await callImport(pendingFile, false, changed, syncAll);
       setImportOk(true); setImportMsg(`استيراد ناجح: ${data.added} صنف جديد + ${data.updated} تحديث` +
+        (data.deactivated ? ` — عُطّل ${data.deactivated} صنف غير موجود في الملف` : "") +
+        (data.syncSkipped ? " — لم يُعطَّل شيء لوجود صفوف فيها مشاكل (أصلحها وأعد الاستيراد)" : "") +
         (data.warningsTotal ? ` — ${data.warningsTotal} صف حُدّث سعره/تكلفته فقط لأن اسمه وفئته مكرران مع صنف آخر (مثال: ${(data.warnings || [])[0]})` : "") +
         (data.errorsTotal ? ` — ${data.errorsTotal} صف فيه مشكلة: ${(data.errors || []).slice(0, 3).join(" | ")}` : ""));
-      setPreview(null); setPendingFile(null);
+      setPreview(null); setPendingFile(null); setSyncAll(false);
       load();
     } catch (e) {
       setImportOk(false); setImportMsg(`${e instanceof Error ? e.message : "فشل الاستيراد"}`);
@@ -1995,6 +1999,13 @@ export default function ProductsPage() {
                 </tbody>
               </table>
             </div>
+            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-line p-3 text-t-xs">
+              <input type="checkbox" className="mt-0.5 h-4 w-4 accent-petrol" checked={syncAll} onChange={(e) => setSyncAll(e.target.checked)} />
+              <span>
+                <b>إعادة هيكلة كاملة (مزامنة مع الملف):</b> بعد الاستيراد تُعطَّل كل الأصناف الحالية غير الموجودة في هذا الملف، فيصير الكتالوج
+                مطابقاً للملف تماماً (فئاته وأنواعه). التعطيل لا يحذف الفواتير ولا المخزون، ولا يتم لو وُجدت صفوف بها أخطاء.
+              </span>
+            </label>
             <p className="text-t-xs text-text-dim">
               راجع عمود "شامل الضريبة" — إذا كانت هذه الأرقام مطابقة لأسعار البيع الفعلية لديك، فاعتمد.
               الموجود بنفس الباركود سيتم تحديثه، والجديد سيُضاف — دون أي تكرار.

@@ -334,6 +334,7 @@ def _norm_header(h: str) -> str:
 async def import_excel(file: UploadFile = _File(...),
                        dryRun: bool = Query(default=False),
                        categoryKinds: str = _Form(default=""),
+                       sync: str = _Form(default=""),
                        user: CurrentUser = Depends(require_permission("products.create", "products.edit"))):
     """رفع ملف Excel للمنتجات: الأعمدة المعتمدة — الاسم / مرجع داخلي / سعر البيع (شامل
     الضريبة) / التكلفة / وحدة القياس / فئة نقطة البيع. المطابقة بالباركود ثم الاسم."""
@@ -396,7 +397,7 @@ async def import_excel(file: UploadFile = _File(...),
         kinds = kinds if isinstance(kinds, dict) else {}
     except ValueError:
         raise HTTPException(422, "تعيين أنواع الفئات غير صالح")
-    result = await service.import_products_rows(user.company_id, rows, kinds)
+    result = await service.import_products_rows(user.company_id, rows, kinds, sync=sync == "1")
     print(f"📦 استيراد منتجات: +{result['added']} جديد | ~{result['updated']} تحديث | "
           f"أخطاء {result['errorsTotal']} — بواسطة {user.email}")
     return result

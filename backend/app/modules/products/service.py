@@ -812,8 +812,11 @@ def resolve_import_class(row: dict) -> dict:
     return {"category": category, "kind": kind, "oilType": oil_type, "filterKind": filter_kind}
 
 
-async def import_products_rows(company_id: str, rows: list[dict], kinds: dict[str, str] | None = None) -> dict:
-    """kinds: تعيين صريح فئة→نوع من شاشة المراجعة (يتقدّم على الاستنتاج من اسم الفئة)"""
+async def import_products_rows(company_id: str, rows: list[dict], kinds: dict[str, str] | None = None, sync: bool = False) -> dict:
+    """kinds: تعيين صريح فئة→نوع من شاشة المراجعة (يتقدّم على الاستنتاج من اسم الفئة).
+    sync=True (مزامنة كاملة مع الملف): بعد نجاح الاستيراد بلا أخطاء تُعطَّل الأصناف النشطة غير الموجودة في الملف
+    (تعطيل لا حذف: الفواتير والمخزون تبقى)، فيصير الكتالوج مطابقاً للملف تماماً."""
+    touched: set = set()
     kinds = {clean_category(k): v for k, v in (kinds or {}).items() if v in IMPORT_KINDS}
     added = updated = 0
     errors: list[str] = []
@@ -895,6 +898,8 @@ async def import_products_rows(company_id: str, rows: list[dict], kinds: dict[st
                     company_id, category, name, unit, barcode, price_ex, cost_val)
                 pid = row_new["id"]; added += 1
 
+            touched.add(pid)
+
             # نوع الصنف يتبع فئة الملف: خدمة / زيت / فلتر / عادي (الأصناف بلا فئة في الملف لا تُمس)
             if file_category:
                 kind = kinds.get(file_category) or klass["kind"]
@@ -918,8 +923,20 @@ async def import_products_rows(company_id: str, rows: list[dict], kinds: dict[st
                     pass
         except Exception as e:
             errors.append(f"صف {i}: {type(e).__name__}: {e}")
+    deactivated = 0
+    sync_skipped = False
+    if sync:
+        if errors or not touched:
+            sync_skipped = True          # لا نعطّل شيئاً لو فشلت صفوف: قد يكون الملف ناقصاً
+        else:
+            rows_off = await fetch(
+                """UPDATE products SET is_active=FALSE, updated_at=now()
+                   WHERE company_id=$1 AND is_active=TRUE AND NOT (id = ANY($2::uuid[])) RETURNING id""",
+                company_id, list(touched))
+            deactivated = len(rows_off)
     return {"added": added, "updated": updated, "errors": errors[:20],
-            "errorsTotal": len(errors), "warnings": warnings[:20], "warningsTotal": len(warnings)}
+            "errorsTotal": len(errors), "warnings": warnings[:20], "warningsTotal": len(warnings),
+            "deactivated": deactivated, "syncSkipped": sync_skipped}
 
 
 async def wipe_all_products(company_id: str) -> dict:

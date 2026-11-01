@@ -82,3 +82,34 @@ def test_resolve_uses_product_category_and_pos_category():
     assert x("خدمة", "خدمات العناية بالسيارة", "All")["kind"] == "service"
     assert x("مادة", "", "Tools & Accessories")["category"] == "Tools & Accessories"                 # بلا فئة نقطة بيع: فئة المنتج
     assert x("مادة", "", "All")["category"] == "أخرى"
+
+
+@pytest.mark.db
+def test_sync_deactivates_products_missing_from_file(db_ready):
+    from conftest import CO, run
+    from app.core import db
+    from app.modules.products import service
+    CID = uuid.UUID(CO)
+
+    async def go():
+        async with db.pool().acquire() as c:
+            await c.execute("TRUNCATE products RESTART IDENTITY CASCADE")
+            await c.execute("INSERT INTO products (company_id, name, barcode, category) VALUES ($1,'قديم لن يظهر','900','ق'),($1,'باقٍ','901','ق')", CID)
+        rows = [{"name": "باقٍ", "barcode": "901", "price_vat": "10", "category": "زيت المحرك", "product_category": "Engine Oil"},
+                {"name": "جديد", "barcode": "902", "price_vat": "20", "category": "الفلاتر", "product_category": "Air Filters"}]
+        plain = await service.import_products_rows(CO, rows)                      # بلا مزامنة: لا تعطيل
+        assert plain["deactivated"] == 0
+        async with db.pool().acquire() as c:
+            assert await c.fetchval("SELECT is_active FROM products WHERE barcode='900'") is True
+        r = await service.import_products_rows(CO, rows, sync=True)
+        assert r["deactivated"] == 1 and not r["syncSkipped"]
+        async with db.pool().acquire() as c:
+            act = {x["barcode"]: x["is_active"] for x in await c.fetch("SELECT barcode, is_active FROM products")}
+            cats = {x["barcode"]: x["category"] for x in await c.fetch("SELECT barcode, category FROM products WHERE is_active")}
+        assert act == {"900": False, "901": True, "902": True}
+        assert cats == {"901": "زيت المحرك", "902": "الفلاتر"}                    # الفئات الجديدة تُنشأ من الملف
+        # صف فاشل = لا مزامنة (الملف قد يكون ناقصاً)
+        bad = rows + [{"name": "سعر خاطئ", "barcode": "903", "price_vat": "abc", "category": "x"}]
+        r2 = await service.import_products_rows(CO, bad, sync=True)
+        assert r2["errorsTotal"] == 1 and r2["syncSkipped"] and r2["deactivated"] == 0
+    run(go)
