@@ -16,6 +16,9 @@ class BranchCreate(BaseModel):
     lines: list[str] = []
     managerUserId: str | None = None
     address: str | None = Field(default=None, max_length=300)
+    # موقع الفرع على الخريطة (يظهر للعميل في تطبيق الحجز مع الأقرب إليه)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
     # ترقيم فواتير مستقل: لو مفعّل، فواتير هذا الفرع تاخد تسلسلها الخاص
     # (وبادئة خاصة لو محددة) بدل التسلسل العام المشترك بين كل الفروع
     invoicePrefix: str | None = Field(default=None, max_length=10)
@@ -31,6 +34,8 @@ class BranchUpdate(BaseModel):
     lines: list[str] | None = None
     managerUserId: str | None = None
     address: str | None = Field(default=None, max_length=300)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
     invoicePrefix: str | None = Field(default=None, max_length=10)
     independentInvoiceNumbering: bool | None = None
 
@@ -47,5 +52,7 @@ class BranchOut(BaseModel):
     manager_user_id: str | None = None
     manager_name: str | None = None     # اسم المدير جاهز للعرض (JOIN مع users)
     address: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
     invoice_prefix: str | None = None
     independent_invoice_numbering: bool = False

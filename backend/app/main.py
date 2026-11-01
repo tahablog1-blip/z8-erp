@@ -946,6 +946,8 @@ async def lifespan(app: FastAPI):
         # ── المرحلة 6: مدير الفرع + العنوان + ترقيم فواتير مستقل اختياري لكل فرع ──
         "ALTER TABLE branches ADD COLUMN IF NOT EXISTS manager_user_id uuid",
         "ALTER TABLE branches ADD COLUMN IF NOT EXISTS address text",
+        "ALTER TABLE branches ADD COLUMN IF NOT EXISTS latitude double precision",
+        "ALTER TABLE branches ADD COLUMN IF NOT EXISTS longitude double precision",
         "ALTER TABLE branches ADD COLUMN IF NOT EXISTS invoice_prefix text",
         "ALTER TABLE branches ADD COLUMN IF NOT EXISTS independent_invoice_numbering boolean NOT NULL DEFAULT FALSE",
         """CREATE TABLE IF NOT EXISTS branch_invoice_counters (

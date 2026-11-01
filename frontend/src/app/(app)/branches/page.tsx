@@ -17,7 +17,7 @@ type Branch = {
   capacity_sir: number; capacity_hafr: number; capacity_rafaat: number;
   lines: string[]; is_frozen: boolean; created_at: string;
   manager_user_id: string | null; manager_name: string | null;
-  address: string | null; invoice_prefix: string | null;
+  address: string | null; latitude: number | null; longitude: number | null; invoice_prefix: string | null;
   independent_invoice_numbering: boolean;
 };
 
@@ -25,7 +25,15 @@ type UserRow = { id: string; full_name: string; is_active: boolean };
 
 const EMPTY = { name: "", category: "service" as BranchCategory,
                 capacitySir: 0, capacityHafr: 0, capacityRafaat: 0, lines: [] as string[],
-                managerUserId: "", address: "", invoicePrefix: "", independentInvoiceNumbering: false };
+                managerUserId: "", address: "", coords: "", invoicePrefix: "", independentInvoiceNumbering: false };
+
+/** يقبل "24.7136, 46.6753" (الصيغة التي ينسخها خرائط جوجل بالزر الأيمن) */
+function parseCoords(v: string): { latitude: number; longitude: number } | null {
+  const m = v.trim().match(/^(-?\d{1,2}(?:\.\d+)?)\s*[,،\s]\s*(-?\d{1,3}(?:\.\d+)?)$/);
+  if (!m) return null;
+  const latitude = Number(m[1]), longitude = Number(m[2]);
+  return Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180 ? { latitude, longitude } : null;
+}
 
 export default function BranchesPage() {
   const { hasPerm } = useAuth();
@@ -60,7 +68,9 @@ export default function BranchesPage() {
     setForm({ name: b.name, category: b.category || "service", capacitySir: b.capacity_sir,
               capacityHafr: b.capacity_hafr, capacityRafaat: b.capacity_rafaat,
               lines: b.lines || [], managerUserId: b.manager_user_id || "",
-              address: b.address || "", invoicePrefix: b.invoice_prefix || "",
+              address: b.address || "",
+              coords: b.latitude != null && b.longitude != null ? `${b.latitude}, ${b.longitude}` : "",
+              invoicePrefix: b.invoice_prefix || "",
               independentInvoiceNumbering: !!b.independent_invoice_numbering });
     setErr(""); setModal({ mode: "edit", id: b.id });
   }
@@ -69,7 +79,10 @@ export default function BranchesPage() {
     setErr(""); setBusy(true);
     // ملاحظة: الفروع (بخلاف باقي الموديولات) تتعامل مع "" كقيمة صريحة للمسح،
     // لا null — الراوتر هنا بيفلتر v is not None فتفضل null بلا أي تأثير
-    const body = { ...form, address: form.address.trim(), invoicePrefix: form.invoicePrefix.trim() };
+    const { coords, ...rest } = form;
+    const pos = parseCoords(coords);
+    if (coords.trim() && !pos) { setBusy(false); setErr("صيغة الموقع غير صحيحة — مثال: 24.7136, 46.6753"); return; }
+    const body = { ...rest, ...(pos ?? {}), address: form.address.trim(), invoicePrefix: form.invoicePrefix.trim() };
     try {
       if (modal?.mode === "create") {
         await api("/branches", { method: "POST", body: JSON.stringify(body) });
@@ -276,6 +289,18 @@ export default function BranchesPage() {
             <Field label={t("branches.address", "العنوان")}>
               <Input value={form.address}
                      onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            </Field>
+            <Field label="موقع الفرع على الخريطة" hint="يظهر للعميل في تطبيق الحجز مع المسافة ووقت الوصول. انسخ الإحداثيات من خرائط جوجل (زر أيمن على المكان) أو استخدم موقعك الحالي">
+              <div className="flex gap-2">
+                <Input value={form.coords} className="tnum" dir="ltr" placeholder="24.7136, 46.6753"
+                       onChange={(e) => setForm({ ...form, coords: e.target.value })} />
+                <Button variant="ghost" type="button" onClick={() => {
+                  if (!navigator.geolocation) return;
+                  navigator.geolocation.getCurrentPosition(
+                    (p) => setForm((f) => ({ ...f, coords: `${p.coords.latitude.toFixed(6)}, ${p.coords.longitude.toFixed(6)}` })),
+                    () => setErr("تعذّر تحديد موقعك — اسمح للمتصفح بالوصول للموقع"));
+                }}>موقعي الحالي</Button>
+              </div>
             </Field>
           </div>
 

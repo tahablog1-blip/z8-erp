@@ -138,3 +138,14 @@ ALTER TABLE shifts ADD COLUMN IF NOT EXISTS device_id uuid;
 ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS pos_device_id uuid;
 -- وكلاء المحطات (test_db_edge)
 CREATE TABLE IF NOT EXISTS station_cameras (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid, branch_id uuid, station int, name text, rtsp_url text, is_active boolean DEFAULT true);
+
+ALTER TABLE branches ADD COLUMN IF NOT EXISTS category text DEFAULT 'service';
+ALTER TABLE branches ADD COLUMN IF NOT EXISTS is_frozen boolean DEFAULT false;
+ALTER TABLE branches ADD COLUMN IF NOT EXISTS address text;
+ALTER TABLE branches ADD COLUMN IF NOT EXISTS latitude double precision;
+ALTER TABLE branches ADD COLUMN IF NOT EXISTS longitude double precision;
+ALTER TABLE cars ADD COLUMN IF NOT EXISTS branch_id uuid;
+ALTER TABLE cars ADD COLUMN IF NOT EXISTS is_deleted boolean DEFAULT false;
+ALTER TABLE cars ADD COLUMN IF NOT EXISTS entered_at timestamptz;
+ALTER TABLE cars ADD COLUMN IF NOT EXISTS exited_at timestamptz;
+ALTER TABLE cars ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();

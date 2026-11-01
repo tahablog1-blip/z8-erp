@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/theme.dart';
 import 'screens/home_screen.dart';
-import 'screens/setup_screen.dart';
+import 'screens/branches_screen.dart';
 import 'state/app_state.dart';
 
 class CustomerApp extends StatelessWidget {
@@ -20,7 +20,7 @@ class CustomerApp extends StatelessWidget {
           listenable: state,
           builder: (_, _) => switch (state.phase) {
             Phase.boot => const Scaffold(body: Center(child: CircularProgressIndicator())),
-            Phase.needsBranch => SetupScreen(state: state),
+            Phase.needsBranch => BranchesScreen(state: state),
             Phase.ready => HomeScreen(state: state),
           },
         ),

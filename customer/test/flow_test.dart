@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:z8_customer/app.dart';
-import 'package:z8_customer/core/config.dart';
+import 'package:z8_customer/core/geo.dart';
 import 'package:z8_customer/core/store.dart';
 import 'package:z8_customer/state/app_state.dart';
 import 'fake_api.dart';
 
-Future<(AppState, FakeApi)> boot(WidgetTester t, {bool otp = true, Map<String, String>? seed}) async {
+const riyadh = LatLng(24.7140, 46.6760); // قرب فرع الخليج
+
+Future<(AppState, FakeApi)> boot(WidgetTester t, {bool otp = true, Map<String, String>? seed, FakeLocation? loc}) async {
   final api = FakeApi(otpRequired: otp);
   final store = MemoryStore()..m.addAll(seed ?? {});
-  final state = AppState(api: api, store: store);
+  final state = AppState(api: api, store: store, location: loc ?? FakeLocation(fresh: riyadh));
   await t.binding.setSurfaceSize(const Size(420, 900));
   await t.pumpWidget(CustomerApp(state: state));
   await state.init();
@@ -18,24 +20,58 @@ Future<(AppState, FakeApi)> boot(WidgetTester t, {bool otp = true, Map<String, S
 }
 
 void main() {
-  test('parseBranchId يقبل الرابط والمعرّف ويرفض غيرهما', () {
-    expect(parseBranchId('https://z8masdr.duckdns.org/booking/$branch?x=1'), branch);
-    expect(parseBranchId('  ${branch.toUpperCase()} '), branch);
-    expect(parseBranchId('hello'), isNull);
+  test('المسافة ووقت الوصول: Haversine وتقدير القيادة', () {
+    final km = haversineKm(const LatLng(24.7136, 46.6753), const LatLng(21.4858, 39.1925)); // الرياض ← جدة تقريباً 850 كم
+    expect(km, inInclusiveRange(820, 880));
+    expect(haversineKm(riyadh, riyadh), 0);
+    expect(estimateDriveMinutes(0.2), 1);                 // لا يقل عن دقيقة
+    expect(estimateDriveMinutes(5), 13);                  // 6.5 كم طرقية ÷ 30 كم/س
+    expect(estimateDriveMinutes(20), 32);                 // 26 كم ÷ 50 كم/س
+    expect(formatKm(0.45), '450 م');
+    expect(formatKm(3.24), '3.2 كم');
+    expect(formatMinutes(75), '1 ساعة و15 دقيقة');
   });
 
-  testWidgets('أول تشغيل: رابط خاطئ يظهر خطأ ثم الرابط الصحيح يفتح الرئيسية', (t) async {
-    await boot(t);
-    expect(find.text('اختر فرعك'), findsOneWidget);
-    await t.enterText(find.byType(TextField), 'xyz');
-    await t.tap(find.text('متابعة'));
-    await t.pumpAndSettle();
-    expect(find.text('الرابط أو الرمز غير صحيح'), findsOneWidget);
-    await t.enterText(find.byType(TextField), 'https://z8masdr.duckdns.org/booking/$branch');
-    await t.tap(find.text('متابعة'));
-    await t.pumpAndSettle();
+  testWidgets('أول تشغيل بلا إدخال رابط: كل الفروع مرتّبة بالأقرب مع المسافة والوقت ونوع الفرع', (t) async {
+    final (state, _) = await boot(t);
+    expect(find.text('اختر الفرع'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);               // لا حقل رابط
+    final names = state.branches.map((b) => b.name).toList();
+    expect(names, ['فرع الخليج', 'معرض التجزئة', 'فرع الشرق', 'فرع بلا موقع']); // الأقرب أولاً، وبلا موقع آخراً
+    expect(find.text('الأقرب إليك'), findsOneWidget);
+    expect(find.text('خدمة'), findsNWidgets(3));
+    expect(find.text('بيع تجزئة'), findsOneWidget);
+    expect(find.textContaining('يصلك خلال'), findsNWidgets(3));
+    expect(find.text('بيع بالقطعة — لا يوجد حجز دور في هذا الفرع'), findsOneWidget);
+    expect(find.text('احجز من هذا الفرع'), findsNWidgets(3));   // التجزئة بلا زر حجز
+    expect(find.text('موقع الفرع غير محدد بعد'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('بدون إذن الموقع: القائمة تظهر بلا مسافات مع تنبيه، ولا انهيار', (t) async {
+    final (state, _) = await boot(t, loc: FakeLocation());
+    expect(state.locationDenied, isTrue);
+    expect(find.text('فعّل الموقع ليظهر لك أقرب فرع ووقت الوصول إليه'), findsOneWidget);
+    expect(find.text('الأقرب إليك'), findsNothing);
+    expect(find.textContaining('يصلك خلال'), findsNothing);
     expect(find.text('فرع الخليج'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('اختيار فرع خدمة يفتح الرئيسية ويُحفظ، وتغيير الفرع من القائمة', (t) async {
+    final (state, _) = await boot(t);
+    await t.tap(find.text('احجز من هذا الفرع').first);
+    await t.pumpAndSettle();
     expect(find.text('احجز دورك الآن'), findsOneWidget);
+    expect(state.branchId, branch);
+    // إعادة تشغيل التطبيق: يتذكر الفرع ولا يعرض القائمة
+    expect(find.text('اختر الفرع'), findsNothing);
+    await t.tap(find.byType(PopupMenuButton<String>));
+    await t.pumpAndSettle();
+    await t.tap(find.text('تغيير الفرع'));
+    await t.pumpAndSettle();
+    expect(find.text('الفرع الحالي'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
   });
 
   testWidgets('رحلة كاملة: OTP ثم حجز سيارة محفوظة ثم تذكرة حية ثم محادثة', (t) async {

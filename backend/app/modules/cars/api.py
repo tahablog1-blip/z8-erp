@@ -453,6 +453,12 @@ class PublicBookIn(_BM):
     fuelType: str | None = None
 
 
+@router.get("/public/branches")
+async def public_branches(company: str | None = Query(default=None, min_length=36, max_length=36)):
+    """كل فروع الشركة للعميل (الخدمة والتجزئة) مع الموقع وحالة الانتظار"""
+    return await service.public_branches(company)
+
+
 @router.get("/public/branch/{branch_id}")
 async def public_branch(branch_id: str):
     return await service.public_branch_info(branch_id)

@@ -6,6 +6,8 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>نستخدم موقعك لعرض أقرب فرع إليك ووقت وصولك إليه.</string>
 	<key>CFBundleDisplayName</key>
 	<string>مصدر الزيوت</string>
 	<key>CFBundleExecutable</key>

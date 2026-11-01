@@ -1,6 +1,10 @@
 import 'package:z8_customer/core/api.dart';
+import 'package:z8_customer/core/geo.dart';
+import 'package:z8_customer/core/location.dart';
 
 const branch = '11111111-2222-3333-4444-555555555555';
+const retailBranch = '22222222-2222-3333-4444-555555555555';
+const farBranch = '33333333-2222-3333-4444-555555555555';
 
 class FakeApi implements CustomerApi {
   FakeApi({this.otpRequired = true});
@@ -11,6 +15,15 @@ class FakeApi implements CustomerApi {
   int ahead = 2;
   String state = 'waiting';
   bool expireOtp = false;
+
+  List<Map<String, dynamic>> branchList = [
+    {'id': branch, 'name': 'فرع الخليج', 'category': 'service', 'address': 'حي الخليج', 'latitude': 24.7136, 'longitude': 46.6753, 'waiting': 3, 'inService': 1, 'estWaitMinutes': 54, 'bookable': true},
+    {'id': retailBranch, 'name': 'معرض التجزئة', 'category': 'retail', 'address': 'طريق الملك', 'latitude': 24.7200, 'longitude': 46.6800, 'waiting': null, 'inService': null, 'estWaitMinutes': null, 'bookable': false},
+    {'id': farBranch, 'name': 'فرع الشرق', 'category': 'service', 'address': null, 'latitude': 24.9, 'longitude': 46.9, 'waiting': 0, 'inService': 0, 'estWaitMinutes': 0, 'bookable': true},
+    {'id': 'noloc', 'name': 'فرع بلا موقع', 'category': 'service', 'address': null, 'latitude': null, 'longitude': null, 'waiting': 0, 'inService': 0, 'estWaitMinutes': 0, 'bookable': true},
+  ];
+  @override
+  Future<List<Map<String, dynamic>>> branches() async => branchList;
 
   @override
   Future<Map<String, dynamic>> branchInfo(String b) async {
@@ -77,4 +90,13 @@ class FakeApi implements CustomerApi {
       };
   @override
   Future<void> chatSend(String token, String message) async => sentMessages.add(message);
+}
+
+class FakeLocation implements LocationProvider {
+  FakeLocation({this.quick, this.fresh});
+  final LatLng? quick, fresh;
+  @override
+  Future<LatLng?> current() async => fresh;
+  @override
+  Future<LatLng?> lastKnown() async => quick;
 }
