@@ -1,0 +1,56 @@
+# استيراد Excel: الفئة تُدخَل حرفياً كما في الملف، ونوع الصنف (خدمة/زيت/فلتر/عادي) يتبع الفئة
+import uuid
+
+import pytest
+
+from app.modules.products.service import category_kind as k, clean_category as cc
+
+
+@pytest.mark.parametrize("cat,kind", [
+    ("خدمات", "service"), ("خدمة تغيير زيت", "service"), ("أجرة عمالة", "service"), ("Service", "service"),
+    ("زيوت", "oil"), ("زيوت محركات", "oil"), ("Engine Oil", "oil"),
+    ("فلاتر", "filter"), ("فلاتر زيت", "filter"), ("فلتر هواء", "filter"),     # فلاتر الزيت فلتر لا زيت
+    ("اكسسوارات", "normal"), ("بطاريات", "normal"), ("", "normal"),
+])
+def test_category_kind(cat, kind):
+    assert k(cat) == kind
+
+
+def test_clean_category_keeps_text_verbatim():
+    assert cc("  زيوت ‏/ محركات  ") == "زيوت / محركات"       # يزيل علامات الاتجاه ويوحّد المسافات فقط
+    assert cc("All / Saleable / زيوت") == "All / Saleable / زيوت"       # لا يقتطع المسار
+
+
+@pytest.mark.db
+def test_import_sets_category_and_type_flags(db_ready):
+    from conftest import CO, run
+    from app.core import db
+    from app.modules.products import service
+    CID = uuid.UUID(CO)
+
+    async def go():
+        async with db.pool().acquire() as c:
+            await c.execute("TRUNCATE products RESTART IDENTITY CASCADE")
+            # صنف قديم مصنّف خطأً كخدمة سيُعاد تصنيفه من الملف
+            await c.execute("INSERT INTO products (company_id, name, barcode, category, is_service) VALUES ($1,'كاسترول ماكينة','111','قديمة',true)", CID)
+        rows = [
+            {"name": "كاسترول ماكينة", "barcode": "111", "price_vat": "40", "category": "زيوت"},
+            {"name": "تغيير زيت ماكينة", "barcode": "222", "price_vat": "30", "category": "خدمات"},
+            {"name": "فلتر زيت تويوتا", "barcode": "333", "price_vat": "25", "category": "فلاتر"},
+            {"name": "فلتر هواء كامري", "barcode": "334", "price_vat": "35", "category": "فلتر هواء"},
+            {"name": "ممسحة زجاج", "barcode": "444", "price_vat": "15", "category": "اكسسوارات"},
+            {"name": "منتج بلا فئة", "barcode": "555", "price_vat": "5", "category": ""},
+            {"name": "إطار", "barcode": "666", "price_vat": "300", "category": "إطارات"},
+        ]
+        r = await service.import_products_rows(CO, rows, {"إطارات": "oil"})     # تعيين صريح من شاشة المراجعة يغلب الاستنتاج
+        assert r["added"] == 6 and r["updated"] == 1 and r["errorsTotal"] == 0
+        async with db.pool().acquire() as c:
+            got = {x["barcode"]: x for x in await c.fetch("SELECT barcode, category, is_service, is_oil, is_oil_filter, filter_kind FROM products")}
+        assert got["111"]["category"] == "زيوت" and got["111"]["is_oil"] and not got["111"]["is_service"]   # صُحّح من الملف
+        assert got["222"]["category"] == "خدمات" and got["222"]["is_service"] and not got["222"]["is_oil"]
+        assert got["333"]["is_oil_filter"] and got["333"]["filter_kind"] == "oil" and not got["333"]["is_oil"]
+        assert got["334"]["is_oil_filter"] and got["334"]["filter_kind"] == "air"
+        assert got["444"]["category"] == "اكسسوارات" and not (got["444"]["is_service"] or got["444"]["is_oil"] or got["444"]["is_oil_filter"])
+        assert got["666"]["category"] == "إطارات" and got["666"]["is_oil"]
+        assert not (got["555"]["is_service"] or got["555"]["is_oil"])                                      # بلا فئة: لا تغيير
+    run(go)

@@ -306,7 +306,7 @@ async def delete_service_rule(rule_id: str,
 
 
 # ══════════════════ استيراد Excel (تصدير Odoo) — سعر البيع شامل الضريبة ══════════════════
-from fastapi import UploadFile, File as _File
+from fastapi import UploadFile, File as _File, Form as _Form
 from .xlsx_lite import read_xlsx_rows
 
 # مطابقة مرنة لعناوين الأعمدة العربية (زي ما بتيجي من تصدير Odoo بالحرف)
@@ -332,6 +332,7 @@ def _norm_header(h: str) -> str:
 @router.post("/import-excel")
 async def import_excel(file: UploadFile = _File(...),
                        dryRun: bool = Query(default=False),
+                       categoryKinds: str = _Form(default=""),
                        user: CurrentUser = Depends(require_permission("products.create", "products.edit"))):
     """رفع ملف Excel للمنتجات: الأعمدة المعتمدة — الاسم / مرجع داخلي / سعر البيع (شامل
     الضريبة) / التكلفة / وحدة القياس / فئة نقطة البيع. المطابقة بالباركود ثم الاسم."""
@@ -376,10 +377,25 @@ async def import_excel(file: UploadFile = _File(...),
             })
         detected = {k: (headers[col_of[k]] if k in col_of else "❌ مش موجود") for k in _IMPORT_HEADERS}
         total = sum(1 for r in rows if (r.get("name") or "").strip())
+        # فئات الملف الحرفية مع عدد أصنافها والنوع المستنتج (يعدّله المستخدم قبل الاعتماد)
+        counts: dict[str, int] = {}
+        for r in rows:
+            if (r.get("name") or "").strip():
+                c = service.clean_category(r.get("category") or "")
+                if c:
+                    counts[c] = counts.get(c, 0) + 1
+        categories = [{"name": c, "count": n, "kind": service.category_kind(c)}
+                      for c, n in sorted(counts.items(), key=lambda x: -x[1])]
         return {"preview": True, "totalRows": total, "columns": detected, "sample": sample,
-                "rawHeaders": headers}
+                "rawHeaders": headers, "categories": categories}
 
-    result = await service.import_products_rows(user.company_id, rows)
+    import json as _json
+    try:
+        kinds = _json.loads(categoryKinds) if categoryKinds else {}
+        kinds = kinds if isinstance(kinds, dict) else {}
+    except ValueError:
+        raise HTTPException(422, "تعيين أنواع الفئات غير صالح")
+    result = await service.import_products_rows(user.company_id, rows, kinds)
     print(f"📦 استيراد منتجات: +{result['added']} جديد | ~{result['updated']} تحديث | "
           f"أخطاء {result['errorsTotal']} — بواسطة {user.email}")
     return result
