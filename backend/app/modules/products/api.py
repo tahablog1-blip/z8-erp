@@ -213,6 +213,12 @@ async def auto_classify_oil_types(body: AutoOilTypesIn,
     return await service.auto_classify_oil_types(user.company_id, body.apply, body.redo)
 
 
+@router.post("/oil-types/clear-all")
+async def clear_all_oil_types(user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
+    """إلغاء تصنيف نوع كل الزيوت لإعادة التصنيف من جديد"""
+    return await service.clear_all_oil_types(user.company_id)
+
+
 @router.post("/oil-types/{oil_type}/assign")
 async def assign_oil_type(oil_type: str, body: AssignIn,
                           user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
@@ -279,47 +285,24 @@ async def create_service_rule(body: ServiceRuleIn,
     return await service.create_service_rule(user.company_id, body.model_dump())
 
 
+class BulkServiceRuleIn(BaseModel):
+    serviceProductId: str
+    price: float
+    brands: list[str] = []
+    allBrands: bool = False
+
+
+@router.post("/service-price-rules/bulk", status_code=201)
+async def bulk_service_rules(body: BulkServiceRuleIn,
+                             user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
+    """سعر خدمة لعدة ماركات دفعة واحدة"""
+    return await service.bulk_service_rules(user.company_id, body.serviceProductId, body.price, body.brands, body.allBrands)
+
+
 @router.delete("/service-price-rules/{rule_id}")
 async def delete_service_rule(rule_id: str,
                               user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
     return await service.delete_service_rule(user.company_id, rule_id)
-
-
-# ══════════════════ خصومات حسب الكمية ══════════════════
-
-class QuantityRuleIn(BaseModel):
-    productId: str
-    minQty: float
-    discountPercent: float
-
-
-@router.get("/quantity-discount-rules")
-async def list_quantity_rules(user: CurrentUser = Depends(get_current_user)):
-    return await service.list_quantity_rules(user.company_id)
-
-
-@router.post("/quantity-discount-rules", status_code=201)
-async def create_quantity_rule(body: QuantityRuleIn,
-                               user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
-    return await service.create_quantity_rule(user.company_id, body.model_dump())
-
-
-@router.delete("/quantity-discount-rules/{rule_id}")
-async def delete_quantity_rule(rule_id: str,
-                               user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
-    return await service.delete_quantity_rule(user.company_id, rule_id)
-
-
-class AiCleanIn(BaseModel):
-    apply: bool = False
-    onlyOils: bool = True
-
-
-@router.post("/ai-clean-names")
-async def ai_clean_names(body: AiCleanIn,
-                         user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
-    """منظف الأسماء الذكي — دفعة 120 صنف في المرة (معاينة ثم تطبيق)"""
-    return await service.ai_clean_names(user.company_id, body.apply, body.onlyOils)
 
 
 # ══════════════════ استيراد Excel (تصدير Odoo) — سعر البيع شامل الضريبة ══════════════════

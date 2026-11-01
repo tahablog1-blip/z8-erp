@@ -14,7 +14,6 @@ typedef Line = ({String label, double qty, double line});
 
 class BookingSelection extends ChangeNotifier {
   final Map<ServiceKind, ServicePick> picks = {};
-  List<ServiceFee> fees = const [];   // أجور الخدمة المرتبطة بأنواع الزيت
   bool withFilter = false;
   OilProduct? filter;                 // فلتر الزيت المطابق للسيارة (لو مربوط من الفرع)
   OilProduct? autoService;            // خدمة تغيير زيت الماكينة بحسب قواعد تسعير السيارة
@@ -44,19 +43,20 @@ class BookingSelection extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// أجرة الخدمة لهذا النوع: لزيت الماكينة قاعدة تسعير السيارة أولاً، ثم أي خدمة مربوطة بالنوع
+  /// أجرة الخدمة التلقائية لزيت الماكينة فقط (من قواعد تسعير السيارة).
+  /// الجير والدفرنس والدبل لها أكثر من خدمة في قائمة الخدمات، فتُحدَّد أجرتها داخل الفرع.
   ({String id, String name, double price})? feeFor(ServiceKind k) {
     if (k == ServiceKind.engine && autoService != null) return (id: autoService!.id, name: autoService!.name, price: autoService!.price);
-    for (final f in fees) {
-      if (f.oilType == k.oilType) return (id: f.id, name: f.name, price: f.price);
-    }
     return null;
   }
+
+  /// خدمات مختارة أجرتها تُحدَّد في الفرع (جير/دفرنس/دبل)
+  List<ServiceKind> get feeAtBranch => [for (final k in picks.keys) if (k != ServiceKind.engine) k];
 
   /// كل خدمة مختارة يجب أن يكون لها زيت
   bool get complete => picks.isNotEmpty && picks.values.every((p) => p.oil != null);
 
-  /// بنود الفاتورة التقديرية بالترتيب: (زيت + أجرة) لكل خدمة ثم الفلتر
+  /// بنود الفاتورة التقديرية بالترتيب: (زيت + أجرة الماكينة) لكل خدمة ثم الفلتر
   List<Line> get lines {
     final out = <Line>[];
     for (final p in picks.values) {

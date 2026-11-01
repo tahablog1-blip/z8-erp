@@ -217,15 +217,16 @@ void main() {
     // ملخص الفاتورة: كل البنود وأجرة الخدمة والإجمالي + تنبيه غير نهائي
     await t.scrollUntilVisible(find.text('ملخص الفاتورة'), 200, scrollable: find.byType(Scrollable).first);
     expect(find.text('خدمة تغيير زيت'), findsOneWidget);
-    expect(find.text('أجرة تغيير زيت قير'), findsOneWidget);
-    expect(find.text('390.00 ر.س'), findsWidgets);                  // 180 + 30 + 110 + 25 + 20 + 25
+    expect(find.text('أجرة تغيير زيت قير'), findsNothing);          // الجير والدفرنس والدبل: الأجرة تُحدَّد في الفرع
+    expect(find.textContaining('يُحدَّد سعرها داخل الفرع'), findsOneWidget);
+    expect(find.text('365.00 ر.س'), findsWidgets);                  // 180 + 30 + 110 + 20 + 25
     expect(find.textContaining('هذا السعر غير نهائي'), findsOneWidget);
     expect(find.text('السعر غير نهائي — قد تُضاف أصناف داخل الفرع'), findsOneWidget);   // نفس التنبيه في الشريط السفلي
 
     await t.tap(find.text('تأكيد الحجز'));
     await t.pumpAndSettle();
     final items = (api.lastSelection!['items'] as List).cast<Map<String, dynamic>>();
-    expect(items.map((e) => e['productId']), ['o-eng', 'svc1', 'o-gear', 'fee-gear', 'o-misc', 'f1']);
+    expect(items.map((e) => e['productId']), ['o-eng', 'svc1', 'o-gear', 'o-misc', 'f1']);
     expect(items.first['qty'], 4.5);
     expect(items.first['label'], 'تغيير زيت ماكينة: شل هيلكس 5W-30');
     expect(api.lastSelection!['withFilter'], true);

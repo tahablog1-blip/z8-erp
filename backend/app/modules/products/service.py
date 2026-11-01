@@ -17,13 +17,6 @@ _COLS = """id, category, name, spec, unit, barcode, sku, price, price_vat, is_se
 # عشان نستبدل السعرين بـ COALESCE مع price_list_items بدل العمودين الأصليين
 _COLS_NO_PRICE = [c.strip() for c in _COLS.split(",") if c.strip() not in ("price", "price_vat")]
 
-# قواعد خصم الكمية مجمّعة كـ JSON داخل صف الصنف نفسه — شاشة البيع تحسب الخصم
-# محلياً عند تغيير الكمية بلا أي طلب إضافي للسيرفر (نفس فلسفة إرفاق السعر الجاهز)
-_QTY_RULES_SQL = """COALESCE((SELECT json_agg(json_build_object(
-                       'min_qty', q.min_qty, 'discount_percent', q.discount_percent) ORDER BY q.min_qty)
-                     FROM quantity_discount_rules q WHERE q.product_id = p.id), '[]'::json) AS qty_discount_rules"""
-
-
 def _row_out(r: dict) -> dict:
     """UUID → نص، و NUMERIC (Decimal) → float عشان JSON"""
     r = dict(r)
@@ -107,8 +100,7 @@ async def list_products(company_id: str, search: str | None = None, price_list_i
         f"""SELECT {cols}, {price_sql}
                   COALESCE((SELECT SUM(inv.qty) FROM inventory inv
                              WHERE inv.product_id = p.id AND inv.loc_type = 'branch'), 0) AS stock_qty,
-                  (p.image_base64 IS NOT NULL) AS has_image,
-                  {_QTY_RULES_SQL}
+                  (p.image_base64 IS NOT NULL) AS has_image
            FROM products p {join_sql} WHERE {where} ORDER BY p.category, p.name, p.spec""", *params
     )
     return [_row_out(r) for r in rows]
@@ -120,8 +112,7 @@ async def get_by_barcode(company_id: str, code: str, price_list_id: str | None =
         row = await fetchrow(
             f"""SELECT {cols}, COALESCE(pli.price, p.price) AS price,
                       COALESCE(pli.price_vat, p.price_vat) AS price_vat,
-                      (pli.id IS NOT NULL) AS price_overridden,
-                      {_QTY_RULES_SQL}
+                      (pli.id IS NOT NULL) AS price_overridden
                FROM products p
                LEFT JOIN price_list_items pli ON pli.product_id = p.id AND pli.price_list_id = $3
                WHERE p.company_id = $1 AND p.barcode = $2 AND p.is_active = TRUE""",
@@ -129,7 +120,7 @@ async def get_by_barcode(company_id: str, code: str, price_list_id: str | None =
         )
     else:
         row = await fetchrow(
-            f"""SELECT {_COLS}, {_QTY_RULES_SQL} FROM products p
+            f"""SELECT {_COLS} FROM products p
                 WHERE company_id = $1 AND barcode = $2 AND is_active = TRUE""",
             company_id, code,
         )
@@ -608,6 +599,16 @@ async def auto_classify_oil_types(company_id: str, apply: bool, redo: bool = Fal
     }
 
 
+async def clear_all_oil_types(company_id: str) -> dict:
+    """إلغاء نوع كل الزيوت (غير الخدمات) دفعة واحدة — لإعادة التصنيف من الصفر.
+    لا يمس شركات الزيوت ولا علامة «زيت» ولا الفلاتر."""
+    rows = await fetch(
+        """UPDATE products SET oil_type=NULL
+           WHERE company_id=$1 AND is_service=FALSE AND COALESCE(oil_type,'') <> ''
+           RETURNING id""", company_id)
+    return {"ok": True, "count": len(rows)}
+
+
 async def assign_oil_type(company_id: str, oil_type: str, product_ids: list[str]) -> dict:
     if oil_type not in OIL_TYPES:
         raise HTTPException(400, "نوع زيت غير معروف")
@@ -684,6 +685,30 @@ async def create_service_rule(company_id: str, d: dict) -> dict:
     return {"ok": True, "id": str(row["id"])}
 
 
+async def bulk_service_rules(company_id: str, service_product_id: str, price: float,
+                             brands: list[str], all_brands: bool = False) -> dict:
+    """سعر خدمة واحد لعدة ماركات دفعة واحدة (أو لكل السيارات). القاعدة العامة للماركة (بلا موديل/سنة)
+    تُستبدل لو كانت موجودة بدل التكرار؛ القواعد الأخص (موديل/سنة) لا تُمس."""
+    if price is None or float(price) < 0:
+        raise HTTPException(422, "أدخل سعر خدمة صحيح")
+    names = [b.strip() for b in brands if b and b.strip()]
+    if not names and not all_brands:
+        raise HTTPException(422, "اختر ماركة واحدة على الأقل")
+    if not await fetchrow("SELECT 1 FROM products WHERE id=$1 AND company_id=$2 AND is_service=TRUE", service_product_id, company_id):
+        raise HTTPException(404, "الخدمة غير موجودة")
+    targets: list[str | None] = ([None] if all_brands else []) + list(dict.fromkeys(names))
+    for b in targets:
+        await execute(
+            """DELETE FROM service_price_rules
+               WHERE company_id=$1 AND service_product_id=$2 AND brand IS NOT DISTINCT FROM $3
+                 AND model IS NULL AND year_from IS NULL AND year_to IS NULL""",
+            company_id, service_product_id, b)
+        await execute(
+            "INSERT INTO service_price_rules (company_id, service_product_id, brand, price) VALUES ($1,$2,$3,$4)",
+            company_id, service_product_id, b, price)
+    return {"ok": True, "count": len(targets)}
+
+
 async def delete_service_rule(company_id: str, rule_id: str) -> dict:
     row = await fetchrow(
         "DELETE FROM service_price_rules WHERE id=$1 AND company_id=$2 RETURNING id",
@@ -691,119 +716,6 @@ async def delete_service_rule(company_id: str, rule_id: str) -> dict:
     if not row:
         raise HTTPException(404, "القاعدة غير موجودة")
     return {"ok": True}
-
-
-# ══════════════════ خصومات حسب الكمية ══════════════════
-# كل قاعدة: صنف + حد أدنى كمية + نسبة خصم — شاشة البيع بتطبّق أعلى حد تحقق
-# فيه الكمية المضافة تلقائياً (نفس منطق "الأخص بيكسب" في أسعار الخدمة، لكن
-# هنا الترتيب بالكمية الأكبر لا الأخص)
-
-async def list_quantity_rules(company_id: str) -> list[dict]:
-    rows = await fetch(
-        """SELECT r.*, p.name AS product_name, p.category AS product_category
-           FROM quantity_discount_rules r JOIN products p ON p.id = r.product_id
-           WHERE r.company_id=$1
-           ORDER BY p.name, r.min_qty""", company_id)
-    return [{**r, "id": str(r["id"]), "product_id": str(r["product_id"]),
-             "min_qty": float(r["min_qty"]), "discount_percent": float(r["discount_percent"])} for r in rows]
-
-
-async def create_quantity_rule(company_id: str, d: dict) -> dict:
-    min_qty = d.get("minQty")
-    pct = d.get("discountPercent")
-    if min_qty is None or float(min_qty) <= 0:
-        raise HTTPException(422, "أدخل حد كمية صحيح (أكبر من صفر)")
-    if pct is None or not (0 < float(pct) <= 100):
-        raise HTTPException(422, "أدخل نسبة خصم صحيحة بين 0 و100")
-    prod = await fetchrow("SELECT id FROM products WHERE id=$1 AND company_id=$2", d["productId"], company_id)
-    if not prod:
-        raise HTTPException(404, "الصنف غير موجود")
-    row = await fetchrow(
-        """INSERT INTO quantity_discount_rules (company_id, product_id, min_qty, discount_percent)
-           VALUES ($1,$2,$3,$4) RETURNING id""",
-        company_id, d["productId"], min_qty, pct)
-    return {"ok": True, "id": str(row["id"])}
-
-
-async def delete_quantity_rule(company_id: str, rule_id: str) -> dict:
-    row = await fetchrow(
-        "DELETE FROM quantity_discount_rules WHERE id=$1 AND company_id=$2 RETURNING id",
-        rule_id, company_id)
-    if not row:
-        raise HTTPException(404, "القاعدة غير موجودة")
-    return {"ok": True}
-
-
-# ══════════════════ منظف الأسماء الذكي ══════════════════
-
-async def ai_clean_names(company_id: str, apply: bool, only_oils: bool, limit: int = 120) -> dict:
-    """إعادة صياغة أسماء الأصناف بالعربي النظيف + استخراج اللزوجة/السعة — على دفعات"""
-    from ...core import ai as _ai
-    cond = "AND (is_oil=TRUE OR category ILIKE '%زيت%' OR category ILIKE '%قير%')" if only_oils else ""
-    rows = await fetch(
-        f"""SELECT id, name, spec FROM products
-            WHERE company_id=$1 AND is_active=TRUE AND is_service=FALSE
-              AND original_name IS NULL {cond}
-            ORDER BY name LIMIT $2""", company_id, limit)
-    if not rows:
-        return {"scanned": 0, "changed": 0, "applied": apply, "items": [], "remaining": 0}
-
-    changed: list[dict] = []
-    failed_batches = 0
-    CHUNK = 30
-    for i in range(0, len(rows), CHUNK):
-        batch = rows[i:i + CHUNK]
-        listing = "\n".join(f'{j}| {_normalize_product_name(r["name"])} | {r["spec"] or ""}' for j, r in enumerate(batch))
-        prompt = (
-            "منتجات مركز زيوت سيارات بأسماء مستوردة فوضوية. أعد صياغة كل سطر:\n"
-            "- name: اسم عربي تجاري نظيف مختصر (الماركة بالعربي + النوع). بدون أكواد أو أرقام مرجعية.\n"
-            "- spec: اللزوجة/السعة/المواصفة إن وجدت (مثال: 5W-30 · 4 لتر). فاضي لو لا يوجد.\n"
-            "- لو الاسم أصلاً نظيف رجّعه كما هو.\n"
-            f"الأسطر (رقم| الاسم | المواصفة):\n{listing}\n"
-            'رد بمصفوفة JSON فقط: [{"i":0,"name":"...","spec":"..."}, ...] بنفس الأرقام.'
-        )
-        parsed = None
-        for _attempt in range(2):  # محاولتان لكل دفعة — الفشل بيتحاسب مش بيتبلع
-            try:
-                parsed = _ai.extract_json(await _ai.ask_text(prompt, 1400))
-                break
-            except Exception:
-                continue
-        if parsed is None:
-            failed_batches += 1
-            # حتى لو الذكاء فشل: التنظيف الحتمي بيتطبق (شيل النجوم والشوائب)
-            for r in batch:
-                nn = _normalize_product_name(r["name"])
-                if nn and nn != r["name"]:
-                    changed.append({"id": str(r["id"]), "old": r["name"], "name": nn, "spec": r["spec"]})
-            continue
-        for item in parsed if isinstance(parsed, list) else []:
-            try:
-                r = batch[int(item["i"])]
-            except (KeyError, ValueError, IndexError, TypeError):
-                continue
-            new_name = str(item.get("name", "")).strip()[:120]
-            new_spec = str(item.get("spec", "")).strip()[:80] or None
-            if new_name and (new_name != r["name"] or (new_spec or "") != (r["spec"] or "")):
-                changed.append({"id": str(r["id"]), "old": r["name"],
-                                "name": new_name, "spec": new_spec})
-
-    if apply and changed:
-        async with transaction() as conn:
-            async with conn.transaction():
-                for c in changed:
-                    await conn.execute(
-                        """UPDATE products SET original_name=name, name=$1, spec=$2
-                           WHERE id=$3 AND company_id=$4""",
-                        c["name"], c["spec"], c["id"], company_id)
-
-    remaining = await fetchrow(
-        f"""SELECT COUNT(*) AS n FROM products
-            WHERE company_id=$1 AND is_active=TRUE AND is_service=FALSE
-              AND original_name IS NULL {cond}""", company_id)
-    return {"scanned": len(rows), "changed": len(changed), "applied": apply,
-            "failedBatches": failed_batches,
-            "items": changed[:60], "remaining": max(0, remaining["n"] - (len(rows) if not apply else 0))}
 
 
 # ══════════════════ استيراد المنتجات من ملف Excel (تصدير Odoo) ══════════════════

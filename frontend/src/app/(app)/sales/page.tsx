@@ -560,14 +560,9 @@ export default function SalesPage() {
     return products.filter((p) => (p.barcode || "").toLowerCase().includes(q)).slice(0, 8);
   }, [products, productQuery]);
 
-  // خصومات الكمية: أعلى حد كمية (من قواعد الصنف) تحقّقته الكمية الحالية —
-  // بتتطبّق على سعر الصنف الحالي (العادي أو سعر قائمة أسعار العميل لو معيّن عليها)
-  function effectivePrice(p: Product, qty: number) {
-    const rules = p.qty_discount_rules || [];
-    let pct = 0;
-    for (const r of rules) { if (qty >= r.min_qty) pct = r.discount_percent; }
-    const factor = 1 - pct / 100;
-    return { unitPrice: Number(p.price) * factor, unitPriceVat: Number(p.price_vat) * factor };
+  // سعر الوحدة (العادي أو سعر قائمة أسعار العميل لو معيّن عليها) — بلا خصومات كمية
+  function effectivePrice(p: Product, _qty: number) {
+    return { unitPrice: Number(p.price), unitPriceVat: Number(p.price_vat) };
   }
 
   function addProduct(p: Product) {
