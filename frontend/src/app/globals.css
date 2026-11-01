@@ -73,12 +73,12 @@ a:focus-visible, [role="tab"]:focus-visible, summary:focus-visible {
 @font-face {
   font-family: "Material Symbols Rounded";
   font-style: normal; font-weight: 400; font-display: block;
-  src: url("/fonts/material-symbols-rounded.woff2?v=1") format("woff2");
+  src: url("/fonts/material-symbols-rounded.woff2?v=2") format("woff2");
 }
 @font-face {
   font-family: "Material Symbols Rounded Fill";
   font-style: normal; font-weight: 400; font-display: block;
-  src: url("/fonts/material-symbols-rounded-fill.woff2?v=1") format("woff2");
+  src: url("/fonts/material-symbols-rounded-fill.woff2?v=2") format("woff2");
 }
 /* ── Material Symbols Rounded: مكتبة الأيقونات الموحدة ──
    24px · Weight 400 · Optical 24 · Rounded — لون افتراضي #64748B */

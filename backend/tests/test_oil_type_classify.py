@@ -15,6 +15,8 @@ from app.modules.products.service import classify_oil_type as c
     ("زيت قير أوتوماتيك ATF", "gearbox"), ("Gear Oil 75W-90", "gearbox"), ("CVT Fluid", "gearbox"),
     ("زيت ماكينة 5W-30", "engine"), ("Shell Helix 10W-40", "engine"), ("موبيل 1 0W-20", "engine"),
     ("زيت محرك ديزل 15W-40", "engine"),
+    ("كاسترول زيت ماجينتك كلكس 5-30 فلتر 12*", "engine"), ("زيت 10/40 سينثتك", "engine"), ("زيت 20-50", "engine"), ("زيت 15W40", "engine"),
+    ("شل هيلكس الترا", "engine"), ("زيت اي تي اف دكسرون", "gearbox"), ("زيت ATF Dexron VI", "gearbox"),
 ])
 def test_rules(text, expected):
     assert c(text) == expected
@@ -27,6 +29,7 @@ def test_priority_specific_over_generic():
 
 
 def test_ambiguous_returns_none():
+    assert c("زيت 75-90") is None and c("زيت 85-140") is None   # درجات قير/دفرنس بلا W
     assert c("زيت 75W-90") is None                               # درجة قير/دفرنس بلا كلمة تحدد النوع
     assert c("زيت عام") is None
     assert c("") is None

@@ -548,11 +548,14 @@ _OIL_TYPE_RULES: list[tuple[str, tuple[str, ...]]] = [
     ("steering", ("دركسيون", "دريكسيون", "باور", "power steering", "steering", "psf", "هيدروليك")),
     ("transfer", ("دبل", "transfer case", "transfer", "علبه نقل")),
     ("differential", ("دفرنس", "دفرنشال", "ديفرنس", "ديفر", "differential", "gl-5", "gl5", "gl 5", "limited slip")),
-    ("gearbox", ("قير", "جير", "gear", "atf", "cvt", "dct", "dsg", "mtf", "transmission", "ناقل الحركه", "gl-4", "gl4", "gl 4", "اوتوماتيك")),
-    ("engine", ("ماكينه", "محرك", "engine", "motor", "موتور")),
+    ("gearbox", ("قير", "جير", "gear", "atf", "اتف", "اي تي اف", "dexron", "ديكسرون", "cvt", "سي في تي", "dct", "dsg", "mtf",
+                 "transmission", "ناقل الحركه", "gl-4", "gl4", "gl 4", "اوتوماتيك")),
+    ("engine", ("ماكينه", "محرك", "engine", "motor", "موتور", "ماجنتك", "ماجينتك", "magnatec", "ايدج", "edge", "هيلكس", "helix",
+                "ريميولا", "rimula", "كوارتز", "quartz", "gtx", "maxlife", "ماكس لايف", "سينثتك", "سنثتك", "synthetic", "تخليقي")),
 ]
 # درجات لزوجة الزيوت: الماكينة 0W/5W/10W/15W/20W/25W، والقير/الدفرنس 75W/80W/85W (لا تدل على النوع وحدها)
-_ENGINE_GRADE = re.compile(r"(?<!\d)(0|5|10|15|20|25)\s*w\s*[-/]?\s*\d{2}(?!\d)", re.I)
+# تُكتب كثيراً بلا حرف W ("5-30" و"10/40")، فنقبل الصيغتين: 5W-30 أو 5-30 — والثاني رقم محرك معروف فقط (16/20/30/40/50/60)
+_ENGINE_GRADE = re.compile(r"(?<!\d)(?:(?:0|5|10|15|20|25)\s*w\s*[-/]?\s*\d{2}|(?:0|5|10|15|20|25)\s*[-/]\s*(?:16|20|30|40|50|60))(?!\d)", re.I)
 
 
 def classify_oil_type(text: str) -> str | None:
