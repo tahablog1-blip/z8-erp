@@ -723,7 +723,43 @@ async def delete_service_rule(company_id: str, rule_id: str) -> dict:
 # بنخزنه كما هو بلا أي انحراف: price = السعر/1.15 (بدقة عالية) ثم بنثبّت
 # price_vat على قيمة الملف حرفياً لو العمود قابل للكتابة (مش generated).
 
-async def import_products_rows(company_id: str, rows: list[dict]) -> dict:
+_CAT_INVISIBLE = dict.fromkeys(map(ord, "\u200e\u200f\u202a\u202b\u202c\u200b\ufeff\u0640"))
+_CAT_INVISIBLE[0x00A0] = " "
+
+
+def clean_category(raw: str) -> str:
+    """نص الفئة كما في الملف حرفياً — بإزالة محارف الاتجاه الخفية وتوحيد المسافات فقط"""
+    return " ".join(str(raw or "").translate(_CAT_INVISIBLE).split())
+
+
+IMPORT_KINDS = ("normal", "service", "oil", "filter")
+
+
+def category_kind(category: str) -> str:
+    """نوع الصنف المستنتج من اسم فئته: service | filter | oil | normal.
+    (فلاتر الزيت تُعدّ فلتراً قبل أن تُعدّ زيتاً)"""
+    t = _norm_ar(category)
+    if any(w in t for w in ("خدم", "اجره", "اجور", "عماله", "service", "labor", "labour")):
+        return "service"
+    if any(w in t for w in ("فلتر", "فلاتر", "filter")):
+        return "filter"
+    if any(w in t for w in ("زيت", "زيوت", "oil")):
+        return "oil"
+    return "normal"
+
+
+def _filter_kind_of(text: str) -> str:
+    t = _norm_ar(text)
+    if any(w in t for w in ("هواء", "هوا", "air")):
+        return "air"
+    if any(w in t for w in ("مكيف", "تكييف", "كابين", "cabin", "pollen", "ac ")):
+        return "ac"
+    return "oil"
+
+
+async def import_products_rows(company_id: str, rows: list[dict], kinds: dict[str, str] | None = None) -> dict:
+    """kinds: تعيين صريح فئة→نوع من شاشة المراجعة (يتقدّم على الاستنتاج من اسم الفئة)"""
+    kinds = {clean_category(k): v for k, v in (kinds or {}).items() if v in IMPORT_KINDS}
     added = updated = 0
     errors: list[str] = []
     warnings: list[str] = []
@@ -736,7 +772,8 @@ async def import_products_rows(company_id: str, rows: list[dict]) -> dict:
             price_vat_in = r.get("price_vat")
             cost = r.get("cost")
             unit = (r.get("unit") or "").strip() or "قطعة"
-            category = (r.get("category") or "").strip()
+            category = clean_category(r.get("category") or "")
+            file_category = category            # فئة الملف الحرفية — تُحدّد نوع الصنف أدناه
 
             price_ex = round(float(price_vat_in) / 1.15, 6) if price_vat_in not in (None, "") else None
             cost_val = round(float(cost), 4) if cost not in (None, "") else None
@@ -801,6 +838,16 @@ async def import_products_rows(company_id: str, rows: list[dict]) -> dict:
                        RETURNING id""",
                     company_id, category, name, unit, barcode, price_ex, cost_val)
                 pid = row_new["id"]; added += 1
+
+            # نوع الصنف يتبع فئة الملف: خدمة / زيت / فلتر / عادي (الأصناف بلا فئة في الملف لا تُمس)
+            if file_category:
+                kind = kinds.get(file_category) or category_kind(file_category)
+                await execute(
+                    """UPDATE products SET is_service=$2, is_oil=$3, is_oil_filter=$4,
+                              filter_kind=CASE WHEN $4 THEN $5 ELSE NULL END
+                       WHERE id=$1""",
+                    pid, kind == "service", kind == "oil", kind == "filter",
+                    _filter_kind_of(f"{file_category} {name}") if kind == "filter" else None)
 
             # تثبيت السعر شامل الضريبة على قيمة الملف حرفياً — لو العمود قابل للكتابة.
             # لو generated في قاعدة بياناتك، الأمر بيفشل بأمان والقيمة المحسوبة تبقى

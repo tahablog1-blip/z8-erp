@@ -158,15 +158,20 @@ export default function ProductsPage() {
     columns: Record<string, string>;
     sample: { name: string; barcode: string; priceVat: string; priceEx: string | number; cost: string; unit: string; category: string }[];
     rawHeaders?: string[];
+    categories?: { name: string; count: number; kind: string }[];
   };
   const [preview, setPreview] = useState<ImportPreview | null>(null);
+  // نوع الصنف لكل فئة في الملف (تُدخَل الفئة كما هي، والنوع يحدد: خدمة/زيت/فلتر/عادي)
+  const [catKinds, setCatKinds] = useState<Record<string, string>>({});
+  const KIND_LABELS: [string, string][] = [["normal", "عادي"], ["service", "خدمة"], ["oil", "زيت"], ["filter", "فلتر"]];
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [wipeOpen, setWipeOpen] = useState(false);
   const [wipeBusy, setWipeBusy] = useState(false);
 
-  async function callImport(file: File, dryRun: boolean) {
+  async function callImport(file: File, dryRun: boolean, kinds?: Record<string, string>) {
     const fd = new FormData();
     fd.append("file", file);
+    if (!dryRun && kinds) fd.append("categoryKinds", JSON.stringify(kinds));
     const res = await fetch(`/api/products/import-excel?dryRun=${dryRun}`, {
       method: "POST", body: fd,
       headers: authHeaders(),
@@ -181,6 +186,7 @@ export default function ProductsPage() {
     try {
       const p = await callImport(file, true);   // معاينة فقط — صفر كتابة
       setPreview(p); setPendingFile(file);
+      setCatKinds(Object.fromEntries((p.categories || []).map((c: { name: string; kind: string }) => [c.name, c.kind])));
     } catch (e) {
       setImportOk(false); setImportMsg(`${e instanceof Error ? e.message : "فشل قراءة الملف"}`);
     } finally {
@@ -193,7 +199,7 @@ export default function ProductsPage() {
     if (!pendingFile) return;
     setImportBusy(true);
     try {
-      const data = await callImport(pendingFile, false);
+      const data = await callImport(pendingFile, false, catKinds);
       setImportOk(true); setImportMsg(`استيراد ناجح: ${data.added} صنف جديد + ${data.updated} تحديث` +
         (data.warningsTotal ? ` — ${data.warningsTotal} صف حُدّث سعره/تكلفته فقط لأن اسمه وفئته مكرران مع صنف آخر (مثال: ${(data.warnings || [])[0]})` : "") +
         (data.errorsTotal ? ` — ${data.errorsTotal} صف فيه مشكلة: ${(data.errors || []).slice(0, 3).join(" | ")}` : ""));
@@ -1931,6 +1937,29 @@ export default function ProductsPage() {
                   ))}
                 </div>
                 <div className="mt-1.5 text-text-dim">صوّر هذا الصندوق وأرسله — إضافة الاسم الناقص للمطابقة سطر واحد.</div>
+              </div>
+            )}
+            {(preview.categories || []).length > 0 && (
+              <div className="rounded-lg border border-line">
+                <div className="border-b border-line bg-ink-3 px-3 py-2 text-t-xs">
+                  <b>فئات ملفك ({preview.categories!.length})</b> — تُدخَل كما هي حرفياً، ونوع الصنف يتبع فئته (خدمة أو زيت أو فلتر أو عادي).
+                  راجع النوع المقترح وعدّله إن لزم.
+                </div>
+                <div className="max-h-56 divide-y divide-line overflow-y-auto">
+                  {preview.categories!.map((c) => (
+                    <div key={c.name} className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 text-t-xs">
+                      <span className="min-w-0 flex-1 font-bold">{c.name} <span className="tnum font-normal text-text-dim">({c.count})</span></span>
+                      <span className="flex gap-1">
+                        {KIND_LABELS.map(([k, l]) => (
+                          <button key={k} type="button" onClick={() => setCatKinds({ ...catKinds, [c.name]: k })}
+                            className={`rounded-md border px-2 py-1 font-bold transition ${(catKinds[c.name] || c.kind) === k ? "border-petrol bg-petrol text-white" : "border-line bg-ink-2 hover:bg-ink-3"}`}>
+                            {l}
+                          </button>
+                        ))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             <div className="overflow-x-auto rounded-lg border border-line">
