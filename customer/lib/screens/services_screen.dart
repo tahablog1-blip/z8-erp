@@ -1,0 +1,269 @@
+import 'package:flutter/material.dart';
+import '../core/api.dart';
+import '../core/theme.dart';
+import '../core/widgets.dart';
+import '../models.dart';
+import '../state/app_state.dart';
+import '../state/selection.dart';
+
+typedef SubmitBooking = Future<String?> Function(Map<String, dynamic>? selection, String? odometer);
+
+/// اختيار الخدمات (يمكن الجمع بين أكثر من خدمة) والزيت والكمية لكل خدمة، ثم تأكيد الحجز.
+class ServicesScreen extends StatefulWidget {
+  const ServicesScreen({super.key, required this.state, required this.carTitle, required this.brand, required this.model, required this.year, required this.submit, this.askOdometer = false});
+  final AppState state;
+  final String carTitle, brand, model, year;
+  final SubmitBooking submit;
+  final bool askOdometer;
+  @override
+  State<ServicesScreen> createState() => _ServicesScreenState();
+}
+
+class _ServicesScreenState extends State<ServicesScreen> {
+  final sel = BookingSelection();
+  final odo = TextEditingController();
+  List<OilProduct> oils = const [];
+  bool loading = true, busy = false;
+  String? err;
+
+  AppState get s => widget.state;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final b = s.branchId!;
+    try {
+      oils = (await s.api.oils(b)).map(OilProduct.fromJson).toList();
+    } on ApiException catch (e) {
+      err = e.message;
+    }
+    // الخدمة التلقائية وفلتر الزيت المطابق اختياريان: غيابهما لا يمنع الحجز
+    try {
+      final a = await s.api.autoService(b, brand: widget.brand, model: widget.model, year: widget.year);
+      if (a != null) sel.autoService = OilProduct.fromJson({...a, 'spec': ''});
+    } on ApiException catch (_) {}
+    if (widget.brand.isNotEmpty && widget.model.isNotEmpty) {
+      try {
+        final f = await s.api.filterMatch(b, brand: widget.brand, model: widget.model, year: widget.year);
+        if (f != null) sel.filter = OilProduct.fromJson(f);
+      } on ApiException catch (_) {}
+    }
+    if (mounted) setState(() => loading = false);
+  }
+
+  Future<void> _pickOil(ServiceKind k) async {
+    final typed = oils.where((o) => o.oilType == k.oilType).toList();
+    final o = await showModalBottomSheet<OilProduct>(
+      context: context, isScrollControlled: true, backgroundColor: Z8.ink2, shape: const RoundedRectangleBorder(),
+      builder: (_) => _OilSheet(kind: k, oils: typed.isEmpty ? oils : typed, filteredByType: typed.isNotEmpty),
+    );
+    if (o != null) sel.setOil(k, o);
+  }
+
+  Future<void> _submit(Map<String, dynamic>? payload) async {
+    setState(() { busy = true; err = null; });
+    final e = await widget.submit(payload, widget.askOdometer && odo.text.trim().isNotEmpty ? arabicDigitsToLatin(odo.text.trim()) : null);
+    if (!mounted) return;
+    if (e == null) {
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() { busy = false; err = e; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: Text('اختر الخدمة', style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
+        body: SafeArea(
+          child: loading
+              ? const Center(child: CircularProgressIndicator())
+              : ListenableBuilder(
+                  listenable: sel,
+                  builder: (context, _) => Column(children: [
+                    Expanded(
+                      child: ListView(padding: const EdgeInsets.all(16), children: [
+                        Panel(color: Z8.petrolSoft, child: Row(children: [
+                          const Icon(Icons.directions_car_outlined, color: Z8.petrol),
+                          const SizedBox(width: 10),
+                          Expanded(child: Text(widget.carTitle, style: tx(Fs.md, w: 900))),
+                        ])),
+                        const SizedBox(height: 16),
+                        Text('الخدمات المطلوبة (يمكنك اختيار أكثر من خدمة)', style: tx(Fs.md, w: 900, color: Z8.petrolDeep)),
+                        const SizedBox(height: 8),
+                        for (final k in ServiceKind.values) _ServiceTile(k, sel, onPick: () => _pickOil(k)),
+                        if (sel.has(ServiceKind.engine) && sel.filter != null) ...[
+                          const SizedBox(height: 4),
+                          Panel(
+                            pad: 4,
+                            child: SwitchListTile(
+                              value: sel.withFilter, onChanged: sel.setFilter, activeThumbColor: Z8.petrol, contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                              title: Text('مع تغيير فلتر الزيت', style: tx(Fs.md, w: 800)),
+                              subtitle: Text('${sel.filter!.title} · ${sel.filter!.price.toStringAsFixed(2)} ر.س', style: tx(Fs.sm, color: Z8.textDim)),
+                            ),
+                          ),
+                        ],
+                        if (widget.askOdometer) ...[
+                          const SizedBox(height: 16),
+                          Z8Field(label: 'قراءة العداد (اختياري)', controller: odo, keyboard: TextInputType.number, ltr: true, maxLength: 7),
+                        ],
+                        if (err != null) ...[const SizedBox(height: 12), ErrorBar(err!)],
+                      ]),
+                    ),
+                    _Footer(sel: sel, busy: busy, onConfirm: () => _submit(sel.payload()), onSkip: () => _submit(null)),
+                  ]),
+                ),
+        ),
+      );
+}
+
+class _ServiceTile extends StatelessWidget {
+  const _ServiceTile(this.k, this.sel, {required this.onPick});
+  final ServiceKind k;
+  final BookingSelection sel;
+  final VoidCallback onPick;
+  @override
+  Widget build(BuildContext context) {
+    final on = sel.has(k);
+    final p = sel.picks[k];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Panel(
+        pad: 0,
+        color: on ? Z8.petrolSoft : null,
+        child: Column(children: [
+          InkWell(
+            onTap: () => sel.toggle(k),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(children: [
+                Icon(on ? Icons.check_box : Icons.check_box_outline_blank, color: Z8.petrol),
+                const SizedBox(width: 12),
+                Expanded(child: Text(k.label, style: tx(Fs.md, w: 900))),
+              ]),
+            ),
+          ),
+          if (on && p != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                InkWell(
+                  onTap: onPick,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: Z8.ink2, border: Border.all(color: p.oil == null ? Z8.brass : Z8.line, width: p.oil == null ? 1.5 : 1)),
+                    child: Row(children: [
+                      Expanded(child: Text(p.oil?.title ?? 'اختر الزيت', style: tx(Fs.md, w: 800, color: p.oil == null ? Z8.brass : Z8.text))),
+                      const Icon(Icons.arrow_drop_down),
+                    ]),
+                  ),
+                ),
+                if (p.oil != null) ...[
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Text('الكمية (لتر)', style: tx(Fs.sm, w: 700, color: Z8.textDim)),
+                    const Spacer(),
+                    IconButton(onPressed: () => sel.setQty(k, p.qty - 0.5), icon: const Icon(Icons.remove_circle_outline)),
+                    SizedBox(width: 44, child: Text(p.qty % 1 == 0 ? p.qty.toStringAsFixed(0) : p.qty.toStringAsFixed(1), textAlign: TextAlign.center, style: tx(Fs.lg, w: 900, tnum: true))),
+                    IconButton(onPressed: () => sel.setQty(k, p.qty + 0.5), icon: const Icon(Icons.add_circle_outline)),
+                  ]),
+                  Align(alignment: AlignmentDirectional.centerEnd, child: Text('${p.total.toStringAsFixed(2)} ر.س', style: tx(Fs.md, w: 900, color: Z8.petrolDeep, tnum: true))),
+                  Text('الكمية تقديرية — يؤكدها الفني عند الفحص', style: tx(Fs.xs, color: Z8.textDim)),
+                ],
+              ]),
+            ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _Footer extends StatelessWidget {
+  const _Footer({required this.sel, required this.busy, required this.onConfirm, required this.onSkip});
+  final BookingSelection sel;
+  final bool busy;
+  final VoidCallback onConfirm, onSkip;
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(color: Z8.ink2, border: Border(top: BorderSide(color: Z8.line))),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          if (sel.lines.isNotEmpty) ...[
+            for (final l in sel.lines)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Row(children: [
+                  Expanded(child: Text(l.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: tx(Fs.xs, color: Z8.textDim))),
+                  Text(l.line.toStringAsFixed(2), style: tx(Fs.xs, w: 700, tnum: true)),
+                ]),
+              ),
+            const Divider(height: 14),
+            Row(children: [
+              Expanded(child: Text('الإجمالي (شامل الضريبة)', maxLines: 1, overflow: TextOverflow.ellipsis, style: tx(Fs.sm, w: 800))),
+              Text('${sel.total.toStringAsFixed(2)} ر.س', style: tx(Fs.lg, w: 900, color: Z8.petrolDeep, tnum: true)),
+            ]),
+            const SizedBox(height: 10),
+          ],
+          Z8Button('تأكيد الحجز', busy: busy, onTap: sel.complete ? onConfirm : null),
+          const SizedBox(height: 6),
+          TextButton(
+            onPressed: busy ? null : onSkip,
+            child: Text('احجز دون تحديد الزيت (يحدده الفني)', style: tx(Fs.sm, w: 800, color: Z8.petrol)),
+          ),
+        ]),
+      );
+}
+
+class _OilSheet extends StatefulWidget {
+  const _OilSheet({required this.kind, required this.oils, required this.filteredByType});
+  final ServiceKind kind;
+  final List<OilProduct> oils;
+  final bool filteredByType;
+  @override
+  State<_OilSheet> createState() => _OilSheetState();
+}
+
+class _OilSheetState extends State<_OilSheet> {
+  String q = '';
+  @override
+  Widget build(BuildContext context) {
+    final shown = widget.oils.where((o) => q.isEmpty || o.title.contains(q) || o.brand.contains(q)).take(200).toList();
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * .8,
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(widget.kind.label, style: tx(Fs.lg, w: 900)),
+              if (!widget.filteredByType) Text('كل الزيوت المتاحة', style: tx(Fs.xs, color: Z8.textDim)),
+              const SizedBox(height: 8),
+              TextField(onChanged: (v) => setState(() => q = v.trim()), style: tx(Fs.md, w: 600), decoration: InputDecoration(hintText: 'ابحث باسم الزيت أو شركته', prefixIcon: const Icon(Icons.search), hintStyle: tx(Fs.md, color: Z8.textDim))),
+            ]),
+          ),
+          Expanded(
+            child: shown.isEmpty
+                ? Center(child: Text('لا توجد نتائج', style: tx(Fs.md, color: Z8.textDim)))
+                : ListView.separated(
+                    itemCount: shown.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (_, i) {
+                      final o = shown[i];
+                      return ListTile(
+                        title: Text(o.title, style: tx(Fs.md, w: 800)),
+                        subtitle: o.brand.isEmpty ? null : Text(o.brand, style: tx(Fs.sm, color: Z8.textDim)),
+                        trailing: Text('${o.price.toStringAsFixed(2)} ر.س', style: tx(Fs.md, w: 900, color: Z8.petrolDeep, tnum: true)),
+                        onTap: () => Navigator.pop(context, o),
+                      );
+                    },
+                  ),
+          ),
+        ]),
+      ),
+    );
+  }
+}

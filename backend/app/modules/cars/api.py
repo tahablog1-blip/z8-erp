@@ -696,6 +696,61 @@ async def public_lookup(branch_id: str, body: PublicLookupIn):
     return await service.public_lookup(branch_id, body.phone, body.plate)
 
 
+class PublicInvoicesIn(_BM):
+    phone: str = ""
+    otpToken: str | None = None
+    savedCarId: str | None = None      # فواتير هذه السيارة فقط (صفحة السيارة)
+
+
+@router.post("/public/booking/{branch_id}/invoices")
+async def public_my_invoices(branch_id: str, body: PublicInvoicesIn):
+    """فواتير العميل (كلها، أو سيارة واحدة من كراجه) مع أصنافها — بهويته الموثّقة (OTP) لا بمجرد رقم جوال حين يكون التحقق مفعّلاً."""
+    from ...core.db import fetch as _f
+    company_id = await _branch_company(branch_id)
+    if await otp.otp_enabled(company_id):
+        cust = await otp.customer_for_claims(company_id, otp.read_token(body.otpToken, company_id))
+    else:
+        phone = otp.normalize_phone(body.phone)
+        if not phone:
+            raise HTTPException(422, "أدخل رقم جوال صحيح")
+        cust = await _fetchrow("SELECT id, name, phone, email FROM customers WHERE company_id=$1 AND phone = ANY($2::text[]) LIMIT 1",
+                               company_id, otp.phone_variants(phone))
+    if not cust:
+        return {"invoices": []}
+    digits = "".join(ch for ch in (cust["phone"] or "") if ch.isdigit())
+    norm = otp.normalize_phone(digits)
+    variants = otp.phone_variants(norm) if norm else ([digits] if digits else [])   # الفواتير القديمة قد تحمل الجوال بصيغة أخرى
+    plate = None
+    if body.savedCarId:
+        car = await _fetchrow("SELECT plate FROM customer_cars WHERE id=$1::uuid AND customer_id=$2 AND company_id=$3",
+                              body.savedCarId, cust["id"], company_id) if len(body.savedCarId) == 36 else None
+        if not car:
+            raise HTTPException(404, "السيارة غير موجودة في حسابك")
+        plate = "".join((car["plate"] or "").upper().split())
+    rows = await _f(
+        """SELECT i.id, i.invoice_no, i.issued_at, i.total_inc, i.payment_status,
+                  c.plate, c.brand, c.name, c.model_year, c.odometer_current
+           FROM invoices i LEFT JOIN cars c ON c.id = i.car_id
+           WHERE i.company_id=$1 AND i.is_returned=FALSE
+             AND (i.customer_id=$2
+                  OR regexp_replace(COALESCE(i.customer_phone,''), '[^0-9]', '', 'g') = ANY($3::text[]))
+             AND ($4::text IS NULL OR UPPER(REPLACE(COALESCE(c.plate,''),' ','')) = $4)
+           ORDER BY i.issued_at DESC LIMIT 60""",
+        company_id, cust["id"], variants, plate)
+    items: dict = {}
+    if rows:
+        for it in await _f("SELECT invoice_id, label, qty, line_inc FROM invoice_items WHERE invoice_id = ANY($1::uuid[]) ORDER BY id",
+                           [r["id"] for r in rows]):
+            items.setdefault(str(it["invoice_id"]), []).append(
+                {"label": it["label"], "qty": float(it["qty"] or 0), "lineInc": float(it["line_inc"] or 0)})
+    return {"pdfPhone": digits, "invoices": [
+        {"id": str(r["id"]), "invoiceNo": r["invoice_no"], "issuedAt": r["issued_at"].isoformat(),
+         "total": float(r["total_inc"] or 0), "status": r["payment_status"] or "",
+         "odometer": r["odometer_current"], "plate": r["plate"],
+         "carLabel": " ".join(x for x in [r["brand"], r["name"], r["model_year"]] if x) or None,
+         "items": items.get(str(r["id"]), [])} for r in rows]}
+
+
 @router.get("/public/booking-status/{car_id}")
 async def public_booking_status(car_id: str):
     return await service.public_booking_status(car_id)

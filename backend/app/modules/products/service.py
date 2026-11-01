@@ -488,7 +488,7 @@ async def assign_brand_products(company_id: str, brand_id: str, product_ids: lis
 # المقترحة لها في زيوت الفرامل فقط، بدل عرض أي زيت عشوائي.
 OIL_TYPES = {
     "engine": "زيت ماكينة", "differential": "زيت دفرنس", "steering": "زيت دركسيون",
-    "brake": "زيت فرامل", "gearbox": "زيت قير",
+    "brake": "زيت فرامل", "gearbox": "زيت قير", "transfer": "زيت دبل",
 }
 
 # الأنواع الثلاثة لتصنيف الفلاتر — كانت كلها مخلوطة تحت "فلاتر زيت" واحدة

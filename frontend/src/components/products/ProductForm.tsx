@@ -13,7 +13,7 @@ import { fmtCurrency } from "@/lib/customers/format";
 type Editing = { id: string; name: string; spec: string | null; category: string; unit: string | null; barcode: string | null; sku: string | null; price: number; cost: number | null; minQty: number;
   serviceIntervalKm?: number | null; isService: boolean; isOil: boolean; isOilFilter: boolean; brand: string | null; hasImage?: boolean; oilType?: string | null };
 
-const OIL_TYPES: Record<string, string> = { engine: "زيت ماكينة", differential: "زيت دفرنس", steering: "زيت دركسيون", brake: "زيت فرامل", gearbox: "زيت قير" };
+const OIL_TYPES: Record<string, string> = { engine: "زيت ماكينة", differential: "زيت دفرنس", steering: "زيت دركسيون", brake: "زيت فرامل", gearbox: "زيت قير", transfer: "زيت دبل" };
 const UNITS = ["قطعة", "لتر", "علبة", "كرتون", "جالون", "كيلو", "متر", "طقم"];
 const EMPTY = { category: "", name: "", spec: "", unit: "قطعة", barcode: "", sku: "", price: "", costPrice: "", minQty: "0", serviceIntervalKm: "", isService: false, isOil: false, isOilFilter: false, oilBrand: "", oilType: "" };
 type Form = typeof EMPTY;

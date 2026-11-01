@@ -103,6 +103,6 @@ def test_all_permission_keys_exist_in_catalog(routes):
 def test_public_routes_are_get_or_known_post(routes):
     posts = sorted(r["p"] for r in routes if r["kind"] == "none" and r["m"] != "GET" and r["p"].startswith(PUBLIC_PREFIXES))
     allowed = {"/api/cars/public/book/{branch_id}", "/api/cars/public/booking/{branch_id}", "/api/cars/public/booking/{branch_id}/otp/send",
-               "/api/cars/public/booking/{branch_id}/otp/verify", "/api/cars/public/booking/{branch_id}/lookup",
+               "/api/cars/public/booking/{branch_id}/otp/verify", "/api/cars/public/booking/{branch_id}/lookup", "/api/cars/public/booking/{branch_id}/invoices",
                "/api/cars/public/booking-invoices/{branch_id}", "/api/cars/public/booking-selection/{car_id}", "/api/service-notes/public/{token}/messages", "/api/service-notes/public/{token}/voice"}
     assert set(posts) <= allowed, f"عمليات كتابة عامة جديدة تحتاج مراجعة أمنية: {sorted(set(posts) - allowed)}"

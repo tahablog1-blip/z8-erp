@@ -6,6 +6,8 @@ import '../models.dart';
 import '../state/app_state.dart';
 import 'book_screen.dart';
 import 'branches_screen.dart';
+import 'car_screen.dart';
+import 'invoices_screen.dart';
 import 'login_screen.dart';
 import 'ticket_screen.dart';
 
@@ -40,6 +42,16 @@ class _HomeScreenState extends State<HomeScreen> {
     if (done == true && mounted) {
       nav.push(MaterialPageRoute(builder: (_) => TicketScreen(state: s)));
     }
+  }
+
+  /// الفواتير تحتاج هوية العميل: نطلب التحقق أولاً لو لم يتم
+  Future<void> _invoices() async {
+    final nav = Navigator.of(context);
+    if (s.needsLogin) {
+      final ok = await nav.push<bool>(MaterialPageRoute(builder: (_) => LoginScreen(state: s)));
+      if (ok != true || !mounted) return;
+    }
+    nav.push(MaterialPageRoute(builder: (_) => InvoicesScreen(state: s)));
   }
 
   @override
@@ -86,6 +98,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 16),
                   ],
                   if (b == null || b.state == BookingState.done) Z8Button('احجز دورك الآن', icon: Icons.event_available, onTap: _book),
+                  const SizedBox(height: 10),
+                  Z8Button('فواتيري', icon: Icons.receipt_long_outlined, outline: true, onTap: _invoices),
                   if (s.profile.cars.isNotEmpty) ...[
                     const SizedBox(height: 24),
                     Text('سياراتي', style: tx(Fs.md, w: 900, color: Z8.petrolDeep)),
@@ -93,12 +107,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     for (final c in s.profile.cars)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8),
-                        child: Panel(child: Row(children: [
-                          const Icon(Icons.directions_car_outlined, color: Z8.petrol),
-                          const SizedBox(width: 12),
-                          Expanded(child: Text(c.title.isEmpty ? 'سيارة' : c.title, style: tx(Fs.md, w: 800))),
-                          Text(c.plate, style: tx(Fs.md, w: 800, color: Z8.textDim), textDirection: TextDirection.ltr),
-                        ])),
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CarScreen(state: s, car: c))),
+                          child: Panel(child: Row(children: [
+                            const Icon(Icons.directions_car_outlined, color: Z8.petrol),
+                            const SizedBox(width: 12),
+                            Expanded(child: Text(c.title.isEmpty ? 'سيارة' : c.title, style: tx(Fs.md, w: 800))),
+                            Text(c.plate, style: tx(Fs.md, w: 800, color: Z8.textDim), textDirection: TextDirection.ltr),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.chevron_left, color: Z8.textDim),
+                          ])),
+                        ),
                       ),
                   ] else if (!s.verified && info?.otpRequired == true) ...[
                     const SizedBox(height: 16),
