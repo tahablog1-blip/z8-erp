@@ -3,15 +3,18 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../core/api.dart';
 import '../core/config.dart';
+import '../core/geo.dart';
+import '../core/location.dart';
 import '../core/store.dart';
 import '../models.dart';
 
 enum Phase { boot, needsBranch, ready }
 
 class AppState extends ChangeNotifier {
-  AppState({required this.api, required this.store});
+  AppState({required this.api, required this.store, required this.location});
   final CustomerApi api;
   final KeyValueStore store;
+  final LocationProvider location;
 
   Phase phase = Phase.boot;
   String? branchId;
@@ -23,6 +26,13 @@ class AppState extends ChangeNotifier {
   Booking? booking;
   bool busy = false;
 
+  // ── الفروع والموقع ──
+  List<Branch> branches = const [];
+  String? branchesError;
+  bool branchesLoading = false;
+  LatLng? where;
+  bool locationDenied = false;
+
   static const _kBranch = 'branch', _kToken = 'otp', _kPhone = 'phone', _kBooking = 'booking';
   bool get verified => otpToken != null;
 
@@ -33,6 +43,7 @@ class AppState extends ChangeNotifier {
     if (branchId == null) {
       phase = Phase.needsBranch;
       notifyListeners();
+      await loadBranches();
       return;
     }
     phase = Phase.ready;
@@ -40,32 +51,73 @@ class AppState extends ChangeNotifier {
     await refreshAll();
   }
 
-  /// يقبل رابط الحجز أو المعرّف نفسه
-  Future<String?> setBranch(String input) async {
-    final id = parseBranchId(input);
-    if (id == null) return 'الرابط أو الرمز غير صحيح';
-    try {
-      final j = await api.branchInfo(id);
-      info = BranchInfo.fromJson(j);
-    } on ApiException catch (e) {
-      return e.message;
-    }
-    branchId = id;
-    await store.write(_kBranch, id);
-    phase = Phase.ready;
-    infoError = null;
+  /// تحميل كل الفروع، ثم ترتيبها بالأقرب تدريجياً: القائمة تظهر فوراً، وما إن يصل الموقع تُعاد الترتيب مع المسافة ووقت الوصول
+  Future<void> loadBranches() async {
+    branchesLoading = true;
+    branchesError = null;
     notifyListeners();
-    await refreshAll();
+    try {
+      branches = (await api.branches()).map(Branch.fromJson).toList();
+    } on ApiException catch (e) {
+      branchesError = e.message;
+    }
+    branchesLoading = false;
+    _rank();
+    notifyListeners();
+    if (branches.isEmpty) return;
+    final quick = await location.lastKnown();
+    if (quick != null) {
+      where = quick;
+      _rank();
+      notifyListeners();
+    }
+    final fresh = await location.current();
+    if (fresh != null) {
+      where = fresh;
+      locationDenied = false;
+    } else if (quick == null) {
+      locationDenied = true;
+    }
+    _rank();
+    notifyListeners();
+  }
+
+  void _rank() {
+    final w = where;
+    for (final b in branches) {
+      if (w != null && b.hasLocation) {
+        b.distanceKm = haversineKm(w, LatLng(b.latitude!, b.longitude!));
+        b.etaMinutes = estimateDriveMinutes(b.distanceKm!);
+      } else {
+        b.distanceKm = null;
+        b.etaMinutes = null;
+      }
+    }
+    branches = [...branches]..sort((a, c) {
+        if (a.distanceKm != null && c.distanceKm != null) return a.distanceKm!.compareTo(c.distanceKm!);
+        if (a.distanceKm != null) return -1;
+        if (c.distanceKm != null) return 1;
+        return a.name.compareTo(c.name);
+      });
+  }
+
+  /// الأقرب بين فروع الخدمة (يُحجز له دور)
+  Branch? get nearestService {
+    for (final b in branches) {
+      if (b.isService && b.distanceKm != null) return b;
+    }
     return null;
   }
 
-  Future<void> changeBranch() async {
-    await store.delete(_kBranch);
-    await logout();
-    branchId = null;
+  /// اختيار فرع خدمة للحجز منه
+  Future<void> selectBranch(Branch b) async {
+    branchId = b.id;
+    await store.write(_kBranch, b.id);
+    phase = Phase.ready;
     info = null;
-    phase = Phase.needsBranch;
+    infoError = null;
     notifyListeners();
+    await refreshAll();
   }
 
   Future<void> refreshAll() async {

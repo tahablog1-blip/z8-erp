@@ -5,6 +5,7 @@ import '../core/widgets.dart';
 import '../models.dart';
 import '../state/app_state.dart';
 import 'book_screen.dart';
+import 'branches_screen.dart';
 import 'login_screen.dart';
 import 'ticket_screen.dart';
 
@@ -53,7 +54,10 @@ class _HomeScreenState extends State<HomeScreen> {
               title: Text(info?.name ?? 'مصدر الزيوت', style: tx(Fs.lg, w: 900, color: Colors.white)),
               actions: [
                 PopupMenuButton<String>(
-                  onSelected: (v) { if (v == 'branch') s.changeBranch(); if (v == 'out') s.logout(); },
+                  onSelected: (v) {
+                    if (v == 'branch') Navigator.of(context).push(MaterialPageRoute(builder: (_) => BranchesScreen(state: s, pickMode: true)));
+                    if (v == 'out') s.logout();
+                  },
                   itemBuilder: (_) => [
                     const PopupMenuItem(value: 'branch', child: Text('تغيير الفرع')),
                     if (s.verified || s.phone.isNotEmpty) const PopupMenuItem(value: 'out', child: Text('تسجيل الخروج')),

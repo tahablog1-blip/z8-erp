@@ -10,7 +10,7 @@ def _row_out(r: dict) -> dict:
     return r
 
 _COLS = """b.id, b.name, b.category, b.capacity_sir, b.capacity_hafr, b.capacity_rafaat, b.lines,
-           b.is_frozen, b.created_at, b.manager_user_id, b.address, b.invoice_prefix,
+           b.is_frozen, b.created_at, b.manager_user_id, b.address, b.latitude, b.longitude, b.invoice_prefix,
            b.independent_invoice_numbering, u.full_name AS manager_name"""
 _FROM = "FROM branches b LEFT JOIN users u ON u.id = b.manager_user_id"
 
@@ -27,16 +27,19 @@ async def list_branches(company_id: str) -> list[dict]:
 async def create_branch(company_id: str, name: str, category: str, sir: int, hafr: int, rafaat: int,
                         lines: list[str] | None = None, manager_user_id: str | None = None,
                         address: str | None = None, invoice_prefix: str | None = None,
-                        independent_invoice_numbering: bool = False) -> dict:
+                        independent_invoice_numbering: bool = False,
+                        latitude: float | None = None, longitude: float | None = None) -> dict:
     manager_user_id = (manager_user_id or "").strip() or None
     address = (address or "").strip() or None
     row = await fetchrow(
         f"""INSERT INTO branches (company_id, name, category, capacity_sir, capacity_hafr, capacity_rafaat,
-                                  lines, manager_user_id, address, invoice_prefix, independent_invoice_numbering)
-           VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11)
+                                  lines, manager_user_id, address, invoice_prefix, independent_invoice_numbering,
+                                  latitude, longitude)
+           VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, $13)
            RETURNING id""",
         company_id, name, category, (len(lines) if lines else sir), hafr, rafaat, lines or [],
         manager_user_id, address, (invoice_prefix or "").strip().upper() or None, independent_invoice_numbering,
+        latitude, longitude,
     )
     return await get_branch(company_id, str(row["id"]))
 
@@ -48,7 +51,7 @@ async def get_branch(company_id: str, branch_id: str) -> dict:
 
 _COL_MAP = {"name": "name", "category": "category", "lines": "lines", "capacitySir": "capacity_sir",
             "capacityHafr": "capacity_hafr", "capacityRafaat": "capacity_rafaat",
-            "is_frozen": "is_frozen", "managerUserId": "manager_user_id", "address": "address",
+            "is_frozen": "is_frozen", "managerUserId": "manager_user_id", "address": "address", "latitude": "latitude", "longitude": "longitude",
             "invoicePrefix": "invoice_prefix", "independentInvoiceNumbering": "independent_invoice_numbering"}
 
 async def update_branch(company_id: str, branch_id: str, fields: dict) -> dict:

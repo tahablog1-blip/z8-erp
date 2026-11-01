@@ -2,6 +2,28 @@
 String _s(dynamic v) => v == null ? '' : '$v';
 int _i(dynamic v) => v is num ? v.toInt() : int.tryParse(_s(v)) ?? 0;
 
+/// فرع في قائمة الفروع العامة. distanceKm/etaMinutes تُحسب عند توفر موقع العميل.
+class Branch {
+  Branch({required this.id, required this.name, required this.isService, required this.address, required this.latitude, required this.longitude,
+      required this.waiting, required this.inService, required this.estWaitMinutes});
+  final String id, name;
+  final bool isService;          // خدمة (يُحجز له دور) أو تجزئة (بيع بالقطعة)
+  final String? address;
+  final double? latitude, longitude;
+  final int? waiting, inService, estWaitMinutes;
+  double? distanceKm;
+  int? etaMinutes;
+  bool get hasLocation => latitude != null && longitude != null;
+  factory Branch.fromJson(Map<String, dynamic> j) {
+    int? n(dynamic v) => v == null ? null : _i(v);
+    double? d(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v));
+    final addr = _s(j['address']).trim();
+    return Branch(
+      id: _s(j['id']), name: _s(j['name']), isService: _s(j['category']) != 'retail', address: addr.isEmpty ? null : addr,
+      latitude: d(j['latitude']), longitude: d(j['longitude']), waiting: n(j['waiting']), inService: n(j['inService']), estWaitMinutes: n(j['estWaitMinutes']));
+  }
+}
+
 class BranchInfo {
   const BranchInfo({required this.name, required this.waiting, required this.inService, required this.estWaitMinutes, required this.otpRequired});
   final String name;

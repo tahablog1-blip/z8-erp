@@ -23,7 +23,7 @@ class Z8Button extends StatelessWidget {
                 ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: fg))
                 : Row(mainAxisSize: MainAxisSize.min, children: [
                     if (icon != null) ...[Icon(icon, size: 20, color: fg), const SizedBox(width: 8)],
-                    Text(label, style: tx(Fs.md, w: 800, color: fg)),
+                    Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: Text(label, maxLines: 1, style: tx(Fs.md, w: 800, color: fg)))),
                   ]),
           ),
         ),

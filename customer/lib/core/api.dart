@@ -12,6 +12,7 @@ class ApiException implements Exception {
 
 /// واجهة مجرّدة ليسهل استبدالها في الاختبارات
 abstract class CustomerApi {
+  Future<List<Map<String, dynamic>>> branches();
   Future<Map<String, dynamic>> branchInfo(String branchId);
   Future<Map<String, dynamic>> otpSend(String branchId, String phone);
   Future<Map<String, dynamic>> otpVerify(String branchId, String phone, String code);
@@ -63,6 +64,12 @@ class Api implements CustomerApi {
 
   Map<String, dynamic> _map(dynamic d) => d is Map ? Map<String, dynamic>.from(d) : <String, dynamic>{};
   List<String> _strings(dynamic d) => d is List ? d.map((e) => '$e').toList() : <String>[];
+
+  @override
+  Future<List<Map<String, dynamic>>> branches() async {
+    final d = await _send('GET', '/cars/public/branches', query: {if (Config.companyId.isNotEmpty) 'company': Config.companyId});
+    return d is List ? d.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
+  }
 
   @override
   Future<Map<String, dynamic>> branchInfo(String b) async => _map(await _send('GET', '/cars/public/booking/$b'));

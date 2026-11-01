@@ -1140,6 +1140,41 @@ async def public_booking_info(branch_id: str) -> dict:
     }
 
 
+async def public_branches(company_id: str | None = None) -> list[dict]:
+    """قائمة فروع الشركة للعميل (تطبيق الحجز): الاسم والفئة (خدمة/تجزئة) والموقع وحالة الانتظار.
+    بدون company: تُقبل فقط لو للنظام شركة واحدة فعّالة (حتى لا تتسرّب فروع شركات أخرى)."""
+    if not company_id:
+        cos = await fetch("SELECT DISTINCT company_id FROM branches WHERE is_active = TRUE LIMIT 2")
+        if len(cos) != 1:
+            raise HTTPException(400, "حدّد الشركة")
+        company_id = str(cos[0]["company_id"])
+    rows = await fetch(
+        """SELECT b.id, b.name, b.category, b.address, b.latitude, b.longitude,
+                  COALESCE(s.waiting, 0) AS waiting, COALESCE(s.in_service, 0) AS in_service
+           FROM branches b
+           LEFT JOIN (
+             SELECT branch_id,
+                    COUNT(*) FILTER (WHERE entered_at IS NULL) AS waiting,
+                    COUNT(*) FILTER (WHERE entered_at IS NOT NULL) AS in_service
+             FROM cars
+             WHERE is_deleted = FALSE AND exited_at IS NULL AND created_at::date = CURRENT_DATE
+             GROUP BY branch_id
+           ) s ON s.branch_id = b.id
+           WHERE b.company_id = $1 AND b.is_active = TRUE AND COALESCE(b.is_frozen, FALSE) = FALSE
+           ORDER BY b.name""", company_id)
+    out = []
+    for r in rows:
+        service = (r["category"] or "service") != "retail"
+        out.append({
+            "id": str(r["id"]), "name": r["name"], "category": "service" if service else "retail",
+            "address": r["address"], "latitude": r["latitude"], "longitude": r["longitude"],
+            "bookable": service,   # فرع التجزئة: بيع بالقطعة فقط — بلا طابور خدمة
+            "waiting": r["waiting"] if service else None, "inService": r["in_service"] if service else None,
+            "estWaitMinutes": r["waiting"] * AVG_SERVICE_MIN if service else None,
+        })
+    return out
+
+
 async def _upsert_garage(company_id: str, customer_id: str, plate: str, car: dict, service_type: str):
     """حفظ السيارة في كراج العميل — ما بيضيعش أبداً حتى لو مسح بيانات موبايله"""
     plate = " ".join((plate or "").upper().split())
