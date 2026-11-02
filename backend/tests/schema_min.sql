@@ -158,3 +158,4 @@ CREATE TABLE IF NOT EXISTS customer_cars (id uuid PRIMARY KEY DEFAULT gen_random
 CREATE TABLE IF NOT EXISTS service_price_rules (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid NOT NULL, service_product_id uuid NOT NULL, brand text, model text, year_from int, year_to int, price numeric(12,2) NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
 ALTER TABLE cars ADD COLUMN IF NOT EXISTS notes text;
 ALTER TABLE cars ADD COLUMN IF NOT EXISTS draft_items jsonb;
+CREATE TABLE IF NOT EXISTS car_oil_filters (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid NOT NULL, brand text NOT NULL, model text NOT NULL, year_from int NOT NULL, year_to int NOT NULL, filter_product_id uuid NOT NULL, created_by uuid, filter_kind text NOT NULL DEFAULT 'oil', cylinders int, engine_size text, created_at timestamptz NOT NULL DEFAULT now());

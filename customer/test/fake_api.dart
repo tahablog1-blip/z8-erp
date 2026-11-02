@@ -103,7 +103,16 @@ class FakeApi implements CustomerApi {
       {'id': 'svc1', 'name': 'خدمة تغيير زيت', 'price': 30.0};
   @override
   Future<Map<String, dynamic>?> filterMatch(String b, {required String brand, required String model, required String year}) async =>
-      brand == 'تويوتا' ? {'id': 'f1', 'name': 'فلتر كامري', 'spec': '', 'price': 25.0} : null;
+      brand == 'تويوتا'
+          ? {
+              'id': 'f1', 'name': 'فلتر كامري', 'spec': '', 'price': 25.0, 'inStock': true,
+              'options': [
+                {'id': 'f1', 'name': 'فلتر كامري', 'spec': '', 'price': 25.0, 'inStock': true},
+                {'id': 'f2', 'name': 'فلتر كامري بديل', 'spec': 'e2', 'price': 18.0, 'inStock': true},
+                {'id': 'f3', 'name': 'فلتر كامري وكالة', 'spec': '', 'price': 40.0, 'inStock': false},
+              ],
+            }
+          : null;
 
   @override
   Future<Map<String, dynamic>> invoices(String b, {String phone = '', String? otpToken, String? savedCarId}) async {

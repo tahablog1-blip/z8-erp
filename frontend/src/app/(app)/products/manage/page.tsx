@@ -539,13 +539,18 @@ export default function ProductsPage() {
   // ── ربط فلتر السيارة: ماركة/موديل/نطاق سنة → صنف فلتر حقيقي من المخزون ──
   const [filtersMapOpen, setFiltersMapOpen] = useState(false);
   const [carFilters, setCarFilters] = useState<any[]>([]);
-  const [cfKind, setCfKind] = useState<"oil" | "air" | "ac">("oil");
   const [cfBrand, setCfBrand] = useState("");
   const [cfModel, setCfModel] = useState("");
   const [cfFrom, setCfFrom] = useState("");
   const [cfTo, setCfTo] = useState("");
   const [cfCylinders, setCfCylinders] = useState(""); // فاضي = أي محرك (الحالة الشائعة)
-  const [cfProductId, setCfProductId] = useState("");
+  const [cfEngine, setCfEngine] = useState("");        // حجم الماكينة (اختياري)
+  // الفلاتر المختارة لهذه السيارة: أكثر من فلتر زيت (باركودات مختلفة) + هواء + مكيف
+  type CfKind = "oil" | "air" | "ac";
+  const [cfSel, setCfSel] = useState<Record<CfKind, string[]>>({ oil: [], air: [], ac: [] });
+  const [cfAllProducts, setCfAllProducts] = useState(false); // البحث في كل الأصناف لا الفلاتر فقط
+  const [cfListQ, setCfListQ] = useState("");
+  const [cfMsg, setCfMsg] = useState("");
   const [cfBusy, setCfBusy] = useState(false);
   const [cfErr, setCfErr] = useState("");
   const [autoClsBusy, setAutoClsBusy] = useState(false);
@@ -590,25 +595,48 @@ export default function ProductsPage() {
     try { setCarFilters(await api<any[]>("/cars/oil-filters")); } catch { setCarFilters([]); }
   }
 
-  async function addCarFilter() {
-    if (!cfBrand.trim() || !cfModel.trim() || !cfFrom || !cfTo || !cfProductId) {
-      setCfErr("كل الحقول مطلوبة"); return;
-    }
-    setCfBusy(true); setCfErr("");
+  // أصناف الفلاتر المرشّحة لكل نوع: الفلاتر المعلّمة/المسمّاة فلتراً وفق نوعها، أو كل الأصناف عند الحاجة
+  function filterPool(kind: CfKind): Product[] {
+    if (cfAllProducts) return rows;
+    const kw = { oil: /زيت|oil/i, air: /هواء|air/i, ac: /مكيف|تكييف|كابين|cabin|ac\b/i }[kind];
+    return rows.filter((r) => {
+      const text = `${r.name} ${r.category || ""}`;
+      if (!(r.is_oil_filter || /فلتر|فلاتر|filter/i.test(text))) return false;
+      return r.filter_kind ? r.filter_kind === kind : kw.test(text);
+    });
+  }
+
+  async function saveCarFilters() {
+    const filters = (["oil", "air", "ac"] as CfKind[]).flatMap((k) => cfSel[k].map((productId) => ({ kind: k, productId })));
+    if (!cfBrand.trim() || !cfModel.trim() || !cfFrom || !cfTo) { setCfErr("اختر الماركة والموديل ونطاق السنوات"); return; }
+    if (filters.length === 0) { setCfErr("أضف فلتراً واحداً على الأقل (زيت أو هواء أو مكيف)"); return; }
+    setCfBusy(true); setCfErr(""); setCfMsg("");
     try {
-      await api("/cars/oil-filters", {
+      const r = await api<{ added: number; skipped: number }>("/cars/oil-filters/bulk", {
         method: "POST",
         body: JSON.stringify({
-          brand: cfBrand.trim(), model: cfModel.trim(),
-          yearFrom: Number(cfFrom), yearTo: Number(cfTo), filterProductId: cfProductId,
-          filterKind: cfKind, cylinders: cfCylinders ? Number(cfCylinders) : null,
+          brand: cfBrand.trim(), model: cfModel.trim(), yearFrom: Number(cfFrom), yearTo: Number(cfTo),
+          cylinders: cfCylinders ? Number(cfCylinders) : null, engineSize: cfEngine.trim() || null, filters,
         }),
       });
-      setCfBrand(""); setCfModel(""); setCfFrom(""); setCfTo(""); setCfProductId(""); setCfCylinders("");
+      setCfMsg(`تم ربط ${r.added} فلتر بـ ${cfBrand} ${cfModel}${r.skipped ? ` (${r.skipped} موجود سابقاً)` : ""}`);
+      setCfSel({ oil: [], air: [], ac: [] });
       await loadCarFilters();
     } catch (e: any) { setCfErr(e.message); }
     finally { setCfBusy(false); }
   }
+
+  // الروابط الحالية مجمّعة بالسيارة: ماركة + موديل + نطاق سنوات + محرك
+  const carGroups = useMemo(() => {
+    const m = new Map<string, { key: string; brand: string; model: string; from: number; to: number; cyl: number | null; eng: string | null; items: any[] }>();
+    for (const f of carFilters) {
+      const key = [f.brand, f.model, f.year_from, f.year_to, f.cylinders ?? "", f.engine_size ?? ""].join("|");
+      if (!m.has(key)) m.set(key, { key, brand: f.brand, model: f.model, from: f.year_from, to: f.year_to, cyl: f.cylinders ?? null, eng: f.engine_size ?? null, items: [] });
+      m.get(key)!.items.push(f);
+    }
+    const q = cfListQ.trim().toLowerCase();
+    return Array.from(m.values()).filter((g) => !q || `${g.brand} ${g.model}`.toLowerCase().includes(q));
+  }, [carFilters, cfListQ]);
 
   async function removeCarFilter(id: string) {
     if (!(await appConfirm("حذف هذا الربط؟"))) return;
@@ -1726,100 +1754,125 @@ export default function ProductsPage() {
       <Modal open={filtersMapOpen} size="lg" onClose={() => setFiltersMapOpen(false)} title="فلاتر السيارات">
         <div className="space-y-4">
           <p className="text-t-sm text-text-dim">
-            حدّد نوع الفلتر (زيت/هواء/مكيف) والماركة والموديل ونطاق سنة الصنع، واختر
-            الفلتر الصحيح من أصنافك — بمجرد ما العميل يحجز بنفس البيانات، الفلتر ده
-            يظهر تلقائياً في فاتورته بدل قائمة عامة.
+            اختر السيارة مرة واحدة (الماركة ثم الموديل ثم نطاق السنوات)، ثم أضف كل فلاترها دفعة واحدة:
+            فلتر الزيت (ويمكن أكثر من فلتر بباركودات مختلفة) وفلتر الهواء وفلتر المكيف. عند حجز العميل بنفس
+            البيانات تظهر له هذه الفلاتر المتوفرة بالفرع ليختار منها.
           </p>
 
-          {/* نوع الفلتر — أزرار بدل نص حر، يحدد أي أصناف تظهر في قائمة الاختيار */}
-          <div className="flex gap-2">
-            {Object.entries(FILTER_KINDS).map(([k, label]) => (
-              <button key={k} onClick={() => { setCfKind(k as any); setCfProductId(""); }}
-                className="rounded-none px-3.5 py-1.5 text-t-xs font-black transition"
-                style={{
-                  background: cfKind === k ? "var(--petrol, #0f766e)" : "transparent",
-                  color: cfKind === k ? "#fff" : undefined,
-                  border: cfKind === k ? "none" : "1px solid var(--line, #E2E8F0)",
-                }}>
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <SearchSelect value={cfBrand} onChange={(v) => { setCfBrand(v); setCfModel(""); }}
-              options={cfBrandsList} placeholder="اختر أو اكتب الماركة" />
-            <SearchSelect value={cfModel} onChange={setCfModel} options={cfModelsList}
-              placeholder={cfBrand ? "اختر أو اكتب الموديل" : "اختر الماركة أولاً"}
-              disabled={!cfBrand} />
-            <Select value={cfFrom} onChange={(e) => setCfFrom(e.target.value)}>
-              <option value="">من سنة</option>
-              {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
-            </Select>
-            <Select value={cfTo} onChange={(e) => setCfTo(e.target.value)}>
-              <option value="">إلى سنة</option>
-              {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
-            </Select>
-          </div>
-          {/* صنف الفلتر ياخد صفاً كاملاً — الأسماء طويلة ومحتاجة مساحة أوضح من
-              زحمة شبكة الماركة/الموديل/السنة، والسلندرات جنبه لأنه اختياري بسيط.
-              البحث هنا حي في كل الأصناف (اسم أو باركود) — بلا اشتراط تصنيف
-              مسبق، عشان محدش يتعطل بانتظار خطوة تصنيف قد تكون غير مكتملة. */}
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_140px]">
-            <ProductSearchSelect value={cfProductId} onChange={setCfProductId} products={rows}
-              placeholder={`ابحث عن ${FILTER_KINDS[cfKind]} بالاسم أو الباركود...`} />
-            <Select value={cfCylinders} onChange={(e) => setCfCylinders(e.target.value)}>
-              <option value="">أي محرك</option>
-              {["3", "4", "5", "6", "8", "10", "12"].map((c) => <option key={c} value={c}>{c} سلندر</option>)}
-            </Select>
-          </div>
-          <p className="text-t-xs text-text-dim">
-            اترك "أي محرك" إلا لو نفس الموديل والسنة عنده أكثر من خيار محرك بفلاتر مختلفة
-            (مثال: فورتشنر 4 أو 6 سلندر) — حينها أضف رابطاً منفصلاً لكل سلندر.
-          </p>
-          {/* تصنيف نوع الفلتر (زيت/هواء/مكيف) على الأصناف مفيد لتقارير الجدول
-              الرئيسي وفلترته، لكن البحث فوق يعمل مباشرة في كل الأصناف بلا
-              اشتراطه — فهذا مجرد اقتراح اختياري غير معطِّل لأي شيء. */}
-          <div className="flex items-center justify-between gap-3 rounded-lg bg-ink-3/40 px-3 py-2">
+          {/* 1) السيارة */}
+          <div className="space-y-2 rounded-card border border-line p-3">
+            <div className="text-t-xs font-black">1) السيارة</div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <SearchSelect value={cfBrand} onChange={(v) => { setCfBrand(v); setCfModel(""); }}
+                options={cfBrandsList} placeholder="الماركة" />
+              <SearchSelect value={cfModel} onChange={setCfModel} options={cfModelsList}
+                placeholder={cfBrand ? "الموديل" : "اختر الماركة أولاً"} disabled={!cfBrand} />
+              <Select value={cfFrom} onChange={(e) => setCfFrom(e.target.value)}>
+                <option value="">من سنة</option>
+                {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
+              </Select>
+              <Select value={cfTo} onChange={(e) => setCfTo(e.target.value)}>
+                <option value="">إلى سنة</option>
+                {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <Select value={cfCylinders} onChange={(e) => setCfCylinders(e.target.value)}>
+                <option value="">أي محرك</option>
+                {["3", "4", "5", "6", "8", "10", "12"].map((c) => <option key={c} value={c}>{c} سلندر</option>)}
+              </Select>
+              <Input value={cfEngine} placeholder="حجم الماكينة (اختياري) 2.5" dir="ltr" onChange={(e) => setCfEngine(e.target.value)} />
+            </div>
             <p className="text-t-xs text-text-dim">
-              نصيحة: صنّف أصنافك بنوع الفلتر (من الجدول الرئيسي) عشان تقدر تفلترها
-              وتحلّل تقاريرها لاحقاً — مش شرط للبحث والربط هنا.
+              اترك «أي محرك» إلا لو نفس الموديل والسنة له أكثر من خيار محرك بفلاتر مختلفة (مثل فورتشنر 4 أو 6 سلندر) — حينها احفظ سيارة منفصلة لكل محرك.
             </p>
-            <Button variant="ghost" size="xs" className="!shrink-0"
-              disabled={autoClsBusy} onClick={runAutoClassify}>
-              {autoClsBusy ? "جارِ التصنيف..." : "تصنيف تلقائي من الفئة"}
-            </Button>
           </div>
-          {autoClsMsg && (
-            <p className="rounded-lg bg-petrol/10 px-3 py-2 text-t-xs font-bold text-petrol">
-              {autoClsMsg}
-            </p>
-          )}
-          <ErrorNote msg={cfErr} />
-          <Button onClick={addCarFilter} disabled={cfBusy}>
-            {cfBusy ? "جارِ الإضافة..." : "+ إضافة ربط"}
-          </Button>
 
-          <div className="max-h-72 divide-y divide-line overflow-y-auto rounded-lg border border-line">
-            {carFilters.map((f) => (
-              <div key={f.id} className="flex items-center gap-2 px-3 py-2 text-t-sm">
-                <Badge tone="neutral">
-                  {FILTER_KINDS[f.filter_kind] || f.filter_kind}
-                </Badge>
-                <span className="flex-1">
-                  <b>{f.brand}</b> {f.model} <span className="text-text-dim">({f.year_from}–{f.year_to}{f.cylinders ? ` · ${f.cylinders} سلندر` : ""})</span>
-                  {" ← "}
-                  <span className="font-bold">{f.filter_name}{f.filter_spec ? ` ${f.filter_spec}` : ""}</span>
-                </span>
-                <button onClick={() => removeCarFilter(f.id)}
-                  className="rounded-md px-2 py-1 text-t-xs font-bold text-ember hover:bg-ember-bg">
-                  حذف
-                </button>
+          {/* 2) الفلاتر: ثلاثة أقسام، وكل قسم يقبل أكثر من فلتر */}
+          <div className="space-y-2 rounded-card border border-line p-3">
+            <div className="flex items-center justify-between">
+              <div className="text-t-xs font-black">2) الفلاتر المناسبة لهذه السيارة</div>
+              <label className="flex cursor-pointer items-center gap-1.5 text-t-xs text-text-dim">
+                <input type="checkbox" className="h-4 w-4 accent-petrol" checked={cfAllProducts} onChange={(e) => setCfAllProducts(e.target.checked)} />
+                البحث في كل الأصناف
+              </label>
+            </div>
+            {(Object.keys(FILTER_KINDS) as CfKind[]).map((k) => (
+              <div key={k} className="space-y-1.5 rounded-lg bg-ink-3 p-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-t-sm font-black">{FILTER_KINDS[k]}{k === "oil" ? " (يمكن أكثر من فلتر)" : ""}</span>
+                  <span className="text-t-xs text-text-dim">{cfSel[k].length} مضاف</span>
+                </div>
+                <ProductSearchSelect value="" onChange={(id) => id && !cfSel[k].includes(id) && setCfSel({ ...cfSel, [k]: [...cfSel[k], id] })}
+                  products={filterPool(k).filter((p) => !cfSel[k].includes(p.id))}
+                  placeholder={`+ ابحث عن ${FILTER_KINDS[k]} بالاسم أو الباركود وأضفه`} />
+                {cfSel[k].length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {cfSel[k].map((id) => {
+                      const pr = rows.find((r) => r.id === id);
+                      return (
+                        <span key={id} className="flex items-center gap-1.5 rounded-md border border-line bg-ink-2 px-2 py-1 text-t-xs font-bold">
+                          {pr ? productLabel(pr) : id}
+                          {pr?.barcode && <span className="tnum font-normal text-text-dim">{pr.barcode}</span>}
+                          <button type="button" onClick={() => setCfSel({ ...cfSel, [k]: cfSel[k].filter((x) => x !== id) })}
+                            className="text-ember hover:opacity-70" aria-label="إزالة"><MIcon name="close" className="!text-[14px]" /></button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             ))}
-            {carFilters.length === 0 && (
-              <p className="p-6 text-center text-t-sm text-text-dim">لا توجد روابط بعد</p>
-            )}
+            <div className="flex items-center justify-between gap-3 rounded-lg bg-ink-3/40 px-3 py-2">
+              <p className="text-t-xs text-text-dim">القوائم تعرض الأصناف المسمّاة «فلتر» بحسب نوعها. إن لم تجد صنفاً فعّل «البحث في كل الأصناف»، أو صنّف الفلاتر تلقائياً من الفئة.</p>
+              <Button variant="ghost" size="xs" className="!shrink-0" disabled={autoClsBusy} onClick={runAutoClassify}>
+                {autoClsBusy ? "جارِ التصنيف..." : "تصنيف تلقائي من الفئة"}
+              </Button>
+            </div>
+            {autoClsMsg && <p className="rounded-lg bg-petrol/10 px-3 py-2 text-t-xs font-bold text-petrol">{autoClsMsg}</p>}
+          </div>
+
+          <ErrorNote msg={cfErr} />
+          {cfMsg && <p className="rounded-lg bg-emerald-bg px-3 py-2 text-t-xs font-bold text-emerald">{cfMsg}</p>}
+          <Button className="w-full justify-center" onClick={saveCarFilters} disabled={cfBusy}>
+            {cfBusy ? "جارِ الحفظ..." : `حفظ ربط الفلاتر (${cfSel.oil.length + cfSel.air.length + cfSel.ac.length})`}
+          </Button>
+
+          {/* الروابط الحالية مجمّعة بالسيارة */}
+          <div className="space-y-2 border-t border-line pt-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-t-sm font-black">السيارات المربوطة ({carGroups.length})</div>
+              <div className="w-48"><Input value={cfListQ} placeholder="بحث بالماركة أو الموديل" onChange={(e) => setCfListQ(e.target.value)} /></div>
+            </div>
+            <div className="max-h-80 space-y-2 overflow-y-auto">
+              {carGroups.map((g) => (
+                <div key={g.key} className="rounded-lg border border-line">
+                  <div className="flex items-center justify-between gap-2 bg-ink-3 px-3 py-2 text-t-sm">
+                    <span><b>{g.brand}</b> {g.model} <span className="tnum text-text-dim">({g.from}–{g.to}{g.cyl ? ` · ${g.cyl} سلندر` : ""}{g.eng ? ` · ${g.eng}` : ""})</span></span>
+                    <Button variant="ghost" size="xs" onClick={() => {
+                      setCfBrand(g.brand); setCfModel(g.model); setCfFrom(String(g.from)); setCfTo(String(g.to));
+                      setCfCylinders(g.cyl ? String(g.cyl) : ""); setCfEngine(g.eng || ""); setCfSel({ oil: [], air: [], ac: [] }); setCfMsg("");
+                    }}>إضافة فلاتر لهذه السيارة</Button>
+                  </div>
+                  {(Object.keys(FILTER_KINDS) as CfKind[]).map((k) => {
+                    const list = g.items.filter((f) => f.filter_kind === k);
+                    return list.length === 0 ? null : (
+                      <div key={k} className="flex flex-wrap items-center gap-1.5 border-t border-line px-3 py-1.5 text-t-xs">
+                        <Badge tone="neutral">{FILTER_KINDS[k]}</Badge>
+                        {list.map((f) => (
+                          <span key={f.id} className="flex items-center gap-1 rounded-md bg-ink-2 px-2 py-1 font-bold">
+                            {f.filter_name}{f.filter_spec ? ` ${f.filter_spec}` : ""}
+                            {f.filter_barcode && <span className="tnum font-normal text-text-dim">{f.filter_barcode}</span>}
+                            <button onClick={() => removeCarFilter(f.id)} className="text-ember hover:opacity-70" aria-label="حذف"><MIcon name="close" className="!text-[14px]" /></button>
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+              {carGroups.length === 0 && <p className="p-6 text-center text-t-sm text-text-dim">لا توجد روابط بعد</p>}
+            </div>
           </div>
         </div>
       </Modal>

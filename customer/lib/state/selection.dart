@@ -17,7 +17,8 @@ typedef Line = ({String label, double qty, double line});
 class BookingSelection extends ChangeNotifier {
   final Map<ServiceKind, ServicePick> picks = {};
   bool withFilter = false;
-  OilProduct? filter;                 // فلتر الزيت المطابق للسيارة (لو مربوط من الفرع)
+  OilProduct? filter;                 // فلتر الزيت المختار (الأفضل مطابقةً ومتوفراً افتراضياً)
+  List<OilProduct> filterOptions = const [];   // كل فلاتر الزيت الممكنة لهذه السيارة (أكثر من باركود)
   OilProduct? autoService;            // خدمة تغيير زيت الماكينة بحسب قواعد تسعير السيارة
 
   bool has(ServiceKind k) => picks.containsKey(k);
@@ -48,6 +49,12 @@ class BookingSelection extends ChangeNotifier {
     final p = picks[k];
     if (p == null) return;
     p.qty = q.clamp(0.5, 30).toDouble();
+    notifyListeners();
+  }
+
+  void chooseFilter(OilProduct f) {
+    if (!f.inStock) return;
+    filter = f;
     notifyListeners();
   }
 
