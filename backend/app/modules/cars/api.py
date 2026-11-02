@@ -822,18 +822,27 @@ async def create_car_oil_filter(body: CarOilFilterIn,
 # ── تطبيع بسيط للنص العربي: يوحّد الألف المقصورة/الياء والمسافات الزائدة —
 #    "كامري" و"كامرى" يُحسبان نفس القيمة، وأي مسافات مكررة تُختصر لمسافة واحدة.
 #    هذا للتجميع والمقارنة فقط، والعرض يبقى بأكثر صيغة كتابة شائعة فعلياً. ──
-_NORMALIZE_SQL = "regexp_replace(replace(replace(trim({col}), 'ى', 'ي'), 'أ', 'ا'), '\\s+', ' ', 'g')"
+_NORMALIZE_SQL = "replace(regexp_replace(replace(replace(trim({col}), 'ى', 'ي'), 'أ', 'ا'), '\\s+', ' ', 'g'), 'كورولا', 'كرولا')"
 
 
 def _merge_with_catalog(real: list[str], catalog_items: list[str]) -> list[str]:
     """يدمج نتائج القاعدة الحقيقية (تبقى أولاً بترتيبها) مع عناصر الكتالوج غير
     الموجودة أصلاً (حسب المقارنة المُطبَّعة) — يضمن قائمة شاملة دائماً."""
-    seen = {service._ar_normalize(x) for x in real}
-    out = list(real)
+    # تهجئة الكتالوج هي المعتمدة للعرض: «كرولا» في البيانات تُعرض «كورولا» ولا تتكرر
+    canon = {service._ar_normalize(c): c for c in catalog_items}
+    out: list[str] = []
+    seen: set = set()
+    for x in real:
+        n = service._ar_normalize(x)
+        if n in seen:
+            continue
+        seen.add(n)
+        out.append(canon.get(n, x))
     for item in catalog_items:
-        if service._ar_normalize(item) not in seen:
+        n = service._ar_normalize(item)
+        if n not in seen:
             out.append(item)
-            seen.add(service._ar_normalize(item))
+            seen.add(n)
     return out
 
 
@@ -870,13 +879,14 @@ def clean_public_models(real: list[str], brand: str, catalog_models: list[str]) 
     nb = norm(brand)
     out: list[str] = []
     seen: set = set()
+    canon = {norm(c): c for c in catalog_models}
     for m in list(real) + list(catalog_models):
         t = m.strip()
         if norm(t).startswith(nb + " "):
             t = t[len(brand):].strip() if t.startswith(brand) else " ".join(t.split()[1:])
         n = norm(t)
         if n and n != nb and n not in seen:
-            out.append(t); seen.add(n)
+            out.append(canon.get(n, t)); seen.add(n)       # تهجئة الكتالوج للعرض
     return out
 
 
