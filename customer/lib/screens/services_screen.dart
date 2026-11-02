@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/api.dart';
+import '../core/i18n.dart';
 import '../core/theme.dart';
 import '../core/widgets.dart';
 import '../models.dart';
@@ -98,7 +99,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text('اختر الخدمة', style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
+        appBar: AppBar(title: Text(tr('اختر الخدمة'), style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
         body: SafeArea(
           child: loading
               ? const Center(child: CircularProgressIndicator())
@@ -113,7 +114,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                           Expanded(child: Text(widget.carTitle, style: tx(Fs.md, w: 900))),
                         ])),
                         const SizedBox(height: 16),
-                        Text('الخدمات المطلوبة (يمكنك اختيار أكثر من خدمة)', style: tx(Fs.md, w: 900, color: Z8.petrolDeep)),
+                        Text(tr('الخدمات المطلوبة (يمكنك اختيار أكثر من خدمة)'), style: tx(Fs.md, w: 900, color: Z8.petrolDeep)),
                         const SizedBox(height: 8),
                         for (final k in ServiceKind.values) _ServiceTile(k, sel, onPick: () => _pickOil(k)),
                         // للموديل أكثر من محرك بفلاتر مختلفة: نسأل العميل بدل أن نعرض فلتر محرك آخر
@@ -122,19 +123,19 @@ class _ServicesScreenState extends State<ServicesScreen> {
                           Panel(
                             color: Z8.brassSoft,
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text('لسيارتك أكثر من محرك — ما هو محرك سيارتك؟', style: tx(Fs.md, w: 900)),
-                              Text('لنعرض لك فلتر الزيت المناسب لمحركك بالضبط', style: tx(Fs.sm, color: Z8.textDim)),
+                              Text(tr('لسيارتك أكثر من محرك — ما هو محرك سيارتك؟'), style: tx(Fs.md, w: 900)),
+                              Text(tr('لنعرض لك فلتر الزيت المناسب لمحركك بالضبط'), style: tx(Fs.sm, color: Z8.textDim)),
                               const SizedBox(height: 8),
                               Wrap(spacing: 8, runSpacing: 8, children: [
                                 for (final c in sel.engineChoices)
                                   ActionChip(
-                                    label: Text(c.label, style: tx(Fs.sm, w: 800)),
+                                    label: Text(c.display.isEmpty ? c.label : c.display, style: tx(Fs.sm, w: 800)),
                                     backgroundColor: sel.engineChosen == c.label ? Z8.petrolSoft : Z8.ink2,
                                     shape: RoundedRectangleBorder(side: BorderSide(color: Z8.petrol, width: sel.engineChosen == c.label ? 2 : 1)),
                                     onPressed: () => _loadFilter(c.cylinders, c.engineSize, chosenLabel: c.label),
                                   ),
                                 ActionChip(
-                                  label: Text('لا أعرف', style: tx(Fs.sm, w: 800, color: Z8.textDim)),
+                                  label: Text(tr('لا أعرف'), style: tx(Fs.sm, w: 800, color: Z8.textDim)),
                                   backgroundColor: Z8.ink2, shape: const RoundedRectangleBorder(side: BorderSide(color: Z8.line)),
                                   onPressed: sel.setEngineUnknown,
                                 ),
@@ -146,7 +147,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                           const SizedBox(height: 4),
                           Panel(
                             color: Z8.petrolSoft,
-                            child: Text('سيحدد الفني فلتر الزيت المناسب لمحرك سيارتك عند الفحص.', style: tx(Fs.sm, w: 700)),
+                            child: Text(tr('سيحدد الفني فلتر الزيت المناسب لمحرك سيارتك عند الفحص.'), style: tx(Fs.sm, w: 700)),
                           ),
                         ],
                         if (sel.has(ServiceKind.engine) && sel.filter != null) ...[
@@ -155,11 +156,11 @@ class _ServicesScreenState extends State<ServicesScreen> {
                             pad: 4,
                             child: SwitchListTile(
                               value: sel.withFilter && sel.filter!.inStock, onChanged: sel.filter!.inStock ? sel.setFilter : null, activeThumbColor: Z8.petrol, contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                              title: Text('مع تغيير فلتر الزيت', style: tx(Fs.md, w: 800)),
+                              title: Text(tr('مع تغيير فلتر الزيت'), style: tx(Fs.md, w: 800)),
                               subtitle: Text(
                                 sel.filter!.inStock
-                                    ? '${sel.filter!.title} · ${sel.filter!.price.toStringAsFixed(2)} ر.س'
-                                    : '${sel.filter!.title} · هذا المنتج غير متوفر الآن',
+                                    ? tr('{0} · {1} ر.س', [sel.filter!.title, sel.filter!.price.toStringAsFixed(2)])
+                                    : tr('{0} · هذا المنتج غير متوفر الآن', [sel.filter!.title]),
                                 style: tx(Fs.sm, w: sel.filter!.inStock ? 500 : 800, color: sel.filter!.inStock ? Z8.textDim : Z8.ember)),
                             ),
                           ),
@@ -176,7 +177,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                                     onTap: o.inStock ? () => sel.chooseFilter(o) : null,
                                     leading: Icon(sel.filter?.id == o.id ? Icons.radio_button_checked : Icons.radio_button_off, color: o.inStock ? Z8.petrol : Z8.textDim),
                                     title: Text(o.title, style: tx(Fs.sm, w: 800, color: o.inStock ? Z8.text : Z8.textDim)),
-                                    trailing: Text(o.inStock ? '${o.price.toStringAsFixed(2)} ر.س' : 'غير متوفر الآن',
+                                    trailing: Text(o.inStock ? tr('{0} ر.س', [o.price.toStringAsFixed(2)]) : tr('غير متوفر الآن'),
                                         style: tx(Fs.sm, w: 900, color: o.inStock ? Z8.petrolDeep : Z8.ember, tnum: true)),
                                   ),
                               ]),
@@ -189,7 +190,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                         ],
                         if (widget.askOdometer) ...[
                           const SizedBox(height: 16),
-                          Z8Field(label: 'قراءة العداد (اختياري)', controller: odo, keyboard: TextInputType.number, ltr: true, maxLength: 7),
+                          Z8Field(label: tr('قراءة العداد (اختياري)'), controller: odo, keyboard: TextInputType.number, ltr: true, maxLength: 7),
                         ],
                         if (err != null) ...[const SizedBox(height: 12), ErrorBar(err!)],
                       ]),
@@ -223,7 +224,7 @@ class _ServiceTile extends StatelessWidget {
               child: Row(children: [
                 Icon(on ? Icons.check_box : Icons.check_box_outline_blank, color: Z8.petrol),
                 const SizedBox(width: 12),
-                Expanded(child: Text(k.label, style: tx(Fs.md, w: 900))),
+                Expanded(child: Text(tr(k.label), style: tx(Fs.md, w: 900))),
               ]),
             ),
           ),
@@ -233,9 +234,9 @@ class _ServiceTile extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 // مصدر الزيت: من الفرع أو زيت خارجي يحضره العميل
                 Row(children: [
-                  Expanded(child: _Source('زيت من الفرع', !p.external, () => sel.setExternal(k, false))),
+                  Expanded(child: _Source(tr('زيت من الفرع'), !p.external, () => sel.setExternal(k, false))),
                   const SizedBox(width: 8),
-                  Expanded(child: _Source('زيت خارجي (أحضره بنفسي)', p.external, () => sel.setExternal(k, true))),
+                  Expanded(child: _Source(tr('زيت خارجي (أحضره بنفسي)'), p.external, () => sel.setExternal(k, true))),
                 ]),
                 const SizedBox(height: 10),
                 if (p.external)
@@ -245,7 +246,7 @@ class _ServiceTile extends StatelessWidget {
                     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       const Icon(Icons.info_outline, size: 20, color: Z8.petrolDeep),
                       const SizedBox(width: 8),
-                      Expanded(child: Text('سيحضر الزيت من عندك وتُحتسب أجرة الخدمة فقط. أحضر الزيت للفرع عند الحضور.', style: tx(Fs.sm, w: 700))),
+                      Expanded(child: Text(tr('سيحضر الزيت من عندك وتُحتسب أجرة الخدمة فقط. أحضر الزيت للفرع عند الحضور.'), style: tx(Fs.sm, w: 700))),
                     ]),
                   )
                 else
@@ -255,7 +256,7 @@ class _ServiceTile extends StatelessWidget {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(color: Z8.ink2, border: Border.all(color: p.oil == null ? Z8.brass : Z8.line, width: p.oil == null ? 1.5 : 1)),
                       child: Row(children: [
-                        Expanded(child: Text(p.oil?.title ?? 'اختر الزيت', style: tx(Fs.md, w: 800, color: p.oil == null ? Z8.brass : Z8.text))),
+                        Expanded(child: Text(p.oil?.title ?? tr('اختر الزيت'), style: tx(Fs.md, w: 800, color: p.oil == null ? Z8.brass : Z8.text))),
                         const Icon(Icons.arrow_drop_down),
                       ]),
                     ),
@@ -263,14 +264,13 @@ class _ServiceTile extends StatelessWidget {
                 if (p.oil != null && !p.external) ...[
                   const SizedBox(height: 10),
                   Row(children: [
-                    Text('الكمية (لتر)', style: tx(Fs.sm, w: 700, color: Z8.textDim)),
-                    const Spacer(),
-                    IconButton(onPressed: () => sel.setQty(k, p.qty - 0.5), icon: const Icon(Icons.remove_circle_outline)),
-                    SizedBox(width: 44, child: Text(p.qty % 1 == 0 ? p.qty.toStringAsFixed(0) : p.qty.toStringAsFixed(1), textAlign: TextAlign.center, style: tx(Fs.lg, w: 900, tnum: true))),
-                    IconButton(onPressed: () => sel.setQty(k, p.qty + 0.5), icon: const Icon(Icons.add_circle_outline)),
+                    Expanded(child: Text(tr('الكمية (عدد القطع)'), maxLines: 1, overflow: TextOverflow.ellipsis, style: tx(Fs.sm, w: 700, color: Z8.textDim))),
+                    IconButton(onPressed: () => sel.setQty(k, p.qty - 1), icon: const Icon(Icons.remove_circle_outline)),
+                    SizedBox(width: 44, child: Text('${p.qty}', textAlign: TextAlign.center, style: tx(Fs.lg, w: 900, tnum: true))),
+                    IconButton(onPressed: () => sel.setQty(k, p.qty + 1), icon: const Icon(Icons.add_circle_outline)),
                   ]),
-                  Align(alignment: AlignmentDirectional.centerEnd, child: Text('${p.total.toStringAsFixed(2)} ر.س', style: tx(Fs.md, w: 900, color: Z8.petrolDeep, tnum: true))),
-                  Text('الكمية تقديرية — يؤكدها الفني عند الفحص', style: tx(Fs.xs, color: Z8.textDim)),
+                  Align(alignment: AlignmentDirectional.centerEnd, child: Text(tr('{0} ر.س', [p.total.toStringAsFixed(2)]), style: tx(Fs.md, w: 900, color: Z8.petrolDeep, tnum: true))),
+                  Text(tr('الكمية تقديرية — يؤكدها الفني عند الفحص'), style: tx(Fs.xs, color: Z8.textDim)),
                 ],
               ]),
             ),
@@ -304,7 +304,7 @@ class _Summary extends StatelessWidget {
   final BookingSelection sel;
   @override
   Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text('ملخص الفاتورة', style: tx(Fs.md, w: 900, color: Z8.petrolDeep)),
+        Text(tr('ملخص الفاتورة'), style: tx(Fs.md, w: 900, color: Z8.petrolDeep)),
         const SizedBox(height: 8),
         Panel(child: Column(children: [
           for (final l in sel.lines)
@@ -318,8 +318,8 @@ class _Summary extends StatelessWidget {
             ),
           const Divider(height: 20),
           Row(children: [
-            Expanded(child: Text('الإجمالي (شامل الضريبة)', style: tx(Fs.md, w: 900))),
-            Text('${sel.total.toStringAsFixed(2)} ر.س', style: tx(Fs.xl, w: 900, color: Z8.petrolDeep, tnum: true)),
+            Expanded(child: Text(tr('الإجمالي (شامل الضريبة)'), style: tx(Fs.md, w: 900))),
+            Text(tr('{0} ر.س', [sel.total.toStringAsFixed(2)]), style: tx(Fs.xl, w: 900, color: Z8.petrolDeep, tnum: true)),
           ]),
         ])),
         if (sel.feeAtBranch.isNotEmpty) ...[
@@ -330,7 +330,7 @@ class _Summary extends StatelessWidget {
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Icon(Icons.build_circle_outlined, size: 20, color: Z8.petrolDeep),
               const SizedBox(width: 8),
-              Expanded(child: Text('أجرة ${sel.feeAtBranch.map((k) => k.label.replaceFirst('تغيير ', '')).join(' و')} غير مضافة: لها أكثر من خدمة في قائمة الخدمات، فيُحدَّد سعرها داخل الفرع حسب الخدمة المتوفرة.', style: tx(Fs.sm, w: 700))),
+              Expanded(child: Text(tr('أجرة {0} غير مضافة: لها أكثر من خدمة في قائمة الخدمات، فيُحدَّد سعرها داخل الفرع حسب الخدمة المتوفرة.', [sel.feeAtBranch.map((k) => tr(k.label)).join(' و')]), style: tx(Fs.sm, w: 700))),
             ]),
           ),
         ],
@@ -349,7 +349,7 @@ class _Disclaimer extends StatelessWidget {
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Icon(Icons.info_outline, size: 20, color: Z8.petrolDeep),
           const SizedBox(width: 8),
-          Expanded(child: Text('هذا السعر غير نهائي — قد تُضاف أصناف أو خدمات أخرى داخل الفرع بعد فحص السيارة، ويُحدَّد السعر النهائي عند إصدار الفاتورة.', style: tx(Fs.sm, w: 700))),
+          Expanded(child: Text(tr('هذا السعر غير نهائي — قد تُضاف أصناف أو خدمات أخرى داخل الفرع بعد فحص السيارة، ويُحدَّد السعر النهائي عند إصدار الفاتورة.'), style: tx(Fs.sm, w: 700))),
         ]),
       );
 }
@@ -366,17 +366,17 @@ class _Footer extends StatelessWidget {
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           if (sel.lines.isNotEmpty) ...[
             Row(children: [
-              Expanded(child: Text('الإجمالي التقديري', maxLines: 1, overflow: TextOverflow.ellipsis, style: tx(Fs.sm, w: 800))),
-              Text('${sel.total.toStringAsFixed(2)} ر.س', style: tx(Fs.lg, w: 900, color: Z8.petrolDeep, tnum: true)),
+              Expanded(child: Text(tr('الإجمالي التقديري'), maxLines: 1, overflow: TextOverflow.ellipsis, style: tx(Fs.sm, w: 800))),
+              Text(tr('{0} ر.س', [sel.total.toStringAsFixed(2)]), style: tx(Fs.lg, w: 900, color: Z8.petrolDeep, tnum: true)),
             ]),
-            Text('السعر غير نهائي — قد تُضاف أصناف داخل الفرع', style: tx(Fs.xs, color: Z8.textDim)),
+            Text(tr('السعر غير نهائي — قد تُضاف أصناف داخل الفرع'), style: tx(Fs.xs, color: Z8.textDim)),
             const SizedBox(height: 10),
           ],
-          Z8Button('تأكيد الحجز', busy: busy, onTap: sel.complete ? onConfirm : null),
+          Z8Button(tr('تأكيد الحجز'), busy: busy, onTap: sel.complete ? onConfirm : null),
           const SizedBox(height: 6),
           TextButton(
             onPressed: busy ? null : onSkip,
-            child: Text('احجز دون تحديد الزيت (يحدده الفني)', style: tx(Fs.sm, w: 800, color: Z8.petrol)),
+            child: Text(tr('احجز دون تحديد الزيت (يحدده الفني)'), style: tx(Fs.sm, w: 800, color: Z8.petrol)),
           ),
         ]),
       );

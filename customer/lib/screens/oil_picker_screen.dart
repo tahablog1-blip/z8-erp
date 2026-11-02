@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/config.dart';
+import '../core/i18n.dart';
 import '../core/theme.dart';
 import '../models.dart';
 
@@ -49,7 +50,7 @@ class _OilPickerScreenState extends State<OilPickerScreen> {
       onPopInvokedWithResult: (didPop, _) { if (!didPop) setState(() { brand = null; q = ''; }); },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(inBrand ? brand! : widget.kind.label, style: tx(Fs.lg, w: 900)),
+          title: Text(inBrand ? tr(brand!) : tr(widget.kind.label), style: tx(Fs.lg, w: 900)),
           backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent,
         ),
         body: SafeArea(child: inBrand ? _oils() : _brandGrid()),
@@ -60,11 +61,11 @@ class _OilPickerScreenState extends State<OilPickerScreen> {
   Widget _brandGrid() {
     final list = _brands;
     return ListView(padding: const EdgeInsets.all(16), children: [
-      Text('اختر شركة الزيت', style: tx(Fs.md, w: 900, color: Z8.petrolDeep)),
-      if (!widget.filteredByType) Padding(padding: const EdgeInsets.only(top: 2), child: Text('كل الزيوت المتاحة', style: tx(Fs.xs, color: Z8.textDim))),
+      Text(tr('اختر شركة الزيت'), style: tx(Fs.md, w: 900, color: Z8.petrolDeep)),
+      if (!widget.filteredByType) Padding(padding: const EdgeInsets.only(top: 2), child: Text(tr('كل الزيوت المتاحة'), style: tx(Fs.xs, color: Z8.textDim))),
       const SizedBox(height: 12),
       if (list.isEmpty)
-        Padding(padding: const EdgeInsets.all(32), child: Center(child: Text('لا توجد زيوت متاحة', style: tx(Fs.md, color: Z8.textDim))))
+        Padding(padding: const EdgeInsets.all(32), child: Center(child: Text(tr('لا توجد زيوت متاحة'), style: tx(Fs.md, color: Z8.textDim))))
       else
         GridView.count(
           crossAxisCount: 3, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: .82,
@@ -78,11 +79,11 @@ class _OilPickerScreenState extends State<OilPickerScreen> {
     return Column(children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-        child: TextField(onChanged: (v) => setState(() => q = v.trim()), style: tx(Fs.md, w: 600), decoration: InputDecoration(hintText: 'ابحث في زيوت $brand', prefixIcon: const Icon(Icons.search), hintStyle: tx(Fs.md, color: Z8.textDim))),
+        child: TextField(onChanged: (v) => setState(() => q = v.trim()), style: tx(Fs.md, w: 600), decoration: InputDecoration(hintText: tr('ابحث في زيوت {0}', [brand]), prefixIcon: const Icon(Icons.search), hintStyle: tx(Fs.md, color: Z8.textDim))),
       ),
       Expanded(
         child: shown.isEmpty
-            ? Center(child: Text('لا توجد نتائج', style: tx(Fs.md, color: Z8.textDim)))
+            ? Center(child: Text(tr('لا توجد نتائج'), style: tx(Fs.md, color: Z8.textDim)))
             : GridView.count(
                 padding: const EdgeInsets.all(16), crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: .72,
                 children: [
@@ -91,7 +92,7 @@ class _OilPickerScreenState extends State<OilPickerScreen> {
                       if (o.inStock) return Navigator.pop(context, o);
                       ScaffoldMessenger.of(context)
                         ..hideCurrentSnackBar()
-                        ..showSnackBar(SnackBar(content: Text('هذا المنتج غير متوفر الآن', style: tx(Fs.md, w: 800, color: Colors.white)), backgroundColor: Z8.ember));
+                        ..showSnackBar(SnackBar(content: Text(tr('هذا المنتج غير متوفر الآن'), style: tx(Fs.md, w: 800, color: Colors.white)), backgroundColor: Z8.ember));
                     }),
                 ],
               ),
@@ -130,8 +131,8 @@ class _BrandCard extends StatelessWidget {
             child: Column(children: [
               Expanded(child: _Img(logo, fallback: Icons.oil_barrel_outlined)),
               const SizedBox(height: 6),
-              Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: tx(Fs.sm, w: 900)),
-              Text(available == 0 ? 'غير متوفر الآن' : '$count منتج', style: tx(Fs.xs, w: available == 0 ? 800 : 500, color: available == 0 ? Z8.ember : Z8.textDim)),
+              Text(tr(name), maxLines: 1, overflow: TextOverflow.ellipsis, style: tx(Fs.sm, w: 900)),
+              Text(available == 0 ? tr('غير متوفر الآن') : tr('{0} منتج', [count]), style: tx(Fs.xs, w: available == 0 ? 800 : 500, color: available == 0 ? Z8.ember : Z8.textDim)),
             ]),
           ),
         ),
@@ -157,14 +158,14 @@ class _OilCard extends StatelessWidget {
                   Align(
                     alignment: Alignment.bottomCenter,
                     child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 4), color: Z8.ember,
-                        child: Text('غير متوفر الآن', textAlign: TextAlign.center, style: tx(Fs.xs, w: 900, color: Colors.white))),
+                        child: Text(tr('غير متوفر الآن'), textAlign: TextAlign.center, style: tx(Fs.xs, w: 900, color: Colors.white))),
                   ),
               ])),
               const SizedBox(height: 8),
               Text(o.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: tx(Fs.sm, w: 900, color: o.inStock ? Z8.text : Z8.textDim)),
               if (o.spec.isNotEmpty) Text(o.spec, maxLines: 1, overflow: TextOverflow.ellipsis, style: tx(Fs.xs, color: Z8.textDim)),
               const SizedBox(height: 4),
-              Text(o.inStock ? '${o.price.toStringAsFixed(2)} ر.س' : 'غير متوفر الآن', style: tx(Fs.md, w: 900, color: o.inStock ? Z8.petrolDeep : Z8.ember, tnum: true)),
+              Text(o.inStock ? tr('{0} ر.س', [o.price.toStringAsFixed(2)]) : tr('غير متوفر الآن'), style: tx(Fs.md, w: 900, color: o.inStock ? Z8.petrolDeep : Z8.ember, tnum: true)),
             ]),
           ),
         ),

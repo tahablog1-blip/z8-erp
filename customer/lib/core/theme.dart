@@ -23,6 +23,9 @@ class Z8 {
 /// نمط نص بخط Cairo — الأوزان بالمحور المتغيّر (wght)
 TextStyle tx(double size, {int w = 500, Color color = Z8.text, double? h, bool tnum = false}) => TextStyle(
       fontFamily: 'Cairo',
+      // خطوط احتياطية لحروف لا يملكها Cairo: البنغالية والهندية (ديفاناجري) والأردية (حروف عربية إضافية)
+      fontFamilyFallback: const ['NotoSansBengali', 'NotoSansDevanagari', 'NotoNaskhArabic'],
+      fontWeight: w >= 700 ? FontWeight.w700 : FontWeight.w400,
       fontSize: size,
       color: color,
       height: h,
@@ -45,6 +48,7 @@ ThemeData z8Theme() {
     colorScheme: cs,
     scaffoldBackgroundColor: Z8.ink,
     fontFamily: 'Cairo',
+    fontFamilyFallback: const ['NotoSansBengali', 'NotoSansDevanagari', 'NotoNaskhArabic'],
     splashFactory: InkRipple.splashFactory,
     dividerColor: Z8.line,
     textSelectionTheme: const TextSelectionThemeData(cursorColor: Z8.petrol),

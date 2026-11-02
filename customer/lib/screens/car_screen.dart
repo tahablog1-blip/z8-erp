@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/api.dart';
+import '../core/i18n.dart';
 import '../core/theme.dart';
 import '../core/widgets.dart';
 import '../models.dart';
@@ -54,7 +55,7 @@ class _CarScreenState extends State<CarScreen> {
     final c = widget.car;
     final last = data?.invoices.isEmpty == false ? data!.invoices.first : null;
     return Scaffold(
-      appBar: AppBar(title: Text(c.title.isEmpty ? 'سيارتي' : c.title, style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
+      appBar: AppBar(title: Text(c.title.isEmpty ? tr('سيارتي') : c.title, style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _load,
@@ -63,16 +64,16 @@ class _CarScreenState extends State<CarScreen> {
               Row(children: [
                 const Icon(Icons.directions_car_outlined, color: Z8.petrol, size: 28),
                 const SizedBox(width: 12),
-                Expanded(child: Text(c.title.isEmpty ? 'سيارة' : c.title, style: tx(Fs.lg, w: 900))),
+                Expanded(child: Text(c.title.isEmpty ? tr('سيارة') : c.title, style: tx(Fs.lg, w: 900))),
                 Text(c.plate, style: tx(Fs.lg, w: 900), textDirection: TextDirection.ltr),
               ]),
-              if (c.year.isNotEmpty) ...[const SizedBox(height: 6), Text('موديل ${c.year}', style: tx(Fs.sm, color: Z8.textDim))],
-              if (last?.odometer != null && last!.odometer! > 1) ...[const SizedBox(height: 4), Text('آخر قراءة عداد: ${last.odometer} كم', style: tx(Fs.sm, color: Z8.textDim))],
+              if (c.year.isNotEmpty) ...[const SizedBox(height: 6), Text(tr('موديل {0}', [c.year]), style: tx(Fs.sm, color: Z8.textDim))],
+              if (last?.odometer != null && last!.odometer! > 1) ...[const SizedBox(height: 4), Text(tr('آخر قراءة عداد: {0} كم', [last.odometer]), style: tx(Fs.sm, color: Z8.textDim))],
             ])),
             const SizedBox(height: 12),
-            Z8Button('احجز خدمة لهذه السيارة', icon: Icons.event_available, onTap: _book),
+            Z8Button(tr('احجز خدمة لهذه السيارة'), icon: Icons.event_available, onTap: _book),
             const SizedBox(height: 24),
-            Text('سجل التغييرات', style: tx(Fs.md, w: 900, color: Z8.petrolDeep)),
+            Text(tr('سجل التغييرات'), style: tx(Fs.md, w: 900, color: Z8.petrolDeep)),
             const SizedBox(height: 8),
             InvoiceListView(state: widget.state, data: data, err: err, showCar: false, onRetry: _load),
           ]),

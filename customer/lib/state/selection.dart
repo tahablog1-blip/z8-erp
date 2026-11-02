@@ -1,5 +1,6 @@
 // اختيارات العميل لحجزه: الخدمات (يُجمع بينها) والزيت والكمية لكل خدمة + أجرة الخدمة وفلتر الزيت
 import 'package:flutter/foundation.dart';
+import '../core/i18n.dart';
 import '../models.dart';
 
 class ServicePick {
@@ -7,12 +8,12 @@ class ServicePick {
   final ServiceKind kind;
   OilProduct? oil;
   bool external = false;     // العميل يحضر الزيت بنفسه (زيت خارجي): تُحتسب الأجرة فقط
-  double qty;
+  int qty;
   double get total => external ? 0 : (oil?.price ?? 0) * qty;
   bool get ready => oil != null || external;
 }
 
-typedef Line = ({String label, double qty, double line});
+typedef Line = ({String label, num qty, double line});
 
 class BookingSelection extends ChangeNotifier {
   final Map<ServiceKind, ServicePick> picks = {};
@@ -48,10 +49,10 @@ class BookingSelection extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setQty(ServiceKind k, double q) {
+  void setQty(ServiceKind k, int q) {
     final p = picks[k];
     if (p == null) return;
-    p.qty = q.clamp(0.5, 30).toDouble();
+    p.qty = q.clamp(1, 99);
     notifyListeners();
   }
 
@@ -96,8 +97,8 @@ class BookingSelection extends ChangeNotifier {
     for (final p in picks.values) {
       if (!p.ready) continue;
       out.add(p.external
-          ? (label: '${p.kind.label}: زيت من العميل (خارجي) — الأجرة فقط', qty: 1, line: 0)
-          : (label: '${p.kind.label}: ${p.oil!.title}', qty: p.qty, line: p.total));
+          ? (label: '${tr(p.kind.label)}: ${tr('زيت من العميل (خارجي) — الأجرة فقط')}', qty: 1, line: 0)
+          : (label: '${tr(p.kind.label)}: ${p.oil!.title}', qty: p.qty, line: p.total));
       final fee = feeFor(p.kind);
       if (fee != null) out.add((label: fee.name, qty: 1, line: fee.price));
     }

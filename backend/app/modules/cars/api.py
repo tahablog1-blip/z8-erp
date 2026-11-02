@@ -837,6 +837,49 @@ def _merge_with_catalog(real: list[str], catalog_items: list[str]) -> list[str]:
     return out
 
 
+def clean_public_brands(real: list[str], catalog: dict[str, list[str]]) -> list[str]:
+    """ماركات نظيفة للعميل: بيانات السيارات القديمة فيها قيم مركّبة مثل «تويوتا كامري» أو موديل مكتوب في خانة الماركة.
+    نعتمد أسماء الماركات المعروفة (الكتالوج)، ونستبعد المركّب (ماركة + كلمات) وأي قيمة هي اسم موديل معروف،
+    ونُبقي ماركة نادرة غير معروفة كما هي. الأكثر تكراراً أولاً ثم بقية الكتالوج."""
+    norm = service._ar_normalize
+    known = {norm(b): b for b in catalog}
+    model_names = {norm(m) for ms in catalog.values() for m in ms}
+    out: list[str] = []
+    seen: set = set()
+    for b in real:
+        n = norm(b)
+        if not n or n in seen:
+            continue
+        if n in known:
+            out.append(known[n]); seen.add(n)
+            continue
+        if any(n.startswith(k + " ") for k in known):          # «تويوتا كامري» → ليست ماركة
+            continue
+        if n in model_names:                                    # «كامري» وحدها → موديل لا ماركة
+            continue
+        out.append(b); seen.add(n)
+    for n, b in known.items():
+        if n not in seen:
+            out.append(b); seen.add(n)
+    return out
+
+
+def clean_public_models(real: list[str], brand: str, catalog_models: list[str]) -> list[str]:
+    """موديلات نظيفة: نحذف اسم الماركة المكتوب في بدايته («تويوتا كامري» → «كامري») ونوحّد التكرار."""
+    norm = service._ar_normalize
+    nb = norm(brand)
+    out: list[str] = []
+    seen: set = set()
+    for m in list(real) + list(catalog_models):
+        t = m.strip()
+        if norm(t).startswith(nb + " "):
+            t = t[len(brand):].strip() if t.startswith(brand) else " ".join(t.split()[1:])
+        n = norm(t)
+        if n and n != nb and n not in seen:
+            out.append(t); seen.add(n)
+    return out
+
+
 @router.get("/brands")
 async def admin_car_brands(user: CurrentUser = Depends(get_current_user)):
     """ماركات السيارات الفعلية المسجّلة على مستوى الشركة كلها — مجمّعة (تتجاهل
@@ -1076,7 +1119,7 @@ async def public_car_brands(branch_id: str):
             GROUP BY {norm}
             ORDER BY cnt DESC, display
             LIMIT 200""", br["company_id"])
-    return _merge_with_catalog([r["display"] for r in rows], list(service.CAR_CATALOG.keys()))
+    return clean_public_brands([r["display"] for r in rows], service.CAR_CATALOG)
 
 
 @router.get("/public/car-models/{branch_id}", response_model=list[str])
@@ -1100,7 +1143,7 @@ async def public_car_models(branch_id: str, brand: str = Query(...)):
             LIMIT 200""", br["company_id"], brand)
     catalog_models = next(
         (v for k, v in service.CAR_CATALOG.items() if service._ar_normalize(k) == service._ar_normalize(brand)), [])
-    return _merge_with_catalog([r["display"] for r in rows], catalog_models)
+    return clean_public_models([r["display"] for r in rows], brand, catalog_models)
 
 
 async def _branch_in_stock(branch_id: str, product_id: str) -> bool:

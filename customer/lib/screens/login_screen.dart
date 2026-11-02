@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../core/i18n.dart';
 import '../core/theme.dart';
 import '../core/widgets.dart';
 import '../state/app_state.dart';
@@ -36,14 +37,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   /// الشركة لم تفعّل رمز التحقق: نكتفي برقم الجوال لعرض السيارات والفواتير
   Future<void> _openPhone() async {
-    if (_p.length < 9) return setState(() => err = 'أدخل رقم جوال صحيح');
+    if (_p.length < 9) return setState(() => err = tr('أدخل رقم جوال صحيح'));
     setState(() { busy = true; err = null; });
     await widget.state.useOpenPhone(_p);
     if (mounted) Navigator.of(context).pop(true);
   }
 
   Future<void> _send() async {
-    if (_p.length < 9) return setState(() => err = 'أدخل رقم جوال صحيح');
+    if (_p.length < 9) return setState(() => err = tr('أدخل رقم جوال صحيح'));
     setState(() { busy = true; err = null; });
     final e = await widget.state.sendOtp(_p);
     if (!mounted) return;
@@ -64,22 +65,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text('تأكيد رقم الجوال', style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
+        appBar: AppBar(title: Text(tr('تأكيد رقم الجوال'), style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
         body: SafeArea(
           child: ListView(padding: const EdgeInsets.all(20), children: [
-            Text(sent ? 'أدخل الرمز الذي وصلك' : 'سنرسل لك رمز تحقق على جوالك لحماية بيانات سياراتك.', style: tx(Fs.sm, color: Z8.textDim)),
+            Text(sent ? tr('أدخل الرمز الذي وصلك') : tr('سنرسل لك رمز تحقق على جوالك لحماية بيانات سياراتك.'), style: tx(Fs.sm, color: Z8.textDim)),
             const SizedBox(height: 16),
-            Z8Field(label: 'رقم الجوال', controller: phone, keyboard: TextInputType.phone, ltr: true, hint: '05xxxxxxxx', maxLength: 15),
+            Z8Field(label: tr('رقم الجوال'), controller: phone, keyboard: TextInputType.phone, ltr: true, hint: '05xxxxxxxx', maxLength: 15),
             if (sent) ...[
               const SizedBox(height: 12),
-              Z8Field(label: 'رمز التحقق', controller: code, keyboard: TextInputType.number, ltr: true, maxLength: 8, textAlign: TextAlign.center),
+              Z8Field(label: tr('رمز التحقق'), controller: code, keyboard: TextInputType.number, ltr: true, maxLength: 8, textAlign: TextAlign.center),
             ],
             if (err != null) ...[const SizedBox(height: 12), ErrorBar(err!)],
             const SizedBox(height: 16),
-            Z8Button(widget.state.info?.otpRequired != true ? 'متابعة' : (sent ? 'تحقق' : 'إرسال الرمز'), busy: busy, onTap: widget.state.info?.otpRequired != true ? _openPhone : (sent ? _verify : _send)),
+            Z8Button(widget.state.info?.otpRequired != true ? tr('متابعة') : (sent ? tr('تحقق') : tr('إرسال الرمز')), busy: busy, onTap: widget.state.info?.otpRequired != true ? _openPhone : (sent ? _verify : _send)),
             if (sent) ...[
               const SizedBox(height: 8),
-              Z8Button(wait > 0 ? 'إعادة الإرسال بعد $wait ث' : 'إعادة إرسال الرمز', outline: true, onTap: wait > 0 || busy ? null : _send),
+              Z8Button(wait > 0 ? tr('إعادة الإرسال بعد {0} ث', [wait]) : tr('إعادة إرسال الرمز'), outline: true, onTap: wait > 0 || busy ? null : _send),
             ],
           ]),
         ),

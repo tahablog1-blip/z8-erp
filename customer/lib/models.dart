@@ -1,4 +1,5 @@
 // نماذج البيانات القادمة من المسارات العامة للحجز
+import 'core/i18n.dart';
 String _s(dynamic v) => v == null ? '' : '$v';
 int _i(dynamic v) => v is num ? v.toInt() : int.tryParse(_s(v)) ?? 0;
 
@@ -96,15 +97,15 @@ class ServiceNote {
 
 /// أنواع الخدمة التي يختارها العميل (يمكن الجمع بينها في حجز واحد)
 enum ServiceKind {
-  engine('تغيير زيت ماكينة', 'engine', 4.0),
-  gear('تغيير زيت جير', 'gearbox', 2.0),
-  differential('تغيير زيت دفرنس', 'differential', 1.0),
-  transfer('تغيير زيت دبل', 'transfer', 1.0);
+  engine('تغيير زيت ماكينة', 'engine', 4),
+  gear('تغيير زيت جير', 'gearbox', 2),
+  differential('تغيير زيت دفرنس', 'differential', 1),
+  transfer('تغيير زيت دبل', 'transfer', 1);
 
   const ServiceKind(this.label, this.oilType, this.defaultQty);
   final String label;
   final String oilType;     // يطابق products.oil_type
-  final double defaultQty;  // لتر — الفني يؤكد الكمية الدقيقة
+  final int defaultQty;     // عدد القطع (عبوات) — أعداد صحيحة فقط، والفني يؤكد الكمية
 }
 
 class OilProduct {
@@ -158,6 +159,11 @@ class EngineChoice {
   const EngineChoice({required this.label, this.cylinders, this.engineSize});
   final String label;
   final String? cylinders, engineSize;
+  /// نص العرض بلغة المستخدم (التسمية القادمة من الخادم عربية)
+  String get display => [
+        if ((cylinders ?? '').isNotEmpty) tr('{0} سلندر', [cylinders]),
+        if ((engineSize ?? '').isNotEmpty) engineSize!,
+      ].join(' · ');
   factory EngineChoice.fromJson(Map<String, dynamic> j) => EngineChoice(
         label: _s(j['label']), cylinders: j['cylinders'] == null ? null : _s(j['cylinders']), engineSize: j['engineSize'] == null ? null : _s(j['engineSize']));
 }
