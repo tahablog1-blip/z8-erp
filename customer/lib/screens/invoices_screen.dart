@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/api.dart';
+import '../core/i18n.dart';
 import '../core/theme.dart';
 import '../core/widgets.dart';
 import '../models.dart';
@@ -9,10 +10,10 @@ import '../state/app_state.dart';
 
 /// فواتيري: كل فواتير العميل (أو فواتير سيارة واحدة لو مُرِّر savedCarId)
 class InvoicesScreen extends StatefulWidget {
-  const InvoicesScreen({super.key, required this.state, this.savedCarId, this.title = 'فواتيري'});
+  const InvoicesScreen({super.key, required this.state, this.savedCarId, this.title});
   final AppState state;
   final String? savedCarId;
-  final String title;
+  final String? title;
   @override
   State<InvoicesScreen> createState() => _InvoicesScreenState();
 }
@@ -39,7 +40,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text(widget.title, style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
+        appBar: AppBar(title: Text(widget.title ?? tr('فواتيري'), style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
         body: SafeArea(
           child: RefreshIndicator(
             onRefresh: _load,
@@ -61,9 +62,9 @@ class InvoiceListView extends StatelessWidget {
   final VoidCallback onRetry;
   @override
   Widget build(BuildContext context) {
-    if (err != null) return Column(children: [ErrorBar(err!), const SizedBox(height: 12), Z8Button('إعادة المحاولة', outline: true, onTap: onRetry)]);
+    if (err != null) return Column(children: [ErrorBar(err!), const SizedBox(height: 12), Z8Button(tr('إعادة المحاولة'), outline: true, onTap: onRetry)]);
     if (data == null) return const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator()));
-    if (data!.invoices.isEmpty) return Padding(padding: const EdgeInsets.all(24), child: Text('لا توجد فواتير بعد', textAlign: TextAlign.center, style: tx(Fs.md, color: Z8.textDim)));
+    if (data!.invoices.isEmpty) return Padding(padding: const EdgeInsets.all(24), child: Text(tr('لا توجد فواتير بعد'), textAlign: TextAlign.center, style: tx(Fs.md, color: Z8.textDim)));
     return Column(children: [
       for (final inv in data!.invoices)
         Padding(padding: const EdgeInsets.only(bottom: 10), child: InvoiceTile(inv, showCar: showCar, pdfUrl: state.pdfUrl(inv.id, data!.pdfPhone))),
@@ -87,10 +88,10 @@ class InvoiceTile extends StatelessWidget {
           tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
           childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
           title: Row(children: [
-            Expanded(child: Text('فاتورة ${inv.no}', style: tx(Fs.md, w: 900))),
-            Text('${inv.total.toStringAsFixed(2)} ر.س', style: tx(Fs.md, w: 900, color: Z8.petrolDeep, tnum: true)),
+            Expanded(child: Text(tr('فاتورة {0}', [inv.no]), style: tx(Fs.md, w: 900))),
+            Text(tr('{0} ر.س', [inv.total.toStringAsFixed(2)]), style: tx(Fs.md, w: 900, color: Z8.petrolDeep, tnum: true)),
           ]),
-          subtitle: Text([date, if (inv.odometer != null && inv.odometer! > 1) '${NumberFormat.decimalPattern('en').format(inv.odometer)} كم', if (showCar && inv.carLabel != null) inv.carLabel!].join(' · '), style: tx(Fs.sm, color: Z8.textDim)),
+          subtitle: Text([date, if (inv.odometer != null && inv.odometer! > 1) tr('{0} كم', [NumberFormat.decimalPattern('en').format(inv.odometer)]), if (showCar && inv.carLabel != null) inv.carLabel!].join(' · '), style: tx(Fs.sm, color: Z8.textDim)),
           children: [
             for (final it in inv.items)
               Padding(
@@ -103,7 +104,7 @@ class InvoiceTile extends StatelessWidget {
                 ]),
               ),
             const SizedBox(height: 10),
-            Z8Button('عرض الفاتورة PDF', icon: Icons.picture_as_pdf_outlined, outline: true, onTap: () => launchUrl(Uri.parse(pdfUrl), mode: LaunchMode.externalApplication)),
+            Z8Button(tr('عرض الفاتورة PDF'), icon: Icons.picture_as_pdf_outlined, outline: true, onTap: () => launchUrl(Uri.parse(pdfUrl), mode: LaunchMode.externalApplication)),
           ],
         ),
       ),

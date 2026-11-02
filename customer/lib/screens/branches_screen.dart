@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/geo.dart';
+import '../core/brand.dart';
+import '../core/i18n.dart';
 import '../core/theme.dart';
 import '../core/widgets.dart';
 import '../models.dart';
@@ -31,8 +33,9 @@ class BranchesScreen extends StatelessWidget {
           final nearestId = list.where((b) => b.distanceKm != null).map((b) => b.id).firstOrNull;
           return Scaffold(
             appBar: AppBar(
-              title: Text(pickMode ? 'تغيير الفرع' : 'اختر الفرع', style: tx(Fs.lg, w: 900, color: Colors.white)),
-              backgroundColor: Z8.sbBg, foregroundColor: Colors.white, surfaceTintColor: Colors.transparent,
+              title: Text(pickMode ? tr('تغيير الفرع') : tr('اختر الفرع'), style: tx(Fs.lg, w: 900, color: Colors.white)),
+              backgroundColor: Colors.transparent, foregroundColor: Colors.white, surfaceTintColor: Colors.transparent,
+              flexibleSpace: const BrandBackdrop(),
             ),
             body: SafeArea(
               child: RefreshIndicator(
@@ -44,8 +47,8 @@ class BranchesScreen extends StatelessWidget {
                       child: Panel(color: Z8.brassSoft, child: Row(children: [
                         const Icon(Icons.location_off_outlined, color: Z8.petrolDeep),
                         const SizedBox(width: 12),
-                        Expanded(child: Text('فعّل الموقع ليظهر لك أقرب فرع ووقت الوصول إليه', style: tx(Fs.sm, w: 700))),
-                        TextButton(onPressed: state.loadBranches, child: Text('إعادة المحاولة', style: tx(Fs.sm, w: 800, color: Z8.petrol))),
+                        Expanded(child: Text(tr('فعّل الموقع ليظهر لك أقرب فرع ووقت الوصول إليه'), style: tx(Fs.sm, w: 700))),
+                        TextButton(onPressed: state.loadBranches, child: Text(tr('إعادة المحاولة'), style: tx(Fs.sm, w: 800, color: Z8.petrol))),
                       ])),
                     )
                   else if (state.where == null && list.isNotEmpty)
@@ -54,17 +57,17 @@ class BranchesScreen extends StatelessWidget {
                       child: Row(children: [
                         const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
                         const SizedBox(width: 10),
-                        Text('جارٍ تحديد موقعك…', style: tx(Fs.sm, color: Z8.textDim)),
+                        Text(tr('جارٍ تحديد موقعك…'), style: tx(Fs.sm, color: Z8.textDim)),
                       ]),
                     ),
                   if (state.branchesError != null) ...[
                     ErrorBar(state.branchesError!),
                     const SizedBox(height: 12),
-                    Z8Button('إعادة المحاولة', outline: true, onTap: state.loadBranches),
+                    Z8Button(tr('إعادة المحاولة'), outline: true, onTap: state.loadBranches),
                   ] else if (state.branchesLoading && list.isEmpty)
                     const Padding(padding: EdgeInsets.all(48), child: Center(child: CircularProgressIndicator()))
                   else if (list.isEmpty)
-                    Padding(padding: const EdgeInsets.all(32), child: Text('لا توجد فروع متاحة حالياً', textAlign: TextAlign.center, style: tx(Fs.md, color: Z8.textDim))),
+                    Padding(padding: const EdgeInsets.all(32), child: Text(tr('لا توجد فروع متاحة حالياً'), textAlign: TextAlign.center, style: tx(Fs.md, color: Z8.textDim))),
                   for (final b in list)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
@@ -94,11 +97,11 @@ class _BranchCard extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
             Expanded(child: Text(b.name, style: tx(Fs.lg, w: 900, color: Z8.petrolDeep))),
-            _Chip(b.isService ? 'خدمة' : 'بيع تجزئة', b.isService ? Z8.petrol : Z8.brass, b.isService ? Colors.white : Z8.text),
+            _Chip(b.isService ? tr('خدمة') : tr('بيع تجزئة'), b.isService ? Z8.petrol : Z8.brass, b.isService ? Colors.white : Z8.text),
           ]),
           if (nearest) ...[
             const SizedBox(height: 6),
-            Row(children: [const Icon(Icons.near_me, size: 16, color: Z8.petrol), const SizedBox(width: 4), Text('الأقرب إليك', style: tx(Fs.sm, w: 900, color: Z8.petrol))]),
+            Row(children: [const Icon(Icons.near_me, size: 16, color: Z8.petrol), const SizedBox(width: 4), Text(tr('الأقرب إليك'), style: tx(Fs.sm, w: 900, color: Z8.petrol))]),
           ],
           if (b.address != null) ...[
             const SizedBox(height: 6),
@@ -109,27 +112,27 @@ class _BranchCard extends StatelessWidget {
             Row(children: [
               const Icon(Icons.directions_car_outlined, size: 18, color: Z8.textDim),
               const SizedBox(width: 6),
-              Expanded(child: Text('${formatKm(b.distanceKm!)} · يصلك خلال ≈ ${formatMinutes(b.etaMinutes!)}', style: tx(Fs.sm, w: 800))),
+              Expanded(child: Text(tr('{0} · يصلك خلال ≈ {1}', [formatKm(b.distanceKm!), formatMinutes(b.etaMinutes!)]), style: tx(Fs.sm, w: 800))),
             ])
           else if (!b.hasLocation)
-            Text('موقع الفرع غير محدد بعد', style: tx(Fs.xs, color: Z8.textDim)),
+            Text(tr('موقع الفرع غير محدد بعد'), style: tx(Fs.xs, color: Z8.textDim)),
           if (b.isService && b.waiting != null) ...[
             const SizedBox(height: 6),
             Row(children: [
               const Icon(Icons.hourglass_empty, size: 18, color: Z8.textDim),
               const SizedBox(width: 6),
-              Expanded(child: Text(b.waiting == 0 ? 'لا يوجد انتظار الآن' : 'بانتظار الخدمة: ${b.waiting} · انتظار تقريبي ${formatMinutes(b.estWaitMinutes ?? 0)}', style: tx(Fs.sm, w: 700))),
+              Expanded(child: Text(b.waiting == 0 ? tr('لا يوجد انتظار الآن') : tr('بانتظار الخدمة: {0} · انتظار تقريبي {1}', [b.waiting, formatMinutes(b.estWaitMinutes ?? 0)]), style: tx(Fs.sm, w: 700))),
             ]),
           ] else if (!b.isService) ...[
             const SizedBox(height: 6),
-            Text('بيع بالقطعة — لا يوجد حجز دور في هذا الفرع', style: tx(Fs.sm, color: Z8.textDim)),
+            Text(tr('بيع بالقطعة — لا يوجد حجز دور في هذا الفرع'), style: tx(Fs.sm, color: Z8.textDim)),
           ],
           const SizedBox(height: 12),
           Row(children: [
             if (onSelect != null)
-              Expanded(child: Z8Button(current ? 'الفرع الحالي' : 'احجز من هذا الفرع', onTap: current ? null : onSelect)),
+              Expanded(child: Z8Button(current ? tr('الفرع الحالي') : tr('احجز من هذا الفرع'), onTap: current ? null : onSelect)),
             if (onSelect != null && onDirections != null) const SizedBox(width: 8),
-            if (onDirections != null) Expanded(child: Z8Button('الاتجاهات', icon: Icons.directions, outline: true, onTap: onDirections)),
+            if (onDirections != null) Expanded(child: Z8Button(tr('الاتجاهات'), icon: Icons.directions, outline: true, onTap: onDirections)),
           ]),
         ]),
       );

@@ -18,6 +18,7 @@ class FakeApi implements CustomerApi {
   Map<String, dynamic>? lastSelection;
   final invoiceCalls = <String?>[];
   final filterCalls = <String?>[];
+  final filterEngines = <String?>[];
 
   List<Map<String, dynamic>> branchList = [
     {'id': branch, 'name': 'فرع الخليج', 'category': 'service', 'address': 'حي الخليج', 'latitude': 24.7136, 'longitude': 46.6753, 'waiting': 3, 'inService': 1, 'estWaitMinutes': 54, 'bookable': true},
@@ -105,6 +106,7 @@ class FakeApi implements CustomerApi {
   @override
   Future<Map<String, dynamic>?> filterMatch(String b, {required String brand, required String model, required String year, String? cylinders, String? engineSize}) async {
     filterCalls.add(cylinders);
+    filterEngines.add(engineSize);
     if (brand == 'هيونداي') {
       // للموديل محركان بفلاتر مختلفة: بلا اختيار محرك لا نعرض فلتر أي منهما
       if ((cylinders ?? '').isEmpty) {

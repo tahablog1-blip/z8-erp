@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/api.dart';
+import '../core/i18n.dart';
 import '../core/theme.dart';
 import '../core/widgets.dart';
 import '../models.dart';
@@ -74,7 +75,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text('محادثة الفرع', style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
+        appBar: AppBar(title: Text(tr('محادثة الفرع'), style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
         body: SafeArea(
           child: Column(children: [
             if (err != null) ErrorBar(err!),
@@ -86,20 +87,20 @@ class _ChatScreenState extends State<ChatScreen> {
                         Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: Panel(color: Z8.brassSoft, pad: 10, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text('ملاحظة #${n.number}${n.title.isEmpty ? '' : ' — ${n.title}'}', style: tx(Fs.sm, w: 900)),
+                            Text(tr('ملاحظة #{0}{1}', [n.number, n.title.isEmpty ? '' : ' — ${n.title}']), style: tx(Fs.sm, w: 900)),
                             if (n.description.isNotEmpty) Text(n.description, style: tx(Fs.sm)),
                           ])),
                         ),
                       for (final m in msgs) _Bubble(m),
                       if (msgs.isEmpty && notes.isEmpty && err == null)
-                        Padding(padding: const EdgeInsets.all(24), child: Text('اكتب رسالتك وسيرد عليك فريق الفرع', textAlign: TextAlign.center, style: tx(Fs.sm, color: Z8.textDim))),
+                        Padding(padding: const EdgeInsets.all(24), child: Text(tr('اكتب رسالتك وسيرد عليك فريق الفرع'), textAlign: TextAlign.center, style: tx(Fs.sm, color: Z8.textDim))),
                     ]),
             ),
             Container(
               padding: const EdgeInsets.all(8),
               decoration: const BoxDecoration(color: Z8.ink2, border: Border(top: BorderSide(color: Z8.line))),
               child: Row(children: [
-                Expanded(child: TextField(controller: input, minLines: 1, maxLines: 4, maxLength: 2000, style: tx(Fs.md, w: 600), decoration: InputDecoration(hintText: 'اكتب رسالة…', counterText: '', hintStyle: tx(Fs.md, color: Z8.textDim)))),
+                Expanded(child: TextField(controller: input, minLines: 1, maxLines: 4, maxLength: 2000, style: tx(Fs.md, w: 600), decoration: InputDecoration(hintText: tr('اكتب رسالة…'), counterText: '', hintStyle: tx(Fs.md, color: Z8.textDim)))),
                 const SizedBox(width: 8),
                 IconButton.filled(onPressed: sending ? null : _send, style: IconButton.styleFrom(backgroundColor: Z8.petrol, shape: const RoundedRectangleBorder()), icon: const Icon(Icons.send, color: Colors.white)),
               ]),
@@ -121,7 +122,7 @@ class _Bubble extends StatelessWidget {
           constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .78),
           color: m.fromCustomer ? Z8.petrolSoft : Z8.ink2,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(m.fromCustomer ? 'أنت' : 'الفرع', style: tx(Fs.xs, w: 800, color: Z8.textDim)),
+            Text(m.fromCustomer ? tr('أنت') : tr('الفرع'), style: tx(Fs.xs, w: 800, color: Z8.textDim)),
             Text(m.text, style: tx(Fs.md, w: 600)),
           ]),
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/api.dart';
+import '../core/i18n.dart';
 import '../core/theme.dart';
 import '../core/widgets.dart';
 import '../models.dart';
@@ -14,13 +15,19 @@ class BookScreen extends StatefulWidget {
   State<BookScreen> createState() => _BookScreenState();
 }
 
-const fuelTypes = ['ديزل', 'بنزين', 'هايبرد'];
+const fuelTypes = ['ديزل', 'بنزين', 'هايبرد'];   // قيم تُرسل للخادم بالعربية؛ العرض مترجم
 const cylinderOptions = ['3', '4', '5', '6', '8', '10', '12'];
+const engineSizes = ['1.0', '1.2', '1.3', '1.4', '1.5', '1.6', '1.8', '2.0', '2.2', '2.4', '2.5', '2.7', '3.0', '3.3', '3.5', '3.6', '4.0', '4.6', '5.0', '5.3', '5.7', '6.2'];
+
+List<String> yearOptions() {
+  final now = DateTime.now().year;
+  return [for (var y = now + 1; y >= 1990; y--) '$y'];
+}
 
 class _BookScreenState extends State<BookScreen> {
   final name = TextEditingController(), phone = TextEditingController(), letters = TextEditingController(), numbers = TextEditingController(),
-      brand = TextEditingController(), model = TextEditingController(), year = TextEditingController(), odo = TextEditingController();
-  String fuel = '', cyl = '';
+      brand = TextEditingController(), model = TextEditingController(), odo = TextEditingController();
+  String fuel = '', cyl = '', yr = '', eng = '';
   List<String> brands = const [], models = const [];
   SavedCar? picked;
   bool newCar = false;
@@ -62,21 +69,22 @@ class _BookScreenState extends State<BookScreen> {
       );
     } else {
       final n = arabicDigitsToLatin(numbers.text.trim());
-      if (name.text.trim().length < 2) return setState(() => err = 'اكتب اسمك');
-      if (arabicDigitsToLatin(phone.text).replaceAll(RegExp(r'[^0-9]'), '').length < 9) return setState(() => err = 'أدخل رقم جوال صحيح');
-      if (n.isEmpty) return setState(() => err = 'أدخل أرقام اللوحة');
+      if (name.text.trim().length < 2) return setState(() => err = tr('اكتب اسمك'));
+      if (arabicDigitsToLatin(phone.text).replaceAll(RegExp(r'[^0-9]'), '').length < 9) return setState(() => err = tr('أدخل رقم جوال صحيح'));
+      if (n.isEmpty) return setState(() => err = tr('أدخل أرقام اللوحة'));
       final car = {
         'plateLetters': letters.text.trim(), 'plateNumbers': n,
         'brand': brand.text.trim().isEmpty ? null : brand.text.trim(),
         'carName': model.text.trim().isEmpty ? null : model.text.trim(),
-        'modelYear': year.text.trim().isEmpty ? null : arabicDigitsToLatin(year.text.trim()),
+        'modelYear': yr.isEmpty ? null : yr,
         'odometer': arabicDigitsToLatin(odo.text.trim()),
         'fuelType': fuel.isEmpty ? null : fuel,
         'cylinders': cyl.isEmpty ? null : cyl,
+        'engineSize': eng.isEmpty ? null : eng,
       };
       screen = ServicesScreen(
         state: s, carTitle: '${[brand.text.trim(), model.text.trim()].where((e) => e.isNotEmpty).join(' ')} · $n ${letters.text.trim()}'.trim(),
-        brand: brand.text.trim(), model: model.text.trim(), year: arabicDigitsToLatin(year.text.trim()), cylinders: cyl,
+        brand: brand.text.trim(), model: model.text.trim(), year: yr, cylinders: cyl, engineSize: eng,
         submit: (selection, _) => s.bookNew(name: name.text.trim(), phoneNo: arabicDigitsToLatin(phone.text).trim(), car: car, selection: selection),
       );
     }
@@ -88,11 +96,11 @@ class _BookScreenState extends State<BookScreen> {
   Widget build(BuildContext context) => ListenableBuilder(
         listenable: s,
         builder: (context, _) => Scaffold(
-          appBar: AppBar(title: Text('حجز جديد', style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
+          appBar: AppBar(title: Text(tr('حجز جديد'), style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
           body: SafeArea(
             child: ListView(padding: const EdgeInsets.all(16), children: [
               if (s.profile.cars.isNotEmpty) ...[
-                Text('سياراتي', style: tx(Fs.md, w: 900, color: Z8.petrolDeep)),
+                Text(tr('سياراتي'), style: tx(Fs.md, w: 900, color: Z8.petrolDeep)),
                 const SizedBox(height: 8),
                 for (final c in s.profile.cars)
                   Padding(
@@ -105,7 +113,7 @@ class _BookScreenState extends State<BookScreen> {
                           Icon(!newCar && picked?.id == c.id ? Icons.radio_button_checked : Icons.radio_button_off, color: Z8.petrol),
                           const SizedBox(width: 12),
                           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(c.title.isEmpty ? 'سيارة' : c.title, style: tx(Fs.md, w: 800)),
+                            Text(c.title.isEmpty ? tr('سيارة') : c.title, style: tx(Fs.md, w: 800)),
                             Text('${c.plate}${c.year.isEmpty ? '' : ' · ${c.year}'}', style: tx(Fs.sm, color: Z8.textDim)),
                           ])),
                         ]),
@@ -119,97 +127,78 @@ class _BookScreenState extends State<BookScreen> {
                     child: Row(children: [
                       Icon(newCar ? Icons.radio_button_checked : Icons.add_circle_outline, color: Z8.petrol),
                       const SizedBox(width: 12),
-                      Text('سيارة أخرى', style: tx(Fs.md, w: 800)),
+                      Text(tr('سيارة أخرى'), style: tx(Fs.md, w: 800)),
                     ]),
                   ),
                 ),
                 const SizedBox(height: 16),
               ],
               if (!newCar && picked != null)
-                Z8Field(label: 'قراءة العداد (اختياري)', controller: odo, keyboard: TextInputType.number, ltr: true, maxLength: 7)
+                Z8Field(label: tr('قراءة العداد (اختياري)'), controller: odo, keyboard: TextInputType.number, ltr: true, maxLength: 7)
               else ...[
-                Z8Field(label: 'الاسم', controller: name),
+                Z8Field(label: tr('الاسم'), controller: name),
                 const SizedBox(height: 12),
-                Z8Field(label: 'رقم الجوال', controller: phone, keyboard: TextInputType.phone, ltr: true, maxLength: 15),
+                Z8Field(label: tr('رقم الجوال'), controller: phone, keyboard: TextInputType.phone, ltr: true, maxLength: 15),
                 const SizedBox(height: 16),
-                Text('بيانات السيارة', style: tx(Fs.md, w: 900, color: Z8.petrolDeep)),
+                Text(tr('بيانات السيارة'), style: tx(Fs.md, w: 900, color: Z8.petrolDeep)),
                 const SizedBox(height: 8),
                 Row(children: [
-                  Expanded(child: Z8Field(label: 'أرقام اللوحة', controller: numbers, keyboard: TextInputType.number, ltr: true, maxLength: 4)),
+                  Expanded(child: Z8Field(label: tr('أرقام اللوحة'), controller: numbers, keyboard: TextInputType.number, ltr: true, maxLength: 4)),
                   const SizedBox(width: 12),
-                  Expanded(child: Z8Field(label: 'حروف اللوحة', controller: letters, maxLength: 4)),
+                  Expanded(child: Z8Field(label: tr('حروف اللوحة'), controller: letters, maxLength: 4)),
                 ]),
                 const SizedBox(height: 12),
-                _Pick(label: 'الماركة', controller: brand, options: brands, onPick: (v) { brand.text = v; model.clear(); _loadModels(v); }),
+                Z8Combo(label: tr('الماركة'), controller: brand, options: brands, hint: tr('اختر الماركة (مثل تويوتا)'),
+                    onPicked: (v) { model.clear(); setState(() => models = const []); _loadModels(v); },
+                    // الكتابة الحرة: لو طابق النص ماركة معروفة نحمّل موديلاتها، وإلا تُفرَّغ قائمة الموديلات
+                    onChanged: (v) {
+                      final t = v.trim();
+                      if (brands.contains(t)) {
+                        _loadModels(t);
+                      } else if (models.isNotEmpty) {
+                        setState(() => models = const []);
+                      }
+                    }),
                 const SizedBox(height: 12),
-                _Pick(label: 'الموديل', controller: model, options: models, onPick: (v) => model.text = v),
+                Z8Combo(label: tr('الموديل'), controller: model, options: models, hint: brand.text.trim().isEmpty ? tr('اختر الماركة أولاً') : tr('اختر الموديل (مثل كامري)')),
                 const SizedBox(height: 12),
                 Row(children: [
-                  Expanded(child: Z8Field(label: 'سنة الصنع', controller: year, keyboard: TextInputType.number, ltr: true, maxLength: 4)),
+                  Expanded(child: Z8Choice(label: tr('سنة الصنع'), value: yr, options: yearOptions(), hint: tr('اختر السنة'), onChanged: (v) => setState(() => yr = v))),
                   const SizedBox(width: 12),
-                  Expanded(child: Z8Field(label: 'قراءة العداد', controller: odo, keyboard: TextInputType.number, ltr: true, maxLength: 7)),
+                  Expanded(child: Z8Field(label: tr('قراءة العداد'), controller: odo, keyboard: TextInputType.number, ltr: true, maxLength: 7)),
                 ]),
                 const SizedBox(height: 12),
-                Text('نوع الوقود', style: tx(Fs.xs, w: 800, color: Z8.petrolDeep)),
+                Text(tr('نوع الوقود'), style: tx(Fs.xs, w: 800, color: Z8.petrolDeep)),
                 const SizedBox(height: 6),
                 Wrap(spacing: 8, runSpacing: 8, children: [
                   for (final f in fuelTypes)
                     ChoiceChip(
-                      label: Text(f, style: tx(Fs.sm, w: 700, color: fuel == f ? Colors.white : Z8.text)),
+                      label: Text(tr(f), style: tx(Fs.sm, w: 700, color: fuel == f ? Colors.white : Z8.text)),
                       selected: fuel == f, selectedColor: Z8.petrol, backgroundColor: Z8.ink2, showCheckmark: false,
                       shape: const RoundedRectangleBorder(side: BorderSide(color: Z8.line)),
                       onSelected: (_) => setState(() => fuel = fuel == f ? '' : f),
                     ),
                 ]),
                 const SizedBox(height: 12),
-                Text('عدد السلندرات (يحدد فلتر الزيت المناسب لمحركك)', style: tx(Fs.xs, w: 800, color: Z8.petrolDeep)),
+                Text(tr('عدد السلندرات (يحدد فلتر الزيت المناسب لمحركك)'), style: tx(Fs.xs, w: 800, color: Z8.petrolDeep)),
                 const SizedBox(height: 6),
                 Wrap(spacing: 8, runSpacing: 8, children: [
                   for (final c in cylinderOptions)
                     ChoiceChip(
-                      label: Text('$c سلندر', style: tx(Fs.sm, w: 700, color: cyl == c ? Colors.white : Z8.text)),
+                      label: Text(tr('{0} سلندر', [c]), style: tx(Fs.sm, w: 700, color: cyl == c ? Colors.white : Z8.text)),
                       selected: cyl == c, selectedColor: Z8.petrol, backgroundColor: Z8.ink2, showCheckmark: false,
                       shape: const RoundedRectangleBorder(side: BorderSide(color: Z8.line)),
                       onSelected: (_) => setState(() => cyl = cyl == c ? '' : c),
                     ),
                 ]),
+                const SizedBox(height: 12),
+                Z8Choice(label: tr('حجم الماكينة (لتر) — اختياري'), value: eng, options: engineSizes, hint: tr('اختر حجم الماكينة'), clearLabel: tr('غير محدد'), onChanged: (v) => setState(() => eng = v)),
               ],
               if (err != null) ...[const SizedBox(height: 16), ErrorBar(err!)],
               const SizedBox(height: 20),
-              Z8Button('التالي: اختيار الخدمة', onTap: _next),
+              Z8Button(tr('التالي: اختيار الخدمة'), onTap: _next),
             ]),
           ),
         ),
       );
-}
-
-/// حقل نصي مع اقتراحات تظهر في ورقة سفلية
-class _Pick extends StatelessWidget {
-  const _Pick({required this.label, required this.controller, required this.options, required this.onPick});
-  final String label;
-  final TextEditingController controller;
-  final List<String> options;
-  final ValueChanged<String> onPick;
-  @override
-  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: tx(Fs.xs, w: 800, color: Z8.petrolDeep)),
-        const SizedBox(height: 4),
-        TextField(
-          controller: controller, style: tx(Fs.md, w: 700),
-          decoration: InputDecoration(suffixIcon: options.isEmpty ? null : const Icon(Icons.arrow_drop_down)),
-          onTap: options.isEmpty ? null : () async {
-            FocusScope.of(context).unfocus();
-            final v = await showModalBottomSheet<String>(
-              context: context, backgroundColor: Z8.ink2, isScrollControlled: true, shape: const RoundedRectangleBorder(),
-              builder: (_) => DraggableScrollableSheet(
-                expand: false, initialChildSize: .6, maxChildSize: .9,
-                builder: (_, sc) => ListView(controller: sc, children: [
-                  for (final o in options) ListTile(title: Text(o, style: tx(Fs.md, w: 700)), onTap: () => Navigator.pop(context, o)),
-                ]),
-              ),
-            );
-            if (v != null) onPick(v);
-          },
-        ),
-      ]);
 }

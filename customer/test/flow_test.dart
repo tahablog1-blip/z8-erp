@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:z8_customer/app.dart';
+import 'package:z8_customer/core/brand.dart';
 import 'package:z8_customer/core/geo.dart';
+import 'package:z8_customer/core/i18n.dart';
 import 'package:z8_customer/core/store.dart';
 import 'package:z8_customer/state/app_state.dart';
 import 'fake_api.dart';
@@ -10,10 +12,10 @@ const riyadh = LatLng(24.7140, 46.6760); // قرب فرع الخليج
 
 Future<(AppState, FakeApi)> boot(WidgetTester t, {bool otp = true, Map<String, String>? seed, FakeLocation? loc}) async {
   final api = FakeApi(otpRequired: otp);
-  final store = MemoryStore()..m.addAll(seed ?? {});
+  final store = MemoryStore()..m.addAll({'lang': 'ar', ...?seed});
   final state = AppState(api: api, store: store, location: loc ?? FakeLocation(fresh: riyadh));
   await t.binding.setSurfaceSize(const Size(420, 900));
-  await t.pumpWidget(CustomerApp(state: state));
+  await t.pumpWidget(CustomerApp(state: state, showSplash: false));
   await state.init();
   await t.pumpAndSettle();
   return (state, api);
@@ -185,8 +187,11 @@ void main() {
     await t.tap(find.text('شل هيلكس'));
     await t.pumpAndSettle();
     expect(find.text('اختر الخدمة'), findsOneWidget);              // عاد لشاشة الخدمات
-    await t.tap(find.byIcon(Icons.add_circle_outline));            // 4.5 لتر
+    expect(find.text('الكمية (عدد القطع)'), findsOneWidget);
+    await t.tap(find.byIcon(Icons.add_circle_outline));            // 4 → 5 قطع (أعداد صحيحة فقط)
     await t.pumpAndSettle();
+    expect(find.text('5'), findsOneWidget);
+    expect(find.text('200.00 ر.س'), findsWidgets);                 // 40 × 5
 
     await t.scrollUntilVisible(find.text('مع تغيير فلتر الزيت'), 200, scrollable: find.byType(Scrollable).first);
     await t.drag(find.byType(ListView).first, const Offset(0, -250));
@@ -227,7 +232,7 @@ void main() {
     expect(find.text('خدمة تغيير زيت'), findsOneWidget);
     expect(find.text('أجرة تغيير زيت قير'), findsNothing);          // الجير والدفرنس والدبل: الأجرة تُحدَّد في الفرع
     expect(find.textContaining('يُحدَّد سعرها داخل الفرع'), findsOneWidget);
-    expect(find.text('365.00 ر.س'), findsWidgets);                  // 180 + 30 + 110 + 20 + 25
+    expect(find.text('385.00 ر.س'), findsWidgets);                  // 200 + 30 + 110 + 20 + 25
     expect(find.textContaining('هذا السعر غير نهائي'), findsOneWidget);
     expect(find.text('السعر غير نهائي — قد تُضاف أصناف داخل الفرع'), findsOneWidget);   // نفس التنبيه في الشريط السفلي
 
@@ -235,7 +240,7 @@ void main() {
     await t.pumpAndSettle();
     final items = (api.lastSelection!['items'] as List).cast<Map<String, dynamic>>();
     expect(items.map((e) => e['productId']), ['o-eng', 'svc1', 'o-gear', 'o-misc', 'f1']);
-    expect(items.first['qty'], 4.5);
+    expect(items.first['qty'], 5);                                   // عدد قطع صحيح
     expect(items.first['label'], 'تغيير زيت ماكينة: شل هيلكس 5W-30');
     expect(api.lastSelection!['withFilter'], true);
     expect(find.text('تذكرتي'), findsOneWidget);
@@ -336,17 +341,23 @@ void main() {
     await t.enterText(fields.at(1), '0555555555');
     await t.enterText(fields.at(2), '1234');
     await t.ensureVisible(fields.at(4));
-    await t.tap(fields.at(4));                                           // الماركة (قائمة اقتراحات)
+    await t.tap(find.byIcon(Icons.arrow_drop_down).first);                                           // الماركة (قائمة اقتراحات)
     await t.pumpAndSettle();
     await t.tap(find.text(brandName).last);
     await t.pumpAndSettle();
     await t.ensureVisible(fields.at(5));
     await t.pumpAndSettle();
-    await t.tap(fields.at(5));                                           // الموديل
+    await t.tap(find.byIcon(Icons.arrow_drop_down).at(1));                                           // الموديل
     await t.pumpAndSettle();
     await t.tap(find.text('كامري').last);
     await t.pumpAndSettle();
-    await t.enterText(fields.at(6), '2020');
+    await t.ensureVisible(find.text('اختر السنة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('اختر السنة'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('2020'), 300, scrollable: find.byType(Scrollable).last);
+    await t.tap(find.text('2020'));
+    await t.pumpAndSettle();
     await t.scrollUntilVisible(find.text('التالي: اختيار الخدمة'), 200, scrollable: find.byType(Scrollable).first);
     await t.tap(find.text('التالي: اختيار الخدمة'));
     await t.pumpAndSettle();
@@ -383,17 +394,23 @@ void main() {
     await t.enterText(fields.at(1), '0555555555');
     await t.enterText(fields.at(2), '1234');
     await t.ensureVisible(fields.at(4));
-    await t.tap(fields.at(4));
+    await t.tap(find.byIcon(Icons.arrow_drop_down).first);
     await t.pumpAndSettle();
     await t.tap(find.text('هيونداي').last);
     await t.pumpAndSettle();
     await t.ensureVisible(fields.at(5));
     await t.pumpAndSettle();
-    await t.tap(fields.at(5));
+    await t.tap(find.byIcon(Icons.arrow_drop_down).at(1));
     await t.pumpAndSettle();
     await t.tap(find.text('كامري').last);
     await t.pumpAndSettle();
-    await t.enterText(fields.at(6), '2020');
+    await t.ensureVisible(find.text('اختر السنة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('اختر السنة'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('2020'), 300, scrollable: find.byType(Scrollable).last);
+    await t.tap(find.text('2020'));
+    await t.pumpAndSettle();
     await t.scrollUntilVisible(find.text('4 سلندر'), 200, scrollable: find.byType(Scrollable).first);
     await t.pumpAndSettle();
     await t.tap(find.text('4 سلندر'));
@@ -411,6 +428,116 @@ void main() {
     await t.tap(find.text('احجز دون تحديد الزيت (يحدده الفني)'));
     await t.pumpAndSettle();
     expect((api.bookings.single['car'] as Map)['cylinders'], '4');          // يُحفظ مع السيارة
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('الماركة من القائمة قابلة للتعديل بالكتابة، والسنة وحجم الماكينة من قوائم، ويُرسل الحجم للمطابقة', (t) async {
+    final (_, api) = await boot(t, otp: false, seed: {'branch': branch});
+    await t.tap(find.text('احجز دورك الآن'));
+    await t.pumpAndSettle();
+    await t.binding.setSurfaceSize(const Size(420, 1800));
+    await t.pumpAndSettle();
+    final fields = find.byType(TextField);
+    await t.enterText(fields.at(0), 'سالم');
+    await t.enterText(fields.at(1), '0555555555');
+    await t.enterText(fields.at(2), '1234');
+    await t.tap(find.byIcon(Icons.arrow_drop_down).first);
+    await t.pumpAndSettle();
+    await t.tap(find.text('هيونداي').last);                              // اختيار من القائمة
+    await t.pumpAndSettle();
+    expect(t.widget<TextField>(fields.at(4)).controller!.text, 'هيونداي');
+    await t.enterText(fields.at(4), 'هيونداي إكسنت');                     // ثم تعديل النص بحرية
+    await t.pumpAndSettle();
+    expect(t.widget<TextField>(fields.at(4)).controller!.text, 'هيونداي إكسنت');
+    await t.enterText(fields.at(4), 'هيونداي');
+    await t.pumpAndSettle();
+    await t.tap(find.byIcon(Icons.arrow_drop_down).at(1));
+    await t.pumpAndSettle();
+    await t.tap(find.text('كامري').last);
+    await t.pumpAndSettle();
+    await t.tap(find.text('اختر السنة'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('2020'), 300, scrollable: find.byType(Scrollable).last);
+    await t.tap(find.text('2020'));
+    await t.pumpAndSettle();
+    expect(find.text('2020'), findsOneWidget);                            // السنة ظهرت في الحقل
+    await t.scrollUntilVisible(find.text('اختر حجم الماكينة'), 200, scrollable: find.byType(Scrollable).first);
+    await t.tap(find.text('اختر حجم الماكينة'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('2.5'), 300, scrollable: find.byType(Scrollable).last);
+    await t.tap(find.text('2.5'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('4 سلندر'), 200, scrollable: find.byType(Scrollable).first);
+    await t.tap(find.text('4 سلندر'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('التالي: اختيار الخدمة'), 200, scrollable: find.byType(Scrollable).first);
+    await t.tap(find.text('التالي: اختيار الخدمة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('تغيير زيت ماكينة'));
+    await t.pumpAndSettle();
+    expect(api.filterEngines, ['2.5']);                                   // حجم الماكينة وصل للمطابقة
+    await t.tap(find.text('احجز دون تحديد الزيت (يحدده الفني)'));
+    await t.pumpAndSettle();
+    final car = api.bookings.single['car'] as Map;
+    expect([car['modelYear'], car['engineSize'], car['cylinders'], car['brand']], ['2020', '2.5', '4', 'هيونداي']);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('أول تشغيل: اختيار اللغة (5 لغات) ثم تتحول الواجهة للإنجليزية بالاتجاه من اليسار', (t) async {
+    final api = FakeApi();
+    final state = AppState(api: api, store: MemoryStore(), location: FakeLocation(fresh: riyadh));
+    await t.binding.setSurfaceSize(const Size(420, 900));
+    await t.pumpWidget(CustomerApp(state: state, showSplash: false));
+    await state.init();
+    await t.pumpAndSettle();
+    for (final n in ['العربية', 'English', 'বাংলা', 'हिन्दी', 'اردو']) {
+      expect(find.text(n), findsOneWidget);
+    }
+    await t.tap(find.byKey(const ValueKey('lang-en')));
+    await t.pumpAndSettle();
+    expect(find.text('Choose the branch'), findsOneWidget);               // شاشة الفروع بالإنجليزية
+    expect(find.text('Nearest to you'), findsOneWidget);
+    expect(Directionality.of(t.element(find.text('Choose the branch'))), TextDirection.ltr);
+    expect(L.current, AppLang.en);
+    expect(await state.store.read('lang'), 'en');                         // تُحفظ للمرات القادمة
+    await t.pumpWidget(const SizedBox());
+    L.current = AppLang.ar;
+  });
+
+  testWidgets('تغيير اللغة من داخل التطبيق: أردو (من اليمين) ثم هندي', (t) async {
+    final (state, _) = await boot(t, seed: {'branch': branch});
+    await t.tap(find.byType(PopupMenuButton<String>));
+    await t.pumpAndSettle();
+    await t.tap(find.text('اللغة'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('lang-hi')));
+    await t.pumpAndSettle();
+    expect(find.text('अभी अपनी बारी बुक करें'), findsOneWidget);          // الرئيسية بالهندية
+    expect(Directionality.of(t.element(find.text('अभी अपनी बारी बुक करें'))), TextDirection.ltr);
+    await t.tap(find.byType(PopupMenuButton<String>));
+    await t.pumpAndSettle();
+    await t.tap(find.text('भाषा'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('lang-ur')));
+    await t.pumpAndSettle();
+    expect(find.text('ابھی اپنی باری بُک کریں'), findsOneWidget);          // أردو
+    expect(Directionality.of(t.element(find.text('ابھی اپنی باری بُک کریں'))), TextDirection.rtl);
+    expect(state.lang, AppLang.ur);
+    await t.pumpWidget(const SizedBox());
+    L.current = AppLang.ar;
+  });
+
+  testWidgets('شاشة الافتتاح: الشعار بالحركة ثم اللمس يتخطاها إلى التطبيق', (t) async {
+    final state = AppState(api: FakeApi(), store: MemoryStore()..m['lang'] = 'ar'..m['branch'] = branch, location: FakeLocation(fresh: riyadh));
+    await t.binding.setSurfaceSize(const Size(420, 900));
+    await t.pumpWidget(CustomerApp(state: state));                         // splash مفعّل
+    await state.init();
+    await t.pump(const Duration(milliseconds: 300));
+    expect(find.byType(SnakeLogo), findsOneWidget);
+    expect(find.text('احجز دورك الآن'), findsNothing);
+    await t.tapAt(const Offset(200, 450));                                // تخطّي باللمس
+    await t.pumpAndSettle();
+    expect(find.text('احجز دورك الآن'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });
 

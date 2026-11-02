@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../core/i18n.dart';
 import '../core/theme.dart';
 import '../core/widgets.dart';
 import '../models.dart';
@@ -31,16 +32,16 @@ class _TicketScreenState extends State<TicketScreen> {
         builder: (context, _) {
           final b = widget.state.booking;
           return Scaffold(
-            appBar: AppBar(title: Text('تذكرتي', style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
+            appBar: AppBar(title: Text(tr('تذكرتي'), style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
             body: b == null
-                ? Center(child: Text('لا يوجد حجز نشط', style: tx(Fs.md, color: Z8.textDim)))
+                ? Center(child: Text(tr('لا يوجد حجز نشط'), style: tx(Fs.md, color: Z8.textDim)))
                 : SafeArea(
                     child: RefreshIndicator(
                       onRefresh: widget.state.refreshBooking,
                       child: ListView(padding: const EdgeInsets.all(16), children: [
                         TicketCard(b),
                         const SizedBox(height: 16),
-                        Z8Button('محادثة مع الفرع', icon: Icons.chat_bubble_outline, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChatScreen(state: widget.state, bookingId: b.id)))),
+                        Z8Button(tr('محادثة مع الفرع'), icon: Icons.chat_bubble_outline, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChatScreen(state: widget.state, bookingId: b.id)))),
                       ]),
                     ),
                   ),
@@ -56,9 +57,9 @@ class TicketCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color, bg) = switch (b.state) {
-      BookingState.waiting => ('بانتظار دورك', Z8.brass, Z8.brassSoft),
-      BookingState.inService => ('سيارتك الآن في الخدمة', Z8.emerald, Z8.emeraldBg),
-      BookingState.done => ('تمت الخدمة — شكراً لك', Z8.petrol, Z8.petrolSoft),
+      BookingState.waiting => (tr('بانتظار دورك'), Z8.brass, Z8.brassSoft),
+      BookingState.inService => (tr('سيارتك الآن في الخدمة'), Z8.emerald, Z8.emeraldBg),
+      BookingState.done => (tr('تمت الخدمة — شكراً لك'), Z8.petrol, Z8.petrolSoft),
     };
     return Panel(
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -77,20 +78,20 @@ class TicketCard extends StatelessWidget {
         Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
           Text('${b.queueNo}', style: tx(Fs.x3 + 18, w: 900, color: Z8.petrolDeep, tnum: true, h: 1)),
           const SizedBox(width: 8),
-          Padding(padding: const EdgeInsets.only(bottom: 6), child: Text('رقم دورك', style: tx(Fs.sm, w: 700, color: Z8.textDim))),
+          Padding(padding: const EdgeInsets.only(bottom: 6), child: Text(tr('رقم دورك'), style: tx(Fs.sm, w: 700, color: Z8.textDim))),
           const Spacer(),
           Text(b.plate, style: tx(Fs.lg, w: 900), textDirection: TextDirection.ltr),
         ]),
         if (b.state == BookingState.waiting) ...[
           const Divider(height: 24),
           Row(children: [
-            Expanded(child: _Stat('قبلك', '${b.ahead}', 'سيارة')),
-            Expanded(child: _Stat('الانتظار المتوقع', b.estWaitMinutes == 0 ? 'الآن' : '${b.estWaitMinutes}', b.estWaitMinutes == 0 ? '' : 'دقيقة')),
+            Expanded(child: _Stat(tr('قبلك'), '${b.ahead}', tr('سيارة'))),
+            Expanded(child: _Stat(tr('الانتظار المتوقع'), b.estWaitMinutes == 0 ? tr('الآن') : '${b.estWaitMinutes}', b.estWaitMinutes == 0 ? '' : tr('دقيقة'))),
           ]),
         ],
         if (b.state == BookingState.inService && (b.station ?? '').isNotEmpty) ...[
           const Divider(height: 24),
-          _Stat('الموقع', b.station!, ''),
+          _Stat(tr('الموقع'), b.station!, ''),
         ],
       ]),
     );

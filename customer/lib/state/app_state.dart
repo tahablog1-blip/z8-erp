@@ -4,11 +4,12 @@ import 'package:flutter/foundation.dart';
 import '../core/api.dart';
 import '../core/config.dart';
 import '../core/geo.dart';
+import '../core/i18n.dart';
 import '../core/location.dart';
 import '../core/store.dart';
 import '../models.dart';
 
-enum Phase { boot, needsBranch, ready }
+enum Phase { boot, needsLang, needsBranch, ready }
 
 class AppState extends ChangeNotifier {
   AppState({required this.api, required this.store, required this.location});
@@ -33,13 +34,37 @@ class AppState extends ChangeNotifier {
   LatLng? where;
   bool locationDenied = false;
 
-  static const _kBranch = 'branch', _kToken = 'otp', _kPhone = 'phone', _kBooking = 'booking';
+  static const _kLang = 'lang', _kBranch = 'branch', _kToken = 'otp', _kPhone = 'phone', _kBooking = 'booking';
   bool get verified => otpToken != null;
 
+  AppLang lang = AppLang.ar;
+
+  /// تغيير اللغة (من شاشة الاختيار الأولى أو من داخل التطبيق) — تُحفظ وتُطبَّق فوراً
+  Future<void> setLang(AppLang l) async {
+    lang = l;
+    L.current = l;
+    await store.write(_kLang, l.code);
+    if (phase == Phase.needsLang) {
+      phase = branchId == null ? Phase.needsBranch : Phase.ready;
+      unawaited(branchId == null ? loadBranches() : refreshAll());
+    }
+    notifyListeners();
+  }
+
   Future<void> init() async {
+    final saved = AppLang.fromCode(await store.read(_kLang));
+    if (saved != null) {
+      lang = saved;
+      L.current = saved;
+    }
     branchId = (await store.read(_kBranch)) ?? (Config.defaultBranchId.isEmpty ? null : Config.defaultBranchId);
     otpToken = await store.read(_kToken);
     phone = (await store.read(_kPhone)) ?? '';
+    if (saved == null) {            // أول تشغيل: يختار العميل لغته أولاً
+      phase = Phase.needsLang;
+      notifyListeners();
+      return;
+    }
     if (branchId == null) {
       phase = Phase.needsBranch;
       notifyListeners();

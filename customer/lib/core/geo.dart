@@ -1,4 +1,5 @@
 // المسافة ووقت الوصول التقريبي بين العميل والفرع
+import 'i18n.dart';
 import 'dart:math';
 
 class LatLng {
@@ -23,10 +24,10 @@ int estimateDriveMinutes(double straightKm) {
   return max(1, (road / speed * 60).ceil());
 }
 
-String formatKm(double km) => km < 1 ? '${(km * 1000).round()} م' : '${km.toStringAsFixed(km < 10 ? 1 : 0)} كم';
+String formatKm(double km) => km < 1 ? tr('{0} م', [(km * 1000).round()]) : tr('{0} كم', [km.toStringAsFixed(km < 10 ? 1 : 0)]);
 
 String formatMinutes(int m) {
-  if (m < 60) return '$m دقيقة';
+  if (m < 60) return tr('{0} دقيقة', [m]);
   final h = m ~/ 60, r = m % 60;
-  return r == 0 ? '$h ساعة' : '$h ساعة و$r دقيقة';
+  return r == 0 ? tr('{0} ساعة', [h]) : tr('{0} ساعة و{1} دقيقة', [h, r]);
 }
