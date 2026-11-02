@@ -453,10 +453,11 @@ async def public_product_image(product_id: str):
 async def public_booking_service(branch_id: str,
                                  brand: str = Query(default=""),
                                  model: str = Query(default=""),
-                                 year: str = Query(default="")):
+                                 year: str = Query(default=""),
+                                 external: int = Query(default=0)):
     """خدمة تغيير الزيت للسيارة دي تحديداً — تُضاف تلقائياً في الحجز مع اختيار الزيت.
     التسعير من قواعد service_price_rules (ماركة/موديل/سنة)، وإلا أقرب صنف خدمة زيت."""
-    return await service.public_booking_service(branch_id, brand, model, year)
+    return await service.public_booking_service(branch_id, brand, model, year, external=bool(external))
 
 
 @router.get("/public/brand-logo/{brand_id}")

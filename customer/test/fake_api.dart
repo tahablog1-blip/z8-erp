@@ -17,6 +17,7 @@ class FakeApi implements CustomerApi {
   bool expireOtp = false;
   Map<String, dynamic>? lastSelection;
   final invoiceCalls = <String?>[];
+  bool noExternalService = false;
   final filterCalls = <String?>[];
   final filterEngines = <String?>[];
 
@@ -101,8 +102,10 @@ class FakeApi implements CustomerApi {
         'filters': <dynamic>[],
       };
   @override
-  Future<Map<String, dynamic>?> autoService(String b, {required String brand, required String model, required String year}) async =>
-      {'id': 'svc1', 'name': 'خدمة تغيير زيت', 'price': 30.0};
+  Future<Map<String, dynamic>?> autoService(String b, {required String brand, required String model, required String year, bool external = false}) async {
+    if (external) return noExternalService ? null : {'id': 'svc-ext', 'name': 'خدمة تغيير زيت خارجي', 'price': 37.9};   // أجرة الخارجي تختلف عن العادية
+    return {'id': 'svc1', 'name': 'خدمة تغيير زيت', 'price': 30.0};
+  }
   @override
   Future<Map<String, dynamic>?> filterMatch(String b, {required String brand, required String model, required String year, String? cylinders, String? engineSize}) async {
     filterCalls.add(cylinders);

@@ -271,6 +271,57 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
+  testWidgets('أجرة الزيت الخارجي تختلف عن العادية (37.9 مقابل 30)، وتتبدّل بتبديل المصدر', (t) async {
+    final (_, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    await t.tap(find.text('احجز دورك الآن'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('التالي: اختيار الخدمة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('تغيير زيت ماكينة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('زيت خارجي (أحضره بنفسي)'));
+    await t.pumpAndSettle();
+    expect(find.text('37.90 ر.س'), findsWidgets);                     // أجرة الخارجي
+    await t.tap(find.text('زيت من الفرع'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('اختر الزيت'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('شل'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('شل هيلكس'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('ملخص الفاتورة'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('خدمة تغيير زيت'), findsOneWidget);                // أجرة العادية 30.00
+    expect(find.text('خدمة تغيير زيت خارجي'), findsNothing);
+    expect(api.noExternalService, false);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('خدمة الزيت الخارجي غير مضبوطة: لا نحمّله أجرة العادية، وتُحدَّد بالفرع', (t) async {
+    final api = FakeApi()..noExternalService = true;
+    final state = AppState(api: api, store: MemoryStore()..m.addAll({'lang': 'ar', 'branch': branch, 'otp': 'old', 'phone': '0500000000'}), location: FakeLocation(fresh: riyadh));
+    await t.binding.setSurfaceSize(const Size(420, 900));
+    await t.pumpWidget(CustomerApp(state: state, showSplash: false));
+    await state.init();
+    await t.pumpAndSettle();
+    await t.tap(find.text('احجز دورك الآن'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('التالي: اختيار الخدمة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('تغيير زيت ماكينة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('زيت خارجي (أحضره بنفسي)'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('ملخص الفاتورة'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('خدمة تغيير زيت'), findsNothing);                  // لا أجرة العادية
+    expect(find.textContaining('يُحدَّد سعرها داخل الفرع'), findsOneWidget);
+    await t.tap(find.text('تأكيد الحجز'));
+    await t.pumpAndSettle();
+    expect((api.lastSelection!['items'] as List), isEmpty);
+    expect(api.lastSelection!['customerNote'], contains('زيت من العميل (خارجي)'));   // الموظف يعرف ويحدد الأجرة
+    await t.pumpWidget(const SizedBox());
+  });
+
   testWidgets('زيت خارجي: بلا اختيار زيت، الأجرة فقط، وملاحظة تصل الموظف', (t) async {
     final (_, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
     await t.tap(find.text('احجز دورك الآن'));
@@ -288,12 +339,13 @@ void main() {
     await t.tap(find.text('زيت خارجي (أحضره بنفسي)').last);
     await t.pumpAndSettle();
     await t.scrollUntilVisible(find.text('ملخص الفاتورة'), 200, scrollable: find.byType(Scrollable).first);
-    expect(find.text('30.00 ر.س'), findsWidgets);                     // أجرة الماكينة فقط (خدمة تغيير زيت)
+    expect(find.text('37.90 ر.س'), findsWidgets);                     // أجرة الماكينة الخارجية (خدمتها وأسعارها مستقلة)
+    expect(find.text('خدمة تغيير زيت خارجي'), findsOneWidget);
     expect(find.textContaining('زيت من العميل (خارجي) — الأجرة فقط'), findsNWidgets(2));
     await t.tap(find.text('تأكيد الحجز'));
     await t.pumpAndSettle();
     final sel = api.lastSelection!;
-    expect((sel['items'] as List).map((e) => (e as Map)['productId']), ['svc1']);       // أجرة الماكينة بلا زيت
+    expect((sel['items'] as List).map((e) => (e as Map)['productId']), ['svc-ext']);   // أجرة الخارجي بلا زيت
     expect(sel['customerNote'], 'زيت من العميل (خارجي) — الأجرة فقط: تغيير زيت ماكينة + تغيير زيت جير');
     expect(find.text('تذكرتي'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
@@ -325,7 +377,7 @@ void main() {
     await t.tap(find.text('تأكيد الحجز'));
     await t.pumpAndSettle();
     final items = (api.lastSelection!['items'] as List).cast<Map<String, dynamic>>();
-    expect(items.map((e) => e['productId']), ['svc1', 'f2']);          // أجرة الماكينة + الفلتر المختار (لا الافتراضي f1)
+    expect(items.map((e) => e['productId']), ['svc-ext', 'f2']);       // أجرة الخارجي + الفلتر المختار (لا الافتراضي f1)
     expect(find.text('تذكرتي'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });

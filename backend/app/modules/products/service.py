@@ -1105,10 +1105,18 @@ async def public_product_image(product_id: str) -> dict | None:
         return None
 
 
-async def public_booking_service(branch_id: str, brand: str, model: str, year: str) -> dict:
+def _is_external_service(name: str | None) -> bool:
+    """خدمة «تغيير زيت خارجي» (العميل يحضر زيته): تُعرَف باسم الصنف الذي فيه «خارج» (خارجي/خارجى)"""
+    return "خارج" in _norm_ar(name or "")
+
+
+async def public_booking_service(branch_id: str, brand: str, model: str, year: str, external: bool = False) -> dict:
     """حلّ خدمة تغيير الزيت المناسبة للسيارة: أدق قاعدة تسعير مطابقة
     (ماركة+موديل+سنة > ماركة+موديل > ماركة > قاعدة عامة)، وإن لم توجد قواعد
-    نرجع لأقرب صنف خدمة اسمه يدل على تغيير الزيت — وإلا لا شيء."""
+    نرجع لأقرب صنف خدمة اسمه يدل على تغيير الزيت — وإلا لا شيء.
+
+    external=True: خدمة الزيت الخارجي (أجرتها تختلف بحسب السيارة: 37.9 لسيارة و75 لأخرى) —
+    تُحَلّ من قواعد صنف الخدمة الذي اسمه فيه «خارجي» فقط، ولا تختلط بقواعد خدمة التغيير العادية."""
     company_id = await _public_branch_company(branch_id)
     yr = None
     digits = "".join(ch for ch in (year or "") if ch.isdigit())
@@ -1129,6 +1137,8 @@ async def public_booking_service(branch_id: str, brand: str, model: str, year: s
 
     best, best_score = None, -1
     for r in rules:
+        if _is_external_service(r["name"]) != external:        # كل نوع خدمة بقواعده
+            continue
         rb, rm = _norm(r["brand"]), _norm(r["model"])
         if rb and not (b and (rb in b or b in rb)):
             continue
@@ -1150,10 +1160,11 @@ async def public_booking_service(branch_id: str, brand: str, model: str, year: s
         """SELECT id, name, price_vat FROM products
            WHERE company_id = $1 AND is_active = TRUE AND is_service = TRUE
              AND (name ILIKE '%تغيير%زيت%' OR name ILIKE '%غيار%زيت%' OR name ILIKE '%زيت%')
+             AND (name ILIKE '%خارج%') = $2
            ORDER BY (name ILIKE '%تغيير%زيت%') DESC,
                     (name ILIKE '%غيار%زيت%') DESC, name
            LIMIT 1""",
-        company_id)
+        company_id, external)
     if row:
         pv = row["price_vat"]
         return {"service": {"id": str(row["id"]), "name": row["name"],

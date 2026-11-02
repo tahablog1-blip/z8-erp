@@ -22,7 +22,7 @@ abstract class CustomerApi {
   Future<Map<String, dynamic>> bookSaved(String branchId, {required String carId, String? otpToken, String? odometer, String serviceType = 'basic', Map<String, dynamic>? selection});
   Future<Map<String, dynamic>> bookNew(String branchId, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken, Map<String, dynamic>? selection});
   Future<Map<String, dynamic>> catalog(String branchId);
-  Future<Map<String, dynamic>?> autoService(String branchId, {required String brand, required String model, required String year});
+  Future<Map<String, dynamic>?> autoService(String branchId, {required String brand, required String model, required String year, bool external = false});
   Future<Map<String, dynamic>?> filterMatch(String branchId, {required String brand, required String model, required String year, String? cylinders, String? engineSize});
   Future<Map<String, dynamic>> invoices(String branchId, {String phone = '', String? otpToken, String? savedCarId});
   Future<Map<String, dynamic>> bookingStatus(String bookingId);
@@ -102,8 +102,8 @@ class Api implements CustomerApi {
   Future<Map<String, dynamic>> catalog(String b) async => _map(await _send('GET', '/cars/public/booking-products/$b'));
 
   @override
-  Future<Map<String, dynamic>?> autoService(String b, {required String brand, required String model, required String year}) async {
-    final d = _map(await _send('GET', '/products/public/booking-service/$b', query: {'brand': brand, 'model': model, 'year': year}));
+  Future<Map<String, dynamic>?> autoService(String b, {required String brand, required String model, required String year, bool external = false}) async {
+    final d = _map(await _send('GET', '/products/public/booking-service/$b', query: {'brand': brand, 'model': model, 'year': year, if (external) 'external': 1}));
     final s = d['service'];
     return s is Map ? Map<String, dynamic>.from(s) : null;
   }
