@@ -25,6 +25,10 @@ abstract class CustomerApi {
   Future<Map<String, dynamic>?> autoService(String branchId, {required String brand, required String model, required String year, bool external = false});
   Future<Map<String, dynamic>?> filterMatch(String branchId, {required String brand, required String model, required String year, String? cylinders, String? engineSize});
   Future<Map<String, dynamic>> invoices(String branchId, {String phone = '', String? otpToken, String? savedCarId});
+  Future<Map<String, dynamic>> registerCar(String branchId, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken});
+  Future<Map<String, dynamic>> notifications(String branchId, {String phone = '', String? otpToken});
+  Future<void> notificationsRead(String branchId, {String phone = '', String? otpToken, List<String>? ids});
+  Future<Map<String, dynamic>> chats(String branchId, {String phone = '', String? otpToken});
   Future<Map<String, dynamic>> bookingStatus(String bookingId);
   Future<String> chatToken(String bookingId);
   Future<Map<String, dynamic>> chatMessages(String token);
@@ -121,6 +125,19 @@ class Api implements CustomerApi {
   @override
   Future<Map<String, dynamic>> invoices(String b, {String phone = '', String? otpToken, String? savedCarId}) async =>
       _map(await _send('POST', '/cars/public/booking/$b/invoices', body: {'phone': phone, 'otpToken': otpToken, 'savedCarId': savedCarId}));
+  @override
+  Future<Map<String, dynamic>> registerCar(String b, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken}) async =>
+      _map(await _send('POST', '/cars/public/booking/$b', body: {'serviceType': 'basic', 'name': name, 'phone': phone, 'car': car, 'otpToken': otpToken, 'registerOnly': true}));
+  @override
+  Future<Map<String, dynamic>> notifications(String b, {String phone = '', String? otpToken}) async =>
+      _map(await _send('POST', '/cars/public/booking/$b/notifications', body: {'phone': phone, 'otpToken': otpToken}));
+  @override
+  Future<void> notificationsRead(String b, {String phone = '', String? otpToken, List<String>? ids}) async {
+    await _send('POST', '/cars/public/booking/$b/notifications/read', body: {'phone': phone, 'otpToken': otpToken, 'ids': ids});
+  }
+  @override
+  Future<Map<String, dynamic>> chats(String b, {String phone = '', String? otpToken}) async =>
+      _map(await _send('POST', '/cars/public/booking/$b/chats', body: {'phone': phone, 'otpToken': otpToken}));
   @override
   Future<Map<String, dynamic>> bookingStatus(String id) async => _map(await _send('GET', '/cars/public/booking-status/$id'));
   @override

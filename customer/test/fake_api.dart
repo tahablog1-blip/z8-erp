@@ -145,6 +145,35 @@ class FakeApi implements CustomerApi {
     return {'pdfPhone': '0500000000', 'invoices': savedCarId == 'car-1' ? all.where((i) => i['plate'] == '1234 ABC').toList() : all};
   }
 
+  // ── الإشعارات والمحادثات ──
+  final registered = <Map<String, dynamic>>[];
+  final readCalls = <List<String>?>[];
+  final notices = <Map<String, dynamic>>[
+    {'id': 'n1', 'kind': 'message', 'title': 'رسالة جديدة من الفرع', 'body': 'x', 'meta': 'سيارتك جاهزة', 'refId': 'bk-1', 'at': '2026-11-01T10:00:00Z', 'read': false},
+    {'id': 'n2', 'kind': 'car_registered', 'title': 'تم تسجيل سيارتك', 'body': 'x', 'meta': '1234 ABC', 'refId': null, 'at': '2026-10-30T10:00:00Z', 'read': false},
+  ];
+  @override
+  Future<Map<String, dynamic>> registerCar(String b, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken}) async {
+    registered.add({'name': name, 'phone': phone, 'car': car});
+    return {'registered': true, 'plate': '${car['plateNumbers']} ${car['plateLetters']}'};
+  }
+  @override
+  Future<Map<String, dynamic>> notifications(String b, {String phone = '', String? otpToken}) async =>
+      {'items': notices, 'unread': notices.where((n) => n['read'] != true).length};
+  @override
+  Future<void> notificationsRead(String b, {String phone = '', String? otpToken, List<String>? ids}) async {
+    readCalls.add(ids);
+    for (final n in notices) {
+      if (ids == null || ids.contains(n['id'])) n['read'] = true;
+    }
+  }
+  @override
+  Future<Map<String, dynamic>> chats(String b, {String phone = '', String? otpToken}) async => {
+        'chats': [
+          {'bookingId': 'bk-1', 'plate': '1234 ABC', 'carLabel': 'تويوتا كامري', 'branchName': 'فرع الخليج', 'lastMessage': 'أهلاً، سيارتك في الدور', 'lastFromCustomer': false, 'lastAt': '2026-11-01T10:00:00Z', 'unread': 1},
+        ],
+      };
+
   @override
   Future<String> chatToken(String id) async => 'chat-token';
   @override

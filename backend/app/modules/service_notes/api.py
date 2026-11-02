@@ -256,6 +256,20 @@ async def messages(
     return [dict(r) for r in rows]
 
 
+async def _notify_customer_message(work_order_id, text: str) -> None:
+    """إشعار داخل تطبيق العميل بأن الفرع راسله — إشعار واحد غير مقروء لكل محادثة (يتحدّث بآخر رسالة)."""
+    try:
+        from ..cars import notify_inbox
+        wid = str(work_order_id)
+        await execute("DELETE FROM customer_notifications WHERE kind='message' AND ref_id=$1 AND read_at IS NULL", wid)
+        snippet = (text or "").strip()
+        await notify_inbox.add_for_visit(wid, "message", "رسالة جديدة من الفرع",
+                                         snippet[:120] if snippet and not snippet.startswith("/api/") else "أرسل لك الفرع رسالة",
+                                         meta=snippet[:120])
+    except Exception as e:
+        print(f"⚠ إشعار رسالة الفرع: {type(e).__name__}: {e}")
+
+
 @router.post("/messages/{work_order_id}")
 async def send_message(
     work_order_id: str, body: MessageCreate,
@@ -271,6 +285,7 @@ async def send_message(
            VALUES ($1,$2,$3,$4,$5,$6,'employee',$7,$8)""",
         user.company_id, wo["branch_id"], wo["id"], wo["customer_id"],
         user.user_id, body.noteId, body.message, body.messageType)
+    await _notify_customer_message(wo["id"], body.message)
     return {"ok": True}
 
 
@@ -475,6 +490,7 @@ async def send_voice_employee(
            VALUES ($1,$2,$3,$4,$5,'employee','🎤 رسالة صوتية',$6,'voice')""",
         user.company_id, wo["branch_id"], wo["id"], wo["customer_id"],
         user.user_id, url)
+    await _notify_customer_message(wo["id"], "🎤 رسالة صوتية")
     return {"ok": True, "url": url}
 
 

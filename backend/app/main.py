@@ -855,6 +855,22 @@ async def lifespan(app: FastAPI):
         # حادثة اليوم الأولى بالظبط. هنا بقى self-healing زي كل حاجة تانية، صفر psql يدوي. ══
         "ALTER TABLE cars ADD COLUMN IF NOT EXISTS engine_size TEXT",
         "ALTER TABLE customer_cars ADD COLUMN IF NOT EXISTS engine_size TEXT",
+        """CREATE TABLE IF NOT EXISTS customer_notifications (
+             id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+             company_id uuid NOT NULL,
+             customer_id uuid NOT NULL,
+             branch_id uuid,
+             kind text NOT NULL,
+             title text NOT NULL,
+             body text,
+             ref_id text,
+             dedupe text,
+             meta text,
+             created_at timestamptz NOT NULL DEFAULT now(),
+             read_at timestamptz
+           )""",
+        "CREATE INDEX IF NOT EXISTS ix_customer_notifications_cust ON customer_notifications (customer_id, created_at DESC)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_customer_notifications_dedupe ON customer_notifications (customer_id, dedupe) WHERE dedupe IS NOT NULL",
         "ALTER TABLE customer_vehicles ADD COLUMN IF NOT EXISTS engine_size TEXT",
         # car_oil_filters نفسه مش موجود في أي DDL متتبّع بالكود (لا هنا ولا في أي migration) —
         # غالباً اتعمل يدوياً على الإنتاج قبل كده. شبكة أمان: لو موجود فعلاً IF NOT EXISTS

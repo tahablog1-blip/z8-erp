@@ -56,7 +56,7 @@ async def notify_booking_confirmed(car_id: str) -> None:
 async def send_due_reminders() -> int:
     """يبعت تذكير لكل حجز أونلاين منتظر دوره قرب — بيرجع عدد اللي اتبعتلهم"""
     rows = await fetch(
-        """SELECT c.id, c.company_id, c.plate, c.customer_phone, b.name AS branch_name
+        """SELECT c.id, c.company_id, c.customer_id, c.plate, c.customer_phone, b.name AS branch_name
            FROM cars c JOIN branches b ON b.id = c.branch_id
            WHERE c.is_deleted=FALSE AND c.exited_at IS NULL AND c.entered_at IS NULL
              AND c.registrar_name=$1 AND c.reminder_sent_at IS NULL
@@ -71,6 +71,11 @@ async def send_due_reminders() -> int:
     for r in rows:
         # نعلّم الأول عشان ما يتكررش لو الإرسال اتأخر أو فشل
         await execute("UPDATE cars SET reminder_sent_at = now() WHERE id=$1", r["id"])
+        from . import notify_inbox
+        await notify_inbox.add(r["company_id"], r["customer_id"], "turn_near", "اقترب دورك",
+                               f"اقترب موعد دخول سيارتك {r['plate'] or ''}"
+                               f"{(' في ' + r['branch_name']) if r['branch_name'] else ''} — توجّه إلى بوابة الدخول.",
+                               ref_id=r["id"], dedupe=f"turn:{r['id']}", meta=r["plate"] or "")
         if await wa.send_text(str(r["company_id"]), r["customer_phone"], reminder_text(r["plate"] or "", r["branch_name"])):
             sent += 1
     return sent

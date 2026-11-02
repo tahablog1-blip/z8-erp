@@ -427,6 +427,9 @@ async def confirm_entry(company_id: str, car_id: str) -> dict:
     if not row.get("draft_items"):
         await _auto_prepare_from_last_invoice(company_id, str(row["id"]), row["customer_id"])
     row = await fetchrow("SELECT * FROM cars WHERE id=$1", row["id"])
+    from . import notify_inbox
+    await notify_inbox.add_for_visit(car_id, "in_service", "سيارتك داخل الخدمة الآن",
+                                     "بدأت خدمة سيارتك {plate}. يمكنك مراسلة الفرع من المحادثات.", dedupe=f"in:{car_id}")
     return _row_out(row)
 
 
@@ -457,6 +460,10 @@ async def confirm_exit(company_id: str, car_id: str) -> dict:
     )
     if not row:
         raise HTTPException(409, "السيارة خرجت بالفعل من جهاز آخر")
+    if not cancel:
+        from . import notify_inbox
+        await notify_inbox.add_for_visit(car_id, "done", "انتهت خدمة سيارتك",
+                                         "تمت خدمة سيارتك {plate} — شكراً لثقتك. فاتورتك في سياراتي.", dedupe=f"out:{car_id}")
     return _row_out(row)
 
 
@@ -1603,6 +1610,8 @@ async def public_create_booking(branch_id: str, d: dict) -> dict:
         if car.get("odometer") in (None, ""):
             raise HTTPException(422, "أدخل ممشى السيارة الحالي")
     else:
+        if d.get("registerOnly") and car.get("odometer") in (None, ""):
+            car = {**car, "odometer": 0}       # تسجيل سيارة فقط: الممشى يُؤخذ عند الحجز
         _validate_by_type(service_type, d, car)
 
     letters = re.sub(r"[^A-Z]", "", (car.get("plateLetters") or "").upper())[:3]
@@ -1612,7 +1621,7 @@ async def public_create_booking(branch_id: str, d: dict) -> dict:
     plate = f"{numbers} {letters}"
 
     # ── نفس اللوحة نشطة؟ رجّع حجزها ──
-    existing = await fetchrow(
+    existing = None if d.get("registerOnly") else await fetchrow(
         """SELECT id FROM cars WHERE branch_id=$1 AND is_deleted=FALSE AND exited_at IS NULL
              AND UPPER(REPLACE(COALESCE(plate,''),' ','')) = $2""",
         branch_id, f"{numbers}{letters}")
@@ -1652,7 +1661,17 @@ async def public_create_booking(branch_id: str, d: dict) -> dict:
             cust["id"])
 
     # ── حفظ السيارة في كراج العميل (دائم) ──
+    is_new_car = not await fetchrow(
+        "SELECT 1 FROM customer_cars WHERE customer_id=$1 AND UPPER(REPLACE(plate,' ','')) = $2", cust["id"], plate.replace(' ', '').upper())
     await _upsert_garage(company_id, str(cust["id"]), plate, car, service_type)
+    from . import notify_inbox
+    if is_new_car:
+        label = " ".join(x for x in [car.get("brand"), car.get("carName")] if x)
+        await notify_inbox.add(company_id, cust["id"], "car_registered", "تم تسجيل سيارتك",
+                               f"أُضيفت {label + ' ' if label else ''}({plate}) إلى سياراتي.", branch_id=br["id"],
+                               dedupe=f"car:{plate.replace(' ', '')}", meta=plate)
+    if d.get("registerOnly"):
+        return {"registered": True, "plate": plate}
 
     # ── إنشاء الحجز في الدور ──
     odo = None
@@ -1672,6 +1691,9 @@ async def public_create_booking(branch_id: str, d: dict) -> dict:
         name, phone, cust["id"], odo, service_type)
     if d.get("items") or d.get("customerNote"):
         await _save_booking_items(str(row["id"]), d)
+    await notify_inbox.add(company_id, cust["id"], "booking", "تم حجز دورك",
+                           f"حجزت دوراً لسيارتك {plate} في {br['name']}. تابع دورك من الصفحة الرئيسية.",
+                           branch_id=br["id"], ref_id=row["id"], dedupe=f"booking:{row['id']}", meta=plate)
     # 📲 رسالة تأكيد الحجز للعميل — في الخلفية، فشلها ما بيأثرش على الحجز
     import asyncio
     from .booking_notify import notify_booking_confirmed
