@@ -1405,10 +1405,10 @@ async def public_booking_invoice_pdf(invoice_id: str, phone: str = "", dl: int =
     if not inv:
         raise HTTPException(403, "غير مسموح")
     try:
-        from ..invoices.pdf import build_invoice_pdf
+        from ..invoices.api import _invoice_pdf_bytes     # نفس مولّد فاتورة النظام الرسمي (لوجو + QR + بيانات المركبة)
     except ImportError:
         raise HTTPException(501, "محرك PDF غير مثبت")
-    pdf = await build_invoice_pdf(str(inv["company_id"]), invoice_id)
+    pdf = await _invoice_pdf_bytes(str(inv["company_id"]), invoice_id)
     disp = "attachment" if dl else "inline"
     return _Resp(content=pdf, media_type="application/pdf",
                  headers={"Content-Disposition":
