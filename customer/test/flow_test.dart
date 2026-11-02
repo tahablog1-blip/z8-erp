@@ -64,7 +64,7 @@ void main() {
     final (state, _) = await boot(t);
     await t.tap(find.text('احجز من هذا الفرع').first);
     await t.pumpAndSettle();
-    expect(find.text('احجز دورك الآن'), findsOneWidget);
+    expect(find.text('حجز جديد'), findsOneWidget);
     expect(state.branchId, branch);
     // إعادة تشغيل التطبيق: يتذكر الفرع ولا يعرض القائمة
     expect(find.text('اختر الفرع'), findsNothing);
@@ -78,7 +78,7 @@ void main() {
 
   testWidgets('رحلة كاملة: OTP ثم حجز سيارة محفوظة ثم تذكرة حية ثم محادثة', (t) async {
     final (state, api) = await boot(t, seed: {'branch': branch});
-    await t.tap(find.text('احجز دورك الآن'));
+    await t.tap(find.text('حجز جديد'));
     await t.pumpAndSettle();
     expect(find.text('تأكيد رقم الجوال'), findsOneWidget);
 
@@ -125,7 +125,7 @@ void main() {
   testWidgets('حجز بسيارة جديدة يرسل البيانات كاملة (أرقام عربية تُحوَّل)', (t) async {
     final (state, api) = await boot(t, otp: false, seed: {'branch': branch});
     state.profile = state.profile; // بدون OTP ولا جوال مخزَّن: لا سيارات محفوظة
-    await t.tap(find.text('احجز دورك الآن'));
+    await t.tap(find.text('حجز جديد'));
     await t.pumpAndSettle();
     await t.binding.setSurfaceSize(const Size(420, 1800));   // يُبنى النموذج كاملاً فلا تتغيّر فهارس الحقول بالتمرير
     await t.pumpAndSettle();
@@ -150,7 +150,7 @@ void main() {
     expect(state.verified, isTrue);
     expect(state.profile.cars, isNotEmpty);
     api.expireOtp = true;
-    await t.tap(find.text('احجز دورك الآن'));
+    await t.tap(find.text('حجز جديد'));
     await t.pumpAndSettle();
     await t.tap(find.text('التالي: اختيار الخدمة'));
     await t.pumpAndSettle();
@@ -164,7 +164,7 @@ void main() {
 
   testWidgets('اختيار أكثر من خدمة: شركات ثم زيوت، أجرة الخدمة، الإجمالي، وتنبيه السعر غير النهائي', (t) async {
     final (_, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
-    await t.tap(find.text('احجز دورك الآن'));
+    await t.tap(find.text('حجز جديد'));
     await t.pumpAndSettle();
     await t.tap(find.text('التالي: اختيار الخدمة'));
     await t.pumpAndSettle();
@@ -249,7 +249,7 @@ void main() {
 
   testWidgets('منتج نافد: تظهر «غير متوفر الآن» على بطاقته، والضغط عليه يُنبّه ولا يُختار', (t) async {
     await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
-    await t.tap(find.text('احجز دورك الآن'));
+    await t.tap(find.text('حجز جديد'));
     await t.pumpAndSettle();
     await t.tap(find.text('التالي: اختيار الخدمة'));
     await t.pumpAndSettle();
@@ -273,7 +273,7 @@ void main() {
 
   testWidgets('أجرة الزيت الخارجي تختلف عن العادية (37.9 مقابل 30)، وتتبدّل بتبديل المصدر', (t) async {
     final (_, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
-    await t.tap(find.text('احجز دورك الآن'));
+    await t.tap(find.text('حجز جديد'));
     await t.pumpAndSettle();
     await t.tap(find.text('التالي: اختيار الخدمة'));
     await t.pumpAndSettle();
@@ -304,7 +304,7 @@ void main() {
     await t.pumpWidget(CustomerApp(state: state, showSplash: false));
     await state.init();
     await t.pumpAndSettle();
-    await t.tap(find.text('احجز دورك الآن'));
+    await t.tap(find.text('حجز جديد'));
     await t.pumpAndSettle();
     await t.tap(find.text('التالي: اختيار الخدمة'));
     await t.pumpAndSettle();
@@ -324,7 +324,7 @@ void main() {
 
   testWidgets('زيت خارجي: بلا اختيار زيت، الأجرة فقط، وملاحظة تصل الموظف', (t) async {
     final (_, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
-    await t.tap(find.text('احجز دورك الآن'));
+    await t.tap(find.text('حجز جديد'));
     await t.pumpAndSettle();
     await t.tap(find.text('التالي: اختيار الخدمة'));
     await t.pumpAndSettle();
@@ -353,7 +353,7 @@ void main() {
 
   testWidgets('أكثر من فلتر زيت للسيارة: يختار العميل بينها والنافد معطّل', (t) async {
     final (_, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
-    await t.tap(find.text('احجز دورك الآن'));
+    await t.tap(find.text('حجز جديد'));
     await t.pumpAndSettle();
     await t.tap(find.text('التالي: اختيار الخدمة'));
     await t.pumpAndSettle();
@@ -384,7 +384,7 @@ void main() {
 
   Future<FakeApi> toServicesWithNewCar(WidgetTester t, String brandName) async {
     final (_, api) = await boot(t, otp: false, seed: {'branch': branch});
-    await t.tap(find.text('احجز دورك الآن'));
+    await t.tap(find.text('حجز جديد'));
     await t.pumpAndSettle();
     await t.binding.setSurfaceSize(const Size(420, 1800));   // يُبنى النموذج كاملاً فلا تتغيّر فهارس الحقول بالتمرير
     await t.pumpAndSettle();
@@ -437,7 +437,7 @@ void main() {
 
   testWidgets('عدد السلندرات المحدد عند التسجيل يُرسل ويحصر الفلتر في محركه فقط', (t) async {
     final (_, api) = await boot(t, otp: false, seed: {'branch': branch});
-    await t.tap(find.text('احجز دورك الآن'));
+    await t.tap(find.text('حجز جديد'));
     await t.pumpAndSettle();
     await t.binding.setSurfaceSize(const Size(420, 1800));   // يُبنى النموذج كاملاً فلا تتغيّر فهارس الحقول بالتمرير
     await t.pumpAndSettle();
@@ -485,7 +485,7 @@ void main() {
 
   testWidgets('الماركة من القائمة قابلة للتعديل بالكتابة، والسنة وحجم الماكينة من قوائم، ويُرسل الحجم للمطابقة', (t) async {
     final (_, api) = await boot(t, otp: false, seed: {'branch': branch});
-    await t.tap(find.text('احجز دورك الآن'));
+    await t.tap(find.text('حجز جديد'));
     await t.pumpAndSettle();
     await t.binding.setSurfaceSize(const Size(420, 1800));
     await t.pumpAndSettle();
@@ -564,16 +564,16 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.byKey(const ValueKey('lang-hi')));
     await t.pumpAndSettle();
-    expect(find.text('अभी अपनी बारी बुक करें'), findsOneWidget);          // الرئيسية بالهندية
-    expect(Directionality.of(t.element(find.text('अभी अपनी बारी बुक करें'))), TextDirection.ltr);
+    expect(find.text('नई बुकिंग'), findsOneWidget);          // الرئيسية بالهندية
+    expect(Directionality.of(t.element(find.text('नई बुकिंग'))), TextDirection.ltr);
     await t.tap(find.byType(PopupMenuButton<String>));
     await t.pumpAndSettle();
     await t.tap(find.text('भाषा'));
     await t.pumpAndSettle();
     await t.tap(find.byKey(const ValueKey('lang-ur')));
     await t.pumpAndSettle();
-    expect(find.text('ابھی اپنی باری بُک کریں'), findsOneWidget);          // أردو
-    expect(Directionality.of(t.element(find.text('ابھی اپنی باری بُک کریں'))), TextDirection.rtl);
+    expect(find.text('نئی بکنگ'), findsOneWidget);          // أردو
+    expect(Directionality.of(t.element(find.text('نئی بکنگ'))), TextDirection.rtl);
     expect(state.lang, AppLang.ur);
     await t.pumpWidget(const SizedBox());
     L.current = AppLang.ar;
@@ -586,10 +586,10 @@ void main() {
     await state.init();
     await t.pump(const Duration(milliseconds: 300));
     expect(find.byType(SnakeLogo), findsOneWidget);
-    expect(find.text('احجز دورك الآن'), findsNothing);
+    expect(find.text('حجز جديد'), findsNothing);
     await t.tapAt(const Offset(200, 450));                                // تخطّي باللمس
     await t.pumpAndSettle();
-    expect(find.text('احجز دورك الآن'), findsOneWidget);
+    expect(find.text('حجز جديد'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });
 
@@ -609,7 +609,7 @@ void main() {
 
   testWidgets('سيارة جديدة: نوع الوقود ثلاثة فقط (ديزل/بنزين/هايبرد)', (t) async {
     await boot(t, otp: false, seed: {'branch': branch});
-    await t.tap(find.text('احجز دورك الآن'));
+    await t.tap(find.text('حجز جديد'));
     await t.pumpAndSettle();
     expect(find.text('ديزل'), findsOneWidget);
     expect(find.text('بنزين'), findsOneWidget);
@@ -619,8 +619,11 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('صفحة السيارة: فواتير هذه السيارة فقط، وفواتيري تعرض كل السيارات', (t) async {
+  testWidgets('صفحة السيارة: من «سياراتي» تفتح السيارة وفيها فواتيرها فقط', (t) async {
     final (_, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    expect(find.text('فواتيري'), findsNothing);                      // لا فواتير عامة في الرئيسية
+    await t.tap(find.text('سياراتي'));
+    await t.pumpAndSettle();
     await t.tap(find.text('تويوتا كامري'));
     await t.pumpAndSettle();
     expect(find.text('سجل التغييرات'), findsOneWidget);
@@ -633,14 +636,68 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('فلتر زيت'), findsOneWidget);                  // أصناف الفاتورة
     expect(find.text('عرض الفاتورة PDF'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+  });
 
-    await t.tap(find.byType(BackButton));
+  testWidgets('الرئيسية: هيدر + أربعة أقسام (سياراتي، حجز جديد، تسجيل سيارة جديدة، المحادثات)', (t) async {
+    await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    for (final x in ['سياراتي', 'حجز جديد', 'تسجيل سيارة جديدة', 'المحادثات']) {
+      expect(find.text(x), findsOneWidget, reason: x);
+    }
+    expect(find.byIcon(Icons.notifications_none), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('الجرس: شارة غير المقروء، والضغط على رسالة الفرع يفتح المحادثة مباشرة', (t) async {
+    final (state, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    expect(state.unreadNotices, 2);
+    expect(find.text('2'), findsWidgets);                            // شارة الجرس
+    await t.tap(find.byIcon(Icons.notifications_none));
     await t.pumpAndSettle();
-    await t.tap(find.text('فواتيري'));
+    expect(find.text('رسالة جديدة من الفرع'), findsOneWidget);
+    expect(find.text('سيارتك جاهزة'), findsOneWidget);
+    expect(find.text('تم تسجيل سيارتك'), findsOneWidget);
+    await t.tap(find.text('رسالة جديدة من الفرع'));
     await t.pumpAndSettle();
-    expect(api.invoiceCalls.last, isNull);
-    expect(find.text('فاتورة B-200'), findsOneWidget);
-    expect(find.text('فاتورة A-100'), findsOneWidget);
+    expect(find.text('محادثة الفرع'), findsOneWidget);               // دخل المحادثة مباشرة
+    expect(find.text('أهلاً، سيارتك في الدور'), findsOneWidget);
+    expect(api.readCalls.single, ['n1']);
+    expect(state.unreadNotices, 1);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('المحادثات: قائمة بين العميل والفرع، والضغط يفتح المحادثة', (t) async {
+    final (state, _) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    expect(state.unreadChats, 1);
+    await t.tap(find.text('المحادثات'));
+    await t.pumpAndSettle();
+    expect(find.text('أهلاً، سيارتك في الدور'), findsOneWidget);
+    expect(find.textContaining('فرع الخليج'), findsWidgets);
+    await t.tap(find.text('أهلاً، سيارتك في الدور'));
+    await t.pumpAndSettle();
+    expect(find.text('محادثة الفرع'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('تسجيل سيارة جديدة: يحفظها في سياراتي بدون اختيار خدمة أو حجز', (t) async {
+    final (_, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    await t.tap(find.text('تسجيل سيارة جديدة'));
+    await t.pumpAndSettle();
+    expect(find.text('سياراتي'), findsNothing);                      // لا قائمة سيارات محفوظة هنا
+    await t.scrollUntilVisible(find.text('حفظ السيارة'), 300, scrollable: find.byType(Scrollable).first);
+    await t.tap(find.text('حفظ السيارة'));
+    await t.pumpAndSettle();
+    expect(find.text('أدخل رقم جوال صحيح'), findsNothing);           // الاسم/الجوال معبّآن مسبقاً
+    expect(find.text('أدخل أرقام اللوحة'), findsOneWidget);          // ينقصه اللوحة
+    expect(api.registered, isEmpty);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('AppState.registerCar يرسل البيانات ويحدّث الملف والإشعارات', (t) async {
+    final (state, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    final e = await state.registerCar(name: 'أحمد', phoneNo: '0500000000', car: {'plateNumbers': '7777', 'plateLetters': 'KSA', 'brand': 'تويوتا', 'carName': 'كامري'});
+    expect(e, isNull);
+    expect(api.registered.single['car']['plateNumbers'], '7777');
     await t.pumpWidget(const SizedBox());
   });
 }

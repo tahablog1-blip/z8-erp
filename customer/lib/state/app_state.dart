@@ -149,6 +149,66 @@ class AppState extends ChangeNotifier {
     await refreshInfo();
     await loadProfile();
     await restoreBooking();
+    await refreshInbox();
+  }
+
+  // ── الإشعارات والمحادثات (تتطلب هوية العميل) ──
+  List<AppNotice> notices = const [];
+  List<ChatThread> chats = const [];
+  int get unreadNotices => notices.where((n) => !n.read).length;
+  int get unreadChats => chats.fold(0, (a, c) => a + c.unread);
+
+  /// يجلب الإشعارات والمحادثات بصمت (فشلها لا يظهر خطأ — الجرس يتحدّث في الدورة التالية)
+  Future<void> refreshInbox() async {
+    if (branchId == null || needsLogin) return;
+    try {
+      final n = await api.notifications(branchId!, phone: phone, otpToken: otpToken);
+      final c = await api.chats(branchId!, phone: phone, otpToken: otpToken);
+      final nl = n['items'], cl = c['chats'];
+      notices = nl is List ? nl.whereType<Map>().map((e) => AppNotice.fromJson(Map<String, dynamic>.from(e))).toList() : const [];
+      chats = cl is List ? cl.whereType<Map>().map((e) => ChatThread.fromJson(Map<String, dynamic>.from(e))).toList() : const [];
+      notifyListeners();
+    } on ApiException catch (e) {
+      if (e.status == 401) {
+        await _dropOtp();
+        notifyListeners();
+      }
+    }
+  }
+
+  /// تعليم إشعارات كمقروءة (أو الكل لو ids فارغة) — محلياً فوراً ثم على الخادم
+  Future<void> markNoticesRead([List<String>? ids]) async {
+    final all = ids == null || ids.isEmpty;
+    notices = [for (final n in notices) (all || ids.contains(n.id)) ? AppNotice(id: n.id, kind: n.kind, title: n.title, body: n.body, meta: n.meta, refId: n.refId, at: n.at, read: true) : n];
+    notifyListeners();
+    try {
+      await api.notificationsRead(branchId!, phone: phone, otpToken: otpToken, ids: all ? null : ids);
+    } on ApiException {
+      // يتزامن في الجلب القادم
+    }
+  }
+
+  /// تسجيل سيارة في «سياراتي» بدون حجز دور
+  Future<String?> registerCar({required String name, required String phoneNo, required Map<String, dynamic> car}) async {
+    busy = true;
+    notifyListeners();
+    try {
+      await api.registerCar(branchId!, name: name, phone: phoneNo, car: car, otpToken: otpToken);
+      if (!verified) {
+        phone = phoneNo;
+        await store.write(_kPhone, phoneNo);
+      }
+      busy = false;
+      notifyListeners();
+      await loadProfile();
+      await refreshInbox();
+      return null;
+    } on ApiException catch (e) {
+      busy = false;
+      if (e.status == 401) await _dropOtp();
+      notifyListeners();
+      return e.message;
+    }
   }
 
   Future<void> refreshInfo() async {
@@ -177,6 +237,8 @@ class AppState extends ChangeNotifier {
   Future<void> _dropOtp() async {
     otpToken = null;
     profile = Profile.empty;
+    notices = const [];
+    chats = const [];
     await store.delete(_kToken);
   }
 

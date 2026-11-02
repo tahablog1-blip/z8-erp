@@ -88,6 +88,31 @@ class ChatMessage {
         id: _s(j['id']), fromCustomer: _s(j['sender_type']) == 'customer', text: _s(j['message']), at: DateTime.tryParse(_s(j['created_at']))?.toLocal());
 }
 
+/// إشعار في صندوق الجرس
+class AppNotice {
+  const AppNotice({required this.id, required this.kind, required this.title, required this.body, required this.meta, required this.refId, required this.at, required this.read});
+  final String id, kind, title, body, meta;
+  final String? refId;       // رقم الزيارة (للمحادثة/الدور)
+  final DateTime? at;
+  final bool read;
+  factory AppNotice.fromJson(Map<String, dynamic> j) => AppNotice(
+        id: _s(j['id']), kind: _s(j['kind']), title: _s(j['title']), body: _s(j['body']), meta: _s(j['meta']),
+        refId: j['refId'] == null ? null : _s(j['refId']), at: DateTime.tryParse(_s(j['at']))?.toLocal(), read: j['read'] == true);
+}
+
+/// محادثة بين العميل وفرع بخصوص زيارة
+class ChatThread {
+  const ChatThread({required this.bookingId, required this.plate, required this.carLabel, required this.branchName, required this.lastMessage, required this.lastFromCustomer, required this.lastAt, required this.unread});
+  final String bookingId, plate, carLabel, branchName, lastMessage;
+  final bool lastFromCustomer;
+  final DateTime? lastAt;
+  final int unread;
+  factory ChatThread.fromJson(Map<String, dynamic> j) => ChatThread(
+        bookingId: _s(j['bookingId']), plate: _s(j['plate']), carLabel: _s(j['carLabel']), branchName: _s(j['branchName']),
+        lastMessage: _s(j['lastMessage']), lastFromCustomer: j['lastFromCustomer'] == true,
+        lastAt: DateTime.tryParse(_s(j['lastAt']))?.toLocal(), unread: j['unread'] is num ? (j['unread'] as num).toInt() : 0);
+}
+
 class ServiceNote {
   const ServiceNote({required this.number, required this.type, required this.title, required this.description});
   final String number, type, title, description;

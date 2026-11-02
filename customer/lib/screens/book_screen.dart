@@ -9,8 +9,9 @@ import 'services_screen.dart';
 
 /// حجز جديد: سيارة محفوظة بضغطة، أو سيارة جديدة بنموذج مختصر. يرجع true عند إنشاء الحجز.
 class BookScreen extends StatefulWidget {
-  const BookScreen({super.key, required this.state});
+  const BookScreen({super.key, required this.state, this.registerOnly = false});
   final AppState state;
+  final bool registerOnly;     // تسجيل سيارة جديدة في «سياراتي» بدون حجز دور
   @override
   State<BookScreen> createState() => _BookScreenState();
 }
@@ -40,7 +41,7 @@ class _BookScreenState extends State<BookScreen> {
     super.initState();
     name.text = s.profile.name;
     phone.text = s.phone;
-    newCar = s.profile.cars.isEmpty;
+    newCar = s.profile.cars.isEmpty || widget.registerOnly;
     if (s.profile.cars.isNotEmpty) picked = s.profile.cars.first;
     s.api.brands(s.branchId!).then((b) { if (mounted) setState(() => brands = b); }).catchError((_) {});
   }
@@ -58,6 +59,7 @@ class _BookScreenState extends State<BookScreen> {
   Future<void> _next() async {
     setState(() => err = null);
     final nav = Navigator.of(context);
+    if (widget.registerOnly) return _register();
     ServicesScreen screen;
     if (!newCar && picked != null) {
       final c = picked!;
@@ -92,14 +94,34 @@ class _BookScreenState extends State<BookScreen> {
     if (ok == true && mounted) nav.pop(true);
   }
 
+  /// تسجيل السيارة فقط: يحفظها في سياراتي ويرجع بدون اختيار خدمة
+  Future<void> _register() async {
+    final n = arabicDigitsToLatin(numbers.text.trim());
+    if (name.text.trim().length < 2) return setState(() => err = tr('اكتب اسمك'));
+    if (arabicDigitsToLatin(phone.text).replaceAll(RegExp(r'[^0-9]'), '').length < 9) return setState(() => err = tr('أدخل رقم جوال صحيح'));
+    if (n.isEmpty || letters.text.trim().length != 3) return setState(() => err = tr('أدخل أرقام اللوحة'));
+    if (brand.text.trim().isEmpty || model.text.trim().isEmpty || yr.isEmpty || fuel.isEmpty) return setState(() => err = tr('أكمل بيانات السيارة: الماركة والموديل والسنة ونوع الوقود'));
+    final nav = Navigator.of(context);
+    final e = await s.registerCar(
+      name: name.text.trim(), phoneNo: arabicDigitsToLatin(phone.text).trim(),
+      car: {
+        'plateLetters': letters.text.trim(), 'plateNumbers': n, 'brand': brand.text.trim(), 'carName': model.text.trim(), 'modelYear': yr,
+        'odometer': arabicDigitsToLatin(odo.text.trim()).isEmpty ? null : arabicDigitsToLatin(odo.text.trim()),
+        'fuelType': fuel, 'cylinders': cyl.isEmpty ? null : cyl, 'engineSize': eng.isEmpty ? null : eng,
+      });
+    if (!mounted) return;
+    if (e != null) return setState(() => err = e);
+    nav.pop(true);
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
         listenable: s,
         builder: (context, _) => Scaffold(
-          appBar: AppBar(title: Text(tr('حجز جديد'), style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
+          appBar: AppBar(title: Text(widget.registerOnly ? tr('تسجيل سيارة جديدة') : tr('حجز جديد'), style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
           body: SafeArea(
             child: ListView(padding: const EdgeInsets.all(16), children: [
-              if (s.profile.cars.isNotEmpty) ...[
+              if (s.profile.cars.isNotEmpty && !widget.registerOnly) ...[
                 Text(tr('سياراتي'), style: tx(Fs.md, w: 900, color: Z8.petrolDeep)),
                 const SizedBox(height: 8),
                 for (final c in s.profile.cars)
@@ -196,7 +218,7 @@ class _BookScreenState extends State<BookScreen> {
               ],
               if (err != null) ...[const SizedBox(height: 16), ErrorBar(err!)],
               const SizedBox(height: 20),
-              Z8Button(tr('التالي: اختيار الخدمة'), onTap: _next),
+              Z8Button(widget.registerOnly ? tr('حفظ السيارة') : tr('التالي: اختيار الخدمة'), onTap: s.busy ? null : _next),
             ]),
           ),
         ),

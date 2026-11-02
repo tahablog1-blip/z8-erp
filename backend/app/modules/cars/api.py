@@ -6,7 +6,7 @@ from fastapi import HTTPException, APIRouter, Depends, Query, Request
 import asyncio as _aio
 from ...core.deps import CurrentUser, get_current_user, require_permission
 from ..auto_checkin import vision as _gate_vision  # القارئ الموحّد (Plate Recognizer + احتياطي كلود)
-from . import otp, service
+from . import notify_inbox, otp, service
 from ...core.db import fetchrow as _fetchrow
 from .schemas import BillingQueueRow, CarCreate, CarEdit, CarOut, ChecklistIn, LookupOut
 
@@ -611,6 +611,7 @@ class PublicBookingIn(_BM):
     items: list = []
     withFilter: bool | None = None
     fromInvoice: str | None = None
+    registerOnly: bool = False          # تسجيل السيارة في «سياراتي» بدون حجز دور
     customerNote: str | None = None     # مثل «زيت ماكينة من العميل (خارجي)» — يصل الموظف في ملاحظات السيارة
 
 
@@ -750,6 +751,52 @@ async def public_my_invoices(branch_id: str, body: PublicInvoicesIn):
          "odometer": r["odometer_current"], "plate": r["plate"],
          "carLabel": " ".join(x for x in [r["brand"], r["name"], r["model_year"]] if x) or None,
          "items": items.get(str(r["id"]), [])} for r in rows]}
+
+
+class PublicIdentityIn(_BM):
+    phone: str = ""
+    otpToken: str | None = None
+
+
+class PublicReadIn(PublicIdentityIn):
+    ids: list[str] | None = None        # فارغ = تعليم الكل كمقروء
+
+
+async def _public_customer(branch_id: str, body: PublicIdentityIn):
+    """هوية العميل في مسارات التطبيق: OTP موثّق لو مفعّل، وإلا الجوال. يرجع (company_id, العميل أو None)."""
+    company_id = await _branch_company(branch_id)
+    if await otp.otp_enabled(company_id):
+        return company_id, await otp.customer_for_claims(company_id, otp.read_token(body.otpToken, company_id))
+    phone = otp.normalize_phone(body.phone)
+    if not phone:
+        raise HTTPException(422, "أدخل رقم جوال صحيح")
+    return company_id, await _fetchrow(
+        "SELECT id, name, phone, email FROM customers WHERE company_id=$1 AND phone = ANY($2::text[]) LIMIT 1",
+        company_id, otp.phone_variants(phone))
+
+
+@router.post("/public/booking/{branch_id}/notifications")
+async def public_notifications(branch_id: str, body: PublicIdentityIn):
+    """إشعارات العميل (زر الجرس): تسجيل سيارة، حجز، دخول/انتهاء الخدمة، رسائل الفرع، قرب موعد التغيير."""
+    company_id, cust = await _public_customer(branch_id, body)
+    if not cust:
+        return {"items": [], "unread": 0}
+    return await notify_inbox.list_for(company_id, cust["id"])
+
+
+@router.post("/public/booking/{branch_id}/notifications/read")
+async def public_notifications_read(branch_id: str, body: PublicReadIn):
+    company_id, cust = await _public_customer(branch_id, body)
+    if cust:
+        await notify_inbox.mark_read(company_id, cust["id"], body.ids)
+    return {"ok": True}
+
+
+@router.post("/public/booking/{branch_id}/chats")
+async def public_chats(branch_id: str, body: PublicIdentityIn):
+    """قائمة محادثات العميل مع الفروع (آخر رسالة + غير المقروء)."""
+    company_id, cust = await _public_customer(branch_id, body)
+    return {"chats": await notify_inbox.chats_for(company_id, cust["id"]) if cust else []}
 
 
 @router.get("/public/booking-status/{car_id}")
