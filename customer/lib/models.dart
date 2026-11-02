@@ -40,13 +40,15 @@ class BranchInfo {
 }
 
 class SavedCar {
-  const SavedCar({required this.id, required this.plate, required this.brand, required this.name, required this.year, required this.serviceType, this.cylinders = '', this.engineSize = ''});
-  final String id, plate, brand, name, year, serviceType, cylinders, engineSize;
+  const SavedCar({required this.id, required this.plate, required this.brand, required this.name, required this.year, required this.serviceType, this.cylinders = '', this.engineSize = '', this.fuel = '', this.color = '', this.chassis = '', this.lastOdometer});
+  final String id, plate, brand, name, year, serviceType, cylinders, engineSize, fuel, color, chassis;
+  final int? lastOdometer;      // آخر ممشى سُجّل لها في زيارة
   String get title => [brand, name].where((e) => e.isNotEmpty).join(' ');
   factory SavedCar.fromJson(Map<String, dynamic> j) => SavedCar(
         id: _s(j['id']), plate: _s(j['plate']), brand: _s(j['brand']), name: _s(j['name']), year: _s(j['model_year']),
         serviceType: _s(j['service_type']).isEmpty ? 'basic' : _s(j['service_type']),
-        cylinders: _s(j['cylinders']), engineSize: _s(j['engine_size']));
+        cylinders: _s(j['cylinders']), engineSize: _s(j['engine_size']), fuel: _s(j['fuel_type']), color: _s(j['color']), chassis: _s(j['chassis_number']),
+        lastOdometer: j['last_odometer'] is num ? (j['last_odometer'] as num).toInt() : null);
 }
 
 class Profile {

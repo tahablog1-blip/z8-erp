@@ -95,17 +95,18 @@ String arabicDigitsToLatin(String s) {
 
 
 /// ورقة اختيار من قائمة (مع بحث لو القائمة طويلة). ترجع القيمة المختارة أو null.
-Future<String?> showPickSheet(BuildContext context, {required String title, required List<String> options, String? current, String? clearLabel}) {
+Future<String?> showPickSheet(BuildContext context, {required String title, required List<String> options, String? current, String? clearLabel, Widget Function(String)? leading}) {
   return showModalBottomSheet<String>(
     context: context, backgroundColor: Z8.ink2, isScrollControlled: true, shape: const RoundedRectangleBorder(),
-    builder: (_) => _PickSheet(title: title, options: options, current: current, clearLabel: clearLabel),
+    builder: (_) => _PickSheet(title: title, options: options, current: current, clearLabel: clearLabel, leading: leading),
   );
 }
 
 const _clearSentinel = '\u0000clear';
 
 class _PickSheet extends StatefulWidget {
-  const _PickSheet({required this.title, required this.options, this.current, this.clearLabel});
+  const _PickSheet({required this.title, required this.options, this.current, this.clearLabel, this.leading});
+  final Widget Function(String)? leading;
   final String title;
   final List<String> options;
   final String? current, clearLabel;
@@ -141,6 +142,7 @@ class _PickSheetState extends State<_PickSheet> {
                 ListTile(title: Text(widget.clearLabel!, style: tx(Fs.md, w: 700, color: Z8.textDim)), onTap: () => Navigator.pop(context, _clearSentinel)),
               for (final o in shown)
                 ListTile(
+                  leading: widget.leading?.call(o),
                   title: Text(o, style: tx(Fs.md, w: o == widget.current ? 900 : 600, color: o == widget.current ? Z8.petrol : Z8.text)),
                   trailing: o == widget.current ? const Icon(Icons.check, color: Z8.petrol) : null,
                   onTap: () => Navigator.pop(context, o),
@@ -155,7 +157,9 @@ class _PickSheetState extends State<_PickSheet> {
 
 /// حقل بقائمة اختيار فقط (لا كتابة): السنة وحجم الماكينة. القيمة الفارغة = غير محدد.
 class Z8Choice extends StatelessWidget {
-  const Z8Choice({super.key, required this.label, required this.value, required this.options, required this.onChanged, this.hint = '', this.clearLabel});
+  const Z8Choice({super.key, required this.label, required this.value, required this.options, required this.onChanged, this.hint = '', this.clearLabel, this.leading, this.enabled = true});
+  final Widget Function(String)? leading;
+  final bool enabled;
   final String label, value, hint;
   final List<String> options;
   final ValueChanged<String> onChanged;
@@ -165,14 +169,17 @@ class Z8Choice extends StatelessWidget {
         Text(label, style: tx(Fs.xs, w: 800, color: Z8.petrolDeep)),
         const SizedBox(height: 4),
         InkWell(
-          onTap: () async {
-            final v = await showPickSheet(context, title: label, options: options, current: value.isEmpty ? null : value, clearLabel: clearLabel);
+          onTap: !enabled ? null : () async {
+            final v = await showPickSheet(context, title: label, options: options, current: value.isEmpty ? null : value, clearLabel: clearLabel, leading: leading);
             if (v == null) return;
             onChanged(v == _clearSentinel ? '' : v);
           },
           child: InputDecorator(
             decoration: const InputDecoration(suffixIcon: Icon(Icons.arrow_drop_down)),
-            child: Text(value.isEmpty ? hint : value, style: tx(Fs.md, w: 700, color: value.isEmpty ? Z8.textDim : Z8.text)),
+            child: Row(children: [
+              if (value.isNotEmpty && leading != null) ...[leading!(value), const SizedBox(width: 8)],
+              Expanded(child: Text(value.isEmpty ? hint : value, overflow: TextOverflow.ellipsis, style: tx(Fs.md, w: 700, color: value.isEmpty ? Z8.textDim : Z8.text))),
+            ]),
           ),
         ),
       ]);
@@ -210,4 +217,89 @@ class Z8Combo extends StatelessWidget {
           ),
         ),
       ]);
+}
+
+
+/// تحكم عام بالحركات المستمرة (تُوقَف في الاختبارات حتى لا تمنع استقرار الشاشة)
+class Motion {
+  static bool enabled = true;
+}
+
+/// نقطة نابضة للدلالة على حالة حيّة
+class PulseDot extends StatefulWidget {
+  const PulseDot({super.key, required this.color, this.size = 12});
+  final Color color;
+  final double size;
+  @override
+  State<PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<PulseDot> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+  @override
+  void initState() {
+    super.initState();
+    if (Motion.enabled) _c.repeat();
+  }
+
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: widget.size * 2.2, height: widget.size * 2.2,
+        child: AnimatedBuilder(
+          animation: _c,
+          builder: (_, _) => Stack(alignment: Alignment.center, children: [
+            Container(
+              width: widget.size * (1 + 1.2 * _c.value), height: widget.size * (1 + 1.2 * _c.value),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: widget.color.withValues(alpha: .35 * (1 - _c.value))),
+            ),
+            Container(width: widget.size, height: widget.size, decoration: BoxDecoration(shape: BoxShape.circle, color: widget.color)),
+          ]),
+        ),
+      );
+}
+
+/// سيارة صغيرة تعبر طريقاً متحركاً — للحجز الجاري
+class DrivingCar extends StatefulWidget {
+  const DrivingCar({super.key, required this.color});
+  final Color color;
+  @override
+  State<DrivingCar> createState() => _DrivingCarState();
+}
+
+class _DrivingCarState extends State<DrivingCar> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 4));
+  @override
+  void initState() {
+    super.initState();
+    if (Motion.enabled) _c.repeat();
+  }
+
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    return SizedBox(
+      height: 30,
+      child: LayoutBuilder(
+        builder: (_, box) => AnimatedBuilder(
+          animation: _c,
+          builder: (_, _) {
+            final x = (box.maxWidth + 30) * _c.value - 30;
+            return Stack(children: [
+              Positioned(left: 0, right: 0, bottom: 2, child: Container(height: 2, color: Z8.line)),
+              PositionedDirectional(
+                start: x, bottom: 4,
+                child: Transform.flip(flipX: rtl, child: Icon(Icons.directions_car_filled, size: 24, color: widget.color)),
+              ),
+            ]);
+          },
+        ),
+      ),
+    );
+  }
 }

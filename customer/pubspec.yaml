@@ -27,6 +27,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/car_brands/
   fonts:
     - family: Cairo
       fonts:

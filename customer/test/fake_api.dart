@@ -47,7 +47,7 @@ class FakeApi implements CustomerApi {
   Map<String, dynamic> _profile() => {
         'found': true,
         'customer': {'id': 'c1', 'name': 'أحمد', 'phone': '0500000000'},
-        'cars': [{'id': 'car-1', 'plate': '1234 ABC', 'brand': 'تويوتا', 'name': 'كامري', 'model_year': '2020', 'service_type': 'basic'}],
+        'cars': [{'id': 'car-1', 'plate': '1234 ABC', 'brand': 'تويوتا', 'name': 'كامري', 'model_year': '2020', 'service_type': 'basic', 'fuel_type': 'بنزين', 'cylinders': '4', 'engine_size': '2.5', 'color': 'أبيض', 'last_odometer': 80000}],
       };
 
   @override

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../core/api.dart';
+import '../core/car_brands.dart';
 import '../core/i18n.dart';
 import '../core/theme.dart';
 import '../core/widgets.dart';
 import '../models.dart';
 import '../state/app_state.dart';
+import 'cars_screen.dart';
 import 'services_screen.dart';
 
 /// حجز جديد: سيارة محفوظة بضغطة، أو سيارة جديدة بنموذج مختصر. يرجع true عند إنشاء الحجز.
@@ -129,17 +131,7 @@ class _BookScreenState extends State<BookScreen> {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: InkWell(
                       onTap: () => setState(() { picked = c; newCar = false; }),
-                      child: Panel(
-                        color: !newCar && picked?.id == c.id ? Z8.petrolSoft : null,
-                        child: Row(children: [
-                          Icon(!newCar && picked?.id == c.id ? Icons.radio_button_checked : Icons.radio_button_off, color: Z8.petrol),
-                          const SizedBox(width: 12),
-                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(c.title.isEmpty ? tr('سيارة') : c.title, style: tx(Fs.md, w: 800)),
-                            Text('${c.plate}${c.year.isEmpty ? '' : ' · ${c.year}'}', style: tx(Fs.sm, color: Z8.textDim)),
-                          ])),
-                        ]),
-                      ),
+                      child: CarCard(c, selected: !newCar && picked?.id == c.id),
                     ),
                   ),
                 InkWell(
@@ -170,19 +162,20 @@ class _BookScreenState extends State<BookScreen> {
                   Expanded(child: Z8Field(label: tr('حروف اللوحة'), controller: letters, maxLength: 4)),
                 ]),
                 const SizedBox(height: 12),
-                Z8Combo(label: tr('الماركة'), controller: brand, options: brands, hint: tr('اختر الماركة (مثل تويوتا)'),
-                    onPicked: (v) { model.clear(); setState(() => models = const []); _loadModels(v); },
-                    // الكتابة الحرة: لو طابق النص ماركة معروفة نحمّل موديلاتها، وإلا تُفرَّغ قائمة الموديلات
-                    onChanged: (v) {
-                      final t = v.trim();
-                      if (brands.contains(t)) {
-                        _loadModels(t);
-                      } else if (models.isNotEmpty) {
-                        setState(() => models = const []);
-                      }
-                    }),
+                Z8Choice(
+                  label: tr('الماركة'), value: brand.text, options: brands, hint: tr('اختر الماركة (مثل تويوتا)'),
+                  leading: (b) => CarBrandLogo(b, size: 28),
+                  onChanged: (v) {
+                    setState(() { brand.text = v; model.clear(); models = const []; });
+                    if (v.isNotEmpty) _loadModels(v);
+                  },
+                ),
                 const SizedBox(height: 12),
-                Z8Combo(label: tr('الموديل'), controller: model, options: models, hint: brand.text.trim().isEmpty ? tr('اختر الماركة أولاً') : tr('اختر الموديل (مثل كامري)')),
+                Z8Choice(
+                  label: tr('الموديل'), value: model.text, options: models, enabled: brand.text.trim().isNotEmpty,
+                  hint: brand.text.trim().isEmpty ? tr('اختر الماركة أولاً') : tr('اختر الموديل (مثل كامري)'),
+                  onChanged: (v) => setState(() => model.text = v),
+                ),
                 const SizedBox(height: 12),
                 Row(children: [
                   Expanded(child: Z8Choice(label: tr('سنة الصنع'), value: yr, options: yearOptions(), hint: tr('اختر السنة'), onChanged: (v) => setState(() => yr = v))),
@@ -190,28 +183,16 @@ class _BookScreenState extends State<BookScreen> {
                   Expanded(child: Z8Field(label: tr('قراءة العداد'), controller: odo, keyboard: TextInputType.number, ltr: true, maxLength: 7)),
                 ]),
                 const SizedBox(height: 12),
-                Text(tr('نوع الوقود'), style: tx(Fs.xs, w: 800, color: Z8.petrolDeep)),
-                const SizedBox(height: 6),
-                Wrap(spacing: 8, runSpacing: 8, children: [
-                  for (final f in fuelTypes)
-                    ChoiceChip(
-                      label: Text(tr(f), style: tx(Fs.sm, w: 700, color: fuel == f ? Colors.white : Z8.text)),
-                      selected: fuel == f, selectedColor: Z8.petrol, backgroundColor: Z8.ink2, showCheckmark: false,
-                      shape: const RoundedRectangleBorder(side: BorderSide(color: Z8.line)),
-                      onSelected: (_) => setState(() => fuel = fuel == f ? '' : f),
-                    ),
-                ]),
-                const SizedBox(height: 12),
-                Text(tr('عدد السلندرات (يحدد فلتر الزيت المناسب لمحركك)'), style: tx(Fs.xs, w: 800, color: Z8.petrolDeep)),
-                const SizedBox(height: 6),
-                Wrap(spacing: 8, runSpacing: 8, children: [
-                  for (final c in cylinderOptions)
-                    ChoiceChip(
-                      label: Text(tr('{0} سلندر', [c]), style: tx(Fs.sm, w: 700, color: cyl == c ? Colors.white : Z8.text)),
-                      selected: cyl == c, selectedColor: Z8.petrol, backgroundColor: Z8.ink2, showCheckmark: false,
-                      shape: const RoundedRectangleBorder(side: BorderSide(color: Z8.line)),
-                      onSelected: (_) => setState(() => cyl = cyl == c ? '' : c),
-                    ),
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(child: Z8Choice(
+                    label: tr('نوع الوقود'), value: fuel.isEmpty ? '' : tr(fuel), options: [for (final f in fuelTypes) tr(f)], hint: tr('اختر نوع الوقود'),
+                    onChanged: (v) => setState(() => fuel = fuelTypes.firstWhere((f) => tr(f) == v, orElse: () => '')),
+                  )),
+                  const SizedBox(width: 12),
+                  Expanded(child: Z8Choice(
+                    label: tr('عدد السلندرات'), value: cyl, options: cylinderOptions, hint: tr('اختر العدد'), clearLabel: tr('غير محدد'),
+                    onChanged: (v) => setState(() => cyl = v),
+                  )),
                 ]),
                 const SizedBox(height: 12),
                 Z8Choice(label: tr('حجم الماكينة (لتر) — اختياري'), value: eng, options: engineSizes, hint: tr('اختر حجم الماكينة'), clearLabel: tr('غير محدد'), onChanged: (v) => setState(() => eng = v)),

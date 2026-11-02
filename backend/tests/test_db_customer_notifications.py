@@ -122,3 +122,12 @@ def test_register_only_then_booking_notify(world):
     assert r.status_code == 201, r.text
     kinds = sorted(i["kind"] for i in call(f"{base}/notifications", {"phone": "0500000001"}).json()["items"])
     assert kinds == ["booking", "car_registered"]   # السيارة سُجّلت سابقاً فلا إشعار تسجيل ثانٍ
+
+
+def test_lookup_cars_carry_fuel_and_last_odometer(world):
+    base = f"/api/cars/public/booking/{world['br']}"
+    car = {"plateNumbers": "7777", "plateLetters": "KSA", "brand": "تويوتا", "carName": "كامري", "modelYear": "2020", "fuelType": "بنزين"}
+    call(base, {"name": "أحمد", "phone": "0500000001", "car": {**car, "odometer": "5000"}})
+    r = call(f"{base}/lookup", {"phone": "0500000001"}).json()
+    c = r["cars"][0]
+    assert c["fuel_type"] == "بنزين" and c["last_odometer"] == 5000

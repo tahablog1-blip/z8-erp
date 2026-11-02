@@ -1207,6 +1207,18 @@ async def _upsert_garage(company_id: str, customer_id: str, plate: str, car: dic
         car.get("color"), car.get("chassisNumber"), service_type)
 
 
+async def _garage_rows(customer_id):
+    """سيارات العميل مع آخر ممشى سُجّل لها في الزيارات (last_odometer)"""
+    return await fetch(
+        """SELECT cc.id, cc.plate, cc.brand, cc.name, cc.model_year, cc.fuel_type, cc.car_category, cc.cylinders,
+                  cc.engine_size, cc.color, cc.chassis_number, cc.service_type,
+                  (SELECT v.odometer_current FROM cars v
+                    WHERE v.customer_id = cc.customer_id AND v.is_deleted = FALSE AND v.odometer_current > 1
+                      AND UPPER(REPLACE(COALESCE(v.plate,''),' ','')) = UPPER(REPLACE(cc.plate,' ',''))
+                    ORDER BY v.created_at DESC LIMIT 1) AS last_odometer
+           FROM customer_cars cc WHERE cc.customer_id=$1 ORDER BY cc.created_at DESC""", customer_id)
+
+
 async def public_lookup(branch_id: str, phone: str, plate: str | None = None,
                         customer_id: str | None = None) -> dict:
     """استرجاع ملف العميل وسياراته بالجوال أو بلوحة أي سيارة له — بياناته ما بتضيعش أبداً"""
@@ -1247,10 +1259,7 @@ async def public_lookup(branch_id: str, phone: str, plate: str | None = None,
                    FROM customers WHERE id=$1""", via["customer_id"])
     if not cust:
         return {"found": False}
-    cars_rows = await fetch(
-        """SELECT id, plate, brand, name, model_year, car_category, cylinders, engine_size,
-                  color, chassis_number, service_type
-           FROM customer_cars WHERE customer_id=$1 ORDER BY created_at DESC""", cust["id"])
+    cars_rows = await _garage_rows(cust["id"])
     # سيارات من تاريخ الزيارات مش متسجلة في الكراج؟ نكملها تلقائياً
     if not cars_rows:
         hist = await fetch(
@@ -1260,10 +1269,7 @@ async def public_lookup(branch_id: str, phone: str, plate: str | None = None,
         for h in hist:
             await _upsert_garage(br["company_id"], str(cust["id"]), h["plate"],
                                  {"brand": h["brand"], "carName": h["name"], "modelYear": h["model_year"], "fuelType": h["fuel_type"]}, "basic")
-        cars_rows = await fetch(
-            """SELECT id, plate, brand, name, model_year, fuel_type, car_category, cylinders, engine_size,
-                      color, chassis_number, service_type
-               FROM customer_cars WHERE customer_id=$1 ORDER BY created_at DESC""", cust["id"])
+        cars_rows = await _garage_rows(cust["id"])
     return {
         "found": True,
         "customer": {**{k: cust[k] for k in cust.keys()}, "id": str(cust["id"])},

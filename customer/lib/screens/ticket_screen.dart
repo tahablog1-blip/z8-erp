@@ -61,18 +61,22 @@ class TicketCard extends StatelessWidget {
       BookingState.inService => (tr('سيارتك الآن في الخدمة'), Z8.emerald, Z8.emeraldBg),
       BookingState.done => (tr('تمت الخدمة — شكراً لك'), Z8.petrol, Z8.petrolSoft),
     };
-    return Panel(
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: Motion.enabled ? 0 : 1, end: 1), duration: const Duration(milliseconds: 450), curve: Curves.easeOutCubic,
+      builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, 14 * (1 - v)), child: child)),
+      child: Panel(
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           color: bg,
           child: Row(children: [
-            Icon(b.state == BookingState.done ? Icons.check_circle : Icons.circle, size: 12, color: color),
+            if (b.state == BookingState.done) Icon(Icons.check_circle, size: 14, color: color) else PulseDot(color: color, size: 9),
             const SizedBox(width: 8),
             Expanded(child: Text(label, style: tx(Fs.md, w: 900, color: Z8.text))),
           ]),
         ),
-        const SizedBox(height: 16),
+        if (b.state != BookingState.done) ...[const SizedBox(height: 10), DrivingCar(color: color)],
+        const SizedBox(height: 10),
         Text(b.branchName, style: tx(Fs.sm, w: 700, color: Z8.textDim)),
         const SizedBox(height: 4),
         Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -94,7 +98,7 @@ class TicketCard extends StatelessWidget {
           _Stat(tr('الموقع'), b.station!, ''),
         ],
       ]),
-    );
+    ));
   }
 }
 

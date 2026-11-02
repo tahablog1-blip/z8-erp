@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:z8_customer/app.dart';
 import 'package:z8_customer/core/brand.dart';
+import 'package:z8_customer/core/car_brands.dart';
 import 'package:z8_customer/core/geo.dart';
 import 'package:z8_customer/core/i18n.dart';
 import 'package:z8_customer/core/store.dart';
+import 'package:z8_customer/core/widgets.dart';
 import 'package:z8_customer/state/app_state.dart';
 import 'fake_api.dart';
 
@@ -22,6 +24,7 @@ Future<(AppState, FakeApi)> boot(WidgetTester t, {bool otp = true, Map<String, S
 }
 
 void main() {
+  Motion.enabled = false;   // الحركات المستمرة تمنع استقرار الشاشة في الاختبار
   test('المسافة ووقت الوصول: Haversine وتقدير القيادة', () {
     final km = haversineKm(const LatLng(24.7136, 46.6753), const LatLng(21.4858, 39.1925)); // الرياض ← جدة تقريباً 850 كم
     expect(km, inInclusiveRange(820, 880));
@@ -382,6 +385,18 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
+  /// يفتح قائمة منسدلة بنص الحقل الظاهر ثم يختار منها (الكتابة في الماركة/الموديل ممنوعة)
+  Future<void> pick(WidgetTester t, String hint, String option) async {
+    await t.ensureVisible(find.text(hint));
+    await t.pumpAndSettle();
+    await t.tap(find.text(hint));
+    await t.pumpAndSettle();
+    final opt = find.descendant(of: find.byType(ListTile), matching: find.text(option));
+    if (opt.evaluate().isEmpty) await t.scrollUntilVisible(opt, 300, scrollable: find.byType(Scrollable).last);
+    await t.tap(opt.first);
+    await t.pumpAndSettle();
+  }
+
   Future<FakeApi> toServicesWithNewCar(WidgetTester t, String brandName) async {
     final (_, api) = await boot(t, otp: false, seed: {'branch': branch});
     await t.tap(find.text('حجز جديد'));
@@ -392,17 +407,8 @@ void main() {
     await t.enterText(fields.at(0), 'سالم');
     await t.enterText(fields.at(1), '0555555555');
     await t.enterText(fields.at(2), '1234');
-    await t.ensureVisible(fields.at(4));
-    await t.tap(find.byIcon(Icons.arrow_drop_down).first);                                           // الماركة (قائمة اقتراحات)
-    await t.pumpAndSettle();
-    await t.tap(find.text(brandName).last);
-    await t.pumpAndSettle();
-    await t.ensureVisible(fields.at(5));
-    await t.pumpAndSettle();
-    await t.tap(find.byIcon(Icons.arrow_drop_down).at(1));                                           // الموديل
-    await t.pumpAndSettle();
-    await t.tap(find.text('كامري').last);
-    await t.pumpAndSettle();
+    await pick(t, 'اختر الماركة (مثل تويوتا)', brandName);
+    await pick(t, 'اختر الموديل (مثل كامري)', 'كامري');
     await t.ensureVisible(find.text('اختر السنة'));
     await t.pumpAndSettle();
     await t.tap(find.text('اختر السنة'));
@@ -445,17 +451,8 @@ void main() {
     await t.enterText(fields.at(0), 'سالم');
     await t.enterText(fields.at(1), '0555555555');
     await t.enterText(fields.at(2), '1234');
-    await t.ensureVisible(fields.at(4));
-    await t.tap(find.byIcon(Icons.arrow_drop_down).first);
-    await t.pumpAndSettle();
-    await t.tap(find.text('هيونداي').last);
-    await t.pumpAndSettle();
-    await t.ensureVisible(fields.at(5));
-    await t.pumpAndSettle();
-    await t.tap(find.byIcon(Icons.arrow_drop_down).at(1));
-    await t.pumpAndSettle();
-    await t.tap(find.text('كامري').last);
-    await t.pumpAndSettle();
+    await pick(t, 'اختر الماركة (مثل تويوتا)', 'هيونداي');
+    await pick(t, 'اختر الموديل (مثل كامري)', 'كامري');
     await t.ensureVisible(find.text('اختر السنة'));
     await t.pumpAndSettle();
     await t.tap(find.text('اختر السنة'));
@@ -463,10 +460,7 @@ void main() {
     await t.scrollUntilVisible(find.text('2020'), 300, scrollable: find.byType(Scrollable).last);
     await t.tap(find.text('2020'));
     await t.pumpAndSettle();
-    await t.scrollUntilVisible(find.text('4 سلندر'), 200, scrollable: find.byType(Scrollable).first);
-    await t.pumpAndSettle();
-    await t.tap(find.text('4 سلندر'));
-    await t.pumpAndSettle();
+    await pick(t, 'اختر العدد', '4');
     await t.scrollUntilVisible(find.text('التالي: اختيار الخدمة'), 200, scrollable: find.byType(Scrollable).first);
     await t.tap(find.text('التالي: اختيار الخدمة'));
     await t.pumpAndSettle();
@@ -483,7 +477,7 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('الماركة من القائمة قابلة للتعديل بالكتابة، والسنة وحجم الماكينة من قوائم، ويُرسل الحجم للمطابقة', (t) async {
+  testWidgets('الماركة والموديل من قوائم منسدلة فقط (لا كتابة)، والسنة وحجم الماكينة من قوائم، ويُرسل الحجم للمطابقة', (t) async {
     final (_, api) = await boot(t, otp: false, seed: {'branch': branch});
     await t.tap(find.text('حجز جديد'));
     await t.pumpAndSettle();
@@ -493,20 +487,10 @@ void main() {
     await t.enterText(fields.at(0), 'سالم');
     await t.enterText(fields.at(1), '0555555555');
     await t.enterText(fields.at(2), '1234');
-    await t.tap(find.byIcon(Icons.arrow_drop_down).first);
-    await t.pumpAndSettle();
-    await t.tap(find.text('هيونداي').last);                              // اختيار من القائمة
-    await t.pumpAndSettle();
-    expect(t.widget<TextField>(fields.at(4)).controller!.text, 'هيونداي');
-    await t.enterText(fields.at(4), 'هيونداي إكسنت');                     // ثم تعديل النص بحرية
-    await t.pumpAndSettle();
-    expect(t.widget<TextField>(fields.at(4)).controller!.text, 'هيونداي إكسنت');
-    await t.enterText(fields.at(4), 'هيونداي');
-    await t.pumpAndSettle();
-    await t.tap(find.byIcon(Icons.arrow_drop_down).at(1));
-    await t.pumpAndSettle();
-    await t.tap(find.text('كامري').last);
-    await t.pumpAndSettle();
+    expect(fields, findsNWidgets(5));                                     // اسم، جوال، أرقام، حروف، عداد — لا حقل ماركة/موديل
+    await pick(t, 'اختر الماركة (مثل تويوتا)', 'هيونداي');
+    expect(find.text('هيونداي'), findsOneWidget);
+    await pick(t, 'اختر الموديل (مثل كامري)', 'كامري');
     await t.tap(find.text('اختر السنة'));
     await t.pumpAndSettle();
     await t.scrollUntilVisible(find.text('2020'), 300, scrollable: find.byType(Scrollable).last);
@@ -519,9 +503,7 @@ void main() {
     await t.scrollUntilVisible(find.text('2.5'), 300, scrollable: find.byType(Scrollable).last);
     await t.tap(find.text('2.5'));
     await t.pumpAndSettle();
-    await t.scrollUntilVisible(find.text('4 سلندر'), 200, scrollable: find.byType(Scrollable).first);
-    await t.tap(find.text('4 سلندر'));
-    await t.pumpAndSettle();
+    await pick(t, 'اختر العدد', '4');
     await t.scrollUntilVisible(find.text('التالي: اختيار الخدمة'), 200, scrollable: find.byType(Scrollable).first);
     await t.tap(find.text('التالي: اختيار الخدمة'));
     await t.pumpAndSettle();
@@ -611,11 +593,11 @@ void main() {
     await boot(t, otp: false, seed: {'branch': branch});
     await t.tap(find.text('حجز جديد'));
     await t.pumpAndSettle();
-    expect(find.text('ديزل'), findsOneWidget);
-    expect(find.text('بنزين'), findsOneWidget);
-    expect(find.text('هايبرد'), findsOneWidget);
-    expect(find.textContaining('بنزين 9'), findsNothing);
-    expect(find.text('كهرباء'), findsNothing);
+    await t.ensureVisible(find.text('اختر نوع الوقود'));
+    await t.tap(find.text('اختر نوع الوقود'));
+    await t.pumpAndSettle();
+    final opts = find.descendant(of: find.byType(ListTile), matching: find.byType(Text));
+    expect([for (final w in opts.evaluate()) (w.widget as Text).data], ['ديزل', 'بنزين', 'هايبرد']);
     await t.pumpWidget(const SizedBox());
   });
 
@@ -698,6 +680,34 @@ void main() {
     final e = await state.registerCar(name: 'أحمد', phoneNo: '0500000000', car: {'plateNumbers': '7777', 'plateLetters': 'KSA', 'brand': 'تويوتا', 'carName': 'كامري'});
     expect(e, isNull);
     expect(api.registered.single['car']['plateNumbers'], '7777');
+    await t.pumpWidget(const SizedBox());
+  });
+
+  test('لوجو الماركة: أسماء عربية وإنجليزية وإملائيات مختلفة تصل لنفس الملف، والمجهول بلا لوجو', () {
+    expect(carBrandAsset('تويوتا'), 'assets/car_brands/toyota.png');
+    expect(carBrandAsset('Toyota'), 'assets/car_brands/toyota.png');
+    expect(carBrandAsset('شيفروليه'), 'assets/car_brands/chevrolet.png');
+    expect(carBrandAsset('مرسيدس'), 'assets/car_brands/mercedes-benz.png');
+    expect(carBrandAsset('ماركة غريبة'), isNull);
+  });
+
+  testWidgets('سياراتي: كارت لكل سيارة بالاسم واللوحة وآخر ممشى وباقي البيانات، وفي الحجز تُختار من الكروت', (t) async {
+    await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    await t.tap(find.text('سياراتي'));
+    await t.pumpAndSettle();
+    for (final x in ['تويوتا كامري', '1234 ABC', 'موديل 2020', 'بنزين', '4 سلندر', '2.5 L', 'أبيض', 'آخر قراءة عداد: 80000 كم']) {
+      expect(find.text(x), findsOneWidget, reason: x);
+    }
+    expect(find.byType(CarBrandLogo), findsOneWidget);
+    await t.tap(find.byType(BackButton));
+    await t.pumpAndSettle();
+    await t.tap(find.text('حجز جديد'));
+    await t.pumpAndSettle();
+    expect(find.text('1234 ABC'), findsOneWidget);                   // سيارته ظاهرة للاختيار
+    expect(find.text('آخر قراءة عداد: 80000 كم'), findsOneWidget);
+    await t.tap(find.text('التالي: اختيار الخدمة'));
+    await t.pumpAndSettle();
+    expect(find.text('اختر الخدمة'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });
 }
