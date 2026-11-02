@@ -102,3 +102,24 @@ def test_with_otp_enabled_phone_alone_is_not_enough(world, monkeypatch):
     assert r.status_code == 200 and [i["invoiceNo"] for i in r.json()["invoices"]] == ["B-1"]
     bad = jwt.encode({"typ": "booking", "cid": str(uuid.uuid4()), "ch": "phone", "sub": "0500000001", "exp": now + 600}, _token_key(), algorithm="HS256")
     assert post(world, {"otpToken": bad}).status_code == 401                        # توكن شركة أخرى
+
+
+def test_public_pdf_uses_official_invoice_generator(world, monkeypatch):
+    """فاتورة التطبيق = نفس فاتورة النظام (pdf_v2) لا المولّد المبسّط القديم"""
+    from app.modules.invoices import api as inv_api
+    from app.core import db
+
+    async def fake(company_id, invoice_id):
+        return b"%PDF-official"
+    monkeypatch.setattr(inv_api, "_invoice_pdf_bytes", fake)
+
+    async def ids():
+        async with db.pool().acquire() as c:
+            return str(await c.fetchval("SELECT id FROM invoices WHERE invoice_no='A-1'"))
+    iid = run(ids)
+
+    async def go():
+        async with client() as c:
+            return await c.get(f"/api/cars/public/booking-invoice-pdf/{iid}", params={"phone": "0500000001"})
+    r = run(go)
+    assert r.status_code == 200 and r.content == b"%PDF-official"
