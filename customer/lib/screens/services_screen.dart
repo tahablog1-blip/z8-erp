@@ -11,9 +11,9 @@ typedef SubmitBooking = Future<String?> Function(Map<String, dynamic>? selection
 
 /// اختيار الخدمات (يمكن الجمع بين أكثر من خدمة) والزيت والكمية لكل خدمة، ثم تأكيد الحجز.
 class ServicesScreen extends StatefulWidget {
-  const ServicesScreen({super.key, required this.state, required this.carTitle, required this.brand, required this.model, required this.year, required this.submit, this.askOdometer = false});
+  const ServicesScreen({super.key, required this.state, required this.carTitle, required this.brand, required this.model, required this.year, required this.submit, this.askOdometer = false, this.cylinders = '', this.engineSize = ''});
   final AppState state;
-  final String carTitle, brand, model, year;
+  final String carTitle, brand, model, year, cylinders, engineSize;
   final SubmitBooking submit;
   final bool askOdometer;
   @override
@@ -47,17 +47,34 @@ class _ServicesScreenState extends State<ServicesScreen> {
       final a = await s.api.autoService(b, brand: widget.brand, model: widget.model, year: widget.year);
       if (a != null) sel.autoService = OilProduct.fromJson({...a, 'spec': ''});
     } on ApiException catch (_) {}
-    if (widget.brand.isNotEmpty && widget.model.isNotEmpty) {
-      try {
-        final f = await s.api.filterMatch(b, brand: widget.brand, model: widget.model, year: widget.year);
-        if (f != null) {
-          sel.filter = OilProduct.fromJson(f);          // الأفضل (المتوفر أولاً)
-          final o = f['options'];
-          sel.filterOptions = o is List ? o.whereType<Map>().map((e) => OilProduct.fromJson(Map<String, dynamic>.from(e))).toList() : [sel.filter!];
-        }
-      } on ApiException catch (_) {}
-    }
+    await _loadFilter(widget.cylinders, widget.engineSize);
     if (mounted) setState(() => loading = false);
+  }
+
+  /// فلتر الزيت المطابق. محرك مجهول مع وجود أكثر من محرك مربوط: نسأل العميل ولا نعرض فلاتر محرك لم يخترْه
+  Future<void> _loadFilter(String? cylinders, String? engineSize, {String? chosenLabel}) async {
+    if (widget.brand.isEmpty || widget.model.isEmpty) return;
+    try {
+      final f = await s.api.filterMatch(s.branchId!, brand: widget.brand, model: widget.model, year: widget.year, cylinders: cylinders, engineSize: engineSize);
+      sel.filter = null;
+      sel.filterOptions = const [];
+      sel.engineUnknown = false;
+      sel.engineChosen = chosenLabel;
+      if (chosenLabel == null) sel.engineChoices = const [];   // بعد اختيار المحرك نُبقي الخيارات ليغيّره العميل
+      if (f != null) {
+        final e = f['engines'];
+        if (f['needsEngine'] == true && e is List) {
+          sel.engineChoices = e.whereType<Map>().map((x) => EngineChoice.fromJson(Map<String, dynamic>.from(x))).toList();
+        }
+        final o = f['options'];
+        final opts = o is List ? o.whereType<Map>().map((x) => OilProduct.fromJson(Map<String, dynamic>.from(x))).toList() : <OilProduct>[];
+        if (opts.isNotEmpty) {
+          sel.filterOptions = opts;
+          sel.filter = f['id'] != null ? OilProduct.fromJson(f) : opts.first;       // الأفضل (المتوفر أولاً)
+        }
+      }
+    } on ApiException catch (_) {}
+    sel.notify();
   }
 
   Future<void> _pickOil(ServiceKind k) async {
@@ -99,6 +116,39 @@ class _ServicesScreenState extends State<ServicesScreen> {
                         Text('الخدمات المطلوبة (يمكنك اختيار أكثر من خدمة)', style: tx(Fs.md, w: 900, color: Z8.petrolDeep)),
                         const SizedBox(height: 8),
                         for (final k in ServiceKind.values) _ServiceTile(k, sel, onPick: () => _pickOil(k)),
+                        // للموديل أكثر من محرك بفلاتر مختلفة: نسأل العميل بدل أن نعرض فلتر محرك آخر
+                        if (sel.has(ServiceKind.engine) && sel.engineChoices.isNotEmpty && !sel.engineUnknown) ...[
+                          const SizedBox(height: 4),
+                          Panel(
+                            color: Z8.brassSoft,
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text('لسيارتك أكثر من محرك — ما هو محرك سيارتك؟', style: tx(Fs.md, w: 900)),
+                              Text('لنعرض لك فلتر الزيت المناسب لمحركك بالضبط', style: tx(Fs.sm, color: Z8.textDim)),
+                              const SizedBox(height: 8),
+                              Wrap(spacing: 8, runSpacing: 8, children: [
+                                for (final c in sel.engineChoices)
+                                  ActionChip(
+                                    label: Text(c.label, style: tx(Fs.sm, w: 800)),
+                                    backgroundColor: sel.engineChosen == c.label ? Z8.petrolSoft : Z8.ink2,
+                                    shape: RoundedRectangleBorder(side: BorderSide(color: Z8.petrol, width: sel.engineChosen == c.label ? 2 : 1)),
+                                    onPressed: () => _loadFilter(c.cylinders, c.engineSize, chosenLabel: c.label),
+                                  ),
+                                ActionChip(
+                                  label: Text('لا أعرف', style: tx(Fs.sm, w: 800, color: Z8.textDim)),
+                                  backgroundColor: Z8.ink2, shape: const RoundedRectangleBorder(side: BorderSide(color: Z8.line)),
+                                  onPressed: sel.setEngineUnknown,
+                                ),
+                              ]),
+                            ]),
+                          ),
+                        ],
+                        if (sel.has(ServiceKind.engine) && sel.engineUnknown) ...[
+                          const SizedBox(height: 4),
+                          Panel(
+                            color: Z8.petrolSoft,
+                            child: Text('سيحدد الفني فلتر الزيت المناسب لمحرك سيارتك عند الفحص.', style: tx(Fs.sm, w: 700)),
+                          ),
+                        ],
                         if (sel.has(ServiceKind.engine) && sel.filter != null) ...[
                           const SizedBox(height: 4),
                           Panel(

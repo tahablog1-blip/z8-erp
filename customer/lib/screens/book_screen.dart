@@ -56,6 +56,7 @@ class _BookScreenState extends State<BookScreen> {
       final odometer = arabicDigitsToLatin(odo.text.trim()).isEmpty ? null : arabicDigitsToLatin(odo.text.trim());
       screen = ServicesScreen(
         state: s, carTitle: '${c.title.isEmpty ? 'سيارة' : c.title} · ${c.plate}', brand: c.brand, model: c.name, year: c.year,
+        cylinders: c.cylinders, engineSize: c.engineSize,
         submit: (selection, _) => s.bookSaved(c, odometer: odometer, selection: selection),
       );
     } else {

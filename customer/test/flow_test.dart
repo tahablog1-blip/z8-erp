@@ -323,6 +323,63 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
+  Future<FakeApi> toServicesWithNewCar(WidgetTester t, String brandName) async {
+    final (_, api) = await boot(t, otp: false, seed: {'branch': branch});
+    await t.tap(find.text('احجز دورك الآن'));
+    await t.pumpAndSettle();
+    final fields = find.byType(TextField);
+    await t.enterText(fields.at(0), 'سالم');
+    await t.enterText(fields.at(1), '0555555555');
+    await t.enterText(fields.at(2), '1234');
+    await t.ensureVisible(fields.at(4));
+    await t.tap(fields.at(4));                                           // الماركة (قائمة اقتراحات)
+    await t.pumpAndSettle();
+    await t.tap(find.text(brandName).last);
+    await t.pumpAndSettle();
+    await t.tap(fields.at(5));                                           // الموديل
+    await t.pumpAndSettle();
+    await t.tap(find.text('كامري').last);
+    await t.pumpAndSettle();
+    await t.enterText(fields.at(6), '2020');
+    await t.ensureVisible(find.text('التالي: اختيار الخدمة'));
+    await t.tap(find.text('التالي: اختيار الخدمة'));
+    await t.pumpAndSettle();
+    return api;
+  }
+
+  testWidgets('محرك مجهول والموديل له محركان: يسأل العميل ولا يعرض فلتر محرك لم يخترْه', (t) async {
+    final api = await toServicesWithNewCar(t, 'هيونداي');
+    await t.tap(find.text('تغيير زيت ماكينة'));
+    await t.pumpAndSettle();
+    expect(find.text('لسيارتك أكثر من محرك — ما هو محرك سيارتك؟'), findsOneWidget);
+    expect(find.text('مع تغيير فلتر الزيت'), findsNothing);              // لا فلتر قبل اختيار المحرك
+    expect(api.filterCalls, ['']);
+    await t.ensureVisible(find.text('4 سلندر'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('4 سلندر'));
+    await t.pumpAndSettle();
+    expect(api.filterCalls, ['', '4']);                                 // أُعيد الاستعلام بالمحرك المختار
+    expect(find.text('لسيارتك أكثر من محرك — ما هو محرك سيارتك؟'), findsOneWidget);
+    expect(find.text('مع تغيير فلتر الزيت'), findsOneWidget);
+    expect(find.textContaining('فلتر هيونداي 4 سلندر'), findsOneWidget);   // فلتر المحرك المختار فقط
+    expect(find.textContaining('6 سلندر'), findsOneWidget);               // خيار 6 سلندر ما زال متاحاً للتغيير
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('«لا أعرف» المحرك: لا فلتر، ورسالة أن الفني يحدده', (t) async {
+    await toServicesWithNewCar(t, 'هيونداي');
+    await t.tap(find.text('تغيير زيت ماكينة'));
+    await t.pumpAndSettle();
+    await t.ensureVisible(find.text('لا أعرف'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('لا أعرف'));
+    await t.pumpAndSettle();
+    expect(find.text('سيحدد الفني فلتر الزيت المناسب لمحرك سيارتك عند الفحص.'), findsOneWidget);
+    expect(find.text('مع تغيير فلتر الزيت'), findsNothing);
+    expect(find.text('لسيارتك أكثر من محرك — ما هو محرك سيارتك؟'), findsNothing);
+    await t.pumpWidget(const SizedBox());
+  });
+
   testWidgets('سيارة جديدة: نوع الوقود ثلاثة فقط (ديزل/بنزين/هايبرد)', (t) async {
     await boot(t, otp: false, seed: {'branch': branch});
     await t.tap(find.text('احجز دورك الآن'));

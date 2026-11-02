@@ -1538,7 +1538,7 @@ async def match_oil_filters(company_id: str, brand: str, model: str, year: str |
         order_sql = ", ".join(order_terms + [("(f.year_to - f.year_from) ASC" if year_known else "f.year_to DESC")])
         # أكثر من فلتر بنفس النوع مسموح (باركودات مختلفة): الأقرب مطابقةً أولاً، وبلا تكرار للصنف الواحد
         rows = await fetch(
-            f"""SELECT p.id, p.name, p.spec, p.price_vat,
+            f"""SELECT p.id, p.name, p.spec, p.price_vat, f.cylinders, f.engine_size,
                       (p.image_base64 IS NOT NULL AND p.image_base64 <> '') AS has_image
                FROM car_oil_filters f JOIN products p ON p.id = f.filter_product_id
                WHERE {where_sql}

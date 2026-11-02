@@ -18,6 +18,9 @@ class BookingSelection extends ChangeNotifier {
   final Map<ServiceKind, ServicePick> picks = {};
   bool withFilter = false;
   OilProduct? filter;                 // فلتر الزيت المختار (الأفضل مطابقةً ومتوفراً افتراضياً)
+  List<EngineChoice> engineChoices = const [];   // للموديل أكثر من محرك مربوط بفلاتر مختلفة: نسأل العميل بدل التخمين
+  String? engineChosen;                          // تسمية المحرك الذي اختاره العميل
+  bool engineUnknown = false;                    // اختار «لا أعرف»: يحدد الفني الفلتر
   List<OilProduct> filterOptions = const [];   // كل فلاتر الزيت الممكنة لهذه السيارة (أكثر من باركود)
   OilProduct? autoService;            // خدمة تغيير زيت الماكينة بحسب قواعد تسعير السيارة
 
@@ -51,6 +54,17 @@ class BookingSelection extends ChangeNotifier {
     p.qty = q.clamp(0.5, 30).toDouble();
     notifyListeners();
   }
+
+  void setEngineUnknown() {
+    engineUnknown = true;
+    engineChosen = null;
+    filter = null;
+    filterOptions = const [];
+    withFilter = false;
+    notifyListeners();
+  }
+
+  void notify() => notifyListeners();
 
   void chooseFilter(OilProduct f) {
     if (!f.inStock) return;
