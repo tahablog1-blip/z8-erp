@@ -48,6 +48,10 @@ class _ServicesScreenState extends State<ServicesScreen> {
       final a = await s.api.autoService(b, brand: widget.brand, model: widget.model, year: widget.year);
       if (a != null) sel.autoService = OilProduct.fromJson({...a, 'spec': ''});
     } on ApiException catch (_) {}
+    try {
+      final x = await s.api.autoService(b, brand: widget.brand, model: widget.model, year: widget.year, external: true);
+      if (x != null) sel.externalService = OilProduct.fromJson({...x, 'spec': ''});
+    } on ApiException catch (_) {}
     await _loadFilter(widget.cylinders, widget.engineSize);
     if (mounted) setState(() => loading = false);
   }

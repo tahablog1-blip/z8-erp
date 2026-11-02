@@ -24,6 +24,7 @@ class BookingSelection extends ChangeNotifier {
   bool engineUnknown = false;                    // اختار «لا أعرف»: يحدد الفني الفلتر
   List<OilProduct> filterOptions = const [];   // كل فلاتر الزيت الممكنة لهذه السيارة (أكثر من باركود)
   OilProduct? autoService;            // خدمة تغيير زيت الماكينة بحسب قواعد تسعير السيارة
+  OilProduct? externalService;        // خدمة «تغيير زيت خارجي» (العميل يحضر زيته) — أجرتها تختلف بحسب السيارة
 
   bool has(ServiceKind k) => picks.containsKey(k);
 
@@ -81,12 +82,16 @@ class BookingSelection extends ChangeNotifier {
   /// أجرة الخدمة التلقائية لزيت الماكينة فقط (من قواعد تسعير السيارة).
   /// الجير والدفرنس والدبل لها أكثر من خدمة في قائمة الخدمات، فتُحدَّد أجرتها داخل الفرع.
   ({String id, String name, double price})? feeFor(ServiceKind k) {
-    if (k == ServiceKind.engine && autoService != null) return (id: autoService!.id, name: autoService!.name, price: autoService!.price);
+    if (k == ServiceKind.engine) {
+      // الزيت الخارجي له خدمته وقواعد أسعاره الخاصة؛ فإن لم تُضبط لا نحمّله أجرة العادية (تُحدَّد في الفرع)
+      final f = picks[k]?.external == true ? externalService : autoService;
+      if (f != null) return (id: f.id, name: f.name, price: f.price);
+    }
     return null;
   }
 
   /// خدمات مختارة أجرتها تُحدَّد في الفرع (جير/دفرنس/دبل)
-  List<ServiceKind> get feeAtBranch => [for (final k in picks.keys) if (k != ServiceKind.engine) k];
+  List<ServiceKind> get feeAtBranch => [for (final k in picks.keys) if (k != ServiceKind.engine || feeFor(k) == null) k];
 
   /// كل خدمة مختارة يجب أن يكون لها زيت
   bool get complete => picks.isNotEmpty && picks.values.every((p) => p.ready);
