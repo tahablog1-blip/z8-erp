@@ -1,6 +1,7 @@
 // الهوية البصرية: صورة الفرع بتدرّج أزرق شفاف، وشعار الشركة بحركة «ثعبانية» تكشفه تدريجياً
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'theme.dart';
@@ -30,19 +31,21 @@ class BrandBackdrop extends StatelessWidget {
       );
 }
 
-/// شعار الشركة يظهر كاملاً عبر «ثعابين» من أشرطة متعرجة تتحرك وتكشف أجزاءه (مثل After Effects)
+/// شعار الشركة: يُرسم بخط واحد متصل يبدأ من أعلى يسار حرف Z ثم يسير على الحرف فالثمانية حتى يكتمل،
+/// وبعد الاكتمال تعبر عليه لمعة متحركة كأنه معدن لامع.
 class SnakeLogo extends StatefulWidget {
-  const SnakeLogo({super.key, this.width = 260, this.duration = const Duration(milliseconds: 2600), this.onDone, this.asset = 'assets/images/logo-white.png'});
+  const SnakeLogo({super.key, this.width = 260, this.duration = const Duration(milliseconds: 2800), this.onDone, this.asset = 'assets/images/logo-white.png'});
   final double width;
   final Duration duration;
-  final VoidCallback? onDone;
+  final VoidCallback? onDone;     // عند اكتمال الرسم (واللمعة تستمر بعدها)
   final String asset;
   @override
   State<SnakeLogo> createState() => _SnakeLogoState();
 }
 
-class _SnakeLogoState extends State<SnakeLogo> with SingleTickerProviderStateMixin {
-  late final AnimationController c;
+class _SnakeLogoState extends State<SnakeLogo> with TickerProviderStateMixin {
+  late final AnimationController c;       // مرحلة الرسم 0→1
+  late final AnimationController shine;   // اللمعة تتكرر بعد الاكتمال
   ui.Image? img;
   bool failed = false;
 
@@ -50,6 +53,7 @@ class _SnakeLogoState extends State<SnakeLogo> with SingleTickerProviderStateMix
   void initState() {
     super.initState();
     c = AnimationController(vsync: this, duration: widget.duration);
+    shine = AnimationController(vsync: this, duration: const Duration(milliseconds: 1900));
     _load();
   }
 
@@ -60,7 +64,11 @@ class _SnakeLogoState extends State<SnakeLogo> with SingleTickerProviderStateMix
       final frame = await codec.getNextFrame();
       if (!mounted) return;
       setState(() => img = frame.image);
-      c.forward().then((_) { if (mounted) widget.onDone?.call(); });   // لا نستدعي onDone عند الإلغاء/التخلص
+      c.forward().then((_) {
+        if (!mounted) return;
+        shine.repeat();
+        widget.onDone?.call();     // لا يُستدعى عند الإلغاء/التخلص
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() => failed = true);   // بلا حركة: نعرض الشعار عادياً ونكمل
@@ -71,6 +79,7 @@ class _SnakeLogoState extends State<SnakeLogo> with SingleTickerProviderStateMix
   @override
   void dispose() {
     c.dispose();
+    shine.dispose();
     img?.dispose();
     super.dispose();
   }
@@ -85,61 +94,110 @@ class _SnakeLogoState extends State<SnakeLogo> with SingleTickerProviderStateMix
       height: h,
       child: img == null
           ? null
-          : AnimatedBuilder(animation: c, builder: (_, _) => CustomPaint(painter: _SnakePainter(img!, c.value))),
+          : AnimatedBuilder(
+              animation: Listenable.merge([c, shine]),
+              builder: (_, _) => CustomPaint(painter: LogoPainter(img!, c.value, shine.isAnimating ? shine.value : -1)),
+            ),
     );
   }
 }
 
-class _SnakePainter extends CustomPainter {
-  _SnakePainter(this.img, this.t);
+/// مسار الرسم بإحداثيات الشعار الأصلي (832×868): نقطة البداية عند طرف الـ Z العلوي الأيسر،
+/// ثم الخط العلوي، فالقطر للأسفل، فالخط السفلي، فحلقة الثمانية السفلى، فصعوداً للحلقة العليا.
+List<Offset> logoSkeleton() {
+  final pts = <Offset>[];
+  void line(Offset a, Offset b, [int n = 24]) {
+    for (var i = 0; i < n; i++) {
+      pts.add(Offset.lerp(a, b, i / n)!);
+    }
+  }
+
+  void arc(Offset c, double r, double a0, double a1, [int n = 60]) {
+    for (var i = 0; i <= n; i++) {
+      final a = (a0 + (a1 - a0) * i / n) * math.pi / 180;
+      pts.add(Offset(c.dx + r * math.cos(a), c.dy + r * math.sin(a)));
+    }
+  }
+
+  line(const Offset(70, 55), const Offset(405, 55));            // الخط العلوي للـ Z (من السهم)
+  line(const Offset(405, 55), const Offset(105, 494), 60);      // القطر
+  line(const Offset(105, 494), const Offset(520, 494), 40);     // الخط السفلي
+  line(const Offset(520, 494), const Offset(690, 585), 24);     // نزولاً مع الشريط المائل نحو الحلقة السفلى
+  arc(const Offset(610, 620), 122, -25, 205);                   // الحلقة السفلى (مع عقارب الساعة)
+  line(Offset(610 + 122 * math.cos(205 * math.pi / 180), 620 + 122 * math.sin(205 * math.pi / 180)), const Offset(492, 330), 40); // صعوداً
+  arc(const Offset(610, 262), 122, 170, 395, 60);               // الحلقة العليا
+  line(const Offset(692, 300), const Offset(705, 390), 12);     // ذيل الشريط المائل في نهاية الحلقة
+  return pts;
+}
+
+@visibleForTesting
+class LogoPainter extends CustomPainter {
+  LogoPainter(this.img, this.t, this.shineT);
   final ui.Image img;
-  final double t;
-  static const snakes = 8;
+  final double t;        // تقدم الرسم 0→1
+  final double shineT;   // موضع اللمعة 0→1، أو سالب = بلا لمعة
+  static final Path _unit = _buildUnit();
+
+  static Path _buildUnit() {
+    final p = Path();
+    final pts = logoSkeleton();
+    p.moveTo(pts.first.dx, pts.first.dy);
+    for (final o in pts.skip(1)) {
+      p.lineTo(o.dx, o.dy);
+    }
+    return p;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
     final src = Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
-    if (t >= 1) {
-      canvas.drawImageRect(img, src, rect, Paint()..filterQuality = FilterQuality.high);
-      return;
-    }
-    // طبقة الشعار، ثم طبقة القناع (الثعابين) تُدمج عليها بـ dstIn فيبقى من الشعار ما تحت الأشرطة فقط
+    final sx = size.width / 832, sy = size.height / 868;
+    final logoPaint = Paint()..filterQuality = FilterQuality.high;
+
     canvas.saveLayer(rect, Paint());
-    canvas.drawImageRect(img, src, rect, Paint()..filterQuality = FilterQuality.high);
-    canvas.saveLayer(rect, Paint()..blendMode = BlendMode.dstIn);
-    final band = size.height / snakes;
-    for (var i = 0; i < snakes; i++) {
-      final delay = i * 0.055;
-      final p = Curves.easeInOutCubic.transform(((t - delay) / (1 - delay * snakes * .6)).clamp(0.0, 1.0));
-      if (p <= 0) continue;
-      final y0 = band * (i + .5);
-      final dir = i.isEven ? 1.0 : -1.0;                 // ثعابين تتجه يميناً ويساراً بالتناوب
-      final path = Path();
-      const steps = 48;
-      for (var k = 0; k <= steps; k++) {
-        final u = k / steps;
-        final x = dir > 0 ? size.width * u : size.width * (1 - u);
-        final amp = band * .9 * (1 - u * .3);
-        final y = y0 + math.sin(u * math.pi * 3 + i * 1.3 + t * 9) * amp;
-        k == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
-      }
-      final m = path.computeMetrics().first;
-      final seg = m.extractPath(0, m.length * p);
+    canvas.drawImageRect(img, src, rect, logoPaint);
+    if (t < 1) {
+      // قناع الرسم: خط واحد سميك يتقدّم على هيكل الشعار فيُبقي من الشعار ما مرّ عليه فقط
+      canvas.saveLayer(rect, Paint()..blendMode = BlendMode.dstIn);
+      final m = _unit.transform(Float64List.fromList([sx, 0, 0, 0, 0, sy, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])).computeMetrics().first;
+      final p = Curves.easeInOutCubic.transform(t);
       canvas.drawPath(
-        seg,
+        m.extractPath(0, m.length * p),
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
-          ..strokeWidth = band * 2.6
+          ..strokeWidth = size.width * .165
           ..color = Colors.white,
       );
+      canvas.restore();
     }
-    canvas.restore();
+    // معدن: تدرّج فضي خفيف دائماً، وفوقه لمعة بيضاء مائلة تعبر الشعار بعد اكتماله (فقط حيث يوجد الشعار)
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..blendMode = BlendMode.srcATop
+        ..shader = ui.Gradient.linear(rect.topLeft, rect.bottomRight, const [Color(0xFFE3ECF8), Color(0xFFB4C7E1), Color(0xFFF1F5FB), Color(0xFFA2B8D8)], const [0, .32, .6, 1]),
+    );
+    if (shineT >= 0 && t >= 1) {
+      final span = size.width * 1.7;
+      final x = -size.width * .35 + shineT * span;          // مركز اللمعة يتحرك من اليسار لليمين
+      final skew = Matrix4.skewX(-.38).storage;             // ميلان اللمعة
+      void band(double halfW, List<Color> cols, List<double> stops) {
+        canvas.drawRect(
+          rect,
+          Paint()
+            ..blendMode = BlendMode.srcATop
+            ..shader = ui.Gradient.linear(Offset(x - halfW, 0), Offset(x + halfW, 0), cols, stops, TileMode.clamp, skew),
+        );
+      }
+      band(size.width * .26, const [Color(0x00FFFFFF), Color(0xCCFFFFFF), Color(0x00FFFFFF)], const [0, .5, 1]);                 // وهج واسع ناعم
+      band(size.width * .05, const [Color(0x00FFFFFF), Color(0xFFFFFFFF), Color(0x00FFFFFF)], const [0, .5, 1]);                 // خط لمعان حادّ
+    }
     canvas.restore();
   }
 
   @override
-  bool shouldRepaint(_SnakePainter old) => old.t != t || old.img != img;
+  bool shouldRepaint(LogoPainter old) => old.t != t || old.shineT != shineT || old.img != img;
 }

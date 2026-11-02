@@ -28,7 +28,7 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Center(
             child: SnakeLogo(
               width: (w * .62).clamp(180, 340).toDouble(),
-              onDone: () => Future.delayed(const Duration(milliseconds: 450), _done),
+              onDone: () => Future.delayed(const Duration(milliseconds: 2000), _done),   // بعد اكتمال الرسم تمرّ لمعة المعدن مرة أو مرتين
             ),
           ),
         ),
