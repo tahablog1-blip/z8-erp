@@ -874,6 +874,12 @@ async def lifespan(app: FastAPI):
              created_at        timestamptz NOT NULL DEFAULT now()
            )""",
         "ALTER TABLE car_oil_filters ADD COLUMN IF NOT EXISTS engine_size TEXT",
+        # توحيد تهجئة موديل: «كرولا» → «كورولا» في كل الجداول (يُنفَّذ كل تشغيل، آمن ومتكرر)
+        "UPDATE cars SET name = 'كورولا' WHERE name = 'كرولا'",
+        "UPDATE customer_cars SET name = 'كورولا' WHERE name = 'كرولا'",
+        "UPDATE car_oil_filters SET model = 'كورولا' WHERE model = 'كرولا'",
+        "UPDATE oil_specs SET model = 'كورولا' WHERE model = 'كرولا'",
+        "UPDATE service_price_rules SET model = 'كورولا' WHERE model = 'كرولا'",
         "CREATE INDEX IF NOT EXISTS idx_car_oil_filters_company ON car_oil_filters (company_id, brand, model)",
         # ══ المصادقة الثنائية (2FA — تطبيق مصادقة TOTP) + إدارة الجلسات/الأجهزة ══
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret TEXT",
