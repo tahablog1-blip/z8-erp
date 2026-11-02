@@ -119,14 +119,17 @@ List<Offset> logoSkeleton() {
     }
   }
 
-  line(const Offset(70, 55), const Offset(405, 55));            // الخط العلوي للـ Z (من السهم)
-  line(const Offset(405, 55), const Offset(105, 494), 60);      // القطر
-  line(const Offset(105, 494), const Offset(520, 494), 40);     // الخط السفلي
-  line(const Offset(520, 494), const Offset(690, 585), 24);     // نزولاً مع الشريط المائل نحو الحلقة السفلى
-  arc(const Offset(610, 620), 122, -25, 205);                   // الحلقة السفلى (مع عقارب الساعة)
-  line(Offset(610 + 122 * math.cos(205 * math.pi / 180), 620 + 122 * math.sin(205 * math.pi / 180)), const Offset(492, 330), 40); // صعوداً
-  arc(const Offset(610, 262), 122, 170, 395, 60);               // الحلقة العليا
-  line(const Offset(692, 300), const Offset(705, 390), 12);     // ذيل الشريط المائل في نهاية الحلقة
+  // مستقيم كل الطريق (خطوط مستقيمة وأنصاف دوائر بلا التواءات)، بنفس ترتيب رسمك:
+  line(const Offset(70, 55), const Offset(392, 55));            // الخط العلوي للـ Z (من السهم)
+  line(const Offset(392, 55), const Offset(102, 494), 60);      // القطر
+  line(const Offset(102, 494), const Offset(480, 494), 40);     // الخط السفلي
+  final c2 = const Offset(610, 620), c1 = const Offset(610, 262);
+  Offset onC(Offset c, double deg) => Offset(c.dx + 122 * math.cos(deg * math.pi / 180), c.dy + 122 * math.sin(deg * math.pi / 180));
+  line(const Offset(480, 494), onC(c2, 190), 8);                // ينزل إلى الجانب الأيسر للحلقة السفلى
+  arc(c2, 122, 190, -40, 90);                                   // الحلقة السفلى: يسار ← أسفل ← يمين
+  line(onC(c2, -40), onC(c1, 135), 40);                         // الشريط المائل صعوداً لليسار نحو الحلقة العليا
+  arc(c1, 122, 135, 410, 80);                                   // الحلقة العليا: يسار ← أعلى ← يمين
+  line(onC(c1, 50), const Offset(706, 394), 8);                 // ذيل الشريط المائل في النهاية
   return pts;
 }
 
@@ -167,8 +170,8 @@ class LogoPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round
-          ..strokeWidth = size.width * .165
+          ..strokeJoin = StrokeJoin.miter       // يكشف الزوايا الحادة للـ Z وهو ماشٍ
+          ..strokeWidth = size.width * .142     // بعرض شريط الشعار نفسه: رأس الخط نصف دائرة نظيف ولا يسبق الأجزاء المجاورة
           ..color = Colors.white,
       );
       canvas.restore();
