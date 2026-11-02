@@ -15,11 +15,12 @@ class BookScreen extends StatefulWidget {
 }
 
 const fuelTypes = ['ديزل', 'بنزين', 'هايبرد'];
+const cylinderOptions = ['3', '4', '5', '6', '8', '10', '12'];
 
 class _BookScreenState extends State<BookScreen> {
   final name = TextEditingController(), phone = TextEditingController(), letters = TextEditingController(), numbers = TextEditingController(),
       brand = TextEditingController(), model = TextEditingController(), year = TextEditingController(), odo = TextEditingController();
-  String fuel = '';
+  String fuel = '', cyl = '';
   List<String> brands = const [], models = const [];
   SavedCar? picked;
   bool newCar = false;
@@ -71,10 +72,11 @@ class _BookScreenState extends State<BookScreen> {
         'modelYear': year.text.trim().isEmpty ? null : arabicDigitsToLatin(year.text.trim()),
         'odometer': arabicDigitsToLatin(odo.text.trim()),
         'fuelType': fuel.isEmpty ? null : fuel,
+        'cylinders': cyl.isEmpty ? null : cyl,
       };
       screen = ServicesScreen(
         state: s, carTitle: '${[brand.text.trim(), model.text.trim()].where((e) => e.isNotEmpty).join(' ')} · $n ${letters.text.trim()}'.trim(),
-        brand: brand.text.trim(), model: model.text.trim(), year: arabicDigitsToLatin(year.text.trim()),
+        brand: brand.text.trim(), model: model.text.trim(), year: arabicDigitsToLatin(year.text.trim()), cylinders: cyl,
         submit: (selection, _) => s.bookNew(name: name.text.trim(), phoneNo: arabicDigitsToLatin(phone.text).trim(), car: car, selection: selection),
       );
     }
@@ -157,6 +159,18 @@ class _BookScreenState extends State<BookScreen> {
                       selected: fuel == f, selectedColor: Z8.petrol, backgroundColor: Z8.ink2, showCheckmark: false,
                       shape: const RoundedRectangleBorder(side: BorderSide(color: Z8.line)),
                       onSelected: (_) => setState(() => fuel = fuel == f ? '' : f),
+                    ),
+                ]),
+                const SizedBox(height: 12),
+                Text('عدد السلندرات (يحدد فلتر الزيت المناسب لمحركك)', style: tx(Fs.xs, w: 800, color: Z8.petrolDeep)),
+                const SizedBox(height: 6),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  for (final c in cylinderOptions)
+                    ChoiceChip(
+                      label: Text('$c سلندر', style: tx(Fs.sm, w: 700, color: cyl == c ? Colors.white : Z8.text)),
+                      selected: cyl == c, selectedColor: Z8.petrol, backgroundColor: Z8.ink2, showCheckmark: false,
+                      shape: const RoundedRectangleBorder(side: BorderSide(color: Z8.line)),
+                      onSelected: (_) => setState(() => cyl = cyl == c ? '' : c),
                     ),
                 ]),
               ],
