@@ -24,6 +24,14 @@
 
 لم يُبنَ بعد: أنواع الحجز "تحت الضمان" و"فاتورة شركة"، الرسائل الصوتية، الإشعارات الفورية (Push).
 
+## التحديث بدون تنزيل الملفات كل مرة
+بدل تنزيل ZIP في كل تحديث، استنسخ المشروع **مرة واحدة** بـ git ثم حدّثه بأمر:
+1. **مرة واحدة:** في Android Studio: File ← New ← Project from Version Control ← الصق `https://github.com/tahablog1-blip/z8-erp.git` ← سجّل الدخول بحساب GitHub عند الطلب ← Clone. (أو GitHub Desktop: File ← Clone repository.) ثم افتح مجلد `customer` من داخل النسخة.
+2. **عند كل تحديث:** في Android Studio اضغط VCS ← **Update Project** (أو Ctrl+T) واختر Merge، ثم من الطرفية داخل `customer`: `flutter pub get`. أو شغّل `powershell -ExecutionPolicy Bypass -File update.ps1` فيفعل الخطوتين.
+3. أوقف التطبيق وشغّله من جديد (وليس Hot restart).
+
+لا تعدّل ملفات المشروع في نسختك المحلية كي لا تتعارض عند التحديث.
+
 ## التشغيل من Android Studio
 1. افتح المجلد `customer` (وليس جذر المشروع) في Android Studio.
 2. `flutter pub get` ثم شغّل على المحاكي أو جهاز حقيقي.
