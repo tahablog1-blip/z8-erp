@@ -39,12 +39,13 @@ class BranchInfo {
 }
 
 class SavedCar {
-  const SavedCar({required this.id, required this.plate, required this.brand, required this.name, required this.year, required this.serviceType});
-  final String id, plate, brand, name, year, serviceType;
+  const SavedCar({required this.id, required this.plate, required this.brand, required this.name, required this.year, required this.serviceType, this.cylinders = '', this.engineSize = ''});
+  final String id, plate, brand, name, year, serviceType, cylinders, engineSize;
   String get title => [brand, name].where((e) => e.isNotEmpty).join(' ');
   factory SavedCar.fromJson(Map<String, dynamic> j) => SavedCar(
         id: _s(j['id']), plate: _s(j['plate']), brand: _s(j['brand']), name: _s(j['name']), year: _s(j['model_year']),
-        serviceType: _s(j['service_type']).isEmpty ? 'basic' : _s(j['service_type']));
+        serviceType: _s(j['service_type']).isEmpty ? 'basic' : _s(j['service_type']),
+        cylinders: _s(j['cylinders']), engineSize: _s(j['engine_size']));
 }
 
 class Profile {
@@ -150,6 +151,15 @@ class InvoiceList {
   const InvoiceList(this.invoices, this.pdfPhone);
   final List<Invoice> invoices;
   final String pdfPhone;
+}
+
+/// محرك مربوط بفلاتر خاصة (مثل 4 سلندر أو 6 سلندر)
+class EngineChoice {
+  const EngineChoice({required this.label, this.cylinders, this.engineSize});
+  final String label;
+  final String? cylinders, engineSize;
+  factory EngineChoice.fromJson(Map<String, dynamic> j) => EngineChoice(
+        label: _s(j['label']), cylinders: j['cylinders'] == null ? null : _s(j['cylinders']), engineSize: j['engineSize'] == null ? null : _s(j['engineSize']));
 }
 
 class OilBrand {

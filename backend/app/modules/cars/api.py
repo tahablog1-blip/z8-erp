@@ -886,17 +886,40 @@ async def public_oil_filter_match(branch_id: str, brand: str = Query(...), model
                                   year: str | None = Query(default=None),
                                   kind: str = Query(default="oil"),
                                   cylinders: str | None = Query(default=None),
-                                  engineSize: str | None = Query(default=None)):
+                                  engineSize: str | None = Query(default=None),
+                                  engineAsk: int = Query(default=0)):
     """يُستخدم من صفحة الحجز: يرجع الفلتر الصحيح لنفس السيارة إن وُجد ربط له
-    (يفضّل تطابق السلندرات/حجم الماكينة بالضبط لو الموديل له أكثر من محرك)"""
+    (يفضّل تطابق السلندرات/حجم الماكينة بالضبط لو الموديل له أكثر من محرك).
+
+    engineAsk=1 (تطبيق العميل): لو محرك السيارة مجهول وللموديل أكثر من محرك مربوط بفلاتر مختلفة (مثل 4 و6 سلندر)
+    لا نخمّن ولا نعرض فلاتر محرك لم يخترْه العميل، بل نرجع needsEngine مع خيارات المحرك ليسأله التطبيق."""
     _pub_guard(branch_id)
     from ...core.db import fetchrow as _fr
     br = await _fr("SELECT company_id FROM branches WHERE id=$1::uuid", branch_id)
     if not br:
         raise HTTPException(404, "الفرع غير موجود")
-    matches = await service.match_oil_filters(br["company_id"], brand, model, year, kind, cylinders, engineSize)
+    matches = await service.match_oil_filters(br["company_id"], brand, model, year, kind, cylinders, engineSize,
+                                              limit=30 if engineAsk else 6)
     if not matches:
         return None
+    engines: list[dict] = []
+    if engineAsk and not (str(cylinders or "").strip() or str(engineSize or "").strip()):
+        seen_eng: set = set()
+        for m in matches:
+            if m.get("cylinders") or m.get("engine_size"):
+                key = (m.get("cylinders"), (m.get("engine_size") or "").strip().lower())
+                if key not in seen_eng:
+                    seen_eng.add(key)
+                    engines.append({"cylinders": m.get("cylinders"), "engineSize": m.get("engine_size"),
+                                    "label": " · ".join(x for x in (f"{m['cylinders']} سلندر" if m.get("cylinders") else "",
+                                                                    f"{m['engine_size']}" if m.get("engine_size") else "") if x)})
+        if len(engines) > 1:
+            # أكثر من محرك: نعرض فقط الفلاتر العامة (بلا محرك محدد) إلى أن يختار العميل محركه
+            matches = [m for m in matches if not (m.get("cylinders") or m.get("engine_size"))]
+            if not matches:
+                return {"needsEngine": True, "engines": engines, "options": []}
+        else:
+            engines = []
 
     async def _out(m):
         return {
@@ -905,10 +928,10 @@ async def public_oil_filter_match(branch_id: str, brand: str = Query(...), model
             "image": f"/api/products/public/product-image/{m['id']}" if m["has_image"] else None,
             "inStock": await _branch_in_stock(branch_id, str(m["id"])),
         }
-    options = [await _out(m) for m in matches]
+    options = [await _out(m) for m in matches[:6]]
     # الحقول العليا = الأفضل (الأقرب مطابقة، والمتوفر أولاً) للتوافق مع صفحة الحجز؛ و options كل الفلاتر الممكنة
     best = next((o for o in options if o["inStock"]), options[0])
-    return {**best, "options": options}
+    return {**best, "options": options, **({"needsEngine": True, "engines": engines} if engines else {})}
 
 
 @router.get("/oil/by-car/{car_id}")

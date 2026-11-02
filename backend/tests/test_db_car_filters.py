@@ -71,3 +71,35 @@ def test_public_match_returns_all_options_in_stock_first(world):
         assert {o["name"]: o["inStock"] for o in r["options"]} == {"فلتر زيت تويوتا 31090": False, "فلتر زيت تويوتا e2": True}
         assert none is None
     run(go)
+
+
+def test_engine_ambiguity_asks_instead_of_showing_other_engines_filters(world):
+    """كامري 4 سلندر و6 سلندر بفلاتر مختلفة: سيارة بمحرك مجهول لا تُعرض عليها فلاتر محرك لم تُختر"""
+    from app.main import app
+    from app.modules.cars import service
+
+    async def go():
+        await service.bulk_car_filters(CO, "تويوتا", "كامري", 2011, 2025, [{"kind": "oil", "productId": world["oil1"]}], None, cylinders=6)
+        await service.bulk_car_filters(CO, "تويوتا", "كامري", 2018, 2027, [{"kind": "oil", "productId": world["oil2"]}], None, cylinders=4)
+        base = f"/api/cars/public/car-oil-filter-match/{world['br']}?brand=تويوتا&model=كامري&year=2020&kind=oil"
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as cl:
+            ask = (await cl.get(base + "&engineAsk=1")).json()
+            four = (await cl.get(base + "&engineAsk=1&cylinders=4")).json()
+            six = (await cl.get(base + "&engineAsk=1&cylinders=6")).json()
+            legacy = (await cl.get(base)).json()                   # صفحة الحجز القديمة: سلوكها كما هو
+        assert ask["needsEngine"] is True and ask["options"] == []                                   # لا نخمّن
+        assert sorted(e["cylinders"] for e in ask["engines"]) == [4, 6]
+        assert [o["name"] for o in four["options"]] == ["فلتر زيت تويوتا e2"] and "needsEngine" not in four
+        assert [o["name"] for o in six["options"]] == ["فلتر زيت تويوتا 31090"]
+        assert "needsEngine" not in legacy and legacy["options"]                                       # تعمل كما كانت
+        # ربط عام (بلا محرك) يظهر مع كل محرك، وسؤال المحرك لا يلزم لو محرك واحد فقط
+        await service.bulk_car_filters(CO, "تويوتا", "كامري", 2011, 2027, [{"kind": "oil", "productId": world["air"]}], None)
+        generic = (await cl_get(app, base + "&engineAsk=1"))
+        assert generic["needsEngine"] is True and [o["name"] for o in generic["options"]] == ["فلتر هواء كامري"]
+        assert [o["name"] for o in (await cl_get(app, base + "&engineAsk=1&cylinders=6"))["options"]] == ["فلتر زيت تويوتا 31090", "فلتر هواء كامري"]
+    run(go)
+
+
+async def cl_get(app, url):
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as cl:
+        return (await cl.get(url)).json()

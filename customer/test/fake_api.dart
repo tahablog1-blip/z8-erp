@@ -17,6 +17,7 @@ class FakeApi implements CustomerApi {
   bool expireOtp = false;
   Map<String, dynamic>? lastSelection;
   final invoiceCalls = <String?>[];
+  final filterCalls = <String?>[];
 
   List<Map<String, dynamic>> branchList = [
     {'id': branch, 'name': 'فرع الخليج', 'category': 'service', 'address': 'حي الخليج', 'latitude': 24.7136, 'longitude': 46.6753, 'waiting': 3, 'inService': 1, 'estWaitMinutes': 54, 'bookable': true},
@@ -102,7 +103,20 @@ class FakeApi implements CustomerApi {
   Future<Map<String, dynamic>?> autoService(String b, {required String brand, required String model, required String year}) async =>
       {'id': 'svc1', 'name': 'خدمة تغيير زيت', 'price': 30.0};
   @override
-  Future<Map<String, dynamic>?> filterMatch(String b, {required String brand, required String model, required String year}) async =>
+  Future<Map<String, dynamic>?> filterMatch(String b, {required String brand, required String model, required String year, String? cylinders, String? engineSize}) async {
+    filterCalls.add(cylinders);
+    if (brand == 'هيونداي') {
+      // للموديل محركان بفلاتر مختلفة: بلا اختيار محرك لا نعرض فلتر أي منهما
+      if ((cylinders ?? '').isEmpty) {
+        return {'needsEngine': true, 'engines': [{'cylinders': 4, 'engineSize': null, 'label': '4 سلندر'}, {'cylinders': 6, 'engineSize': null, 'label': '6 سلندر'}], 'options': <dynamic>[]};
+      }
+      final p = {'id': 'h$cylinders', 'name': 'فلتر هيونداي $cylinders سلندر', 'spec': '', 'price': 22.0, 'inStock': true};
+      return {...p, 'options': [p]};
+    }
+    return filterMatchFor(brand);
+  }
+
+  Map<String, dynamic>? filterMatchFor(String brand) =>
       brand == 'تويوتا'
           ? {
               'id': 'f1', 'name': 'فلتر كامري', 'spec': '', 'price': 25.0, 'inStock': true,

@@ -23,7 +23,7 @@ abstract class CustomerApi {
   Future<Map<String, dynamic>> bookNew(String branchId, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken, Map<String, dynamic>? selection});
   Future<Map<String, dynamic>> catalog(String branchId);
   Future<Map<String, dynamic>?> autoService(String branchId, {required String brand, required String model, required String year});
-  Future<Map<String, dynamic>?> filterMatch(String branchId, {required String brand, required String model, required String year});
+  Future<Map<String, dynamic>?> filterMatch(String branchId, {required String brand, required String model, required String year, String? cylinders, String? engineSize});
   Future<Map<String, dynamic>> invoices(String branchId, {String phone = '', String? otpToken, String? savedCarId});
   Future<Map<String, dynamic>> bookingStatus(String bookingId);
   Future<String> chatToken(String bookingId);
@@ -109,8 +109,12 @@ class Api implements CustomerApi {
   }
 
   @override
-  Future<Map<String, dynamic>?> filterMatch(String b, {required String brand, required String model, required String year}) async {
-    final d = await _send('GET', '/cars/public/car-oil-filter-match/$b', query: {'brand': brand, 'model': model, 'year': year, 'kind': 'oil'});
+  Future<Map<String, dynamic>?> filterMatch(String b, {required String brand, required String model, required String year, String? cylinders, String? engineSize}) async {
+    final d = await _send('GET', '/cars/public/car-oil-filter-match/$b', query: {
+      'brand': brand, 'model': model, 'year': year, 'kind': 'oil', 'engineAsk': 1,
+      if ((cylinders ?? '').isNotEmpty) 'cylinders': cylinders,
+      if ((engineSize ?? '').isNotEmpty) 'engineSize': engineSize,
+    });
     return d is Map ? Map<String, dynamic>.from(d) : null;
   }
 

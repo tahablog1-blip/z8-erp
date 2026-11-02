@@ -42,7 +42,7 @@ class _CarScreenState extends State<CarScreen> {
     final nav = Navigator.of(context);
     final ok = await nav.push<bool>(MaterialPageRoute(
       builder: (_) => ServicesScreen(
-        state: s, carTitle: '${c.title.isEmpty ? 'سيارة' : c.title} · ${c.plate}', brand: c.brand, model: c.name, year: c.year, askOdometer: true,
+        state: s, carTitle: '${c.title.isEmpty ? 'سيارة' : c.title} · ${c.plate}', brand: c.brand, model: c.name, year: c.year, askOdometer: true, cylinders: c.cylinders, engineSize: c.engineSize,
         submit: (selection, odo) => s.bookSaved(c, odometer: odo, selection: selection),
       ),
     ));
