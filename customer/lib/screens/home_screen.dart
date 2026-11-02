@@ -68,7 +68,12 @@ class _HomeScreenState extends State<HomeScreen> {
             appBar: AppBar(
               backgroundColor: Colors.transparent, foregroundColor: Colors.white, surfaceTintColor: Colors.transparent,
               flexibleSpace: const BrandBackdrop(),
-              title: Text(info?.name ?? tr('مصدر الزيوت'), style: tx(Fs.lg, w: 900, color: Colors.white)),
+              toolbarHeight: 84,
+              title: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Image.asset('assets/images/logo-white.png', height: 34, fit: BoxFit.contain, alignment: AlignmentDirectional.centerStart, errorBuilder: (_, _, _) => const SizedBox(height: 34)),
+                const SizedBox(height: 4),
+                Text(info?.name ?? tr('مصدر الزيوت'), style: tx(Fs.md, w: 900, color: Colors.white)),
+              ]),
               actions: [
                 IconButton(
                   tooltip: tr('الإشعارات'),
