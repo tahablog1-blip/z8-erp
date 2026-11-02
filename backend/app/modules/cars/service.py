@@ -1416,6 +1416,51 @@ async def create_car_oil_filter(company_id: str, brand: str, model: str,
     return {"id": str(row["id"])}
 
 
+async def bulk_car_filters(company_id: str, brand: str, model: str, year_from: int, year_to: int,
+                           filters: list[dict], user_id: str | None,
+                           cylinders: int | None = None, engine_size: str | None = None) -> dict:
+    """ربط عدة فلاتر (زيت/هواء/مكيف، وأكثر من فلتر زيت بباركودات مختلفة) بسيارة واحدة دفعة واحدة.
+    لا يكرّر ربطاً موجوداً بنفس السيارة/النطاق/المحرك/النوع/الصنف."""
+    brand = (brand or "").strip(); model = (model or "").strip()
+    engine_size = (engine_size or "").strip() or None
+    if not brand or not model:
+        raise HTTPException(400, "الماركة والموديل مطلوبان")
+    if year_from > year_to:
+        year_from, year_to = year_to, year_from
+    clean: list[tuple[str, str]] = []
+    for f in filters or []:
+        kind, pid = f.get("kind"), f.get("productId")
+        if kind not in ("oil", "air", "ac") or not pid:
+            raise HTTPException(400, "فلتر غير صالح في القائمة")
+        if (kind, pid) not in clean:
+            clean.append((kind, pid))
+    if not clean:
+        raise HTTPException(400, "أضف فلتراً واحداً على الأقل")
+    ids = list({pid for _, pid in clean})
+    found = {str(r["id"]) for r in await fetch(
+        "SELECT id FROM products WHERE company_id=$1 AND id = ANY($2::uuid[])", company_id, ids)}
+    if any(pid not in found for _, pid in clean):
+        raise HTTPException(404, "أحد الأصناف المختارة غير موجود")
+    added = skipped = 0
+    for kind, pid in clean:
+        dup = await fetchrow(
+            """SELECT 1 FROM car_oil_filters
+               WHERE company_id=$1 AND lower(brand)=lower($2) AND lower(model)=lower($3)
+                 AND year_from=$4 AND year_to=$5 AND filter_kind=$6 AND filter_product_id=$7::uuid
+                 AND cylinders IS NOT DISTINCT FROM $8 AND engine_size IS NOT DISTINCT FROM $9""",
+            company_id, brand, model, year_from, year_to, kind, pid, cylinders, engine_size)
+        if dup:
+            skipped += 1
+            continue
+        await execute(
+            """INSERT INTO car_oil_filters
+                 (company_id, brand, model, year_from, year_to, filter_product_id, created_by, filter_kind, cylinders, engine_size)
+               VALUES ($1,$2,$3,$4,$5,$6::uuid,$7::uuid,$8,$9,$10)""",
+            company_id, brand, model, year_from, year_to, pid, user_id, kind, cylinders, engine_size)
+        added += 1
+    return {"added": added, "skipped": skipped}
+
+
 async def delete_car_oil_filter(company_id: str, row_id: str) -> dict:
     await execute("DELETE FROM car_oil_filters WHERE id=$1::uuid AND company_id=$2",
                   row_id, company_id)
@@ -1425,6 +1470,13 @@ async def delete_car_oil_filter(company_id: str, row_id: str) -> dict:
 async def match_oil_filter(company_id: str, brand: str, model: str, year: str | int | None,
                            filter_kind: str = "oil", cylinders: str | int | None = None,
                            engine_size: str | None = None) -> dict | None:
+    rows = await match_oil_filters(company_id, brand, model, year, filter_kind, cylinders, engine_size, limit=1)
+    return rows[0] if rows else None
+
+
+async def match_oil_filters(company_id: str, brand: str, model: str, year: str | int | None,
+                            filter_kind: str = "oil", cylinders: str | int | None = None,
+                            engine_size: str | None = None, limit: int = 6) -> list[dict]:
     """أقرب ربط مطابق للسيارة (لنوع فلتر ونطاق سنة محددين) — بترتيب أولوية:
     ١) تطابق السلندرات وحجم الماكينة بالضبط (لو الموديل له أكثر من محرك، مثال
        حقيقي: فورتشنر 4 سلندر وفورتشنر 6 سلندر لهما فلتر مختلف بنفس نطاق السنة).
@@ -1440,7 +1492,7 @@ async def match_oil_filter(company_id: str, brand: str, model: str, year: str | 
     عشان "2.5"/"2.5L"/"2.5 لتر" تتطابق كلها."""
     brand = (brand or "").strip(); model = (model or "").strip()
     if not brand or not model:
-        return None
+        return []
     try:
         y = int(str(year)[:4]) if year else None
     except ValueError:
@@ -1457,7 +1509,7 @@ async def match_oil_filter(company_id: str, brand: str, model: str, year: str | 
     norm_model_in = _SQL_NORM.format(col="$3::text")
     norm_eng_col = _SQL_NORM_ENGINE.format(col="f.engine_size")
 
-    async def _query(year_known: bool) -> dict | None:
+    async def _query(year_known: bool) -> list[dict]:
         # ── شروط وترتيب السلندرات/حجم الماكينة تُبنى ديناميكياً بفهرسة باراميترات
         #    تُحسب أثناء البناء — تفادياً لحساب أوفسيتات يدوية عرضة للخطأ مع كل
         #    حقل اختياري إضافي. تُفرض فقط لو القيمة معروفة. ──
@@ -1484,22 +1536,28 @@ async def match_oil_filter(company_id: str, brand: str, model: str, year: str | 
             f"f.filter_kind=${kind_idx}", *where_extra,
         ])
         order_sql = ", ".join(order_terms + [("(f.year_to - f.year_from) ASC" if year_known else "f.year_to DESC")])
-        return await fetchrow(
+        # أكثر من فلتر بنفس النوع مسموح (باركودات مختلفة): الأقرب مطابقةً أولاً، وبلا تكرار للصنف الواحد
+        rows = await fetch(
             f"""SELECT p.id, p.name, p.spec, p.price_vat,
                       (p.image_base64 IS NOT NULL AND p.image_base64 <> '') AS has_image
                FROM car_oil_filters f JOIN products p ON p.id = f.filter_product_id
                WHERE {where_sql}
-               ORDER BY {order_sql}
-               LIMIT 1""",
+               ORDER BY {order_sql}""",
             *params)
+        seen: set = set()
+        out: list[dict] = []
+        for r in rows:
+            if r["id"] not in seen:
+                seen.add(r["id"])
+                out.append(dict(r))
+        return out
 
     if y is not None:
-        row = await _query(True)
-        if row:
-            return dict(row)
+        rows = await _query(True)
+        if rows:
+            return rows[:limit]
     # بلا سنة معروفة أو ما طابقت نطاقاً محدداً — آخر ربط مسجّل لنفس الماركة/الموديل
-    row = await _query(False)
-    return dict(row) if row else None
+    return (await _query(False))[:limit]
 
 
 async def public_create_booking(branch_id: str, d: dict) -> dict:

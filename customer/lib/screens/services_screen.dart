@@ -50,7 +50,11 @@ class _ServicesScreenState extends State<ServicesScreen> {
     if (widget.brand.isNotEmpty && widget.model.isNotEmpty) {
       try {
         final f = await s.api.filterMatch(b, brand: widget.brand, model: widget.model, year: widget.year);
-        if (f != null) sel.filter = OilProduct.fromJson(f);
+        if (f != null) {
+          sel.filter = OilProduct.fromJson(f);          // الأفضل (المتوفر أولاً)
+          final o = f['options'];
+          sel.filterOptions = o is List ? o.whereType<Map>().map((e) => OilProduct.fromJson(Map<String, dynamic>.from(e))).toList() : [sel.filter!];
+        }
       } on ApiException catch (_) {}
     }
     if (mounted) setState(() => loading = false);
@@ -109,6 +113,25 @@ class _ServicesScreenState extends State<ServicesScreen> {
                                 style: tx(Fs.sm, w: sel.filter!.inStock ? 500 : 800, color: sel.filter!.inStock ? Z8.textDim : Z8.ember)),
                             ),
                           ),
+                          // أكثر من فلتر زيت لهذه السيارة (باركودات مختلفة): يختار العميل منها
+                          if (sel.withFilter && sel.filterOptions.length > 1) ...[
+                            const SizedBox(height: 8),
+                            Panel(
+                              pad: 0,
+                              child: Column(children: [
+                                for (final o in sel.filterOptions)
+                                  ListTile(
+                                    dense: true,
+                                    enabled: o.inStock,
+                                    onTap: o.inStock ? () => sel.chooseFilter(o) : null,
+                                    leading: Icon(sel.filter?.id == o.id ? Icons.radio_button_checked : Icons.radio_button_off, color: o.inStock ? Z8.petrol : Z8.textDim),
+                                    title: Text(o.title, style: tx(Fs.sm, w: 800, color: o.inStock ? Z8.text : Z8.textDim)),
+                                    trailing: Text(o.inStock ? '${o.price.toStringAsFixed(2)} ر.س' : 'غير متوفر الآن',
+                                        style: tx(Fs.sm, w: 900, color: o.inStock ? Z8.petrolDeep : Z8.ember, tnum: true)),
+                                  ),
+                              ]),
+                            ),
+                          ],
                         ],
                         if (sel.lines.isNotEmpty) ...[
                           const SizedBox(height: 16),

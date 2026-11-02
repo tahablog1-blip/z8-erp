@@ -292,6 +292,37 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
+  testWidgets('أكثر من فلتر زيت للسيارة: يختار العميل بينها والنافد معطّل', (t) async {
+    final (_, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    await t.tap(find.text('احجز دورك الآن'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('التالي: اختيار الخدمة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('تغيير زيت ماكينة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('زيت خارجي (أحضره بنفسي)'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('مع تغيير فلتر الزيت'), 200, scrollable: find.byType(Scrollable).first);
+    await t.ensureVisible(find.text('مع تغيير فلتر الزيت'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('مع تغيير فلتر الزيت'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('فلتر كامري وكالة'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('فلتر كامري بديل e2'), findsOneWidget);          // الخيارات الثلاثة ظاهرة
+    expect(find.text('فلتر كامري وكالة'), findsOneWidget);
+    expect(find.text('غير متوفر الآن'), findsOneWidget);              // الوكالة نافدة
+    await t.tap(find.text('فلتر كامري وكالة'));                         // النافد لا يُختار
+    await t.pumpAndSettle();
+    await t.tap(find.text('فلتر كامري بديل e2'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('تأكيد الحجز'));
+    await t.pumpAndSettle();
+    final items = (api.lastSelection!['items'] as List).cast<Map<String, dynamic>>();
+    expect(items.map((e) => e['productId']), ['svc1', 'f2']);          // أجرة الماكينة + الفلتر المختار (لا الافتراضي f1)
+    expect(find.text('تذكرتي'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+  });
+
   testWidgets('سيارة جديدة: نوع الوقود ثلاثة فقط (ديزل/بنزين/هايبرد)', (t) async {
     await boot(t, otp: false, seed: {'branch': branch});
     await t.tap(find.text('احجز دورك الآن'));

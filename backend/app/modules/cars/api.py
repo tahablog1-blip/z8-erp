@@ -787,6 +787,30 @@ async def list_car_oil_filters(user: CurrentUser = Depends(get_current_user)):
     return await service.list_car_oil_filters(user.company_id)
 
 
+class CarFilterItem(_BM):
+    kind: str                # oil | air | ac
+    productId: str
+
+
+class CarFiltersBulkIn(_BM):
+    brand: str
+    model: str
+    yearFrom: int
+    yearTo: int
+    cylinders: int | None = None
+    engineSize: str | None = None
+    filters: list[CarFilterItem]
+
+
+@router.post("/oil-filters/bulk")
+async def bulk_car_filters(body: CarFiltersBulkIn,
+                           user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
+    """ربط عدة فلاتر (زيت/هواء/مكيف، وأكثر من فلتر زيت) بسيارة واحدة دفعة واحدة"""
+    return await service.bulk_car_filters(
+        user.company_id, body.brand, body.model, body.yearFrom, body.yearTo,
+        [f.model_dump() for f in body.filters], user.user_id, body.cylinders, body.engineSize)
+
+
 @router.post("/oil-filters")
 async def create_car_oil_filter(body: CarOilFilterIn,
                                 user: CurrentUser = Depends(require_permission("products.edit", "products.create"))):
@@ -870,15 +894,21 @@ async def public_oil_filter_match(branch_id: str, brand: str = Query(...), model
     br = await _fr("SELECT company_id FROM branches WHERE id=$1::uuid", branch_id)
     if not br:
         raise HTTPException(404, "الفرع غير موجود")
-    match = await service.match_oil_filter(br["company_id"], brand, model, year, kind, cylinders, engineSize)
-    if not match:
+    matches = await service.match_oil_filters(br["company_id"], brand, model, year, kind, cylinders, engineSize)
+    if not matches:
         return None
-    return {
-        "id": str(match["id"]), "name": match["name"], "spec": match["spec"] or "",
-        "price": float(match["price_vat"] or 0),
-        "image": f"/api/products/public/product-image/{match['id']}" if match["has_image"] else None,
-        "inStock": await _branch_in_stock(branch_id, str(match["id"])),
-    }
+
+    async def _out(m):
+        return {
+            "id": str(m["id"]), "name": m["name"], "spec": m["spec"] or "",
+            "price": float(m["price_vat"] or 0),
+            "image": f"/api/products/public/product-image/{m['id']}" if m["has_image"] else None,
+            "inStock": await _branch_in_stock(branch_id, str(m["id"])),
+        }
+    options = [await _out(m) for m in matches]
+    # الحقول العليا = الأفضل (الأقرب مطابقة، والمتوفر أولاً) للتوافق مع صفحة الحجز؛ و options كل الفلاتر الممكنة
+    best = next((o for o in options if o["inStock"]), options[0])
+    return {**best, "options": options}
 
 
 @router.get("/oil/by-car/{car_id}")
