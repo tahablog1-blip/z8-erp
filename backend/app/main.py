@@ -969,6 +969,8 @@ async def lifespan(app: FastAPI):
         "ALTER TABLE branches ADD COLUMN IF NOT EXISTS manager_user_id uuid",
         "ALTER TABLE branches ADD COLUMN IF NOT EXISTS address text",
         "ALTER TABLE branches ADD COLUMN IF NOT EXISTS latitude double precision",
+        "ALTER TABLE branches ADD COLUMN IF NOT EXISTS geofence_enabled boolean NOT NULL DEFAULT FALSE",
+        "ALTER TABLE branches ADD COLUMN IF NOT EXISTS geofence_radius_m integer NOT NULL DEFAULT 150",
         "ALTER TABLE branches ADD COLUMN IF NOT EXISTS longitude double precision",
         "ALTER TABLE branches ADD COLUMN IF NOT EXISTS invoice_prefix text",
         "ALTER TABLE branches ADD COLUMN IF NOT EXISTS independent_invoice_numbering boolean NOT NULL DEFAULT FALSE",

@@ -11,7 +11,7 @@ def _row_out(r: dict) -> dict:
 
 _COLS = """b.id, b.name, b.category, b.capacity_sir, b.capacity_hafr, b.capacity_rafaat, b.lines,
            b.is_frozen, b.created_at, b.manager_user_id, b.address, b.latitude, b.longitude, b.invoice_prefix,
-           b.independent_invoice_numbering, u.full_name AS manager_name"""
+           b.independent_invoice_numbering, b.geofence_enabled, b.geofence_radius_m, u.full_name AS manager_name"""
 _FROM = "FROM branches b LEFT JOIN users u ON u.id = b.manager_user_id"
 
 
@@ -52,7 +52,8 @@ async def get_branch(company_id: str, branch_id: str) -> dict:
 _COL_MAP = {"name": "name", "category": "category", "lines": "lines", "capacitySir": "capacity_sir",
             "capacityHafr": "capacity_hafr", "capacityRafaat": "capacity_rafaat",
             "is_frozen": "is_frozen", "managerUserId": "manager_user_id", "address": "address", "latitude": "latitude", "longitude": "longitude",
-            "invoicePrefix": "invoice_prefix", "independentInvoiceNumbering": "independent_invoice_numbering"}
+            "invoicePrefix": "invoice_prefix", "independentInvoiceNumbering": "independent_invoice_numbering",
+            "geofenceEnabled": "geofence_enabled", "geofenceRadiusM": "geofence_radius_m"}
 
 async def update_branch(company_id: str, branch_id: str, fields: dict) -> dict:
     # هنا (بخلاف باقي الموديولات) الفلترة لسه "v is not None" — القيمة الفاضية

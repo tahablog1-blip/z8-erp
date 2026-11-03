@@ -7,8 +7,12 @@ const retailBranch = '22222222-2222-3333-4444-555555555555';
 const farBranch = '33333333-2222-3333-4444-555555555555';
 
 class FakeApi implements CustomerApi {
-  FakeApi({this.otpRequired = true});
+  FakeApi({this.otpRequired = true, this.geofence = false});
   final bool otpRequired;
+  final bool geofence;                 // الفرع يمنع الحجز إلا أمامه
+  double nearMeters = 30;              // بُعد العميل المحاكى عن الفرع
+  String? lastGeoToken;
+  int geoCalls = 0;
   final sentMessages = <String>[];
   final bookings = <Map<String, dynamic>>[];
   String? lastOtpToken;
@@ -33,7 +37,7 @@ class FakeApi implements CustomerApi {
   @override
   Future<Map<String, dynamic>> branchInfo(String b) async {
     if (b != branch) throw ApiException('الفرع غير متاح للحجز حالياً', status: 404);
-    return {'branchName': 'فرع الخليج', 'waiting': 3, 'inService': 1, 'estWaitMinutes': 24, 'otp': {'phone': true, 'email': false, 'required': otpRequired}};
+    return {'branchName': 'فرع الخليج', 'waiting': 3, 'inService': 1, 'estWaitMinutes': 24, 'otp': {'phone': true, 'email': false, 'required': otpRequired}, 'geofence': {'enabled': geofence, 'radiusM': 150}};
   }
 
   @override
@@ -63,8 +67,9 @@ class FakeApi implements CustomerApi {
       };
 
   @override
-  Future<Map<String, dynamic>> bookSaved(String b, {required String carId, String? otpToken, String? odometer, String serviceType = 'basic', Map<String, dynamic>? selection}) async {
+  Future<Map<String, dynamic>> bookSaved(String b, {required String carId, String? otpToken, String? odometer, String serviceType = 'basic', Map<String, dynamic>? selection, String? geoToken}) async {
     lastSelection = selection;
+    lastGeoToken = geoToken;
     if (expireOtp) throw ApiException('انتهت صلاحية التحقق — أعد التحقق برمز جديد', status: 401);
     lastOtpToken = otpToken;
     bookings.add({'saved': carId});
@@ -72,11 +77,20 @@ class FakeApi implements CustomerApi {
   }
 
   @override
-  Future<Map<String, dynamic>> bookNew(String b, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken, Map<String, dynamic>? selection}) async {
+  Future<Map<String, dynamic>> bookNew(String b, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken, Map<String, dynamic>? selection, String? geoToken}) async {
     lastSelection = selection;
+    lastGeoToken = geoToken;
     lastOtpToken = otpToken;
     bookings.add({'name': name, 'phone': phone, 'car': car});
     return _booking('${car['plateNumbers']} ${car['plateLetters']}');
+  }
+
+  @override
+  Future<Map<String, dynamic>> geoCheck(String b, {required double lat, required double lng, required double accuracy, required bool mocked, required double fixAgeS}) async {
+    geoCalls++;
+    if (mocked) return {'enabled': true, 'ok': false, 'reason': 'mock', 'radiusM': 150};
+    if (nearMeters > 150) return {'enabled': true, 'ok': false, 'reason': 'far', 'distanceM': nearMeters.round(), 'radiusM': 150};
+    return {'enabled': true, 'ok': true, 'distanceM': nearMeters.round(), 'token': 'geo-$geoCalls', 'radiusM': 150};
   }
 
   @override
@@ -189,8 +203,17 @@ class FakeApi implements CustomerApi {
 }
 
 class FakeLocation implements LocationProvider {
-  FakeLocation({this.quick, this.fresh});
+  FakeLocation({this.quick, this.fresh, this.status = GeoStatus.ok, this.mocked = false});
   final LatLng? quick, fresh;
+  GeoStatus status;
+  bool mocked;
+  final settingsOpened = <GeoStatus>[];
+  @override
+  Future<GeoResult> fix() async => status == GeoStatus.ok && fresh != null
+      ? GeoResult(GeoStatus.ok, GeoFix(lat: fresh!.lat, lng: fresh!.lng, accuracy: 6, mocked: mocked, ageS: 1))
+      : GeoResult(status == GeoStatus.ok ? GeoStatus.failed : status);
+  @override
+  Future<void> openSettings(GeoStatus why) async => settingsOpened.add(why);
   @override
   Future<LatLng?> current() async => fresh;
   @override

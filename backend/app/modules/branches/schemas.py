@@ -38,6 +38,9 @@ class BranchUpdate(BaseModel):
     longitude: float | None = Field(default=None, ge=-180, le=180)
     invoicePrefix: str | None = Field(default=None, max_length=10)
     independentInvoiceNumbering: bool | None = None
+    # الحجز من التطبيق ممنوع إلا أمام الفرع (نصف القطر بالمتر)
+    geofenceEnabled: bool | None = None
+    geofenceRadiusM: int | None = Field(default=None, ge=30, le=2000)
 
 class BranchOut(BaseModel):
     id: str
@@ -56,3 +59,5 @@ class BranchOut(BaseModel):
     longitude: float | None = None
     invoice_prefix: str | None = None
     independent_invoice_numbering: bool = False
+    geofence_enabled: bool = False
+    geofence_radius_m: int = 150

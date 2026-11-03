@@ -19,8 +19,9 @@ abstract class CustomerApi {
   Future<Map<String, dynamic>> lookup(String branchId, {String phone = '', String? otpToken});
   Future<List<String>> brands(String branchId);
   Future<List<String>> models(String branchId, String brand);
-  Future<Map<String, dynamic>> bookSaved(String branchId, {required String carId, String? otpToken, String? odometer, String serviceType = 'basic', Map<String, dynamic>? selection});
-  Future<Map<String, dynamic>> bookNew(String branchId, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken, Map<String, dynamic>? selection});
+  Future<Map<String, dynamic>> bookSaved(String branchId, {required String carId, String? otpToken, String? odometer, String serviceType = 'basic', Map<String, dynamic>? selection, String? geoToken});
+  Future<Map<String, dynamic>> bookNew(String branchId, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken, Map<String, dynamic>? selection, String? geoToken});
+  Future<Map<String, dynamic>> geoCheck(String branchId, {required double lat, required double lng, required double accuracy, required bool mocked, required double fixAgeS});
   Future<Map<String, dynamic>> catalog(String branchId);
   Future<Map<String, dynamic>?> autoService(String branchId, {required String brand, required String model, required String year, bool external = false});
   Future<Map<String, dynamic>?> filterMatch(String branchId, {required String brand, required String model, required String year, String? cylinders, String? engineSize});
@@ -95,12 +96,15 @@ class Api implements CustomerApi {
   @override
   Future<List<String>> models(String b, String brand) async => _strings(await _send('GET', '/cars/public/car-models/$b', query: {'brand': brand}));
   @override
-  Future<Map<String, dynamic>> bookSaved(String b, {required String carId, String? otpToken, String? odometer, String serviceType = 'basic', Map<String, dynamic>? selection}) async =>
+  Future<Map<String, dynamic>> bookSaved(String b, {required String carId, String? otpToken, String? odometer, String serviceType = 'basic', Map<String, dynamic>? selection, String? geoToken}) async =>
       _map(await _send('POST', '/cars/public/booking/$b',
-          body: {'savedCarId': carId, 'odometer': odometer, 'serviceType': serviceType, 'otpToken': otpToken, ...?selection}));
+          body: {'savedCarId': carId, 'odometer': odometer, 'serviceType': serviceType, 'otpToken': otpToken, 'geoToken': geoToken, ...?selection}));
   @override
-  Future<Map<String, dynamic>> bookNew(String b, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken, Map<String, dynamic>? selection}) async =>
-      _map(await _send('POST', '/cars/public/booking/$b', body: {'serviceType': 'basic', 'name': name, 'phone': phone, 'car': car, 'otpToken': otpToken, ...?selection}));
+  Future<Map<String, dynamic>> bookNew(String b, {required String name, required String phone, required Map<String, dynamic> car, String? otpToken, Map<String, dynamic>? selection, String? geoToken}) async =>
+      _map(await _send('POST', '/cars/public/booking/$b', body: {'serviceType': 'basic', 'name': name, 'phone': phone, 'car': car, 'otpToken': otpToken, 'geoToken': geoToken, ...?selection}));
+  @override
+  Future<Map<String, dynamic>> geoCheck(String b, {required double lat, required double lng, required double accuracy, required bool mocked, required double fixAgeS}) async =>
+      _map(await _send('POST', '/cars/public/booking/$b/geo-check', body: {'lat': lat, 'lng': lng, 'accuracy': accuracy, 'mocked': mocked, 'fixAgeS': fixAgeS}));
 
   @override
   Future<Map<String, dynamic>> catalog(String b) async => _map(await _send('GET', '/cars/public/booking-products/$b'));

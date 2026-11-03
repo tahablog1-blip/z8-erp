@@ -19,13 +19,15 @@ type Branch = {
   manager_user_id: string | null; manager_name: string | null;
   address: string | null; latitude: number | null; longitude: number | null; invoice_prefix: string | null;
   independent_invoice_numbering: boolean;
+  geofence_enabled?: boolean; geofence_radius_m?: number;
 };
 
 type UserRow = { id: string; full_name: string; is_active: boolean };
 
 const EMPTY = { name: "", category: "service" as BranchCategory,
                 capacitySir: 0, capacityHafr: 0, capacityRafaat: 0, lines: [] as string[],
-                managerUserId: "", address: "", coords: "", invoicePrefix: "", independentInvoiceNumbering: false };
+                managerUserId: "", address: "", coords: "", invoicePrefix: "", independentInvoiceNumbering: false,
+                geofenceEnabled: false, geofenceRadiusM: 150 };
 
 /** يقبل "24.7136, 46.6753" (الصيغة التي ينسخها خرائط جوجل بالزر الأيمن) */
 function parseCoords(v: string): { latitude: number; longitude: number } | null {
@@ -71,7 +73,8 @@ export default function BranchesPage() {
               address: b.address || "",
               coords: b.latitude != null && b.longitude != null ? `${b.latitude}, ${b.longitude}` : "",
               invoicePrefix: b.invoice_prefix || "",
-              independentInvoiceNumbering: !!b.independent_invoice_numbering });
+              independentInvoiceNumbering: !!b.independent_invoice_numbering,
+              geofenceEnabled: !!b.geofence_enabled, geofenceRadiusM: b.geofence_radius_m || 150 });
     setErr(""); setModal({ mode: "edit", id: b.id });
   }
 
@@ -302,6 +305,24 @@ export default function BranchesPage() {
                 }}>موقعي الحالي</Button>
               </div>
             </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 rounded-lg border border-line bg-ink-3 p-2.5">
+            <label className="col-span-full flex cursor-pointer items-center justify-between">
+              <div>
+                <div className="text-t-sm font-bold">منع الحجز من تطبيق العميل إلا أمام الفرع</div>
+                <div className="text-t-xs text-text-dim">يتطلب ضبط موقع الفرع بدقة أعلاه (عند البوابة). يُنصح بتجربته أمام الفرع قبل الاعتماد عليه.</div>
+              </div>
+              <input type="checkbox" className="h-4 w-4"
+                     checked={form.geofenceEnabled}
+                     onChange={(e) => setForm({ ...form, geofenceEnabled: e.target.checked })} />
+            </label>
+            {form.geofenceEnabled && (
+              <Field label="أقصى مسافة عن الفرع (متر)" hint="الافتراضي 150">
+                <Input type="number" min={30} max={2000} value={form.geofenceRadiusM} className="tnum" dir="ltr"
+                       onChange={(e) => setForm({ ...form, geofenceRadiusM: Number(e.target.value) || 150 })} />
+              </Field>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2 rounded-lg border border-line bg-ink-3 p-2.5">

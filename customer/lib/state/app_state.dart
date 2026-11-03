@@ -284,12 +284,61 @@ class AppState extends ChangeNotifier {
     await loadProfile();
   }
 
-  // ── الحجز ──
-  Future<String?> bookSaved(SavedCar car, {String? odometer, Map<String, dynamic>? selection}) =>
-      _book(() => api.bookSaved(branchId!, carId: car.id, otpToken: otpToken, odometer: odometer, serviceType: car.serviceType, selection: selection));
+  // ── التحقق من الوجود أمام الفرع (الحجز لا يتم إلا بقرب الفرع) ──
+  bool get geofenceOn => info?.geofence == true;
+  String? _geoToken;
+  GeoStatus? geoWhy;            // سبب الفشل لو يحتاج إعدادات الموقع
+  int? geoDistanceM;
 
-  Future<String?> bookNew({required String name, required String phoneNo, required Map<String, dynamic> car, Map<String, dynamic>? selection}) =>
-      _book(() => api.bookNew(branchId!, name: name, phone: phoneNo, car: car, otpToken: otpToken, selection: selection));
+  /// يقرأ موقعك ويسأل الخادم. null = نجح (أو الفحص غير مفعّل)؛ غير ذلك رسالة للعرض.
+  Future<String?> verifyNear() async {
+    _geoToken = null;
+    geoWhy = null;
+    geoDistanceM = null;
+    if (!geofenceOn) return null;
+    final r = await location.fix();
+    if (r.status != GeoStatus.ok || r.fix == null) {
+      geoWhy = r.status;
+      return switch (r.status) {
+        GeoStatus.serviceOff => 'خدمة الموقع (GPS) مغلقة — فعّلها لتتمكن من الحجز',
+        GeoStatus.denied => 'نحتاج إذن الموقع للتأكد أنك أمام الفرع',
+        GeoStatus.deniedForever => 'إذن الموقع مرفوض — فعّله من إعدادات التطبيق',
+        _ => 'تعذّر تحديد موقعك — اخرج لمكان مفتوح وأعد المحاولة',
+      };
+    }
+    final f = r.fix!;
+    try {
+      final j = await api.geoCheck(branchId!, lat: f.lat, lng: f.lng, accuracy: f.accuracy, mocked: f.mocked, fixAgeS: f.ageS);
+      if (j['ok'] == true && j['token'] is String) {
+        _geoToken = j['token'] as String;
+        geoDistanceM = j['distanceM'] is num ? (j['distanceM'] as num).toInt() : null;
+        return null;
+      }
+      geoDistanceM = j['distanceM'] is num ? (j['distanceM'] as num).toInt() : null;
+      return switch ('${j['reason']}') {          // رسائل ثابتة قابلة للترجمة
+        'far' => 'أنت بعيد عن الفرع — اقترب لتتمكن من الحجز',
+        'mock' => 'تم اكتشاف موقع وهمي — أوقف تطبيقات تغيير الموقع ثم أعد المحاولة',
+        'weak' => 'إشارة الموقع ضعيفة — اخرج لمكان مفتوح وانتظر ثوانٍ ثم أعد المحاولة',
+        'stale' => 'موقعك قديم — انتظر ثوانٍ ليتحدّث ثم أعد المحاولة',
+        _ => 'تعذّر التحقق من موقعك — أعد المحاولة',
+      };
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  // ── الحجز ── (يُعاد فحص الموقع لحظة الإرسال: التوكن قصير العمر)
+  Future<String?> bookSaved(SavedCar car, {String? odometer, Map<String, dynamic>? selection}) async {
+    final g = await verifyNear();
+    if (g != null) return g;
+    return _book(() => api.bookSaved(branchId!, carId: car.id, otpToken: otpToken, odometer: odometer, serviceType: car.serviceType, selection: selection, geoToken: _geoToken));
+  }
+
+  Future<String?> bookNew({required String name, required String phoneNo, required Map<String, dynamic> car, Map<String, dynamic>? selection}) async {
+    final g = await verifyNear();
+    if (g != null) return g;
+    return _book(() => api.bookNew(branchId!, name: name, phone: phoneNo, car: car, otpToken: otpToken, selection: selection, geoToken: _geoToken));
+  }
 
   // ── الفواتير: كلها أو لسيارة واحدة. تتطلب هوية موثّقة لو التحقق مفعّل ──
   Future<InvoiceList> fetchInvoices({String? savedCarId}) async {

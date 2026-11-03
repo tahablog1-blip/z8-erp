@@ -4,6 +4,7 @@ import 'package:z8_customer/app.dart';
 import 'package:z8_customer/core/brand.dart';
 import 'package:z8_customer/core/car_brands.dart';
 import 'package:z8_customer/core/geo.dart';
+import 'package:z8_customer/core/location.dart';
 import 'package:z8_customer/core/i18n.dart';
 import 'package:z8_customer/core/store.dart';
 import 'package:z8_customer/core/widgets.dart';
@@ -12,8 +13,8 @@ import 'fake_api.dart';
 
 const riyadh = LatLng(24.7140, 46.6760); // قرب فرع الخليج
 
-Future<(AppState, FakeApi)> boot(WidgetTester t, {bool otp = true, Map<String, String>? seed, FakeLocation? loc}) async {
-  final api = FakeApi(otpRequired: otp);
+Future<(AppState, FakeApi)> boot(WidgetTester t, {bool otp = true, Map<String, String>? seed, FakeLocation? loc, bool geofence = false, double near = 30}) async {
+  final api = FakeApi(otpRequired: otp, geofence: geofence)..nearMeters = near;
   final store = MemoryStore()..m.addAll({'lang': 'ar', ...?seed});
   final state = AppState(api: api, store: store, location: loc ?? FakeLocation(fresh: riyadh));
   await t.binding.setSurfaceSize(const Size(420, 900));
@@ -709,5 +710,68 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('اختر الخدمة'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
+  });
+
+  group('الحجز لا يتم إلا أمام الفرع', () {
+    final seed = {'branch': branch, 'otp': 'old', 'phone': '0500000000'};
+
+    testWidgets('قريب: يمر بلا تعطيل ويصل توكن الموقع مع الحجز', (t) async {
+      final (_, api) = await boot(t, seed: seed, geofence: true, near: 40);
+      await t.tap(find.text('حجز جديد'));
+      await t.pumpAndSettle();
+      expect(find.text('التالي: اختيار الخدمة'), findsOneWidget);       // عبر بوابة القرب إلى نموذج الحجز
+      await t.tap(find.text('التالي: اختيار الخدمة'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('تغيير زيت ماكينة'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('احجز دون تحديد الزيت (يحدده الفني)'));
+      await t.pumpAndSettle();
+      expect(api.lastGeoToken, startsWith('geo-'));                       // التوكن أُرفق
+      expect(api.geoCalls, 2);                                            // عند الدخول وعند الإرسال
+      await t.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('بعيد: يُمنع الحجز مع المسافة وإعادة المحاولة', (t) async {
+      final (_, api) = await boot(t, seed: seed, geofence: true, near: 420);
+      await t.tap(find.text('حجز جديد'));
+      await t.pumpAndSettle();
+      expect(find.text('أنت بعيد عن الفرع — اقترب لتتمكن من الحجز'), findsOneWidget);
+      expect(find.text('أنت على بعد 420 م من الفرع'), findsOneWidget);
+      expect(find.text('التالي: اختيار الخدمة'), findsNothing);
+      api.nearMeters = 25;                                                // اقترب
+      await t.tap(find.text('إعادة المحاولة'));
+      await t.pumpAndSettle();
+      expect(find.text('التالي: اختيار الخدمة'), findsOneWidget);
+      await t.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('الموقع (GPS) مغلق: يطلب التفعيل ويفتح الإعدادات', (t) async {
+      final loc = FakeLocation(fresh: riyadh, status: GeoStatus.serviceOff);
+      final (_, _) = await boot(t, seed: seed, geofence: true, loc: loc);
+      await t.tap(find.text('حجز جديد'));
+      await t.pumpAndSettle();
+      expect(find.text('خدمة الموقع (GPS) مغلقة — فعّلها لتتمكن من الحجز'), findsOneWidget);
+      await t.tap(find.text('فتح إعدادات الموقع'));
+      expect(loc.settingsOpened, [GeoStatus.serviceOff]);
+      await t.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('موقع وهمي مرفوض', (t) async {
+      final loc = FakeLocation(fresh: riyadh, mocked: true);
+      await boot(t, seed: seed, geofence: true, loc: loc);
+      await t.tap(find.text('حجز جديد'));
+      await t.pumpAndSettle();
+      expect(find.textContaining('موقع وهمي'), findsOneWidget);
+      await t.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('الفحص غير مفعّل للفرع: لا يُطلب الموقع أصلاً', (t) async {
+      final (_, api) = await boot(t, seed: seed, near: 9000);
+      await t.tap(find.text('حجز جديد'));
+      await t.pumpAndSettle();
+      expect(find.text('التالي: اختيار الخدمة'), findsOneWidget);
+      expect(api.geoCalls, 0);
+      await t.pumpWidget(const SizedBox());
+    });
   });
 }
