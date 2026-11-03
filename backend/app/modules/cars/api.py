@@ -6,7 +6,7 @@ from fastapi import HTTPException, APIRouter, Depends, Query, Request
 import asyncio as _aio
 from ...core.deps import CurrentUser, get_current_user, require_permission
 from ..auto_checkin import vision as _gate_vision  # القارئ الموحّد (Plate Recognizer + احتياطي كلود)
-from . import notify_inbox, otp, service
+from . import geofence, notify_inbox, otp, service
 from ...core.db import fetchrow as _fetchrow
 from .schemas import BillingQueueRow, CarCreate, CarEdit, CarOut, ChecklistIn, LookupOut
 
@@ -466,6 +466,7 @@ async def public_branch(branch_id: str):
 
 @router.post("/public/book/{branch_id}")
 async def public_book(branch_id: str, body: PublicBookIn):
+    await geofence.web_blocked(branch_id)       # الحجز عبر الويب ملغى حيث فحص الموقع مفعّل
     return await service.public_book(branch_id, body.model_dump())
 
 
@@ -611,6 +612,7 @@ class PublicBookingIn(_BM):
     items: list = []
     withFilter: bool | None = None
     fromInvoice: str | None = None
+    geoToken: str | None = None         # توكن فحص الموقع (من /geo-check) — مطلوب للحجز لو الفرع مفعّل الفحص
     registerOnly: bool = False          # تسجيل السيارة في «سياراتي» بدون حجز دور
     customerNote: str | None = None     # مثل «زيت ماكينة من العميل (خارجي)» — يصل الموظف في ملاحظات السيارة
 
@@ -641,7 +643,21 @@ async def _branch_company(branch_id: str) -> str:
 async def public_booking_info(branch_id: str):
     info = await service.public_booking_info(branch_id)
     ch = await otp.channels(await _branch_company(branch_id))
-    return {**info, "otp": {**ch, "required": ch["phone"] or ch["email"]}}
+    return {**info, "otp": {**ch, "required": ch["phone"] or ch["email"]}, "geofence": await geofence.public_rule(branch_id)}
+
+
+class GeoCheckIn(_BM):
+    lat: float
+    lng: float
+    accuracy: float | None = None      # دقة الجهاز بالمتر
+    mocked: bool = False               # علامة «موقع وهمي» من نظام أندرويد
+    fixAgeS: float | None = None       # عمر قراءة الـGPS بالثواني
+
+
+@router.post("/public/booking/{branch_id}/geo-check")
+async def public_geo_check(branch_id: str, body: GeoCheckIn):
+    """فحص قرب العميل من الفرع. لا تُخزَّن الإحداثيات؛ النجاح يرجع توكناً قصيراً يُرفق مع الحجز."""
+    return await geofence.check(branch_id, body.lat, body.lng, body.accuracy, body.mocked, body.fixAgeS)
 
 
 @router.post("/public/booking/{branch_id}/otp/send")
@@ -664,6 +680,8 @@ async def public_otp_verify(branch_id: str, body: OtpVerifyIn):
 async def public_create_booking(branch_id: str, body: PublicBookingIn):
     data = body.model_dump()
     company_id = await _branch_company(branch_id)
+    if not body.registerOnly:
+        await geofence.require(branch_id, body.geoToken)     # لا يدخل الدور إلا من أمام الفرع
     if await otp.otp_enabled(company_id):
         claims = otp.read_token(body.otpToken, company_id)
         if body.savedCarId:

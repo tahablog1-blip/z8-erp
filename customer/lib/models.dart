@@ -26,15 +26,17 @@ class Branch {
 }
 
 class BranchInfo {
-  const BranchInfo({required this.name, required this.waiting, required this.inService, required this.estWaitMinutes, required this.otpRequired});
+  const BranchInfo({required this.name, required this.waiting, required this.inService, required this.estWaitMinutes, required this.otpRequired, this.geofence = false, this.geofenceRadiusM = 150});
   final String name;
-  final int waiting, inService, estWaitMinutes;
-  final bool otpRequired;
+  final int waiting, inService, estWaitMinutes, geofenceRadiusM;
+  final bool otpRequired, geofence;      // geofence: الحجز لا يتم إلا أمام الفرع
   factory BranchInfo.fromJson(Map<String, dynamic> j) {
     final otp = j['otp'];
     return BranchInfo(
       name: _s(j['branchName']), waiting: _i(j['waiting']), inService: _i(j['inService']), estWaitMinutes: _i(j['estWaitMinutes']),
       otpRequired: otp is Map && otp['required'] == true,
+      geofence: j['geofence'] is Map && j['geofence']['enabled'] == true,
+      geofenceRadiusM: j['geofence'] is Map ? (_i(j['geofence']['radiusM']) == 0 ? 150 : _i(j['geofence']['radiusM'])) : 150,
     );
   }
 }

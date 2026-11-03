@@ -5,6 +5,7 @@ import '../core/theme.dart';
 import '../core/widgets.dart';
 import '../models.dart';
 import '../state/app_state.dart';
+import 'flows.dart';
 import 'invoices_screen.dart';
 import 'services_screen.dart';
 import 'ticket_screen.dart';
@@ -41,6 +42,7 @@ class _CarScreenState extends State<CarScreen> {
   Future<void> _book() async {
     final s = widget.state, c = widget.car;
     final nav = Navigator.of(context);
+    if (!await ensureNear(context, s) || !mounted) return;
     final ok = await nav.push<bool>(MaterialPageRoute(
       builder: (_) => ServicesScreen(
         state: s, carTitle: '${c.title.isEmpty ? 'سيارة' : c.title} · ${c.plate}', brand: c.brand, model: c.name, year: c.year, askOdometer: true, cylinders: c.cylinders, engineSize: c.engineSize,
