@@ -224,8 +224,8 @@ class Catalog {
 
 /// إعلان في الرئيسية
 class Ad {
-  const Ad({required this.id, required this.title, required this.body, required this.link, required this.image});
+  const Ad({required this.id, required this.title, required this.body, required this.link, required this.image, this.video});
   final String id, title, body, link;
-  final String? image;       // مسار نسبي على الخادم
-  factory Ad.fromJson(Map<String, dynamic> j) => Ad(id: _s(j['id']), title: _s(j['title']), body: _s(j['body']), link: _s(j['link']), image: j['image'] == null ? null : _s(j['image']));
+  final String? image, video;       // مسارات نسبية على الخادم (الفيديو MP4 بلا تحكم بالتقدم)
+  factory Ad.fromJson(Map<String, dynamic> j) => Ad(id: _s(j['id']), title: _s(j['title']), body: _s(j['body']), link: _s(j['link']), image: j['image'] == null ? null : _s(j['image']), video: j['video'] == null ? null : _s(j['video']));
 }

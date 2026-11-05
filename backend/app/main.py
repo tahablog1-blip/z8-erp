@@ -980,6 +980,7 @@ async def lifespan(app: FastAPI):
              sort integer NOT NULL DEFAULT 0,
              created_at timestamptz NOT NULL DEFAULT now()
            )""",
+        "ALTER TABLE customer_ads ADD COLUMN IF NOT EXISTS video_file text",
         "ALTER TABLE branches ADD COLUMN IF NOT EXISTS geofence_enabled boolean NOT NULL DEFAULT FALSE",
         "ALTER TABLE branches ADD COLUMN IF NOT EXISTS geofence_radius_m integer NOT NULL DEFAULT 150",
         "ALTER TABLE branches ADD COLUMN IF NOT EXISTS longitude double precision",

@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { Button, Card, Field, Input, Textarea, Badge, Modal, ErrorNote, PageHeader } from "@/components/ui";
 import { appConfirm } from "@/components/dialog";
 
-type Ad = { id: string; title: string; body: string; link: string; is_active: boolean; sort: number; has_image: boolean };
+type Ad = { id: string; title: string; body: string; link: string; is_active: boolean; sort: number; has_image: boolean; has_video?: boolean };
 const EMPTY = { title: "", body: "", link: "", isActive: true, sort: 0, imageData: undefined as string | undefined };
 
 function readImage(file: File): Promise<string> {
@@ -35,21 +35,32 @@ export default function AdsPage() {
   const [form, setForm] = useState({ ...EMPTY });
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [video, setVideo] = useState<File | null>(null);
+  const [dropVideo, setDropVideo] = useState(false);
+  const [hadVideo, setHadVideo] = useState(false);
 
   const load = () => api<Ad[]>("/cars/ads").then(setAds).catch((e) => setErr(e.message));
   useEffect(() => { load(); }, []);
 
-  function openNew() { setForm({ ...EMPTY }); setErr(""); setModal({}); }
+  function openNew() { setForm({ ...EMPTY }); setVideo(null); setDropVideo(false); setHadVideo(false); setErr(""); setModal({}); }
   function openEdit(a: Ad) {
     setForm({ title: a.title, body: a.body || "", link: a.link || "", isActive: a.is_active, sort: a.sort, imageData: undefined });
+    setVideo(null); setDropVideo(false); setHadVideo(!!a.has_video);
     setErr(""); setModal({ id: a.id });
   }
   async function save() {
     setErr(""); setBusy(true);
     try {
       const body = JSON.stringify({ ...form, imageData: form.imageData });
-      if (modal?.id) await api(`/cars/ads/${modal.id}`, { method: "PUT", body });
-      else await api("/cars/ads", { method: "POST", body });
+      let id = modal?.id;
+      if (id) await api(`/cars/ads/${id}`, { method: "PUT", body });
+      else id = (await api<{ id: string }>("/cars/ads", { method: "POST", body })).id;
+      if (video) {
+        const fd = new FormData(); fd.append("file", video);
+        await api(`/cars/ads/${id}/video`, { method: "POST", body: fd });
+      } else if (dropVideo && hadVideo) {
+        await api(`/cars/ads/${id}/video`, { method: "DELETE" });
+      }
       setModal(null); await load();
     } catch (e: any) { setErr(e.message); } finally { setBusy(false); }
   }
@@ -73,7 +84,7 @@ export default function AdsPage() {
                 <div className="truncate text-t-md font-black">{a.title}</div>
                 {a.body && <div className="mt-0.5 line-clamp-2 text-t-sm text-text-dim">{a.body}</div>}
               </div>
-              <Badge tone={a.is_active ? "good" : undefined}>{a.is_active ? "ظاهر" : "مخفي"}</Badge>
+              <div className="flex shrink-0 gap-1">{a.has_video && <Badge>فيديو</Badge>}<Badge tone={a.is_active ? "good" : undefined}>{a.is_active ? "ظاهر" : "مخفي"}</Badge></div>
             </div>
             <div className="mt-3 flex gap-2">
               <Button variant="ghost" onClick={() => openEdit(a)}>تعديل</Button>
@@ -96,6 +107,15 @@ export default function AdsPage() {
               try { setForm({ ...form, imageData: await readImage(f) }); } catch (x: any) { setErr(x.message); }
             }} />
             {form.imageData && <button type="button" className="mt-1 text-t-xs text-ember" onClick={() => setForm({ ...form, imageData: "" })}>إزالة الصورة</button>}
+          </Field>
+          <Field label="فيديو (اختياري)" hint="MP4 فقط حتى 20 ميجابايت. يعمل تلقائياً في التطبيق بدون تحكم بالتقدم، والعميل يكتم الصوت أو يشغّله فقط. يُفضّل 10–20 ثانية.">
+            <input type="file" accept="video/mp4" onChange={(e) => {
+              const f = e.target.files?.[0]; if (!f) return;
+              if (f.size > 20 * 1024 * 1024) { setErr("الفيديو أكبر من 20 ميجابايت"); e.target.value = ""; return; }
+              setErr(""); setVideo(f); setDropVideo(false);
+            }} />
+            {hadVideo && !video && !dropVideo && <div className="mt-1 text-t-xs text-text-dim">يوجد فيديو حالي. <button type="button" className="text-ember" onClick={() => setDropVideo(true)}>حذف الفيديو</button></div>}
+            {dropVideo && <div className="mt-1 text-t-xs text-ember">سيُحذف الفيديو عند الحفظ</div>}
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="الترتيب"><Input type="number" dir="ltr" value={form.sort} onChange={(e) => setForm({ ...form, sort: Number(e.target.value) || 0 })} /></Field>
