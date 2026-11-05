@@ -839,8 +839,11 @@ void main() {
   testWidgets('إعلان الفيديو: زر واحد فقط للصوت (كتم/تشغيل) بلا أي تحكم بالتقدم', (t) async {
     final (state, _) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
     expect(state.ads.last.video, '/api/cars/public/ad-video/ad3');
-    await t.drag(find.byType(PageView), const Offset(800, 0));        // إلى إعلان الفيديو (آخر صفحة)
-    await t.pumpAndSettle();
+    expect(state.ads.firstWhere((a) => a.gif != null).gif, '/api/cars/public/ad-video/ad4');   // إعلان GIF
+    for (var k = 0; k < 3; k++) {
+      await t.drag(find.byType(PageView), const Offset(800, 0));        // إلى إعلان الفيديو (آخر صفحة)
+      await t.pumpAndSettle();
+    }
     await t.drag(find.byType(PageView), const Offset(800, 0));
     await t.pumpAndSettle();
     expect(find.text('فيديو تعريفي'), findsOneWidget);
@@ -874,6 +877,7 @@ void main() {
     await t.tap(find.byKey(const ValueKey('info-o-eng')));
     await t.pumpAndSettle();
     expect(find.text('تفاصيل المنتج'), findsOneWidget);
+    expect(find.byType(Image), findsWidgets);                                // غلاف البطاقة (GIF المتحرك لو رُفع)
     for (final x in ['5W-30', 'API SP', 'صناعي بالكامل', 'مواصفات المنتج', 'الحماية', 'توفير الوقود', 'قوة المنتج', 'حماية ممتازة من التآكل', 'يصلح لـ', 'بنزين', 'هايبرد', 'زيت صناعي للمحركات الحديثة']) {
       expect(find.text(x), findsOneWidget, reason: x);
     }

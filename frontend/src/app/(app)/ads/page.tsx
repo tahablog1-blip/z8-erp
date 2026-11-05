@@ -84,7 +84,7 @@ export default function AdsPage() {
                 <div className="truncate text-t-md font-black">{a.title}</div>
                 {a.body && <div className="mt-0.5 line-clamp-2 text-t-sm text-text-dim">{a.body}</div>}
               </div>
-              <div className="flex shrink-0 gap-1">{a.has_video && <Badge>فيديو</Badge>}<Badge tone={a.is_active ? "good" : undefined}>{a.is_active ? "ظاهر" : "مخفي"}</Badge></div>
+              <div className="flex shrink-0 gap-1">{a.has_video && <Badge>فيديو/GIF</Badge>}<Badge tone={a.is_active ? "good" : undefined}>{a.is_active ? "ظاهر" : "مخفي"}</Badge></div>
             </div>
             <div className="mt-3 flex gap-2">
               <Button variant="ghost" onClick={() => openEdit(a)}>تعديل</Button>
@@ -108,14 +108,15 @@ export default function AdsPage() {
             }} />
             {form.imageData && <button type="button" className="mt-1 text-t-xs text-ember" onClick={() => setForm({ ...form, imageData: "" })}>إزالة الصورة</button>}
           </Field>
-          <Field label="فيديو (اختياري)" hint="MP4 فقط حتى 20 ميجابايت. يعمل تلقائياً في التطبيق بدون تحكم بالتقدم، والعميل يكتم الصوت أو يشغّله فقط. يُفضّل 10–20 ثانية.">
-            <input type="file" accept="video/mp4" onChange={(e) => {
+          <Field label="فيديو أو GIF متحرك (اختياري)" hint="MP4 حتى 20 ميجابايت (بصوت اختياري للعميل: كتم/تشغيل فقط)، أو GIF حتى 10 ميجابايت (بلا صوت، يدور تلقائياً). GIF أثقل من MP4 بنفس المدة، فاحرص أن يكون قصيراً.">
+            <input type="file" accept="video/mp4,image/gif" onChange={(e) => {
               const f = e.target.files?.[0]; if (!f) return;
-              if (f.size > 20 * 1024 * 1024) { setErr("الفيديو أكبر من 20 ميجابايت"); e.target.value = ""; return; }
+              const gif = f.type === "image/gif";
+              if (f.size > (gif ? 10 : 20) * 1024 * 1024) { setErr(gif ? "ملف GIF أكبر من 10 ميجابايت" : "الفيديو أكبر من 20 ميجابايت"); e.target.value = ""; return; }
               setErr(""); setVideo(f); setDropVideo(false);
             }} />
-            {hadVideo && !video && !dropVideo && <div className="mt-1 text-t-xs text-text-dim">يوجد فيديو حالي. <button type="button" className="text-ember" onClick={() => setDropVideo(true)}>حذف الفيديو</button></div>}
-            {dropVideo && <div className="mt-1 text-t-xs text-ember">سيُحذف الفيديو عند الحفظ</div>}
+            {hadVideo && !video && !dropVideo && <div className="mt-1 text-t-xs text-text-dim">يوجد فيديو/GIF حالي. <button type="button" className="text-ember" onClick={() => setDropVideo(true)}>حذف</button></div>}
+            {dropVideo && <div className="mt-1 text-t-xs text-ember">سيُحذف عند الحفظ</div>}
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="الترتيب"><Input type="number" dir="ltr" value={form.sort} onChange={(e) => setForm({ ...form, sort: Number(e.target.value) || 0 })} /></Field>

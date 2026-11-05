@@ -55,7 +55,7 @@ class _ProductCardScreenState extends State<ProductCardScreen> with TickerProvid
       if (c != null && c.economy > 0) (tr('توفير الوقود'), c.economy),
       if (c != null && c.heat > 0) (tr('تحمّل الحرارة'), c.heat),
     ];
-    final img = absUrl(o.image);
+    final img = absUrl(c?.gif ?? o.image);      // GIF المتحرك يحل محل الصورة الثابتة
     return Scaffold(
       appBar: AppBar(title: Text(tr('تفاصيل المنتج'), style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
       body: SafeArea(
@@ -87,7 +87,7 @@ class _ProductCardScreenState extends State<ProductCardScreen> with TickerProvid
                         height: 190,
                         child: img == null
                             ? const Icon(Icons.oil_barrel_outlined, size: 96, color: Colors.white)
-                            : Image.network(img, fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.oil_barrel_outlined, size: 96, color: Colors.white)),
+                            : Image.network(img, fit: BoxFit.contain, gaplessPlayback: true, errorBuilder: (_, _, _) => const Icon(Icons.oil_barrel_outlined, size: 96, color: Colors.white)),
                       ),
                     ),
                   ),

@@ -2,7 +2,7 @@
 # نفس عقد النظام القديم: مسارات القراءة (القائمة، الباركود، القوائم المتسلسلة)
 # مفتوحة عن قصد للمسجّلين — نقطة البيع وتسجيل السيارات محتاجينها حتى لموظف
 # بلا صلاحية إدارة الأصناف. الكتابة كلها خلف صلاحياتها.
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel
 
 from ...core.audit import log_action
@@ -538,10 +538,10 @@ def clean_card(c: dict) -> dict | None:
 @router.get("/{product_id}/card")
 async def get_product_card(product_id: str, user: CurrentUser = Depends(get_current_user)):
     from ...core.db import fetchrow
-    row = await fetchrow("SELECT card FROM products WHERE id=$1::uuid AND company_id=$2", product_id, user.company_id)
+    row = await fetchrow("SELECT card, (card_gif IS NOT NULL) AS has_gif FROM products WHERE id=$1::uuid AND company_id=$2", product_id, user.company_id)
     if not row:
         raise HTTPException(404, "الصنف غير موجود")
-    return row["card"] or {}
+    return {**(row["card"] or {}), "hasGif": bool(row["has_gif"])}
 
 
 @router.put("/{product_id}/card")
@@ -555,3 +555,50 @@ async def put_product_card(product_id: str, body: ProductCardIn,
         raise HTTPException(404, "الصنف غير موجود")
     await log_action(user, "product_edit", "stock", details=f"بطاقة المنتج — {row['name']}")
     return {"ok": True, "card": card}
+
+
+PRODUCT_GIF_DIR = "uploads/product-gif"
+PRODUCT_GIF_MAX = 10 * 1024 * 1024
+
+
+def _rm_product_gif(fname: str | None) -> None:
+    import os
+    if fname and "/" not in fname and ".." not in fname:
+        try:
+            os.remove(os.path.join(PRODUCT_GIF_DIR, fname))
+        except OSError:
+            pass
+
+
+@router.post("/{product_id}/card/gif")
+async def upload_product_gif(product_id: str, file: UploadFile = File(...),
+                             user: CurrentUser = Depends(require_permission("products.edit"))):
+    """صورة GIF متحركة للمنتج (بدل فيديو): تظهر في بطاقة المنتج بالتطبيق. حتى 10MB."""
+    import os
+    from ...core.db import execute, fetchrow
+    cur = await fetchrow("SELECT card_gif, name FROM products WHERE id=$1::uuid AND company_id=$2", product_id, user.company_id)
+    if not cur:
+        raise HTTPException(404, "الصنف غير موجود")
+    data = await file.read(PRODUCT_GIF_MAX + 1)
+    if len(data) > PRODUCT_GIF_MAX:
+        raise HTTPException(413, "ملف GIF كبير — الحد 10 ميجابايت")
+    if data[:4] != b"GIF8":
+        raise HTTPException(422, "الملف ليس صورة GIF صالحة")
+    os.makedirs(PRODUCT_GIF_DIR, exist_ok=True)
+    fname = f"{product_id}-{os.urandom(6).hex()}.gif"
+    with open(os.path.join(PRODUCT_GIF_DIR, fname), "wb") as f:
+        f.write(data)
+    await execute("UPDATE products SET card_gif=$3 WHERE id=$1::uuid AND company_id=$2", product_id, user.company_id, fname)
+    _rm_product_gif(cur["card_gif"])
+    await log_action(user, "product_edit", "stock", details=f"GIF بطاقة المنتج — {cur['name']}")
+    return {"ok": True}
+
+
+@router.delete("/{product_id}/card/gif")
+async def delete_product_gif(product_id: str, user: CurrentUser = Depends(require_permission("products.edit"))):
+    from ...core.db import execute, fetchrow
+    cur = await fetchrow("SELECT card_gif FROM products WHERE id=$1::uuid AND company_id=$2", product_id, user.company_id)
+    if cur:
+        await execute("UPDATE products SET card_gif=NULL WHERE id=$1::uuid AND company_id=$2", product_id, user.company_id)
+        _rm_product_gif(cur["card_gif"])
+    return {"ok": True}

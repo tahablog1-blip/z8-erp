@@ -211,3 +211,4 @@ CREATE TABLE IF NOT EXISTS customer_ads (id uuid PRIMARY KEY DEFAULT gen_random_
 ALTER TABLE cars ADD COLUMN IF NOT EXISTS draft_items jsonb;
 ALTER TABLE customer_ads ADD COLUMN IF NOT EXISTS video_file text;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS card jsonb;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS card_gif text;
