@@ -166,6 +166,7 @@ class FakeApi implements CustomerApi {
   List<Map<String, dynamic>> adList = [
     {'id': 'ad1', 'title': 'خصم 20% على تغيير الزيت', 'body': 'لفترة محدودة', 'link': '', 'image': null},
     {'id': 'ad2', 'title': 'افتتاح فرع جديد', 'body': '', 'link': 'https://example.com', 'image': null},
+    {'id': 'ad3', 'title': 'فيديو تعريفي', 'body': 'شاهد', 'link': '', 'image': null, 'video': '/api/cars/public/ad-video/ad3'},
   ];
   @override
   Future<Map<String, dynamic>> ads(String b) async => {'ads': adList};

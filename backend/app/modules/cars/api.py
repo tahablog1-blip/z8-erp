@@ -1,7 +1,7 @@
 # modules/cars/api.py — طبقة الـ HTTP: مسارات + صلاحيات فقط
 # نفس عقد النظام القديم: GET / مفتوح عن قصد — الكاشير محتاجها لربط الفاتورة
 # بالسيارة حتى لو مالوش صلاحيات إدارة الدور.
-from fastapi import HTTPException, APIRouter, Depends, Query, Request
+from fastapi import HTTPException, APIRouter, Depends, Query, Request, UploadFile, File
 
 import asyncio as _aio
 from ...core.deps import CurrentUser, get_current_user, require_permission
@@ -1426,7 +1426,7 @@ def _clean_image(v: str | None) -> str | None:
 @router.get("/ads")
 async def list_ads(user: CurrentUser = Depends(require_permission("branches.manage"))):
     from ...core.db import fetch as _f
-    rows = await _f("""SELECT id, title, body, link, is_active, sort, (image_data IS NOT NULL AND image_data <> '') AS has_image, created_at
+    rows = await _f("""SELECT id, title, body, link, is_active, sort, (image_data IS NOT NULL AND image_data <> '') AS has_image, (video_file IS NOT NULL) AS has_video, created_at
                        FROM customer_ads WHERE company_id=$1 ORDER BY sort, created_at DESC""", user.company_id)
     return [{**dict(r), "id": str(r["id"])} for r in rows]
 
@@ -1458,7 +1458,56 @@ async def update_ad(ad_id: str, body: AdIn, user: CurrentUser = Depends(require_
 async def delete_ad(ad_id: str, user: CurrentUser = Depends(require_permission("branches.manage"))):
     _pub_guard(ad_id)
     from ...core.db import execute as _ex
-    await _ex("DELETE FROM customer_ads WHERE id=$1::uuid AND company_id=$2", ad_id, user.company_id)
+    row = await _fetchrow("DELETE FROM customer_ads WHERE id=$1::uuid AND company_id=$2 RETURNING video_file", ad_id, user.company_id)
+    if row:
+        _rm_ad_video(row["video_file"])
+    return {"ok": True}
+
+
+AD_VIDEO_DIR = "uploads/ads"
+AD_VIDEO_MAX = 20 * 1024 * 1024        # 20MB — تحت حد nginx (25m)
+
+
+def _rm_ad_video(fname: str | None) -> None:
+    import os
+    if fname and "/" not in fname and ".." not in fname:
+        try:
+            os.remove(os.path.join(AD_VIDEO_DIR, fname))
+        except OSError:
+            pass
+
+
+@router.post("/ads/{ad_id}/video")
+async def upload_ad_video(ad_id: str, file: UploadFile = File(...), user: CurrentUser = Depends(require_permission("branches.manage"))):
+    """فيديو الإعلان (MP4 فقط، حتى 20MB). يُعرض في التطبيق بلا تحكم بالتقدم — كتم/تشغيل الصوت فقط."""
+    import os
+    _pub_guard(ad_id)
+    cur = await _fetchrow("SELECT video_file FROM customer_ads WHERE id=$1::uuid AND company_id=$2", ad_id, user.company_id)
+    if not cur:
+        raise HTTPException(404, "الإعلان غير موجود")
+    data = await file.read(AD_VIDEO_MAX + 1)
+    if len(data) > AD_VIDEO_MAX:
+        raise HTTPException(413, "الفيديو كبير — الحد 20 ميجابايت")
+    if len(data) < 12 or data[4:8] != b"ftyp":
+        raise HTTPException(422, "الملف ليس فيديو MP4 صالحاً")
+    os.makedirs(AD_VIDEO_DIR, exist_ok=True)
+    fname = f"{ad_id}-{os.urandom(6).hex()}.mp4"
+    with open(os.path.join(AD_VIDEO_DIR, fname), "wb") as f:
+        f.write(data)
+    from ...core.db import execute as _ex
+    await _ex("UPDATE customer_ads SET video_file=$3 WHERE id=$1::uuid AND company_id=$2", ad_id, user.company_id, fname)
+    _rm_ad_video(cur["video_file"])
+    return {"ok": True}
+
+
+@router.delete("/ads/{ad_id}/video")
+async def delete_ad_video(ad_id: str, user: CurrentUser = Depends(require_permission("branches.manage"))):
+    _pub_guard(ad_id)
+    cur = await _fetchrow("SELECT video_file FROM customer_ads WHERE id=$1::uuid AND company_id=$2", ad_id, user.company_id)
+    if cur:
+        from ...core.db import execute as _ex
+        await _ex("UPDATE customer_ads SET video_file=NULL WHERE id=$1::uuid AND company_id=$2", ad_id, user.company_id)
+        _rm_ad_video(cur["video_file"])
     return {"ok": True}
 
 
@@ -1467,10 +1516,23 @@ async def public_ads(branch_id: str):
     """إعلانات الرئيسية في تطبيق العميل (الفعّالة فقط، مرتبة)"""
     from ...core.db import fetch as _f
     company_id = await _branch_company(branch_id)
-    rows = await _f("""SELECT id, title, body, link, (image_data IS NOT NULL AND image_data <> '') AS has_image
+    rows = await _f("""SELECT id, title, body, link, (image_data IS NOT NULL AND image_data <> '') AS has_image, (video_file IS NOT NULL) AS has_video
                        FROM customer_ads WHERE company_id=$1 AND is_active=TRUE ORDER BY sort, created_at DESC LIMIT 12""", company_id)
     return {"ads": [{"id": str(r["id"]), "title": r["title"], "body": r["body"] or "", "link": r["link"] or "",
-                     "image": f"/api/cars/public/ad-image/{r['id']}" if r["has_image"] else None} for r in rows]}
+                     "image": f"/api/cars/public/ad-image/{r['id']}" if r["has_image"] else None,
+                     "video": f"/api/cars/public/ad-video/{r['id']}" if r["has_video"] else None} for r in rows]}
+
+
+@router.get("/public/ad-video/{ad_id}")
+async def public_ad_video(ad_id: str):
+    import os
+    from fastapi.responses import FileResponse
+    _pub_guard(ad_id)
+    row = await _fetchrow("SELECT video_file FROM customer_ads WHERE id=$1::uuid AND is_active=TRUE", ad_id)
+    path = os.path.join(AD_VIDEO_DIR, row["video_file"]) if row and row["video_file"] and "/" not in row["video_file"] else None
+    if not path or not os.path.exists(path):
+        raise HTTPException(404, "غير موجود")
+    return FileResponse(path, media_type="video/mp4", headers={"Cache-Control": "public, max-age=600"})
 
 
 @router.get("/public/ad-image/{ad_id}")

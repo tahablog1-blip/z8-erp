@@ -161,3 +161,44 @@ def test_my_bookings_and_cancel_and_ads(world):
     assert [a["title"] for a in ads] == ["خصم 20%"] and ads[0]["image"].startswith("/api/cars/public/ad-image/")
     img = run(lambda: get(ads[0]["image"]))
     assert img.status_code == 200 and img.headers["content-type"] == "image/png"
+
+
+def test_ad_video_upload_validation_and_range_serving(world, tmp_path, monkeypatch):
+    import io
+    from fastapi import HTTPException, UploadFile
+    from app.core import db
+    from app.modules.cars import api as cars_api
+    monkeypatch.setattr(cars_api, "AD_VIDEO_DIR", str(tmp_path))
+
+    async def mk():
+        async with db.pool().acquire() as c:
+            return str(await c.fetchval("INSERT INTO customer_ads (company_id, title) VALUES ($1,'فيديو') RETURNING id", CID))
+    ad = run(mk)
+
+    class U:
+        company_id = str(CID)
+
+    def up(data):
+        f = UploadFile(file=io.BytesIO(data), filename="a.mp4")
+        return run(lambda: cars_api.upload_ad_video(ad, f, U()))
+    with pytest.raises(HTTPException) as e:
+        up(b"not a video at all, just text")
+    assert e.value.status_code == 422
+    mp4 = b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 2000
+    assert up(mp4) == {"ok": True}
+
+    base = f"/api/cars/public/booking/{world['br']}"
+
+    async def get(path, **kw):
+        async with client() as c:
+            return await c.get(path, **kw)
+    ads = run(lambda: get(f"{base}/ads")).json()["ads"]
+    assert ads[0]["video"] == f"/api/cars/public/ad-video/{ad}"
+    full = run(lambda: get(ads[0]["video"]))
+    assert full.status_code == 200 and full.headers["content-type"] == "video/mp4" and len(full.content) == len(mp4)
+    part = run(lambda: get(ads[0]["video"], headers={"Range": "bytes=0-99"}))
+    assert part.status_code == 206 and len(part.content) == 100          # يدعم التمرير الجزئي (يلزم للتشغيل على الجوال)
+    big = b"\x00\x00\x00\x18ftypmp42" + b"\x00" * (20 * 1024 * 1024)
+    with pytest.raises(HTTPException) as e:
+        up(big)
+    assert e.value.status_code == 413

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:z8_customer/app.dart';
+import 'package:z8_customer/core/ads.dart';
 import 'package:z8_customer/core/brand.dart';
 import 'package:z8_customer/core/car_brands.dart';
 import 'package:z8_customer/core/geo.dart';
@@ -25,7 +26,8 @@ Future<(AppState, FakeApi)> boot(WidgetTester t, {bool otp = true, Map<String, S
 }
 
 void main() {
-  Motion.enabled = false;   // الحركات المستمرة تمنع استقرار الشاشة في الاختبار
+  Motion.enabled = false;
+  AdVideo.enabled = false;  // لا منصة فيديو في الاختبار   // الحركات المستمرة تمنع استقرار الشاشة في الاختبار
   test('المسافة ووقت الوصول: Haversine وتقدير القيادة', () {
     final km = haversineKm(const LatLng(24.7136, 46.6753), const LatLng(21.4858, 39.1925)); // الرياض ← جدة تقريباً 850 كم
     expect(km, inInclusiveRange(820, 880));
@@ -832,5 +834,26 @@ void main() {
       expect(api.geoCalls, 0);
       await t.pumpWidget(const SizedBox());
     });
+  });
+
+  testWidgets('إعلان الفيديو: زر واحد فقط للصوت (كتم/تشغيل) بلا أي تحكم بالتقدم', (t) async {
+    final (state, _) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    expect(state.ads.last.video, '/api/cars/public/ad-video/ad3');
+    await t.drag(find.byType(PageView), const Offset(800, 0));        // إلى إعلان الفيديو (آخر صفحة)
+    await t.pumpAndSettle();
+    await t.drag(find.byType(PageView), const Offset(800, 0));
+    await t.pumpAndSettle();
+    expect(find.text('فيديو تعريفي'), findsOneWidget);
+    expect(find.byIcon(Icons.volume_off), findsOneWidget);             // يبدأ مكتوماً
+    await t.tap(find.byKey(const ValueKey('ad-mute')));
+    await t.pump();
+    expect(find.byIcon(Icons.volume_up), findsOneWidget);              // تشغيل الصوت
+    await t.tap(find.byKey(const ValueKey('ad-mute')));
+    await t.pump();
+    expect(find.byIcon(Icons.volume_off), findsOneWidget);
+    expect(find.byType(Slider), findsNothing);                          // لا شريط تقدم
+    expect(find.byIcon(Icons.play_arrow), findsNothing);
+    expect(find.byIcon(Icons.pause), findsNothing);
+    await t.pumpWidget(const SizedBox());
   });
 }
