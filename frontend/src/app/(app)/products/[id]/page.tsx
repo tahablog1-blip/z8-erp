@@ -15,6 +15,7 @@ import { AreaChart } from "@/components/dashboard/charts/AreaChart";
 import { ProductForm } from "@/components/products/ProductForm";
 import { BarcodeLabels } from "@/components/products/BarcodeLabels";
 import { StockBadge, Thumb, TypeChips } from "@/components/products/parts";
+import { ProductCardEditor } from "@/components/products/ProductCardEditor";
 import { barcodeSvg } from "@/lib/code128";
 import { fmtCompact } from "@/lib/dashboard/format";
 import { ago, fmtCurrency, fmtD, fmtDT, fmtMoney } from "@/lib/customers/format";
@@ -169,6 +170,11 @@ export default function ProductProfilePage() {
       {tab === "overview" && (
         <div className="grid gap-4 xl:grid-cols-3">
           <div className="space-y-4 xl:col-span-2">
+            {!p.isService && (
+              <Card title="بطاقة المنتج في تطبيق العميل" icon="auto_awesome">
+                <ProductCardEditor id={id} canEdit={canEdit} />
+              </Card>
+            )}
             {!p.isService && (
               <Card title="المخزون حسب الموقع" icon="warehouse">
                 {d.stock.length === 0 ? <EmptyState icon="inventory_2" title="لا يوجد رصيد مسجّل لهذا الصنف" description="يظهر الرصيد بعد أول استلام أو تحويل." /> : (

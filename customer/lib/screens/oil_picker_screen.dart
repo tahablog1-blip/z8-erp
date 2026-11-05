@@ -3,6 +3,7 @@ import '../core/config.dart';
 import '../core/i18n.dart';
 import '../core/theme.dart';
 import '../models.dart';
+import 'product_card_screen.dart';
 
 /// اختيار الزيت على مرحلتين: شركات الزيوت (شعار + اسم) ثم زيوت الشركة (صورة + اسم + سعر).
 /// يرجع OilProduct عند الاختيار.
@@ -88,7 +89,10 @@ class _OilPickerScreenState extends State<OilPickerScreen> {
                 padding: const EdgeInsets.all(16), crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: .72,
                 children: [
                   for (final o in shown)
-                    _OilCard(o, () {
+                    _OilCard(o, onInfo: o.card == null ? null : () async {
+                      final r = await Navigator.push<OilProduct>(context, MaterialPageRoute(builder: (_) => ProductCardScreen(product: o)));
+                      if (r != null && mounted) Navigator.pop(context, r);       // اختاره من داخل البطاقة
+                    }, () {
                       if (o.inStock) return Navigator.pop(context, o);
                       ScaffoldMessenger.of(context)
                         ..hideCurrentSnackBar()
@@ -140,9 +144,10 @@ class _BrandCard extends StatelessWidget {
 }
 
 class _OilCard extends StatelessWidget {
-  const _OilCard(this.o, this.onTap);
+  const _OilCard(this.o, this.onTap, {this.onInfo});
   final OilProduct o;
   final VoidCallback onTap;
+  final VoidCallback? onInfo;       // يظهر زر (i) فقط لو للمنتج بطاقة تفاصيل
   @override
   Widget build(BuildContext context) => Material(
         color: Z8.ink2,
@@ -154,6 +159,17 @@ class _OilCard extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Expanded(child: Stack(fit: StackFit.expand, children: [
                 Opacity(opacity: o.inStock ? 1 : .35, child: _Img(o.image, fallback: Icons.oil_barrel_outlined)),
+                if (onInfo != null)
+                  PositionedDirectional(
+                    top: 0, end: 0,
+                    child: Material(
+                      color: Z8.petrol, shape: const CircleBorder(),
+                      child: InkWell(
+                        key: ValueKey('info-${o.id}'), customBorder: const CircleBorder(), onTap: onInfo,
+                        child: const Padding(padding: EdgeInsets.all(5), child: Icon(Icons.info_outline, size: 18, color: Colors.white)),
+                      ),
+                    ),
+                  ),
                 if (!o.inStock)
                   Align(
                     alignment: Alignment.bottomCenter,
