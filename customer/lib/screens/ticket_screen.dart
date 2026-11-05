@@ -9,8 +9,9 @@ import 'chat_screen.dart';
 
 /// تذكرة الدور الحيّة: ترتيبك، كم سيارة قبلك، الوقت المتوقع — تتحدّث كل 10 ثوان
 class TicketScreen extends StatefulWidget {
-  const TicketScreen({super.key, required this.state});
+  const TicketScreen({super.key, required this.state, this.bookingId});
   final AppState state;
+  final String? bookingId;       // حجز محدد من «حجوزاتي»؛ بدونه الحجز الحالي
   @override
   State<TicketScreen> createState() => _TicketScreenState();
 }
@@ -20,7 +21,10 @@ class _TicketScreenState extends State<TicketScreen> {
   @override
   void initState() {
     super.initState();
-    _t = Timer.periodic(const Duration(seconds: 10), (_) => widget.state.refreshBooking());
+    _t = Timer.periodic(const Duration(seconds: 10), (_) {
+      widget.state.refreshBooking();
+      widget.state.refreshBookings();
+    });
   }
 
   @override
@@ -30,7 +34,8 @@ class _TicketScreenState extends State<TicketScreen> {
   Widget build(BuildContext context) => ListenableBuilder(
         listenable: widget.state,
         builder: (context, _) {
-          final b = widget.state.booking;
+          final id = widget.bookingId;
+          final b = id == null ? widget.state.booking : (widget.state.myBookings.where((x) => x.id == id).firstOrNull ?? widget.state.booking);
           return Scaffold(
             appBar: AppBar(title: Text(tr('تذكرتي'), style: tx(Fs.lg, w: 900)), backgroundColor: Z8.ink2, surfaceTintColor: Colors.transparent),
             body: b == null
@@ -60,6 +65,7 @@ class TicketCard extends StatelessWidget {
       BookingState.waiting => (tr('بانتظار دورك'), Z8.brass, Z8.brassSoft),
       BookingState.inService => (tr('سيارتك الآن في الخدمة'), Z8.emerald, Z8.emeraldBg),
       BookingState.done => (tr('تمت الخدمة — شكراً لك'), Z8.petrol, Z8.petrolSoft),
+      BookingState.cancelled => (tr('تم إلغاء الحجز'), Z8.ember, Z8.emberBg),
     };
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: Motion.enabled ? 0 : 1, end: 1), duration: const Duration(milliseconds: 450), curve: Curves.easeOutCubic,
@@ -70,12 +76,12 @@ class TicketCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           color: bg,
           child: Row(children: [
-            if (b.state == BookingState.done) Icon(Icons.check_circle, size: 14, color: color) else PulseDot(color: color, size: 9),
+            if (b.state == BookingState.done || b.state == BookingState.cancelled) Icon(b.state == BookingState.done ? Icons.check_circle : Icons.cancel, size: 14, color: color) else PulseDot(color: color, size: 9),
             const SizedBox(width: 8),
             Expanded(child: Text(label, style: tx(Fs.md, w: 900, color: Z8.text))),
           ]),
         ),
-        if (b.state != BookingState.done) ...[const SizedBox(height: 10), DrivingCar(color: color)],
+        if (b.active) ...[const SizedBox(height: 10), DrivingCar(color: color)],
         const SizedBox(height: 10),
         Text(b.branchName, style: tx(Fs.sm, w: 700, color: Z8.textDim)),
         const SizedBox(height: 4),

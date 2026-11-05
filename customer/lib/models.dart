@@ -68,19 +68,23 @@ class Profile {
   }
 }
 
-enum BookingState { waiting, inService, done }
+enum BookingState { waiting, inService, done, cancelled }
 
 class Booking {
-  const Booking({required this.id, required this.state, required this.queueNo, required this.ahead, required this.estWaitMinutes, required this.plate, required this.customerName, required this.station, required this.branchName});
+  const Booking({required this.id, required this.state, required this.queueNo, required this.ahead, required this.estWaitMinutes, required this.plate, required this.customerName, required this.station, required this.branchName, this.canCancel = false, this.createdAt});
   final String id, plate, customerName, branchName;
+  final bool canCancel;          // لم تدخل السيارة الخدمة بعد
+  final DateTime? createdAt;
   final String? station;
   final BookingState state;
   final int queueNo, ahead, estWaitMinutes;
   factory Booking.fromJson(Map<String, dynamic> j) => Booking(
         id: _s(j['bookingId']),
-        state: switch (_s(j['state'])) { 'in_service' => BookingState.inService, 'done' => BookingState.done, _ => BookingState.waiting },
+        state: j['cancelled'] == true ? BookingState.cancelled : switch (_s(j['state'])) { 'in_service' => BookingState.inService, 'done' => BookingState.done, _ => BookingState.waiting },
         queueNo: _i(j['queueNo']), ahead: _i(j['ahead']), estWaitMinutes: _i(j['estWaitMinutes']),
-        plate: _s(j['plate']), customerName: _s(j['customerName']), station: j['station'] == null ? null : _s(j['station']), branchName: _s(j['branchName']));
+        plate: _s(j['plate']), customerName: _s(j['customerName']), station: j['station'] == null ? null : _s(j['station']), branchName: _s(j['branchName']),
+        canCancel: j['canCancel'] == true, createdAt: DateTime.tryParse(_s(j['createdAt']))?.toLocal());
+  bool get active => state == BookingState.waiting || state == BookingState.inService;
 }
 
 class ChatMessage {
@@ -216,4 +220,12 @@ class Catalog {
     }
     return Catalog(oils: l('oils', OilProduct.fromJson), brands: l('brands', OilBrand.fromJson));
   }
+}
+
+/// إعلان في الرئيسية
+class Ad {
+  const Ad({required this.id, required this.title, required this.body, required this.link, required this.image});
+  final String id, title, body, link;
+  final String? image;       // مسار نسبي على الخادم
+  factory Ad.fromJson(Map<String, dynamic> j) => Ad(id: _s(j['id']), title: _s(j['title']), body: _s(j['body']), link: _s(j['link']), image: j['image'] == null ? null : _s(j['image']));
 }

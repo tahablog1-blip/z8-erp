@@ -602,10 +602,9 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('صفحة السيارة: من «سياراتي» تفتح السيارة وفيها فواتيرها فقط', (t) async {
+  testWidgets('صفحة السيارة: من تبويب السيارات تُفتح السيارة وفيها فواتيرها فقط، وتبويب فواتيري يعرض الكل', (t) async {
     final (_, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
-    expect(find.text('فواتيري'), findsNothing);                      // لا فواتير عامة في الرئيسية
-    await t.tap(find.text('سياراتي'));
+    await t.tap(find.text('سيارة جديدة'));                           // تبويب السيارات
     await t.pumpAndSettle();
     await t.tap(find.text('تويوتا كامري'));
     await t.pumpAndSettle();
@@ -619,15 +618,73 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('فلتر زيت'), findsOneWidget);                  // أصناف الفاتورة
     expect(find.text('عرض الفاتورة PDF'), findsOneWidget);
+    await t.tap(find.byType(BackButton));
+    await t.pumpAndSettle();
+    await t.tap(find.text('فواتيري'));                              // تبويب كل الفواتير
+    await t.pumpAndSettle();
+    expect(api.invoiceCalls.last, isNull);
+    expect(find.text('فاتورة B-200'), findsOneWidget);
+    expect(find.text('فاتورة A-100'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('الرئيسية: هيدر + أربعة أقسام (سياراتي، حجز جديد، تسجيل سيارة جديدة، المحادثات)', (t) async {
+  testWidgets('شريط التبويبات: الرئيسية، فواتيري، سيارة جديدة، الحجوزات، المحادثات', (t) async {
     await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
-    for (final x in ['سياراتي', 'حجز جديد', 'تسجيل سيارة جديدة', 'المحادثات']) {
-      expect(find.text(x), findsOneWidget, reason: x);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    for (final x in ['الرئيسية', 'فواتيري', 'سيارة جديدة', 'الحجوزات', 'المحادثات']) {
+      expect(find.descendant(of: find.byType(NavigationBar), matching: find.text(x)), findsOneWidget, reason: x);
     }
-    expect(find.byIcon(Icons.notifications_none), findsOneWidget);
+    expect(find.byIcon(Icons.notifications_none), findsOneWidget);     // جرس الإشعارات في هيدر الرئيسية
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('الرئيسية: إعلانات + تتبع الحجز الجاري (وبدونه دعوة للحجز)', (t) async {
+    final seed = {'branch': branch, 'otp': 'old', 'phone': '0500000000'};
+    await boot(t, seed: seed);
+    expect(find.text('خصم 20% على تغيير الزيت'), findsOneWidget);       // إعلان
+    expect(find.text('لا توجد حجوزات جارية الآن'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+    final api = FakeApi()..seedActive = true;
+    final state = AppState(api: api, store: MemoryStore()..m.addAll({'lang': 'ar', ...seed}), location: FakeLocation(fresh: riyadh));
+    await t.binding.setSurfaceSize(const Size(420, 900));
+    await t.pumpWidget(CustomerApp(state: state, showSplash: false));
+    await state.init();
+    await t.pumpAndSettle();
+    expect(find.text('بانتظار دورك'), findsOneWidget);                  // كارت التتبع
+    expect(find.text('لا توجد حجوزات جارية الآن'), findsNothing);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('تبويب الحجوزات: الجارية والسابقة وإلغاء الدور المنتظر', (t) async {
+    final api = FakeApi()..seedActive = true;
+    final state = AppState(api: api, store: MemoryStore()..m.addAll({'lang': 'ar', 'branch': branch, 'otp': 'old', 'phone': '0500000000'}), location: FakeLocation(fresh: riyadh));
+    await t.binding.setSurfaceSize(const Size(420, 1200));
+    await t.pumpWidget(CustomerApp(state: state, showSplash: false));
+    await state.init();
+    await t.pumpAndSettle();
+    await t.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text('الحجوزات')));
+    await t.pumpAndSettle();
+    expect(find.text('حجوزات جارية'), findsOneWidget);
+    expect(find.text('حجوزات سابقة'), findsOneWidget);
+    expect(find.text('مكتمل'), findsOneWidget);
+    await t.tap(find.text('إلغاء'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('إلغاء الحجز').last);                          // تأكيد في الحوار
+    await t.pumpAndSettle();
+    expect(api.cancelCalls, ['bk-1']);
+    expect(find.text('ملغي'), findsOneWidget);                           // انتقل للسابقة
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('تغيير الفرع: قائمة الفروع تظهر فوراً بلا تحديث يدوي', (t) async {
+    final (state, _) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    expect(state.branches, isEmpty);                                   // لم تُحمَّل في بدء التشغيل لأن الفرع محفوظ
+    await t.tap(find.byType(PopupMenuButton<String>));
+    await t.pumpAndSettle();
+    await t.tap(find.text('تغيير الفرع'));
+    await t.pumpAndSettle();
+    expect(find.text('معرض التجزئة'), findsOneWidget);                  // ظهرت دون سحب للتحديث
+    expect(find.text('فرع الشرق'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });
 
@@ -664,6 +721,8 @@ void main() {
 
   testWidgets('تسجيل سيارة جديدة: يحفظها في سياراتي بدون اختيار خدمة أو حجز', (t) async {
     final (_, api) = await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    await t.tap(find.text('سيارة جديدة'));
+    await t.pumpAndSettle();
     await t.tap(find.text('تسجيل سيارة جديدة'));
     await t.pumpAndSettle();
     expect(find.text('سياراتي'), findsNothing);                      // لا قائمة سيارات محفوظة هنا
@@ -694,13 +753,13 @@ void main() {
 
   testWidgets('سياراتي: كارت لكل سيارة بالاسم واللوحة وآخر ممشى وباقي البيانات، وفي الحجز تُختار من الكروت', (t) async {
     await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
-    await t.tap(find.text('سياراتي'));
+    await t.tap(find.text('سيارة جديدة'));
     await t.pumpAndSettle();
     for (final x in ['تويوتا كامري', '1234 ABC', 'موديل 2020', 'بنزين', '4 سلندر', '2.5 L', 'أبيض', 'آخر قراءة عداد: 80000 كم']) {
       expect(find.text(x), findsOneWidget, reason: x);
     }
     expect(find.byType(CarBrandLogo), findsOneWidget);
-    await t.tap(find.byType(BackButton));
+    await t.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text('الرئيسية')));
     await t.pumpAndSettle();
     await t.tap(find.text('حجز جديد'));
     await t.pumpAndSettle();

@@ -10,10 +10,24 @@ import '../state/app_state.dart';
 
 /// كل الفروع (خدمة وبيع تجزئة) مرتّبة بالأقرب إليك مع المسافة ووقت الوصول التقريبي.
 /// تظهر القائمة فوراً ثم تُعاد ترتيبها حين يصل الموقع.
-class BranchesScreen extends StatelessWidget {
+class BranchesScreen extends StatefulWidget {
   const BranchesScreen({super.key, required this.state, this.pickMode = false});
   final AppState state;
   final bool pickMode; // true = مفتوحة من الرئيسية (تعود بعد الاختيار)
+  @override
+  State<BranchesScreen> createState() => _BranchesScreenState();
+}
+
+class _BranchesScreenState extends State<BranchesScreen> {
+  AppState get state => widget.state;
+  bool get pickMode => widget.pickMode;
+
+  @override
+  void initState() {
+    super.initState();
+    // عند الفتح من «تغيير الفرع» لم تكن القائمة محمّلة (تُحمَّل فقط في أول تشغيل) — نحمّلها فوراً بلا سحب للتحديث
+    if (pickMode || state.branches.isEmpty) Future.microtask(state.loadBranches);
+  }
 
   Future<void> _select(BuildContext context, Branch b) async {
     final nav = Navigator.of(context);

@@ -22,6 +22,8 @@ class CarsScreen extends StatelessWidget {
             child: RefreshIndicator(
               onRefresh: state.loadProfile,
               child: ListView(padding: const EdgeInsets.all(16), children: [
+                Z8Button(tr('تسجيل سيارة جديدة'), icon: Icons.add_circle_outline, onTap: () => openRegisterCar(context, state)),
+                const SizedBox(height: 16),
                 if (state.profile.cars.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 24),
@@ -35,8 +37,6 @@ class CarsScreen extends StatelessWidget {
                       child: CarCard(c, chevron: true),
                     ),
                   ),
-                const SizedBox(height: 12),
-                Z8Button(tr('تسجيل سيارة جديدة'), icon: Icons.add_circle_outline, outline: true, onTap: () => openRegisterCar(context, state)),
               ]),
             ),
           ),

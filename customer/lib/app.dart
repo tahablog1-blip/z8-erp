@@ -3,7 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/i18n.dart';
 import 'core/theme.dart';
 import 'screens/branches_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/shell.dart';
 import 'screens/language_screen.dart';
 import 'screens/splash_screen.dart';
 import 'state/app_state.dart';
@@ -39,7 +39,7 @@ class _CustomerAppState extends State<CustomerApp> {
                 Phase.boot => const Scaffold(body: Center(child: CircularProgressIndicator())),
                 Phase.needsLang => LanguageScreen(state: state, first: true),
                 Phase.needsBranch => BranchesScreen(state: state),
-                Phase.ready => HomeScreen(state: state),
+                Phase.ready => MainShell(state: state),
               },
       ),
     );
