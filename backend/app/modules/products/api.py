@@ -504,3 +504,54 @@ async def product_detail(
 ):
     """صفحة الصنف: البيانات + الأرصدة بكل موقع + آخر الحركات."""
     return await service.get_product_detail(user.company_id, product_id)
+
+
+# ══════════════════ بطاقة المنتج المتحركة (تظهر في تطبيق العميل) ══════════════════
+from pydantic import BaseModel as _CardBM, Field as _CardField
+
+
+class ProductCardIn(_CardBM):
+    viscosity: str = _CardField(default="", max_length=30)       # 5W-30
+    standard: str = _CardField(default="", max_length=60)        # API SP / ACEA C3
+    baseType: str = _CardField(default="", pattern="^(|synthetic|semi|mineral)$")
+    protection: int = _CardField(default=0, ge=0, le=5)          # شرائط 0–5 (0 = لا تظهر)
+    economy: int = _CardField(default=0, ge=0, le=5)
+    heat: int = _CardField(default=0, ge=0, le=5)
+    strengths: list[str] = _CardField(default_factory=list, max_length=4)     # نقاط القوة
+    suitableFor: list[str] = _CardField(default_factory=list, max_length=8)   # يصلح لـ
+    description: str = _CardField(default="", max_length=300)
+
+
+def clean_card(c: dict) -> dict | None:
+    """ينظّف البطاقة؛ لو فارغة كلياً → None (لا بطاقة)"""
+    out = {
+        "viscosity": (c.get("viscosity") or "").strip(), "standard": (c.get("standard") or "").strip(),
+        "baseType": c.get("baseType") or "", "protection": int(c.get("protection") or 0),
+        "economy": int(c.get("economy") or 0), "heat": int(c.get("heat") or 0),
+        "strengths": [x.strip()[:90] for x in (c.get("strengths") or []) if x and x.strip()][:4],
+        "suitableFor": [x.strip()[:40] for x in (c.get("suitableFor") or []) if x and x.strip()][:8],
+        "description": (c.get("description") or "").strip(),
+    }
+    return out if any(out.values()) else None
+
+
+@router.get("/{product_id}/card")
+async def get_product_card(product_id: str, user: CurrentUser = Depends(get_current_user)):
+    from ...core.db import fetchrow
+    row = await fetchrow("SELECT card FROM products WHERE id=$1::uuid AND company_id=$2", product_id, user.company_id)
+    if not row:
+        raise HTTPException(404, "الصنف غير موجود")
+    return row["card"] or {}
+
+
+@router.put("/{product_id}/card")
+async def put_product_card(product_id: str, body: ProductCardIn,
+                           user: CurrentUser = Depends(require_permission("products.edit"))):
+    from ...core.db import fetchrow
+    card = clean_card(body.model_dump())
+    row = await fetchrow("UPDATE products SET card=$3 WHERE id=$1::uuid AND company_id=$2 RETURNING name",
+                         product_id, user.company_id, card)
+    if not row:
+        raise HTTPException(404, "الصنف غير موجود")
+    await log_action(user, "product_edit", "stock", details=f"بطاقة المنتج — {row['name']}")
+    return {"ok": True, "card": card}

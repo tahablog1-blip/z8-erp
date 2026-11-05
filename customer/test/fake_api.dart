@@ -102,7 +102,7 @@ class FakeApi implements CustomerApi {
   @override
   Future<Map<String, dynamic>> catalog(String b) async => {
         'oils': [
-          {'id': 'o-eng', 'name': 'شل هيلكس', 'spec': '5W-30', 'brand': 'شل', 'price': 40.0, 'oilType': 'engine', 'image': null},
+          {'id': 'o-eng', 'name': 'شل هيلكس', 'spec': '5W-30', 'brand': 'شل', 'price': 40.0, 'oilType': 'engine', 'image': null, 'card': {'viscosity': '5W-30', 'standard': 'API SP', 'baseType': 'synthetic', 'protection': 5, 'economy': 4, 'heat': 0, 'strengths': ['حماية ممتازة من التآكل', 'يحافظ على نظافة المحرك'], 'suitableFor': ['بنزين', 'هايبرد'], 'description': 'زيت صناعي للمحركات الحديثة'}},
           {'id': 'o-eng2', 'name': 'شل ألترا', 'spec': '0W-20', 'brand': 'شل', 'price': 90.0, 'oilType': 'engine', 'image': null, 'inStock': false},
           {'id': 'o-gear', 'name': 'كاسترول قير', 'spec': '75W-90', 'brand': 'كاسترول', 'price': 55.0, 'oilType': 'gearbox', 'image': '/api/products/public/product-image/o-gear'},
           {'id': 'o-diff', 'name': 'موبيل دفرنس', 'spec': '80W', 'brand': 'موبيل', 'price': 35.0, 'oilType': 'differential', 'image': null},

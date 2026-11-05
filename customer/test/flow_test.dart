@@ -856,4 +856,32 @@ void main() {
     expect(find.byIcon(Icons.pause), findsNothing);
     await t.pumpWidget(const SizedBox());
   });
+
+  testWidgets('بطاقة المنتج المتحركة: زر (i) يفتحها بمواصفات وقوة ويصلح لـ، ومنها يُختار الزيت', (t) async {
+    await boot(t, seed: {'branch': branch, 'otp': 'old', 'phone': '0500000000'});
+    await t.tap(find.text('حجز جديد'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('التالي: اختيار الخدمة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('تغيير زيت ماكينة'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('اختر الزيت'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('شل'));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('info-o-eng')), findsOneWidget);       // له بطاقة
+    expect(find.byKey(const ValueKey('info-o-eng2')), findsNothing);        // بلا بطاقة: لا زر
+    await t.tap(find.byKey(const ValueKey('info-o-eng')));
+    await t.pumpAndSettle();
+    expect(find.text('تفاصيل المنتج'), findsOneWidget);
+    for (final x in ['5W-30', 'API SP', 'صناعي بالكامل', 'مواصفات المنتج', 'الحماية', 'توفير الوقود', 'قوة المنتج', 'حماية ممتازة من التآكل', 'يصلح لـ', 'بنزين', 'هايبرد', 'زيت صناعي للمحركات الحديثة']) {
+      expect(find.text(x), findsOneWidget, reason: x);
+    }
+    expect(find.text('تحمّل الحرارة'), findsNothing);                      // تقييمها 0 فلا تظهر
+    await t.tap(find.text('اختيار هذا الزيت'));
+    await t.pumpAndSettle();
+    expect(find.text('اختر الخدمة'), findsOneWidget);                      // عاد لشاشة الخدمات وقد اختير الزيت
+    expect(find.text('الكمية (عدد القطع)'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+  });
 }

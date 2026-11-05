@@ -210,3 +210,4 @@ ALTER TABLE companies ADD COLUMN IF NOT EXISTS wa_token text;
 CREATE TABLE IF NOT EXISTS customer_ads (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid NOT NULL, title text NOT NULL, body text, link text, image_data text, is_active boolean NOT NULL DEFAULT TRUE, sort integer NOT NULL DEFAULT 0, created_at timestamptz NOT NULL DEFAULT now());
 ALTER TABLE cars ADD COLUMN IF NOT EXISTS draft_items jsonb;
 ALTER TABLE customer_ads ADD COLUMN IF NOT EXISTS video_file text;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS card jsonb;

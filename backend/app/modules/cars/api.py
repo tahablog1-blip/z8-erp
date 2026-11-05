@@ -1249,13 +1249,15 @@ async def public_booking_products(branch_id: str):
                 "oilType": r["oil_type"] if "oil_type" in r.keys() else None,
                 # الصورة بقت رابط لنقطة الصور العامة بدل base64 مضمّن —
                 # كده الاستجابة خفيفة مهما كبرت القائمة، والمتصفح بيكيّش الصور.
-                "image": f"/api/products/public/product-image/{r['id']}" if r["has_image"] else None}
+                "image": f"/api/products/public/product-image/{r['id']}" if r["has_image"] else None,
+                # بطاقة المنتج المتحركة (مواصفات/قوة/يصلح لـ) لو أدخلها المدير
+                "card": (r["card"] if "card" in r.keys() else None) or None}
 
     # الزيوت من خريطة الأصناف الفعلية: علامة is_oil لو متعلّمة، وإلا أي صنف
     # فئته أو اسمه فيهم "زيت" (مع استبعاد الفلاتر والخدمات) — كده كل الزيوت
     # المستوردة بتظهر وتتبحث من غير تعليم يدوي لآلاف الأصناف.
     oils = await _f(
-        """SELECT id, name, spec, unit, oil_brand, category, oil_type, price_vat,
+        """SELECT id, name, spec, unit, oil_brand, category, oil_type, price_vat, card,
                   (image_base64 IS NOT NULL AND image_base64 <> '') AS has_image,
                   COALESCE((SELECT SUM(i.qty) FROM inventory i WHERE i.product_id = products.id
                             AND i.loc_type='branch' AND i.loc_id=$2), 0) AS branch_qty

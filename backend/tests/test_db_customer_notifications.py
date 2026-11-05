@@ -202,3 +202,26 @@ def test_ad_video_upload_validation_and_range_serving(world, tmp_path, monkeypat
     with pytest.raises(HTTPException) as e:
         up(big)
     assert e.value.status_code == 413
+
+
+def test_product_card_cleaning_and_public_catalog(world):
+    from app.core import db
+    from app.modules.products.api import clean_card
+    assert clean_card({}) is None
+    c = clean_card({"viscosity": " 5W-30 ", "baseType": "synthetic", "protection": 5, "strengths": ["حماية", "", "  توفير  ", "3", "4", "5"], "suitableFor": ["بنزين", " "]})
+    assert c["viscosity"] == "5W-30" and c["strengths"] == ["حماية", "توفير", "3", "4"] and c["suitableFor"] == ["بنزين"]
+
+    async def seed():
+        async with db.pool().acquire() as conn:
+            await conn.execute("DELETE FROM products")
+            await conn.execute("INSERT INTO products (company_id, name, spec, is_oil, is_active, card) VALUES ($1,'شل هيلكس','5W-30',TRUE,TRUE,$2)", CID, c)
+            await conn.execute("INSERT INTO products (company_id, name, spec, is_oil, is_active) VALUES ($1,'زيت بلا بطاقة','10W-40',TRUE,TRUE)", CID)
+
+    run(seed)
+
+    async def get(path):
+        async with client() as cl:
+            return await cl.get(path)
+    oils = {o["name"]: o for o in run(lambda: get(f"/api/cars/public/booking-products/{world['br']}")).json()["oils"]}
+    assert oils["شل هيلكس"]["card"]["viscosity"] == "5W-30" and oils["شل هيلكس"]["card"]["protection"] == 5
+    assert oils["زيت بلا بطاقة"]["card"] is None

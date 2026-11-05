@@ -142,8 +142,9 @@ enum ServiceKind {
 }
 
 class OilProduct {
-  const OilProduct({required this.id, required this.name, required this.spec, required this.brand, required this.price, required this.oilType, required this.image, this.inStock = true});
+  const OilProduct({required this.id, required this.name, required this.spec, required this.brand, required this.price, required this.oilType, required this.image, this.inStock = true, this.card});
   final String id, name, spec, brand;
+  final ProductCard? card;      // بطاقة المنتج المتحركة (لو أدخلها المدير)
   final bool inStock;   // متوفر بمخزون الفرع؟
   final double price;
   final String? oilType, image;
@@ -152,7 +153,21 @@ class OilProduct {
         id: _s(j['id']), name: _s(j['name']), spec: _s(j['spec']), brand: _s(j['brand']),
         price: j['price'] is num ? (j['price'] as num).toDouble() : double.tryParse(_s(j['price'])) ?? 0,
         oilType: j['oilType'] == null ? null : _s(j['oilType']), image: j['image'] == null ? null : _s(j['image']),
-        inStock: j['inStock'] != false);
+        inStock: j['inStock'] != false, card: j['card'] is Map ? ProductCard.fromJson(Map<String, dynamic>.from(j['card'])) : null);
+}
+
+/// مواصفات المنتج وقوته وما يصلح له — يعرضها العميل كبطاقة متحركة
+class ProductCard {
+  const ProductCard({required this.viscosity, required this.standard, required this.baseType, required this.protection, required this.economy, required this.heat, required this.strengths, required this.suitableFor, required this.description});
+  final String viscosity, standard, baseType, description;     // baseType: synthetic | semi | mineral
+  final int protection, economy, heat;                          // 0–5 (0 = لا يظهر)
+  final List<String> strengths, suitableFor;
+  factory ProductCard.fromJson(Map<String, dynamic> j) {
+    List<String> l(dynamic v) => v is List ? v.map((e) => '$e').where((e) => e.trim().isNotEmpty).toList() : const [];
+    return ProductCard(
+      viscosity: _s(j['viscosity']), standard: _s(j['standard']), baseType: _s(j['baseType']), description: _s(j['description']),
+      protection: _i(j['protection']), economy: _i(j['economy']), heat: _i(j['heat']), strengths: l(j['strengths']), suitableFor: l(j['suitableFor']));
+  }
 }
 
 class InvoiceItem {
