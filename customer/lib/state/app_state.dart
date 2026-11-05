@@ -141,6 +141,10 @@ class AppState extends ChangeNotifier {
     phase = Phase.ready;
     info = null;
     infoError = null;
+    ads = const [];
+    myBookings = const [];
+    booking = null;
+    tab = 0;
     notifyListeners();
     await refreshAll();
   }
@@ -150,6 +154,69 @@ class AppState extends ChangeNotifier {
     await loadProfile();
     await restoreBooking();
     await refreshInbox();
+    await loadAds();
+    await refreshBookings();
+  }
+
+  // ── التبويبات السفلية: 0 الرئيسية · 1 فواتيري · 2 سيارة جديدة · 3 الحجوزات · 4 المحادثات ──
+  int tab = 0;
+  int invoicesEpoch = 0;       // يزيد عند فتح تبويب الفواتير فتُجلب من جديد
+  void goTab(int i) {
+    if (i == 1) invoicesEpoch++;
+    tab = i;
+    notifyListeners();
+  }
+
+  // ── الإعلانات (الرئيسية) ──
+  List<Ad> ads = const [];
+  Future<void> loadAds() async {
+    if (branchId == null) return;
+    try {
+      final j = await api.ads(branchId!);
+      final l = j['ads'];
+      ads = l is List ? l.whereType<Map>().map((e) => Ad.fromJson(Map<String, dynamic>.from(e))).toList() : const [];
+      notifyListeners();
+    } on ApiException {
+      // الإعلانات رفاهية — لا نُظهر خطأ
+    }
+  }
+
+  // ── حجوزاتي (النشطة + الأخيرة) ──
+  List<Booking> myBookings = const [];
+  List<Booking> get activeBookings => myBookings.where((b) => b.active).toList();
+  bool bookingsLoaded = false;
+
+  Future<void> refreshBookings() async {
+    if (branchId == null || needsLogin) return;
+    try {
+      final j = await api.myBookings(branchId!, phone: phone, otpToken: otpToken);
+      final l = j['bookings'];
+      myBookings = l is List ? l.whereType<Map>().map((e) => Booking.fromJson(Map<String, dynamic>.from(e))).toList() : const [];
+      bookingsLoaded = true;
+      final a = activeBookings;
+      if (a.isNotEmpty) booking = a.first;
+      notifyListeners();
+    } on ApiException catch (e) {
+      if (e.status == 401) {
+        await _dropOtp();
+        notifyListeners();
+      }
+    }
+  }
+
+  /// يلغي دوراً منتظراً. null = نجح، وإلا رسالة الخطأ.
+  Future<String?> cancelBooking(Booking b) async {
+    try {
+      await api.cancelBooking(branchId!, b.id, phone: phone, otpToken: otpToken);
+      if (booking?.id == b.id) {
+        booking = null;
+        await store.delete(_kBooking);
+      }
+      await refreshBookings();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
   }
 
   // ── الإشعارات والمحادثات (تتطلب هوية العميل) ──
@@ -239,6 +306,7 @@ class AppState extends ChangeNotifier {
     profile = Profile.empty;
     notices = const [];
     chats = const [];
+    myBookings = const [];
     await store.delete(_kToken);
   }
 
@@ -392,7 +460,7 @@ class AppState extends ChangeNotifier {
     try {
       final b = Booking.fromJson(await api.bookingStatus(bid));
       booking = b;
-      if (b.state == BookingState.done) await store.delete(_kBooking);
+      if (!b.active) await store.delete(_kBooking);
     } on ApiException catch (e) {
       if (e.status == 404) {
         booking = null;

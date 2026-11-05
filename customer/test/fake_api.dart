@@ -159,6 +159,29 @@ class FakeApi implements CustomerApi {
     return {'pdfPhone': '0500000000', 'invoices': savedCarId == 'car-1' ? all.where((i) => i['plate'] == '1234 ABC').toList() : all};
   }
 
+  // ── الإعلانات وحجوزاتي ──
+  bool seedActive = false;       // عند التشغيل لدى العميل حجز جارٍ
+  bool cancelled = false;
+  final cancelCalls = <String>[];
+  List<Map<String, dynamic>> adList = [
+    {'id': 'ad1', 'title': 'خصم 20% على تغيير الزيت', 'body': 'لفترة محدودة', 'link': '', 'image': null},
+    {'id': 'ad2', 'title': 'افتتاح فرع جديد', 'body': '', 'link': 'https://example.com', 'image': null},
+  ];
+  @override
+  Future<Map<String, dynamic>> ads(String b) async => {'ads': adList};
+  @override
+  Future<Map<String, dynamic>> myBookings(String b, {String phone = '', String? otpToken}) async => {
+        'bookings': [
+          if (seedActive || bookings.isNotEmpty) {..._booking('1234 ABC'), 'cancelled': cancelled, 'canCancel': !cancelled && state == 'waiting', 'createdAt': '2026-11-02T10:00:00Z'},
+          {'bookingId': 'bk-old', 'state': 'done', 'cancelled': false, 'canCancel': false, 'queueNo': 2, 'ahead': 0, 'estWaitMinutes': 0, 'plate': '1234 ABC', 'customerName': 'أحمد', 'station': null, 'branchName': 'فرع الخليج', 'createdAt': '2026-09-01T10:00:00Z'},
+        ],
+      };
+  @override
+  Future<void> cancelBooking(String b, String bookingId, {String phone = '', String? otpToken}) async {
+    cancelCalls.add(bookingId);
+    cancelled = true;
+  }
+
   // ── الإشعارات والمحادثات ──
   final registered = <Map<String, dynamic>>[];
   final readCalls = <List<String>?>[];

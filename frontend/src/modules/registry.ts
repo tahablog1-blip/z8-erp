@@ -47,6 +47,7 @@ export const NAV_MODULES: NavModule[] = [
 
   // ── الإدارة ──
   { path: "/branches",   title: "الفروع",         icon: "branches", section: "الإدارة", permissions: ["branches.manage"] },
+  { path: "/ads",        title: "إعلانات التطبيق", icon: "branches", section: "الإدارة", permissions: ["branches.manage"] },
   { path: "/hr",         title: "الموارد البشرية", icon: "hr", section: "الإدارة", permissions: ["hr.view", "hr.manage", "hr.attendance", "hr.leave_approve", "hr.violations", "hr.payroll"] },
 
   // ── الإعدادات — مدخل واحد؛ أقسامها الفرعية (المنشأة/المستخدمون/الأدوار/الأجهزة/الطباعة/النظام/الخلفية/التصميم)

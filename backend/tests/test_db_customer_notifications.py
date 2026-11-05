@@ -131,3 +131,33 @@ def test_lookup_cars_carry_fuel_and_last_odometer(world):
     r = call(f"{base}/lookup", {"phone": "0500000001"}).json()
     c = r["cars"][0]
     assert c["fuel_type"] == "بنزين" and c["last_odometer"] == 5000
+
+
+def test_my_bookings_and_cancel_and_ads(world):
+    from app.core import db
+    base = f"/api/cars/public/booking/{world['br']}"
+    car = {"plateNumbers": "7777", "plateLetters": "KSA", "brand": "تويوتا", "carName": "كامري", "modelYear": "2020", "fuelType": "بنزين", "odometer": "5000"}
+    bid = call(base, {"name": "أحمد", "phone": "0500000001", "car": car}).json()["bookingId"]
+    other = call(base, {"name": "غيره", "phone": "0500000002", "car": {**car, "plateNumbers": "8888"}}).json()["bookingId"]
+    mine = call(f"{base}/my-bookings", {"phone": "0500000001"}).json()["bookings"]
+    assert [b["bookingId"] for b in mine] == [bid] and mine[0]["canCancel"] and mine[0]["state"] == "waiting"
+    # لا يلغي حجز غيره
+    assert call(f"{base}/bookings/{other}/cancel", {"phone": "0500000001"}).status_code == 409
+    assert call(f"{base}/bookings/{bid}/cancel", {"phone": "0500000001"}).status_code == 200
+    mine = call(f"{base}/my-bookings", {"phone": "0500000001"}).json()["bookings"]
+    assert mine[0]["cancelled"] and not mine[0]["canCancel"]
+    assert call(f"{base}/bookings/{bid}/cancel", {"phone": "0500000001"}).status_code == 409   # مرتين
+
+    async def ad():
+        async with db.pool().acquire() as c:
+            await c.execute("INSERT INTO customer_ads (company_id, title, body, image_data) VALUES ($1,'خصم 20%','على تغيير الزيت','data:image/png;base64,iVBORw0KGgo=')", CID)
+            await c.execute("INSERT INTO customer_ads (company_id, title, is_active) VALUES ($1,'مخفي',FALSE)", CID)
+    run(ad)
+
+    async def get(path):
+        async with client() as c:
+            return await c.get(path)
+    ads = run(lambda: get(f"{base}/ads")).json()["ads"]
+    assert [a["title"] for a in ads] == ["خصم 20%"] and ads[0]["image"].startswith("/api/cars/public/ad-image/")
+    img = run(lambda: get(ads[0]["image"]))
+    assert img.status_code == 200 and img.headers["content-type"] == "image/png"

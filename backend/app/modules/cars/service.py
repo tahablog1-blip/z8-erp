@@ -1736,6 +1736,7 @@ async def public_booking_status(car_id: str) -> dict:
         state = "waiting"
     return {
         "bookingId": str(car["id"]),
+        "cancelled": car["work_status"] == "cancelled",
         "state": state,
         "queueNo": queue_no["n"],
         "ahead": ahead["n"],

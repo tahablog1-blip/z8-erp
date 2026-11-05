@@ -1401,6 +1401,127 @@ async def public_booking_selection(car_id: str, body: _SelectionIn):
     return {"ok": True}
 
 
+# ═══ إعلانات تطبيق العميل (الرئيسية) — تُدار من لوحة الإدارة ═══
+class AdIn(_BM):
+    title: str = Field(min_length=1, max_length=120)
+    body: str = Field(default="", max_length=400)
+    link: str = Field(default="", max_length=300)
+    imageData: str | None = None        # data URL (image/*) — يُحفظ كما هو، حدّه ~700KB
+    isActive: bool = True
+    sort: int = 0
+
+
+def _clean_image(v: str | None) -> str | None:
+    if v is None:
+        return None
+    if v == "":
+        return ""
+    if not v.startswith("data:image/") or ";base64," not in v:
+        raise HTTPException(422, "الصورة غير صالحة")
+    if len(v) > 950_000:
+        raise HTTPException(422, "الصورة كبيرة — الحد حوالي 700 ك.ب")
+    return v
+
+
+@router.get("/ads")
+async def list_ads(user: CurrentUser = Depends(require_permission("branches.manage"))):
+    from ...core.db import fetch as _f
+    rows = await _f("""SELECT id, title, body, link, is_active, sort, (image_data IS NOT NULL AND image_data <> '') AS has_image, created_at
+                       FROM customer_ads WHERE company_id=$1 ORDER BY sort, created_at DESC""", user.company_id)
+    return [{**dict(r), "id": str(r["id"])} for r in rows]
+
+
+@router.post("/ads", status_code=201)
+async def create_ad(body: AdIn, user: CurrentUser = Depends(require_permission("branches.manage"))):
+    row = await _fetchrow(
+        """INSERT INTO customer_ads (company_id, title, body, link, image_data, is_active, sort)
+           VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id""",
+        user.company_id, body.title.strip(), body.body.strip(), body.link.strip(), _clean_image(body.imageData) or None, body.isActive, body.sort)
+    return {"id": str(row["id"])}
+
+
+@router.put("/ads/{ad_id}")
+async def update_ad(ad_id: str, body: AdIn, user: CurrentUser = Depends(require_permission("branches.manage"))):
+    _pub_guard(ad_id)
+    img = _clean_image(body.imageData)           # None = اترك الصورة كما هي، "" = احذفها
+    row = await _fetchrow(
+        """UPDATE customer_ads SET title=$3, body=$4, link=$5, is_active=$6, sort=$7,
+                  image_data = CASE WHEN $8::text IS NULL THEN image_data WHEN $8::text = '' THEN NULL ELSE $8::text END
+           WHERE id=$1::uuid AND company_id=$2 RETURNING id""",
+        ad_id, user.company_id, body.title.strip(), body.body.strip(), body.link.strip(), body.isActive, body.sort, img)
+    if not row:
+        raise HTTPException(404, "الإعلان غير موجود")
+    return {"ok": True}
+
+
+@router.delete("/ads/{ad_id}")
+async def delete_ad(ad_id: str, user: CurrentUser = Depends(require_permission("branches.manage"))):
+    _pub_guard(ad_id)
+    from ...core.db import execute as _ex
+    await _ex("DELETE FROM customer_ads WHERE id=$1::uuid AND company_id=$2", ad_id, user.company_id)
+    return {"ok": True}
+
+
+@router.get("/public/booking/{branch_id}/ads")
+async def public_ads(branch_id: str):
+    """إعلانات الرئيسية في تطبيق العميل (الفعّالة فقط، مرتبة)"""
+    from ...core.db import fetch as _f
+    company_id = await _branch_company(branch_id)
+    rows = await _f("""SELECT id, title, body, link, (image_data IS NOT NULL AND image_data <> '') AS has_image
+                       FROM customer_ads WHERE company_id=$1 AND is_active=TRUE ORDER BY sort, created_at DESC LIMIT 12""", company_id)
+    return {"ads": [{"id": str(r["id"]), "title": r["title"], "body": r["body"] or "", "link": r["link"] or "",
+                     "image": f"/api/cars/public/ad-image/{r['id']}" if r["has_image"] else None} for r in rows]}
+
+
+@router.get("/public/ad-image/{ad_id}")
+async def public_ad_image(ad_id: str):
+    import base64
+    from fastapi import Response as _Resp
+    _pub_guard(ad_id)
+    row = await _fetchrow("SELECT image_data FROM customer_ads WHERE id=$1::uuid AND is_active=TRUE", ad_id)
+    if not row or not row["image_data"]:
+        raise HTTPException(404, "غير موجود")
+    head, b64 = row["image_data"].split(";base64,", 1)
+    return _Resp(content=base64.b64decode(b64), media_type=head[5:], headers={"Cache-Control": "public, max-age=600"})
+
+
+# ═══ إدارة حجوزات العميل: قائمتها (النشطة + الأخيرة) وإلغاء الدور المنتظر ═══
+@router.post("/public/booking/{branch_id}/my-bookings")
+async def public_my_bookings(branch_id: str, body: PublicIdentityIn):
+    from ...core.db import fetch as _f
+    company_id, cust = await _public_customer(branch_id, body)
+    if not cust:
+        return {"bookings": []}
+    rows = await _f(
+        """SELECT id, created_at, entered_at, exited_at, work_status FROM cars
+           WHERE company_id=$1 AND customer_id=$2 AND is_deleted=FALSE ORDER BY created_at DESC LIMIT 15""",
+        company_id, cust["id"])
+    out = []
+    for r in rows:
+        st = await service.public_booking_status(str(r["id"]))
+        cancelled = r["work_status"] == "cancelled"
+        out.append({**st, "createdAt": r["created_at"].isoformat(), "cancelled": cancelled,
+                    "canCancel": r["entered_at"] is None and r["exited_at"] is None})
+    return {"bookings": out}
+
+
+@router.post("/public/booking/{branch_id}/bookings/{car_id}/cancel")
+async def public_cancel_booking(branch_id: str, car_id: str, body: PublicIdentityIn):
+    """يلغي العميل دوره المنتظر (لم تدخل سيارته بعد)"""
+    _pub_guard(car_id)
+    company_id, cust = await _public_customer(branch_id, body)
+    if not cust:
+        raise HTTPException(403, "غير مسموح")
+    row = await _fetchrow(
+        """UPDATE cars SET exited_at = now(), work_status = 'cancelled', draft_items = NULL
+           WHERE id=$1::uuid AND company_id=$2 AND customer_id=$3 AND is_deleted=FALSE
+             AND entered_at IS NULL AND exited_at IS NULL RETURNING id""",
+        car_id, company_id, cust["id"])
+    if not row:
+        raise HTTPException(409, "لا يمكن إلغاء هذا الحجز — دخلت السيارة الخدمة أو أُلغي سابقاً")
+    return {"ok": True}
+
+
 _reorder_cars_routes()
 
 
