@@ -158,8 +158,7 @@ class OilProduct {
 
 /// مواصفات المنتج وقوته وما يصلح له — يعرضها العميل كبطاقة متحركة
 class ProductCard {
-  const ProductCard({required this.viscosity, required this.standard, required this.baseType, required this.protection, required this.economy, required this.heat, required this.strengths, required this.suitableFor, required this.description, this.gif});
-  final String? gif;                  // صورة GIF متحركة تحل محل صورة المنتج في غلاف البطاقة
+  const ProductCard({required this.viscosity, required this.standard, required this.baseType, required this.protection, required this.economy, required this.heat, required this.strengths, required this.suitableFor, required this.description});
   final String viscosity, standard, baseType, description;     // baseType: synthetic | semi | mineral
   final int protection, economy, heat;                          // 0–5 (0 = لا يظهر)
   final List<String> strengths, suitableFor;
@@ -167,7 +166,7 @@ class ProductCard {
     List<String> l(dynamic v) => v is List ? v.map((e) => '$e').where((e) => e.trim().isNotEmpty).toList() : const [];
     return ProductCard(
       viscosity: _s(j['viscosity']), standard: _s(j['standard']), baseType: _s(j['baseType']), description: _s(j['description']),
-      protection: _i(j['protection']), economy: _i(j['economy']), heat: _i(j['heat']), strengths: l(j['strengths']), suitableFor: l(j['suitableFor']), gif: j['gif'] == null ? null : _s(j['gif']));
+      protection: _i(j['protection']), economy: _i(j['economy']), heat: _i(j['heat']), strengths: l(j['strengths']), suitableFor: l(j['suitableFor']));
   }
 }
 
@@ -240,8 +239,8 @@ class Catalog {
 
 /// إعلان في الرئيسية
 class Ad {
-  const Ad({required this.id, required this.title, required this.body, required this.link, required this.image, this.video, this.gif});
+  const Ad({required this.id, required this.title, required this.body, required this.link, required this.image, this.video});
   final String id, title, body, link;
-  final String? image, video, gif;       // gif: صورة متحركة تدور تلقائياً بلا صوت ولا تحكم       // مسارات نسبية على الخادم (الفيديو MP4 بلا تحكم بالتقدم)
-  factory Ad.fromJson(Map<String, dynamic> j) => Ad(id: _s(j['id']), title: _s(j['title']), body: _s(j['body']), link: _s(j['link']), image: j['image'] == null ? null : _s(j['image']), video: j['video'] == null ? null : _s(j['video']), gif: j['gif'] == null ? null : _s(j['gif']));
+  final String? image, video;       // مسارات نسبية على الخادم (الفيديو MP4 بلا تحكم بالتقدم)
+  factory Ad.fromJson(Map<String, dynamic> j) => Ad(id: _s(j['id']), title: _s(j['title']), body: _s(j['body']), link: _s(j['link']), image: j['image'] == null ? null : _s(j['image']), video: j['video'] == null ? null : _s(j['video']));
 }

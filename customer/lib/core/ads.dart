@@ -38,7 +38,7 @@ class _AdsCarouselState extends State<AdsCarousel> {
       _t = Timer.periodic(const Duration(seconds: 1), (_) {
         _waited++;
         // الصورة 5 ثوانٍ؛ الفيديو يكمل حتى ينتهي (أقصى 40 ثانية احتياطاً)
-        if (_isLiveVideo(_i) ? _waited >= 40 : _waited >= (widget.ads[_i].gif != null ? 8 : 5)) _next();       // GIF يأخذ وقتاً أطول ليُرى
+        if (_isLiveVideo(_i) ? _waited >= 40 : _waited >= 5) _next();
       });
     }
   }
@@ -79,8 +79,6 @@ class _AdsCarouselState extends State<AdsCarousel> {
                         poster: a.image == null ? null : '${Config.apiBase}${a.image}',
                         onEnded: _next, onFailed: () { if (mounted) setState(() => _failed.add(i)); },
                       )
-                    else if (a.gif != null)
-                      Image.network('${Config.apiBase}${a.gif}', fit: BoxFit.cover, gaplessPlayback: true, errorBuilder: (_, _, _) => const BrandBackdrop())       // GIF يدور تلقائياً بلا تحكم
                     else if (a.image != null)
                       Image.network('${Config.apiBase}${a.image}', fit: BoxFit.cover, errorBuilder: (_, _, _) => const BrandBackdrop())
                     else

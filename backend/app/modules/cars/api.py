@@ -1229,30 +1229,6 @@ async def _branch_in_stock(branch_id: str, product_id: str) -> bool:
     return bool(row and row["q"] and row["q"] > 0)
 
 
-PRODUCT_GIF_DIR = "uploads/product-gif"
-
-
-def _card_with_gif(r) -> dict | None:
-    """بطاقة المنتج + رابط GIF المتحرك (لو رُفع) — GIF وحده يكفي لظهور البطاقة"""
-    card = dict(r["card"]) if "card" in r.keys() and r["card"] else {}
-    if "card_gif" in r.keys() and r["card_gif"]:
-        card["gif"] = f"/api/cars/public/product-gif/{r['id']}"
-    return card or None
-
-
-@router.get("/public/product-gif/{product_id}")
-async def public_product_gif(product_id: str):
-    import os
-    from fastapi.responses import FileResponse
-    _pub_guard(product_id)
-    row = await _fetchrow("SELECT card_gif FROM products WHERE id=$1::uuid", product_id)
-    f = row["card_gif"] if row else None
-    path = os.path.join(PRODUCT_GIF_DIR, f) if f and "/" not in f else None
-    if not path or not os.path.exists(path):
-        raise HTTPException(404, "غير موجود")
-    return FileResponse(path, media_type="image/gif", headers={"Cache-Control": "public, max-age=600"})
-
-
 @router.get("/public/booking-products/{branch_id}")
 async def public_booking_products(branch_id: str):
     _pub_guard(branch_id)
@@ -1275,13 +1251,13 @@ async def public_booking_products(branch_id: str):
                 # كده الاستجابة خفيفة مهما كبرت القائمة، والمتصفح بيكيّش الصور.
                 "image": f"/api/products/public/product-image/{r['id']}" if r["has_image"] else None,
                 # بطاقة المنتج المتحركة (مواصفات/قوة/يصلح لـ) لو أدخلها المدير
-                "card": _card_with_gif(r)}
+                "card": (r["card"] if "card" in r.keys() else None) or None}
 
     # الزيوت من خريطة الأصناف الفعلية: علامة is_oil لو متعلّمة، وإلا أي صنف
     # فئته أو اسمه فيهم "زيت" (مع استبعاد الفلاتر والخدمات) — كده كل الزيوت
     # المستوردة بتظهر وتتبحث من غير تعليم يدوي لآلاف الأصناف.
     oils = await _f(
-        """SELECT id, name, spec, unit, oil_brand, category, oil_type, price_vat, card, card_gif,
+        """SELECT id, name, spec, unit, oil_brand, category, oil_type, price_vat, card,
                   (image_base64 IS NOT NULL AND image_base64 <> '') AS has_image,
                   COALESCE((SELECT SUM(i.qty) FROM inventory i WHERE i.product_id = products.id
                             AND i.loc_type='branch' AND i.loc_id=$2), 0) AS branch_qty
@@ -1492,7 +1468,6 @@ async def delete_ad(ad_id: str, user: CurrentUser = Depends(require_permission("
 
 AD_VIDEO_DIR = "uploads/ads"
 AD_VIDEO_MAX = 20 * 1024 * 1024        # 20MB — تحت حد nginx (25m)
-GIF_MAX = 10 * 1024 * 1024             # GIF أثقل بكثير من MP4 بنفس المدة — حد أصغر
 
 
 def _rm_ad_video(fname: str | None) -> None:
@@ -1513,13 +1488,12 @@ async def upload_ad_video(ad_id: str, file: UploadFile = File(...), user: Curren
     if not cur:
         raise HTTPException(404, "الإعلان غير موجود")
     data = await file.read(AD_VIDEO_MAX + 1)
-    is_gif = data[:4] == b"GIF8"
-    if len(data) > (GIF_MAX if is_gif else AD_VIDEO_MAX):
-        raise HTTPException(413, "ملف GIF كبير — الحد 10 ميجابايت" if is_gif else "الفيديو كبير — الحد 20 ميجابايت")
-    if not is_gif and (len(data) < 12 or data[4:8] != b"ftyp"):
-        raise HTTPException(422, "الملف ليس فيديو MP4 ولا صورة GIF صالحة")
+    if len(data) > AD_VIDEO_MAX:
+        raise HTTPException(413, "الفيديو كبير — الحد 20 ميجابايت")
+    if len(data) < 12 or data[4:8] != b"ftyp":
+        raise HTTPException(422, "الملف ليس فيديو MP4 صالحاً")
     os.makedirs(AD_VIDEO_DIR, exist_ok=True)
-    fname = f"{ad_id}-{os.urandom(6).hex()}.{'gif' if is_gif else 'mp4'}"
+    fname = f"{ad_id}-{os.urandom(6).hex()}.mp4"
     with open(os.path.join(AD_VIDEO_DIR, fname), "wb") as f:
         f.write(data)
     from ...core.db import execute as _ex
@@ -1544,12 +1518,11 @@ async def public_ads(branch_id: str):
     """إعلانات الرئيسية في تطبيق العميل (الفعّالة فقط، مرتبة)"""
     from ...core.db import fetch as _f
     company_id = await _branch_company(branch_id)
-    rows = await _f("""SELECT id, title, body, link, (image_data IS NOT NULL AND image_data <> '') AS has_image, video_file, (video_file IS NOT NULL) AS has_video
+    rows = await _f("""SELECT id, title, body, link, (image_data IS NOT NULL AND image_data <> '') AS has_image, (video_file IS NOT NULL) AS has_video
                        FROM customer_ads WHERE company_id=$1 AND is_active=TRUE ORDER BY sort, created_at DESC LIMIT 12""", company_id)
     return {"ads": [{"id": str(r["id"]), "title": r["title"], "body": r["body"] or "", "link": r["link"] or "",
                      "image": f"/api/cars/public/ad-image/{r['id']}" if r["has_image"] else None,
-                     "video": f"/api/cars/public/ad-video/{r['id']}" if r["has_video"] and not str(r["video_file"]).endswith(".gif") else None,
-                     "gif": f"/api/cars/public/ad-video/{r['id']}" if r["has_video"] and str(r["video_file"]).endswith(".gif") else None} for r in rows]}
+                     "video": f"/api/cars/public/ad-video/{r['id']}" if r["has_video"] else None} for r in rows]}
 
 
 @router.get("/public/ad-video/{ad_id}")
@@ -1561,7 +1534,7 @@ async def public_ad_video(ad_id: str):
     path = os.path.join(AD_VIDEO_DIR, row["video_file"]) if row and row["video_file"] and "/" not in row["video_file"] else None
     if not path or not os.path.exists(path):
         raise HTTPException(404, "غير موجود")
-    return FileResponse(path, media_type="image/gif" if path.endswith(".gif") else "video/mp4", headers={"Cache-Control": "public, max-age=600"})
+    return FileResponse(path, media_type="video/mp4", headers={"Cache-Control": "public, max-age=600"})
 
 
 @router.get("/public/ad-image/{ad_id}")

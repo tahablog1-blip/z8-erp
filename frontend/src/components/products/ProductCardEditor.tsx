@@ -14,28 +14,12 @@ export function ProductCardEditor({ id, canEdit }: { id: string; canEdit: boolea
   const [c, setC] = useState<Card>(EMPTY);
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [hasGif, setHasGif] = useState(false);
 
   useEffect(() => {
-    api<Partial<Card> & { hasGif?: boolean }>(`/products/${id}/card`).then((d) => { setHasGif(!!d.hasGif); setC({ ...EMPTY, ...d, strengths: [...(d.strengths ?? []), "", "", "", ""].slice(0, 4) }); }).catch(() => undefined);
+    api<Partial<Card>>(`/products/${id}/card`).then((d) => setC({ ...EMPTY, ...d, strengths: [...(d.strengths ?? []), "", "", "", ""].slice(0, 4) })).catch(() => undefined);
   }, [id]);
 
   const toggle = (x: string) => setC((p) => ({ ...p, suitableFor: p.suitableFor.includes(x) ? p.suitableFor.filter((y) => y !== x) : [...p.suitableFor, x].slice(0, 8) }));
-
-  async function uploadGif(f: File) {
-    if (f.size > 10 * 1024 * 1024) { setMsg({ ok: false, t: "ملف GIF أكبر من 10 ميجابايت" }); return; }
-    setBusy(true); setMsg(null);
-    try {
-      const fd = new FormData(); fd.append("file", f);
-      await api(`/products/${id}/card/gif`, { method: "POST", body: fd });
-      setHasGif(true); setMsg({ ok: true, t: "تم رفع الصورة المتحركة" });
-    } catch (e: any) { setMsg({ ok: false, t: e.message }); } finally { setBusy(false); }
-  }
-  async function removeGif() {
-    setBusy(true);
-    try { await api(`/products/${id}/card/gif`, { method: "DELETE" }); setHasGif(false); setMsg({ ok: true, t: "حُذفت الصورة المتحركة" }); }
-    catch (e: any) { setMsg({ ok: false, t: e.message }); } finally { setBusy(false); }
-  }
 
   async function save() {
     setBusy(true); setMsg(null);
@@ -83,10 +67,6 @@ export function ProductCardEditor({ id, canEdit }: { id: string; canEdit: boolea
         </div>
         <Input className="mt-2" value={c.suitableFor.filter((x) => !QUICK.includes(x)).join("، ")} disabled={!canEdit} placeholder="خيارات أخرى مفصولة بفاصلة (مثل: تويوتا، هيونداي)"
                onChange={(e) => setC({ ...c, suitableFor: [...c.suitableFor.filter((x) => QUICK.includes(x)), ...e.target.value.split(/[,،]/).map((x) => x.trim()).filter(Boolean)].slice(0, 8) })} />
-      </Field>
-      <Field label="صورة متحركة GIF (اختيارية)" hint="تظهر مكان صورة المنتج أعلى البطاقة في التطبيق وتدور تلقائياً بلا تحكم. حتى 10 ميجابايت — يُفضّل قصيرة وخلفية شفافة أو داكنة.">
-        <input type="file" accept="image/gif" disabled={!canEdit || busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadGif(f); e.target.value = ""; }} />
-        {hasGif && <div className="mt-1 text-t-xs text-text-dim">يوجد GIF حالي. {canEdit && <button type="button" className="text-ember" onClick={removeGif}>حذف</button>}</div>}
       </Field>
       <Field label="وصف مختصر (اختياري)"><Textarea rows={2} maxLength={300} value={c.description} disabled={!canEdit} onChange={(e) => setC({ ...c, description: e.target.value })} /></Field>
       {msg && <div className={`text-t-sm font-bold ${msg.ok ? "text-emerald" : "text-ember"}`}>{msg.t}</div>}
